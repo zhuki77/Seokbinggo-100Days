@@ -2,10 +2,11 @@ id,station,output,amount,ingredients
 workbench,None,workbench,1,dirt:8|stone:12
 furnace,Workbench,furnace,1,stone:22|dirt:8|iron:6|copper:4
 ice_anvil,Furnace,ice_anvil,1,iron:10|copper:5|ice_steel:8
-reinforced_pickaxe,Furnace,reinforced_pickaxe,1,iron:8|copper:4|stone:5
-ice_steel_pickaxe,IceAnvil,ice_steel_pickaxe,1,ice_steel:10|iron:3|copper:2
+iron_claws,Furnace,iron_claws,1,iron_ingot:4|copper_ingot:2|stone:5
+ice_steel_claws,IceAnvil,ice_steel_claws,1,ice_steel_ingot:5|iron_ingot:2|copper_ingot:1
 lantern,Workbench,lantern,1,wood:4|hemp:2|coal:2
 sieve,Workbench,sieve,1,hemp:6|wood:2
 haetae_statue,Furnace,haetae_statue,1,stone:20|copper:6|yokai_tears:20
 nest,Workbench,nest,1,wood:6|hemp:4
 magpie_nest,Workbench,magpie_nest,1,wood:8|hemp:6
+foundry,Furnace,foundry,1,clay:12|stone:16|iron_ore:6

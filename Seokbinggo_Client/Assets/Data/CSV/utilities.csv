@@ -1,0 +1,4 @@
+id,kind,cooldownSeconds,value,consumable
+folding_fan,FoldingFan,3,3,false
+bell_rope,BellRope,0,10,false
+fox_rain_charm,FoxRainCharm,0,30,true

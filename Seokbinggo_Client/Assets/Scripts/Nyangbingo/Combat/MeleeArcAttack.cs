@@ -11,16 +11,20 @@ namespace Nyangbingo.Combat
         [Range(1, 180)][SerializeField] private float arcDegrees = 100f;
         [SerializeField] private int damage = 5;
         [SerializeField] private float knockback = .5f;
+        [SerializeField] private ClawProfile clawProfile;
 
         public void Strike(Vector2 direction)
         {
             Vector2 center = origin == null ? (Vector2)transform.position : (Vector2)origin.position;
-            foreach (var hit in Physics2D.OverlapCircleAll(center, range, targetLayers))
+            var activeRange = clawProfile == null ? range : range * clawProfile.VerticalReach;
+            var activeDamage = clawProfile == null ? damage : clawProfile.Damage;
+            var activeKnockback = clawProfile == null ? knockback : clawProfile.Knockback;
+            foreach (var hit in Physics2D.OverlapCircleAll(center, activeRange, targetLayers))
             {
                 var toTarget = ((Vector2)hit.transform.position - center).normalized;
                 if (Vector2.Angle(direction.normalized, toTarget) > arcDegrees * .5f) continue;
-                hit.GetComponentInParent<Health>()?.ApplyDamage(damage, DamageTag.Melee);
-                if (hit.attachedRigidbody != null) hit.attachedRigidbody.AddForce(toTarget * knockback, ForceMode2D.Impulse);
+                hit.GetComponentInParent<Health>()?.ApplyDamage(activeDamage, DamageTag.Melee);
+                if (hit.attachedRigidbody != null) hit.attachedRigidbody.AddForce(toTarget * activeKnockback, ForceMode2D.Impulse);
             }
         }
     }
