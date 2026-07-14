@@ -17,6 +17,15 @@ namespace Nyangbingo.Save
     public struct TurretFuelRecord { public string objectId; public int fuel; }
 
     [Serializable]
+    public struct EquipmentRecord { public string slot; public string equipmentId; }
+
+    [Serializable]
+    public struct SmeltingRecord { public string stationId; public string recipeId; public float remainingSeconds; }
+
+    [Serializable]
+    public struct SmeltingOutputRecord { public string stationId; public string itemId; public int amount; }
+
+    [Serializable]
     public sealed class SaveGame
     {
         public int seed; public int day = 1; public float timeOfDaySec;
@@ -32,6 +41,10 @@ namespace Nyangbingo.Save
         public bool magpieJoined;
         public Vector2 magpieNestPosition;
         public List<TurretFuelRecord> turretFuel = new List<TurretFuelRecord>();
+        public List<EquipmentRecord> equipment = new List<EquipmentRecord>();
+        public List<SmeltingRecord> smelting = new List<SmeltingRecord>();
+        public List<SmeltingOutputRecord> smeltingOutputs = new List<SmeltingOutputRecord>();
+        public List<string> openedChestIds = new List<string>();
     }
 
     public sealed class SaveManager : MonoBehaviour

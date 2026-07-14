@@ -64,6 +64,27 @@ namespace Nyangbingo.Debugging
                 Debug.Log("[Nyangbingo] Boss start, spawn pause, defeat, and spawn resume completed.");
             else Debug.LogError("[Nyangbingo] Boss flow test failed.");
             Destroy(bossObject);
+
+            inventory.TryAdd(wood.Id, 2); inventory.TryAdd(stone.Id, 1);
+            var smelting = new SmeltingStation(inventory);
+            var smeltingRecipe = SmeltingDefinition.CreateRuntime("test_smelting",
+                new ItemAmount { item = wood, amount = 2 }, new ItemAmount { item = stone, amount = 1 },
+                new ItemAmount { item = workbench, amount = 1 }, 1f);
+            if (smelting.TryStart(smeltingRecipe) && smelting.Tick(1f) && inventory.Count(workbench.Id) >= 2)
+                Debug.Log("[Nyangbingo] Smelting completed.");
+            else Debug.LogError("[Nyangbingo] Smelting test failed.");
+
+            var chest = new ChestProgress();
+            var chestDefinition = ChestDefinition.CreateRuntime(new[] { new ItemAmount { item = wood, amount = 1 } });
+            if (chest.TryOpen("test-chest", chestDefinition) && !chest.TryOpen("test-chest", chestDefinition))
+                Debug.Log("[Nyangbingo] Chest single-open protection completed.");
+            else Debug.LogError("[Nyangbingo] Chest test failed.");
+
+            var utilities = new UtilityService(); var fanUsed = false;
+            utilities.FanUsed += _ => fanUsed = true;
+            if (utilities.TryUse(UtilityDefinition.CreateRuntime(UtilityKind.FoldingFan, 3f)) && fanUsed)
+                Debug.Log("[Nyangbingo] Utility event completed.");
+            else Debug.LogError("[Nyangbingo] Utility test failed.");
         }
     }
 }
