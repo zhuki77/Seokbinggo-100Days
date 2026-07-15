@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ceae4e365f04a0478ccff265fd33ac8, type: 3}
+  m_Name: middle_chest
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ChestDefinition
+  id: middle_chest
+  region: 2
+  rewards: []
+  equipmentPool:
+  - {fileID: 11400000, guid: c14a0758747a43c48996adfef5f8a34b, type: 2}
+  - {fileID: 11400000, guid: 60d33c6ec18b6384296cdb5e605b4cf9, type: 2}
+  - {fileID: 11400000, guid: 85da604b6e837904ba37e95e8fd73fa6, type: 2}

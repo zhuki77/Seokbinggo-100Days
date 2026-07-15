@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 611fd213879b6d34f9f6063f0e1c820e, type: 3}
+  m_Name: smelt_copper
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.SmeltingDefinition
+  id: smelt_copper
+  stationKind: 0
+  input:
+    item: {fileID: 11400000, guid: a8744937d42729d4a92df3354d7973d5, type: 2}
+    amount: 2
+  fuel:
+    item: {fileID: 11400000, guid: aed8994ecde330142b2c13ec869bc0cc, type: 2}
+    amount: 1
+  output:
+    item: {fileID: 11400000, guid: bfbf06795069d8b4cb038e7953262af7, type: 2}
+    amount: 1
+  durationSeconds: 20

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a1977f73094c64489185d07a1954fb, type: 3}
+  m_Name: baekjung
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.DayEventDefinition
+  id: baekjung
+  day: 15
+  maxActive: 12
+  waveOffsets:
+  - 0
+  - 150
+  - 300
+  composition:
+  - kind: 0
+    amount: 3
+  - kind: 1
+    amount: 2
+  - kind: 2
+    amount: 7
+  tearMultiplier: 1.5
+  signatureMultiplier: 2

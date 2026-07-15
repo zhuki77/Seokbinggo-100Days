@@ -11,4 +11,13 @@ namespace Nyangbingo.Inventory
             if (item != null && amount > 0) Requested?.Invoke(item, amount);
         }
     }
+
+    public static class EquipmentAcquisition
+    {
+        public static event Action<EquipmentDefinition> Requested;
+        public static void Request(EquipmentDefinition equipment)
+        {
+            if (equipment != null) Requested?.Invoke(equipment);
+        }
+    }
 }

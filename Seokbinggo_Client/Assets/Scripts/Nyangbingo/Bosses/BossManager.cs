@@ -16,6 +16,9 @@ namespace Nyangbingo.Bosses
         private IRegularSpawnController spawnController;
         private ActiveBoss active;
         public bool IsBossActive => active != null;
+        public BossDefinition ActiveDefinition => active?.definition;
+        public Health ActiveHealth => active?.health;
+        public float ActiveSummonedAtGameSeconds => active?.summonedAtGameSeconds ?? 0f;
         public event Action<BossDefinition> BossStarted;
         public event Action<BossDefinition, bool> BossEnded; // true when defeated
 
@@ -23,6 +26,7 @@ namespace Nyangbingo.Bosses
         {
             public BossDefinition definition;
             public Health health;
+            public float summonedAtGameSeconds;
         }
 
         private void Awake()
@@ -40,14 +44,37 @@ namespace Nyangbingo.Bosses
             if (isActiveAndEnabled && timeSource != null) timeSource.Dawn += HandleDawn;
         }
 
-        public bool TryStart(BossDefinition definition, Health spawnedBoss)
+        public bool TryStart(BossDefinition definition, Health spawnedBoss, float summonedAtGameSeconds = 0f)
         {
-            if (definition == null || spawnedBoss == null || active != null || timeSource == null || !timeSource.IsNight) return false;
-            active = new ActiveBoss { definition = definition, health = spawnedBoss };
-            active.health.Died += HandleDefeated;
-            spawnController?.SetRegularSpawning(false);
+            if (definition == null || spawnedBoss == null || spawnedBoss.IsDead || active != null ||
+                timeSource == null || !timeSource.IsNight || float.IsNaN(summonedAtGameSeconds) ||
+                float.IsInfinity(summonedAtGameSeconds) || summonedAtGameSeconds < 0f) return false;
+            BeginActive(definition, spawnedBoss, summonedAtGameSeconds);
+            GameEvents.RaiseBossSummoned(definition);
             BossStarted?.Invoke(definition);
             return true;
+        }
+
+        public bool RestoreActive(BossDefinition definition, Health spawnedBoss, float summonedAtGameSeconds)
+        {
+            if (definition == null || spawnedBoss == null || spawnedBoss.IsDead || active != null ||
+                timeSource == null || !timeSource.IsNight || float.IsNaN(summonedAtGameSeconds) ||
+                float.IsInfinity(summonedAtGameSeconds) || summonedAtGameSeconds < 0f) return false;
+            BeginActive(definition, spawnedBoss, summonedAtGameSeconds);
+            return true;
+        }
+
+        private void BeginActive(BossDefinition definition, Health spawnedBoss, float summonedAtGameSeconds)
+        {
+            active = new ActiveBoss
+            {
+                definition = definition,
+                health = spawnedBoss,
+                summonedAtGameSeconds = summonedAtGameSeconds
+            };
+            active.health.SetKnockbackImmune(true);
+            active.health.Died += HandleDefeated;
+            spawnController?.SetRegularSpawning(false);
         }
 
         private void HandleDefeated()
@@ -63,6 +90,7 @@ namespace Nyangbingo.Bosses
             if (!defeated && active.health != null) Destroy(active.health.gameObject);
             active = null;
             spawnController?.SetRegularSpawning(true);
+            if (defeated) GameEvents.RaiseBossDefeated(definition);
             BossEnded?.Invoke(definition, defeated);
         }
     }
