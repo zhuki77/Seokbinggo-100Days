@@ -23,17 +23,23 @@ namespace Nyangbingo.Inventory
 
         public int Count(string itemId)
         {
-            var total = 0;
-            foreach (var slot in slots) if (slot.itemId == itemId) total += slot.amount;
-            return total;
+            long total = 0;
+            foreach (var slot in slots)
+            {
+                if (slot.itemId != itemId) continue;
+                total += slot.amount;
+                if (total >= int.MaxValue) return int.MaxValue;
+            }
+            return (int)total;
         }
 
-        public bool Has(string itemId, int amount) => Count(itemId) >= amount;
+        public bool Has(string itemId, int amount) => amount > 0 && Count(itemId) >= amount;
 
         public bool TryAdd(string itemId, int amount)
         {
             var item = findItem(itemId);
-            if (item == null || amount <= 0 || CapacityFor(itemId, item.MaxStack) < amount) return false;
+            if (item == null || item.MaxStack <= 0 || amount <= 0 || CapacityFor(itemId, item.MaxStack) < amount)
+                return false;
             for (var i = 0; i < slots.Count && amount > 0; i++)
             {
                 var slot = slots[i];
@@ -65,16 +71,53 @@ namespace Nyangbingo.Inventory
         public List<InventorySlot> Export() => new List<InventorySlot>(slots);
         public void Import(IEnumerable<InventorySlot> saved)
         {
-            slots.Clear(); foreach (var slot in saved) slots.Add(slot);
-            while (slots.Count < SlotCount) slots.Add(default);
-            if (slots.Count > SlotCount) slots.RemoveRange(SlotCount, slots.Count - SlotCount);
-            Changed?.Invoke();
+            TryImport(saved);
         }
 
-        private int CapacityFor(string itemId, int maxStack)
+        public bool TryImport(IEnumerable<InventorySlot> saved)
         {
-            var capacity = 0;
-            foreach (var slot in slots) capacity += slot.itemId == itemId ? maxStack - slot.amount : string.IsNullOrEmpty(slot.itemId) ? maxStack : 0;
+            if (!TryBuildImport(saved, out var restored)) return false;
+            slots.Clear();
+            slots.AddRange(restored);
+            Changed?.Invoke();
+            return true;
+        }
+
+        public bool CanImport(IEnumerable<InventorySlot> saved) => TryBuildImport(saved, out _);
+
+        private bool TryBuildImport(IEnumerable<InventorySlot> saved, out List<InventorySlot> restored)
+        {
+            restored = null;
+            if (saved == null) return false;
+            var candidate = new List<InventorySlot>(SlotCount);
+            foreach (var slot in saved)
+            {
+                if (candidate.Count >= SlotCount) return false;
+                if (string.IsNullOrEmpty(slot.itemId))
+                {
+                    if (slot.amount != 0) return false;
+                    candidate.Add(default);
+                    continue;
+                }
+
+                var item = findItem(slot.itemId);
+                if (item == null || slot.amount <= 0 || slot.amount > item.MaxStack) return false;
+                candidate.Add(slot);
+            }
+
+            while (candidate.Count < SlotCount) candidate.Add(default);
+            restored = candidate;
+            return true;
+        }
+
+        private long CapacityFor(string itemId, int maxStack)
+        {
+            long capacity = 0;
+            foreach (var slot in slots)
+            {
+                if (slot.itemId == itemId) capacity += Math.Max(0L, (long)maxStack - slot.amount);
+                else if (string.IsNullOrEmpty(slot.itemId)) capacity += maxStack;
+            }
             return capacity;
         }
     }
