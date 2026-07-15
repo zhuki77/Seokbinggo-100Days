@@ -148,6 +148,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61cf206d5e95dc945bf6257cc5002f7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Debugging.DevBTestBootstrap
+  importedTimedRecipe: {fileID: 11400000, guid: 2e45a3f3c934a0d459548f929ef6b4d0, type: 2}
+  importedBaekjungEvent: {fileID: 11400000, guid: e6460f074668835409ab528c79ba1d0f, type: 2}
+  importedClubGoblin: {fileID: 11400000, guid: 1e12ea6cffc1074428042e6ae90ef5d4, type: 2}
+  gameDataCatalog: {fileID: 11400000, guid: e667adc57c5f5a345871e23239f7483a, type: 2}
 --- !u!4 &231905047
 Transform:
   m_ObjectHideFlags: 0
