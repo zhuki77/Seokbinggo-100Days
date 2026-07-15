@@ -14,15 +14,17 @@ namespace Nyangbingo.Data
         [SerializeField] private CraftingStation station;
         [SerializeField] private ItemAmount[] ingredients;
         [SerializeField] private ItemAmount output;
+        [Min(0f)][SerializeField] private float durationSeconds;
         public string Id => id;
         public CraftingStation Station => station;
         public ItemAmount[] Ingredients => ingredients;
         public ItemAmount Output => output;
+        public float DurationSeconds => durationSeconds;
 
-        public static RecipeDefinition CreateRuntime(string recipeId, CraftingStation requiredStation, ItemAmount[] required, ItemAmount result)
+        public static RecipeDefinition CreateRuntime(string recipeId, CraftingStation requiredStation, ItemAmount[] required, ItemAmount result, float seconds = 0f)
         {
             var recipe = CreateInstance<RecipeDefinition>();
-            recipe.id = recipeId; recipe.station = requiredStation; recipe.ingredients = required; recipe.output = result;
+            recipe.id = recipeId; recipe.station = requiredStation; recipe.ingredients = required; recipe.output = result; recipe.durationSeconds = seconds;
             return recipe;
         }
     }

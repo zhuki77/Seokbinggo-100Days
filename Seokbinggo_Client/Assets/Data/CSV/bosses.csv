@@ -1,0 +1,5 @@
+id,kind,hitPoints,expectedCombatSeconds,summonItem,requiresDeepAltar,forcedDay,guaranteedDrops
+goblin_chief,GoblinChief,2400,200,wrestling_belt,false,0,goblin_fire_essence:1
+mother_bulgasari,MotherBulgasari,3000,286,iron_bait_pile,false,0,iron_furnace_heart:1
+imugi,Imugi,6600,220,ice_altar_offering,true,0,yeouiju:1
+gangcheori,Gangcheori,2000,48,drought_talisman,false,30,drought_heart:1

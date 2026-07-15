@@ -1,0 +1,7 @@
+id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,visionRadiusBonus,blocksInventoryTheft,note
+bell_charm,AccessoryOne,true,0,0,0,0,0,true,0,false,방울 노리개 - 이중 점프
+ice_heart_charm,AccessoryOne,true,0,0,0,-0.15,0,false,0,false,얼음 심장 노리개 - 체온 상승 15% 감소
+lucky_pouch,AccessoryOne,true,0,0,0.10,0,0,false,0,false,복주머니 - 채굴 크리티컬 10%p
+wind_ribbon,AccessoryOne,true,0,0.10,0,0,0,false,0,false,바람 댕기 - 이동 속도 10% 증가(임시 수치)
+tiger_eye_orb,AccessoryOne,true,0,0,0,0,0,false,2,false,호랑이 눈 구슬 - 시야 반경 2 증가(임시 수치)
+goblin_hat,AccessoryOne,true,0,0,0,0,0,false,0,true,도깨비 감투 - 야광귀 인벤토리 절도 무효

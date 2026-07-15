@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: mother_bulgasari
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: mother_bulgasari
+  kind: 1
+  hitPoints: 3000
+  expectedCombatSeconds: 286
+  summonItem: {fileID: 11400000, guid: ef2da80e2e710484b9cf6a333fd185ef, type: 2}
+  requiresDeepAltar: 0
+  forcedDay: 0
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: f0f7e812848260f4dbd1d2e58a963b0a, type: 2}
+    amount: 1
