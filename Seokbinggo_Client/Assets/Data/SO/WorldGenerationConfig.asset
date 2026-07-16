@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fde254ef9b59f1448067b8864cc7050, type: 3}
+  m_Name: WorldGenerationConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.WorldGenerationConfig
+  mapWidth: 400
+  mapHeight: 160
+  surfaceBaseHeightRatio: 0.82
+  surfaceNoiseAmplitude: 6
+  surfaceNoiseFrequency: 0.02
+  upperLayerThickness: 40
+  middleLayerThickness: 55
+  bedrockThickness: 4
+  upperDirtRatio: 0.64
+  caveNoiseFrequency: 0.08
+  caveChanceUpper: 0.1
+  caveChanceDeep: 0.25
+  oreVeins:
+  - elementType: coal
+    layer: 1
+    hardness: 1
+    frequencyPer100Tiles: 8
+    minClusterSize: 3
+    maxClusterSize: 6
+  - elementType: clay
+    layer: 1
+    hardness: 1
+    frequencyPer100Tiles: 10
+    minClusterSize: 3
+    maxClusterSize: 6
+  - elementType: iron_ore
+    layer: 2
+    hardness: 2
+    frequencyPer100Tiles: 18
+    minClusterSize: 3
+    maxClusterSize: 6
+  - elementType: copper_ore
+    layer: 2
+    hardness: 2
+    frequencyPer100Tiles: 12
+    minClusterSize: 3
+    maxClusterSize: 6
+  - elementType: ice_shard
+    layer: 2
+    hardness: 2
+    frequencyPer100Tiles: 10
+    minClusterSize: 3
+    maxClusterSize: 6
+  - elementType: ice_steel_ore
+    layer: 3
+    hardness: 3
+    frequencyPer100Tiles: 12
+    minClusterSize: 3
+    maxClusterSize: 6
+  - elementType: frost_essence
+    layer: 3
+    hardness: 3
+    frequencyPer100Tiles: 4
+    minClusterSize: 3
+    maxClusterSize: 6
+  spawnColumnRatio: 0.5
+  alcoveWidth: 5
+  alcoveHeight: 4
+  ruinCountMin: 2
+  ruinCountMax: 3
+  ruinWidth: 3
+  ruinHeight: 2
+  deepAltarColumnRatio: 0.75
+  altarSize: 2
+  altarHardness: 3
+  iceLakeWidth: 6
+  iceLakeHeight: 3
+  chestCountRuins: 4
+  chestCountUpper: 6
+  chestCountMiddle: 6
+  chestCountDeep: 4
+  chestIdPrefix: chest_
+  maxRerollAttempts: 200
+  onboardingSearchRadius: 18
+  onboardingRequiredDirt: 8
+  onboardingRequiredStone: 12
