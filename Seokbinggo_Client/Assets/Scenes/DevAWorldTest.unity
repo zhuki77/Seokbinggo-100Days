@@ -283,6 +283,11 @@ MonoBehaviour:
   enableSaveLoadHotkeys: 1
   saveManager: {fileID: 0}
   saveSlot: 0
+  dayNightService: {fileID: 0}
+  logDayNightTransitions: 1
+  showSpawnQueryDemoAtNight: 1
+  spawnQueryMinRange: 4
+  spawnQueryMaxRange: 12
 --- !u!4 &916007806
 Transform:
   m_ObjectHideFlags: 0
