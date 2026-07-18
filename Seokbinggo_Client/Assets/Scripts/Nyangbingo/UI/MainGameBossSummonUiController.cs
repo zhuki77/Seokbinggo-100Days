@@ -113,6 +113,11 @@ namespace Nyangbingo.UI
             return Vector2.Distance(playerTarget.transform.position, altarCenter) <= deepAltarInteractionRange;
         }
 
+        public bool IsPlayerNearStation(CraftingStation station) =>
+            initialized && ResolveNearbyCraftingStation() == station;
+
+        public void ShowExternalMessage(string message) => ShowMessage(message);
+
         private void TryCraftSelectedSummonItem()
         {
             var definition = SelectedBoss;

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c390a03978e6ec9409c42023bfb2515b, type: 3}
+  m_Name: EnvironmentArtCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.EnvironmentArtCatalog
+  distantView: {fileID: 21300000, guid: aed7ce89b773c374085265418a7803f1, type: 3}
+  clouds: {fileID: 21300000, guid: f1a7487adb81d434aa9aa94f97208cea, type: 3}
+  underground: {fileID: 21300000, guid: 462f8ea1c392618429cd095b293ed74a, type: 3}
+  titleFrames:
+  - {fileID: -6253688462931843144, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: -6068521320509472332, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: 1544329553135153506, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: 7835581016885569692, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: 5274640448056513208, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: -6282871294039097186, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: -2431312158161853200, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: -2913510416134052612, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: 6596592844103936619, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}
+  - {fileID: 7022207018864802435, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}

@@ -17,6 +17,8 @@ namespace Nyangbingo.UI
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
         [SerializeField] private Text temperatureText;
+        [SerializeField] private Image temperatureArt;
+        [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
         [SerializeField] private Text sealText;
         [SerializeField] private Text dayText;
         [SerializeField] private Text clawText;
@@ -24,16 +26,26 @@ namespace Nyangbingo.UI
         [SerializeField] private Text playerHealthText;
         [SerializeField] private BossManager bossManager;
         [SerializeField] private Text bossStatusText;
+        [SerializeField] private GameObject craftingProgressPanel;
+        [SerializeField] private Text craftingProgressText;
+        [SerializeField] private Image craftingProgressFill;
         [SerializeField] private GameObject deathPanel;
         [SerializeField] private Text[] inventorySlotTexts = new Text[PlayerInventory.SlotCount];
+        [SerializeField] private Image[] inventorySlotIcons = new Image[PlayerInventory.SlotCount];
+        [SerializeField] private ItemArtCatalog itemArtCatalog;
         private PlayerInventory inventory;
 
         public int BoundSlotCount => inventorySlotTexts?.Length ?? 0;
+        public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
         public bool HasPlayerStatusBindings => playerHealth != null && playerHealthText != null && deathPanel != null;
+        public bool HasCraftingProgressBindings => craftingProgressPanel != null && craftingProgressText != null &&
+                                                   craftingProgressFill != null;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, Text temperature, Text seal, Text day, Text claw, Text healthText,
-            Health health, BossManager manager, Text bossText, GameObject playerDeathPanel, Text[] slots)
+            Health health, BossManager manager, Text bossText, GameObject playerDeathPanel, Text[] slots,
+            Image[] icons, ItemArtCatalog artCatalog, Image temperatureImage, GameplayArtCatalog gameplayArt,
+            GameObject craftingPanel, Text craftingText, Image craftingFill)
         {
             gameDataCatalog = catalog;
             bootstrap = mainBootstrap;
@@ -48,13 +60,21 @@ namespace Nyangbingo.UI
             bossStatusText = bossText;
             deathPanel = playerDeathPanel;
             inventorySlotTexts = slots;
+            inventorySlotIcons = icons;
+            itemArtCatalog = artCatalog;
+            temperatureArt = temperatureImage;
+            gameplayArtCatalog = gameplayArt;
+            craftingProgressPanel = craftingPanel;
+            craftingProgressText = craftingText;
+            craftingProgressFill = craftingFill;
         }
 
         private void Start()
         {
             if (bootstrap == null || runtimeServices == null || gameDataCatalog == null ||
                 !runtimeServices.Initialize() || inventorySlotTexts == null ||
-                inventorySlotTexts.Length != PlayerInventory.SlotCount)
+                inventorySlotTexts.Length != PlayerInventory.SlotCount || inventorySlotIcons == null ||
+                inventorySlotIcons.Length != PlayerInventory.SlotCount)
             {
                 Debug.LogError("[Nyangbingo] MainGameHudController: HUD 데이터 또는 12슬롯 참조가 올바르지 않습니다.");
                 enabled = false;
@@ -80,12 +100,61 @@ namespace Nyangbingo.UI
         {
             if (bootstrap == null || runtimeServices == null) return;
             if (temperatureText != null) temperatureText.text = $"체온 {runtimeServices.PlayerTemperature.Current:0.0}";
+            RefreshTemperatureArt();
             if (sealText != null) sealText.text = $"석빙고 {bootstrap.SealSystem?.TemperaturePercent ?? 0f:0}%";
             if (dayText != null) dayText.text = $"D-{bootstrap.TimeService.DaysRemaining}";
             if (clawText != null) clawText.text = $"발톱 T{ResolveClawTier()}";
             if (playerHealthText != null && playerHealth != null)
                 playerHealthText.text = $"HP {playerHealth.Current}/{playerHealth.MaxHealth}";
             RefreshBossStatus();
+            RefreshCraftingProgress();
+        }
+
+        private void RefreshCraftingProgress()
+        {
+            if (craftingProgressPanel == null || craftingProgressText == null || craftingProgressFill == null) return;
+            var process = runtimeServices?.CraftingProcess;
+            var recipe = process?.Active;
+            var active = process?.IsCrafting == true && recipe != null;
+            craftingProgressPanel.SetActive(active);
+            if (!active) return;
+
+            var duration = Mathf.Max(.0001f, recipe.DurationSeconds);
+            var remaining = Mathf.Clamp(process.RemainingSeconds, 0f, duration);
+            var completion = Mathf.Clamp01(1f - remaining / duration);
+            ResizeCraftingProgressFill(completion);
+            var itemName = recipe.Output.item != null ? recipe.Output.item.DisplayName : recipe.Id;
+            craftingProgressText.text = remaining <= .0001f
+                ? $"{itemName} 제작 완료 · 인벤토리 공간 대기"
+                : $"제작 중 · {itemName}  {remaining:0.0}초";
+        }
+
+        private void ResizeCraftingProgressFill(float completion)
+        {
+            var fillRect = craftingProgressFill.rectTransform;
+            var trackRect = fillRect.parent as RectTransform;
+            if (trackRect == null) return;
+            craftingProgressFill.type = Image.Type.Simple;
+            fillRect.anchorMin = fillRect.anchorMax = fillRect.pivot = new Vector2(0f, .5f);
+            fillRect.anchoredPosition = new Vector2(2f, 0f);
+            fillRect.sizeDelta = new Vector2(
+                Mathf.Max(0f, (trackRect.rect.width - 4f) * completion),
+                Mathf.Max(0f, trackRect.rect.height - 4f));
+        }
+
+        private void RefreshTemperatureArt()
+        {
+            if (temperatureArt == null) return;
+            var frames = gameplayArtCatalog?.TemperatureFrames;
+            if (frames == null || frames.Count == 0)
+            {
+                temperatureArt.enabled = false;
+                return;
+            }
+
+            var index = Mathf.RoundToInt(runtimeServices.PlayerTemperature.Normalized * (frames.Count - 1));
+            temperatureArt.sprite = frames[Mathf.Clamp(index, 0, frames.Count - 1)];
+            temperatureArt.enabled = temperatureArt.sprite != null;
         }
 
         private void RefreshBossStatus()
@@ -127,6 +196,10 @@ namespace Nyangbingo.UI
                 var slot = inventory.Slots[index];
                 var item = string.IsNullOrEmpty(slot.itemId) ? null : gameDataCatalog.FindItem(slot.itemId);
                 text.text = item == null ? $"{index + 1}\n-" : $"{index + 1}\n{item.DisplayName} x{slot.amount}";
+                var icon = inventorySlotIcons[index];
+                if (icon == null) continue;
+                icon.sprite = item != null ? itemArtCatalog?.FindSprite(item.Id) : null;
+                icon.enabled = icon.sprite != null;
             }
         }
 

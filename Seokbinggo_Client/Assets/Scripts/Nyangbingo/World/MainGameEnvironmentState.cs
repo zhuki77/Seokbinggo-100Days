@@ -26,10 +26,13 @@ namespace Nyangbingo.World
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
+        [SerializeField] private BuildingArtCatalog buildingArtCatalog;
 
         private readonly Dictionary<string, Entry> byObjectId =
             new Dictionary<string, Entry>(StringComparer.Ordinal);
         private readonly Dictionary<Vector3Int, Entry> byCell = new Dictionary<Vector3Int, Entry>();
+        private readonly Dictionary<string, GameObject> visualsByObjectId =
+            new Dictionary<string, GameObject>(StringComparer.Ordinal);
         private SealBoundaryPolicy boundaryPolicy;
 
         public bool IsColdSourceActive { get; private set; }
@@ -37,10 +40,12 @@ namespace Nyangbingo.World
         public int ActiveCoolingSourceCount { get; private set; }
         public bool IsInitialized { get; private set; }
 
-        public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap)
+        public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
+            BuildingArtCatalog artCatalog = null)
         {
             gameDataCatalog = catalog;
             bootstrap = mainBootstrap;
+            buildingArtCatalog = artCatalog;
         }
 
         private void Start()
@@ -94,6 +99,7 @@ namespace Nyangbingo.World
             };
             byObjectId.Add(record.objectId, entry);
             byCell.Add(cell, entry);
+            CreateVisual(entry);
             RecomputeCoolingAndInvalidate();
             return true;
         }
@@ -103,6 +109,11 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(objectId) || !byObjectId.TryGetValue(objectId, out var entry)) return false;
             byObjectId.Remove(objectId);
             byCell.Remove(entry.Cell);
+            if (visualsByObjectId.TryGetValue(objectId, out var visual))
+            {
+                visualsByObjectId.Remove(objectId);
+                if (visual != null) Destroy(visual);
+            }
             RecomputeCoolingAndInvalidate();
             return true;
         }
@@ -131,6 +142,26 @@ namespace Nyangbingo.World
             .OrderBy(record => record.objectId, StringComparer.Ordinal)
             .ToList();
 
+        public bool TryGetVisual(string objectId, out GameObject visual)
+        {
+            visual = null;
+            return !string.IsNullOrWhiteSpace(objectId) &&
+                   visualsByObjectId.TryGetValue(objectId, out visual) && visual != null;
+        }
+
+        public bool CanPlaceAt(Vector2 position)
+        {
+            if (!IsFinite(position.x) || !IsFinite(position.y)) return false;
+            var cell = CellFrom(position);
+            var tileService = bootstrap?.TileService;
+            var head = cell + Vector3Int.up;
+            var ground = cell + Vector3Int.down;
+            return !byCell.ContainsKey(cell) && tileService != null &&
+                   cell.x >= 0 && ground.y >= 0 && cell.x < tileService.Width && head.y < tileService.Height &&
+                   tileService.GetTile(cell).IsAir && tileService.GetTile(head).IsAir &&
+                   !tileService.GetTile(ground).IsAir;
+        }
+
         public bool TryRestorePlacedObjects(IEnumerable<PlacedObjectRecord> records)
         {
             if (!IsInitialized && !Initialize()) return false;
@@ -156,8 +187,10 @@ namespace Nyangbingo.World
 
             byObjectId.Clear();
             byCell.Clear();
+            ClearVisuals();
             foreach (var pair in restoredById) byObjectId.Add(pair.Key, pair.Value);
             foreach (var pair in restoredByCell) byCell.Add(pair.Key, pair.Value);
+            foreach (var entry in byObjectId.Values) CreateVisual(entry);
             RecomputeCoolingAndInvalidate();
             return true;
         }
@@ -170,6 +203,28 @@ namespace Nyangbingo.World
         }
 
         private void InvalidateSeal() => bootstrap?.SealSystem?.InvalidateAll();
+
+        private void CreateVisual(Entry entry)
+        {
+            var art = buildingArtCatalog?.Find(entry.Record.definitionId);
+            if (art?.Sprite == null || visualsByObjectId.ContainsKey(entry.Record.objectId)) return;
+            var visual = new GameObject($"Placed_{entry.Record.objectId}");
+            visual.transform.SetParent(transform, false);
+            visual.transform.position = entry.Record.position;
+            visual.transform.rotation = Quaternion.Euler(0f, 0f, entry.Record.rotationDegrees);
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = art.Sprite;
+            renderer.sortingOrder = 12;
+            visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
+            visualsByObjectId.Add(entry.Record.objectId, visual);
+        }
+
+        private void ClearVisuals()
+        {
+            foreach (var visual in visualsByObjectId.Values)
+                if (visual != null) Destroy(visual);
+            visualsByObjectId.Clear();
+        }
 
         private static Vector3Int CellFrom(Vector2 position) =>
             new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);

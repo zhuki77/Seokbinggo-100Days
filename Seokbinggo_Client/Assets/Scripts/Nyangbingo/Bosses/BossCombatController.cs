@@ -29,6 +29,7 @@ namespace Nyangbingo.Bosses
         private MeshFilter telegraphFilter;
         private Mesh telegraphMesh;
         private Material telegraphMaterial;
+        private SpriteRenderer warningRenderer;
         private Health health;
         private Vector2 lockedAim = Vector2.down;
         private float contactAttackRemaining;
@@ -43,6 +44,21 @@ namespace Nyangbingo.Bosses
         public bool IsTelegraphing => telegraphing;
         public bool IsSpecialActive => specialActive;
         public float SpecialCooldownRemaining => specialCooldownRemaining;
+        public event System.Action Attacked;
+        public event System.Action SpecialStarted;
+
+        public void ConfigureWarningArt(GameplayArtCatalog artCatalog)
+        {
+            var frames = artCatalog?.BossWarningFrames;
+            if (frames == null || frames.Count == 0) return;
+            var warning = new GameObject("SpecialWarningArt");
+            warning.transform.SetParent(transform, false);
+            warning.transform.localPosition = new Vector3(0f, 1.15f, 0f);
+            warningRenderer = warning.AddComponent<SpriteRenderer>();
+            warningRenderer.sortingOrder = 16;
+            warning.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(frames);
+            warningRenderer.enabled = telegraphing || specialActive;
+        }
 
         public bool ConfigureForRuntime(BossDefinition value, MonoBehaviour target)
         {
@@ -106,7 +122,10 @@ namespace Nyangbingo.Bosses
 
             if (distance <= ContactRange + RangeTolerance && contactAttackRemaining <= .0001f &&
                 definition.ContactDamage > 0 && combatTarget.TryApplyContactDamage(definition.ContactDamage))
+            {
                 contactAttackRemaining = ContactAttackIntervalGameSeconds;
+                Attacked?.Invoke();
+            }
         }
 
         private void BeginTelegraph(Vector2 aim)
@@ -134,6 +153,7 @@ namespace Nyangbingo.Bosses
         private void ActivateSpecial()
         {
             telegraphing = false;
+            SpecialStarted?.Invoke();
             if (definition.SpecialDurationSeconds <= .0001f || definition.SpecialTickSeconds <= .0001f)
             {
                 ApplySpecialHit();
@@ -284,6 +304,7 @@ namespace Nyangbingo.Bosses
         private void SetTelegraphVisible(bool visible)
         {
             if (telegraphRenderer != null) telegraphRenderer.enabled = visible;
+            if (warningRenderer != null) warningRenderer.enabled = visible;
         }
 
         private void OnDisable() => SetTelegraphVisible(false);

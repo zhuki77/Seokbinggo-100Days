@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: frost_essence
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: -8267796919885556955, guid: 40b3646c9078af84b9abb2c8170e6c18, type: 3}
+  m_Sprite: {fileID: -7911935547710846901, guid: 8f8f996a80f898841800b30f466ddafd, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

@@ -2,6 +2,7 @@ using Nyangbingo.Combat;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 namespace Nyangbingo.World
@@ -20,6 +21,8 @@ namespace Nyangbingo.World
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
         [SerializeField] private Camera followCamera;
+        [SerializeField] private CharacterArtCatalog characterArtCatalog;
+        [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
         [Min(0f)][SerializeField] private float cameraFollowSharpness = 12f;
 
         private readonly StatSheet statSheet = new StatSheet();
@@ -29,12 +32,16 @@ namespace Nyangbingo.World
         private WireSnareAbility wireSnare;
         private Vector2 movementInput;
         private Vector2 facing = Vector2.down;
+        private Vector2 horizontalFacing = Vector2.right;
         private float baseMoveSpeed;
         private float currentMoveSpeed;
         private float attackCooldown;
         private CombatProfileDefinition activeProfile;
         private SpriteRenderer attackIndicator;
+        private RuntimeCharacterSpriteAnimator characterAnimator;
         private float attackIndicatorRemaining;
+        private int attackIndicatorFrameIndex;
+        private float attackIndicatorFrameRemaining;
         private bool loggedFirstAttackInput;
         private bool loggedFirstAttackHit;
         private bool dead;
@@ -43,15 +50,20 @@ namespace Nyangbingo.World
         public bool IsInitialized => initialized;
         public string ActiveCombatProfileId => activeProfile != null ? activeProfile.Id : string.Empty;
         public float CurrentMoveSpeed => currentMoveSpeed;
+        public Vector2 FacingDirection => facing;
+        public Vector2 HorizontalFacingDirection => horizontalFacing;
         public bool IsDead => dead;
 
         public void ConfigureForScene(GameDataCatalog gameDataCatalog, MainGameBootstrap mainBootstrap,
-            MainGameRuntimeServices services, Camera camera)
+            MainGameRuntimeServices services, Camera camera, CharacterArtCatalog artCatalog = null,
+            GameplayArtCatalog gameplayArt = null)
         {
             catalog = gameDataCatalog;
             bootstrap = mainBootstrap;
             runtimeServices = services;
             followCamera = camera;
+            characterArtCatalog = artCatalog;
+            gameplayArtCatalog = gameplayArt;
         }
 
         private void Start() => Initialize();
@@ -84,11 +96,24 @@ namespace Nyangbingo.World
             var collider = GetComponent<CircleCollider2D>();
             collider.radius = .38f;
             collider.isTrigger = false;
-            RuntimePlaceholderVisual.Configure(GetComponent<SpriteRenderer>(), new Color(.25f, .85f, 1f), .8f, 20);
+            var playerRenderer = GetComponent<SpriteRenderer>();
+            var playerArt = characterArtCatalog != null ? characterArtCatalog.Find("player") : null;
+            if (playerArt?.Sprite != null)
+            {
+                characterAnimator = GetComponent<RuntimeCharacterSpriteAnimator>() ??
+                                    gameObject.AddComponent<RuntimeCharacterSpriteAnimator>();
+                characterAnimator.Configure(playerArt, 20);
+            }
+            else
+                RuntimePlaceholderVisual.Configure(playerRenderer, new Color(.25f, .85f, 1f), .8f, 20);
             var indicatorObject = new GameObject("AttackIndicator");
             indicatorObject.transform.SetParent(transform, false);
             attackIndicator = indicatorObject.AddComponent<SpriteRenderer>();
-            RuntimePlaceholderVisual.Configure(attackIndicator, new Color(1f, .9f, .2f, .75f), .65f, 19);
+            var attackFrames = gameplayArtCatalog?.PlayerAttackFrames;
+            if (attackFrames != null && attackFrames.Count > 0)
+                RuntimePlaceholderVisual.ConfigureSprite(attackIndicator, attackFrames[0], 19);
+            else
+                RuntimePlaceholderVisual.Configure(attackIndicator, new Color(1f, .9f, .2f, .75f), .65f, 19);
             attackIndicator.enabled = false;
 
             runtimeServices.PlayerInventory.Changed += RefreshCombatProfile;
@@ -120,17 +145,24 @@ namespace Nyangbingo.World
             movementInput = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             if (movementInput.sqrMagnitude > 1f) movementInput.Normalize();
             if (movementInput.sqrMagnitude > Mathf.Epsilon) facing = movementInput.normalized;
+            if (Mathf.Abs(movementInput.x) > Mathf.Epsilon)
+                horizontalFacing = movementInput.x < 0f ? Vector2.left : Vector2.right;
+            characterAnimator?.SetFacing(facing);
+            characterAnimator?.SetMoving(movementInput.sqrMagnitude > Mathf.Epsilon);
 
             attackCooldown = Mathf.Max(0f, attackCooldown - Time.deltaTime);
             wireSnare.Tick(Time.deltaTime);
             if (attackIndicatorRemaining > 0f)
             {
                 attackIndicatorRemaining = Mathf.Max(0f, attackIndicatorRemaining - Time.deltaTime);
+                TickAttackFeedback(Time.deltaTime);
                 if (attackIndicatorRemaining <= 0f) attackIndicator.enabled = false;
             }
-            if (attackCooldown <= 0f && (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space)))
+            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            if (!pointerOverUi && attackCooldown <= 0f &&
+                (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space)))
                 TryBasicAttack();
-            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.E))
+            if ((!pointerOverUi && Input.GetMouseButtonDown(1)) || Input.GetKeyDown(KeyCode.E))
                 TryFanAbility();
         }
 
@@ -161,6 +193,7 @@ namespace Nyangbingo.World
         {
             if (activeProfile == null || !activeProfile.HasBasicAttack || activeProfile.AttacksPerSecond <= 0f) return;
             attack.Strike(facing);
+            characterAnimator?.PlayAttack();
             ShowAttackFeedback();
             attackCooldown = 1f / activeProfile.AttacksPerSecond;
             if (!loggedFirstAttackInput || attack.LastHitCount > 0 && !loggedFirstAttackHit)
@@ -184,7 +217,26 @@ namespace Nyangbingo.World
             attackIndicator.transform.localPosition = facing * .85f;
             attackIndicator.transform.right = facing;
             attackIndicator.enabled = true;
-            attackIndicatorRemaining = .12f;
+            attackIndicatorFrameIndex = 0;
+            attackIndicatorFrameRemaining = .1f;
+            var frames = gameplayArtCatalog?.PlayerAttackFrames;
+            if (frames != null && frames.Count > 0) attackIndicator.sprite = frames[0];
+            attackIndicatorRemaining = frames != null && frames.Count > 0
+                ? Mathf.Max(.12f, frames.Count * .1f)
+                : .12f;
+        }
+
+        private void TickAttackFeedback(float deltaTime)
+        {
+            var frames = gameplayArtCatalog?.PlayerAttackFrames;
+            if (attackIndicator == null || frames == null || frames.Count <= 1) return;
+            attackIndicatorFrameRemaining -= Mathf.Max(0f, deltaTime);
+            while (attackIndicatorFrameRemaining <= 0f && attackIndicatorFrameIndex < frames.Count - 1)
+            {
+                attackIndicatorFrameIndex++;
+                attackIndicator.sprite = frames[attackIndicatorFrameIndex];
+                attackIndicatorFrameRemaining += .1f;
+            }
         }
 
         private void RefreshEquipmentStats()
@@ -255,6 +307,15 @@ namespace Nyangbingo.World
             renderer.color = color;
             renderer.sortingOrder = sortingOrder;
             renderer.transform.localScale = new Vector3(size, size, 1f);
+        }
+
+        public static void ConfigureSprite(SpriteRenderer renderer, Sprite sourceSprite, int sortingOrder)
+        {
+            if (renderer == null || sourceSprite == null) return;
+            renderer.sprite = sourceSprite;
+            renderer.color = Color.white;
+            renderer.sortingOrder = sortingOrder;
+            renderer.transform.localScale = Vector3.one;
         }
     }
 

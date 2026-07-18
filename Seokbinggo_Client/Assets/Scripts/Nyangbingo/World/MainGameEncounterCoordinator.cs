@@ -25,6 +25,8 @@ namespace Nyangbingo.World
         [SerializeField] private MainGameRuntimeServices runtimeServices;
         [SerializeField] private BossManager bossManager;
         [SerializeField] private MainGameRaidTarget raidTarget;
+        [SerializeField] private CharacterArtCatalog characterArtCatalog;
+        [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
         [Min(1)][SerializeField] private int minimumSpawnRange = 12;
         [Min(1)][SerializeField] private int maximumSpawnRange = 24;
 
@@ -67,13 +69,16 @@ namespace Nyangbingo.World
         public event Action RaidSlotAvailable;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
-            MainGameRuntimeServices services, BossManager manager, MainGameRaidTarget target)
+            MainGameRuntimeServices services, BossManager manager, MainGameRaidTarget target,
+            CharacterArtCatalog artCatalog = null, GameplayArtCatalog gameplayArt = null)
         {
             gameDataCatalog = catalog;
             bootstrap = mainBootstrap;
             runtimeServices = services;
             bossManager = manager;
             raidTarget = target;
+            characterArtCatalog = artCatalog;
+            gameplayArtCatalog = gameplayArt;
         }
 
         private void Start() => Initialize();
@@ -81,10 +86,17 @@ namespace Nyangbingo.World
 #if UNITY_EDITOR
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F8)) TryStartEditorBossEncounter(
-                Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
-                    ? "gangcheol_boss"
-                    : "king_dokkaebi");
+            if (Input.GetKeyDown(KeyCode.F8))
+            {
+                var bossId = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
+                    ? "mother_bulgasari"
+                    : Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)
+                        ? "imugi"
+                        : Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
+                            ? "gangcheol_boss"
+                            : "king_dokkaebi";
+                TryStartEditorBossEncounter(bossId);
+            }
             if (Input.GetKeyDown(KeyCode.J)) DefeatAllYokaiForEditorTest();
             if (Input.GetKeyDown(KeyCode.K)) DefeatActiveBossForEditorTest();
         }
@@ -181,8 +193,10 @@ namespace Nyangbingo.World
             collider.isTrigger = true;
             var visualObject = new GameObject("Visual");
             visualObject.transform.SetParent(bossObject.transform, false);
-            RuntimePlaceholderVisual.Configure(visualObject.AddComponent<SpriteRenderer>(),
-                new Color(1f, .25f, .2f), 1.3f, 15);
+            var bossRenderer = visualObject.AddComponent<SpriteRenderer>();
+            var bossArt = characterArtCatalog != null ? characterArtCatalog.Find(definition.Id) : null;
+            if (bossArt?.Sprite == null)
+                RuntimePlaceholderVisual.Configure(bossRenderer, new Color(1f, .25f, .2f), 1.3f, 15);
             bossObject.AddComponent<RuntimeDamageFlash>();
             health.ConfigureForRuntime(definition.HitPoints);
             var combat = bossObject.AddComponent<BossCombatController>();
@@ -190,6 +204,19 @@ namespace Nyangbingo.World
             {
                 Destroy(bossObject);
                 return null;
+            }
+            combat.ConfigureWarningArt(gameplayArtCatalog);
+            if (bossArt?.Sprite != null)
+            {
+                var characterAnimator = visualObject.AddComponent<RuntimeCharacterSpriteAnimator>();
+                characterAnimator.Configure(bossArt, 15);
+                characterAnimator.Bind(combat);
+            }
+            if (string.Equals(definition.Id, "imugi", StringComparison.Ordinal))
+            {
+                var bodySprite = characterArtCatalog?.FindSprite("imugi_body");
+                if (bodySprite != null)
+                    bossObject.AddComponent<RuntimeImugiBodyVisual>().Configure(bodySprite, 14);
             }
             activeBossCombat = combat;
             forcedBossSpawnPending = definition.ForcedDay > 0 &&
@@ -494,10 +521,21 @@ namespace Nyangbingo.World
             var collider = yokaiObject.AddComponent<CircleCollider2D>();
             collider.radius = .42f;
             collider.isTrigger = true;
-            RuntimePlaceholderVisual.Configure(yokaiObject.AddComponent<SpriteRenderer>(),
-                raid ? new Color(1f, .45f, .8f) : new Color(.8f, .35f, 1f), .8f, 10);
+            var yokaiRenderer = yokaiObject.AddComponent<SpriteRenderer>();
+            var yokaiArt = characterArtCatalog != null
+                ? characterArtCatalog.Find(definition.Id)
+                : null;
+            if (yokaiArt?.Sprite == null)
+                RuntimePlaceholderVisual.Configure(yokaiRenderer,
+                    raid ? new Color(1f, .45f, .8f) : new Color(.8f, .35f, 1f), .8f, 10);
             yokaiObject.AddComponent<RuntimeDamageFlash>();
             var brain = yokaiObject.AddComponent<YokaiBrain>();
+            if (yokaiArt?.Sprite != null)
+            {
+                var characterAnimator = yokaiObject.AddComponent<RuntimeCharacterSpriteAnimator>();
+                characterAnimator.Configure(yokaiArt, 10);
+                characterAnimator.Bind(brain);
+            }
             var loot = yokaiObject.AddComponent<YokaiLoot>();
             loot.ConfigureForRuntime(definition);
             brain.ConfigureForRuntime(definition, raidTarget, instanceSpawnTrack: YokaiSpawnTrack.Raid);

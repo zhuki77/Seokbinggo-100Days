@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: ice_lake
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: -6174854518499500714, guid: bbb74f6f952c93648af08cbc4f157320, type: 3}
+  m_Sprite: {fileID: 4149957583998880654, guid: 444dd92792123574e8ab57ebd9a197f0, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

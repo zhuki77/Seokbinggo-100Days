@@ -328,6 +328,7 @@ namespace Nyangbingo.Combat
     public sealed class HomingProjectilePool
     {
         private readonly List<HomingProjectile> projectiles = new List<HomingProjectile>();
+        public IReadOnlyList<HomingProjectile> Projectiles => projectiles;
         public int CreatedCount => projectiles.Count;
         public int ActiveCount { get { var count = 0; foreach (var projectile in projectiles) if (projectile.IsActive) count++; return count; } }
 

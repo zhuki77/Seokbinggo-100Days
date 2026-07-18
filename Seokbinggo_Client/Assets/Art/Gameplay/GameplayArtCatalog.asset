@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 146fb9fd9d01eab4fbd2c038e2e6fe7d, type: 3}
+  m_Name: GameplayArtCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GameplayArtCatalog
+  temperatureFrames:
+  - {fileID: 6089713551096819619, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 7442340692086479441, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 2291581378479768530, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: -1015300253125513468, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 1470755588923593508, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 5344124077963382089, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 4241314421866331440, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 3074377415993671059, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: -1361327604885230186, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: 8177731838524445377, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: -5189892327583380677, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  - {fileID: -3769161349956858393, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
+  playerAttackFrames:
+  - {fileID: 4632834317428173865, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
+  - {fileID: 6284916264915588163, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
+  - {fileID: -8095174646388654662, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
+  - {fileID: -5862808029776645176, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
+  napFrames:
+  - {fileID: -4720411098547174715, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
+  - {fileID: -7882630989249393061, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
+  - {fileID: -8420978340319773532, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
+  - {fileID: 6903819377081626375, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
+  miningCrackFrames:
+  - {fileID: -734855239842383610, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
+  - {fileID: -3731632179725249485, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
+  - {fileID: -5504637012312644558, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
+  bossWarningFrames:
+  - {fileID: 3297973032039475795, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
+  - {fileID: 4423930028971399608, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
+  - {fileID: 561205347486940968, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
+  - {fileID: 4699966602189482013, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
+  - {fileID: 2350356796563014357, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
+  blueProjectileFrames:
+  - {fileID: 4082674624207476099, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
+  - {fileID: -245658596771386416, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
+  - {fileID: 1429566124144128816, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
