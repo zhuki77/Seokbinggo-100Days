@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: icesteel_ore
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: 5225378062527257822, guid: 7514314d093c3bb43a05c55cf5926507, type: 3}
+  m_Sprite: {fileID: -5892135280658725143, guid: 501f481b43120324291db73d6d4e2380, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

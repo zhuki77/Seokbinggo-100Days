@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: bedrock
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: -6323190219312509082, guid: e0b2bc74694fb5c45adfd63d9d6f4ddc, type: 3}
+  m_Sprite: {fileID: -1441502099202254596, guid: f56a6f0612393e0429c03e8e1b14a8a5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

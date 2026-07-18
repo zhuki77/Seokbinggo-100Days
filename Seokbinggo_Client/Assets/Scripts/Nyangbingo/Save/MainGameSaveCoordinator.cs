@@ -17,6 +17,7 @@ namespace Nyangbingo.Save
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
         [SerializeField] private MainGameEnvironmentState environmentState;
+        [SerializeField] private MainGameTurretRuntime turretRuntime;
         [SerializeField] private MainGameEncounterCoordinator encounterCoordinator;
         [SerializeField] private DayNightService timeService;
         [SerializeField] private SaveManager saveManager;
@@ -32,6 +33,7 @@ namespace Nyangbingo.Save
             MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services,
             MainGameEnvironmentState environment,
+            MainGameTurretRuntime turrets,
             MainGameEncounterCoordinator encounters,
             DayNightService clock,
             SaveManager manager,
@@ -41,6 +43,7 @@ namespace Nyangbingo.Save
             bootstrap = mainBootstrap;
             runtimeServices = services;
             environmentState = environment;
+            turretRuntime = turrets;
             encounterCoordinator = encounters;
             timeService = clock;
             saveManager = manager;
@@ -59,12 +62,14 @@ namespace Nyangbingo.Save
             bootstrap ??= GetComponent<MainGameBootstrap>();
             runtimeServices ??= GetComponent<MainGameRuntimeServices>();
             environmentState ??= GetComponent<MainGameEnvironmentState>();
+            turretRuntime ??= GetComponent<MainGameTurretRuntime>();
             encounterCoordinator ??= GetComponent<MainGameEncounterCoordinator>();
             timeService ??= GetComponent<DayNightService>();
             saveManager ??= GetComponent<SaveManager>();
             dawnAutoSave ??= GetComponent<DawnAutoSave>();
 
-            if (bootstrap == null || runtimeServices == null || environmentState == null || encounterCoordinator == null ||
+            if (bootstrap == null || runtimeServices == null || environmentState == null || turretRuntime == null ||
+                encounterCoordinator == null ||
                 timeService == null || saveManager == null || dawnAutoSave == null ||
                 !bootstrap.InitializeServices() || !runtimeServices.Initialize() || !environmentState.Initialize() ||
                 !encounterCoordinator.Initialize())
@@ -123,6 +128,7 @@ namespace Nyangbingo.Save
             if (!bootstrap.Session.CaptureSnapshot(save)) return null;
 
             save.placedObjectRecords = environmentState.ExportPlacedObjects();
+            if (!turretRuntime.CaptureProgress(save)) return null;
             if (!PlayerTimeBossSaveAdapter.Capture(save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager))
                 return null;
@@ -193,7 +199,8 @@ namespace Nyangbingo.Save
                 (!save.playerState.hasTemperature ||
                  runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
                 encounterCoordinator.RestoreProgress(save) &&
-                environmentState.TryRestorePlacedObjects(save.placedObjectRecords);
+                environmentState.TryRestorePlacedObjects(save.placedObjectRecords) &&
+                turretRuntime.RestoreProgress(save);
                 return succeeded;
             }
             finally

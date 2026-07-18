@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff89639c915fffd458bd0a1f22c96520, type: 3}
+  m_Name: ItemArtCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemArtCatalog
+  entries:
+  - id: straw_helm
+    sprite: {fileID: -1549732909551137463, guid: c7ad8a3cb6725584fa30a9c13851af42, type: 3}
+  - id: straw_armor
+    sprite: {fileID: 8666384606237025198, guid: e7069fca86302564589a105d907bf683, type: 3}
+  - id: straw_boots
+    sprite: {fileID: -8552582348445748943, guid: c1d41552de8616f40bf630db0b0e2a25, type: 3}
+  - id: iron_helm
+    sprite: {fileID: -6317210384991082757, guid: 37706b57c5f4d604994649284b99032c, type: 3}
+  - id: iron_armor
+    sprite: {fileID: -948754495056464395, guid: e9ce4f8ca481aa34c8fb644960a04715, type: 3}
+  - id: iron_boots
+    sprite: {fileID: -3440963406023141052, guid: 06dc69448409f61468522821bd145204, type: 3}
+  - id: icesteel_helm
+    sprite: {fileID: 7789743151848434024, guid: e1106c75c10847744a6392e59119b8ba, type: 3}
+  - id: icesteel_armor
+    sprite: {fileID: 6986519032436896046, guid: 1e547f5206ac65443b67d62f361cb55a, type: 3}
+  - id: icesteel_boots
+    sprite: {fileID: 7784809103556119206, guid: ca9c1ac4a47d8474fa1bf605abb52551, type: 3}
+  - id: bell_norigae
+    sprite: {fileID: -5911313100936678976, guid: d668eb8cf00889f4bb05eaec5128aa6a, type: 3}
+  - id: wind_daenggi
+    sprite: {fileID: -8426036865995822105, guid: 405fdb0d79515e84cb2faa40a86bb402, type: 3}
+  - id: tiger_eye_bead
+    sprite: {fileID: 3951562560574670857, guid: 5306e03d9a6c138499010048b1ea9028, type: 3}
+  - id: ice_heart_norigae
+    sprite: {fileID: 6242185748945974111, guid: c9e6d33aa2bc64c4a8e8cfb0e2679719, type: 3}
+  - id: bokjumeoni
+    sprite: {fileID: -136793687118069845, guid: a3ebc55273689424582360afcf270664, type: 3}
+  - id: dokkaebi_gamtu
+    sprite: {fileID: 2488249953745425912, guid: 845fd919eeee61443b219a5102d92828, type: 3}
+  - id: ssireum_satba
+    sprite: {fileID: -4789564392577086773, guid: f8e65023324def4469768759b4c61ab6, type: 3}
+  - id: iron_bait_pile
+    sprite: {fileID: -6809966416514452904, guid: e2a11ac8c28a5cb468616dd24082cfe4, type: 3}
+  - id: ice_altar_offering
+    sprite: {fileID: 5745268669429968758, guid: 856f2aa75ee64dd48a0ffdb0ea3c7727, type: 3}
+  - id: drought_talisman
+    sprite: {fileID: 2020467084064704490, guid: e3c63e49b90521e4a923e9311dc5ec33, type: 3}

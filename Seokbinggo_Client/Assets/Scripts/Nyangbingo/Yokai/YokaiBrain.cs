@@ -45,6 +45,7 @@ namespace Nyangbingo.Yokai
         public float LanternPauseRemaining => lanternPauseRemaining;
         public float BloomCooldownRemaining => bloomCooldownRemaining;
         public event System.Action Bloomed;
+        public event System.Action Attacked;
         public event System.Action<YokaiDefinition> DawnFleeStarted;
         public event System.Action<YokaiDefinition> FledOffscreen;
 
@@ -286,7 +287,10 @@ namespace Nyangbingo.Yokai
                     {
                         if (contactAttackRemaining <= .0001f && definition.ContactDamage > 0 &&
                             combatTarget.TryApplyContactDamage(definition.ContactDamage))
+                        {
                             contactAttackRemaining = ContactAttackIntervalGameSeconds;
+                            Attacked?.Invoke();
+                        }
                         break;
                     }
                     var wall = target as IWallMaterialTarget;
@@ -299,6 +303,7 @@ namespace Nyangbingo.Yokai
                         if (!float.IsNaN(damage) && !float.IsInfinity(damage))
                         {
                             target.DamageWall(damage);
+                            Attacked?.Invoke();
                             GameEvents.RaiseWallDamaged();
                         }
                     }
