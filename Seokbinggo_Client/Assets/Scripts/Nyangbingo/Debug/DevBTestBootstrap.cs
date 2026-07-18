@@ -105,6 +105,7 @@ namespace Nyangbingo.Debugging
                 Debug.LogError("[Nyangbingo] Save test failed.");
             else Debug.Log("[Nyangbingo] Item acquisition, crafting, and save round-trip completed.");
             TestSaveJsonSchemaRejection();
+            TestRegularEncounterSaveRoundTrip();
             TestV24SaveIdMigration();
             TestSaveManagerInputValidation(save);
             TestSaveManagerAtomicReplacement(save);
@@ -355,6 +356,35 @@ namespace Nyangbingo.Debugging
             if (emptyRejected && futureRejected && legacyAccepted)
                 Debug.Log("[Nyangbingo] Save JSON future-schema rejection and legacy normalization completed.");
             else Debug.LogError("[Nyangbingo] Save JSON schema validation test failed.");
+        }
+
+        private void TestRegularEncounterSaveRoundTrip()
+        {
+            var source = new SaveGame
+            {
+                regularEncounter = new RegularEncounterStateRecord
+                {
+                    hasValue = true,
+                    day = 7,
+                    isNight = true,
+                    discardRegularForCurrentNight = true,
+                    remainingRegularYokaiIds = new System.Collections.Generic.List<string>()
+                }
+            };
+            var roundTripSucceeded = SaveManager.TryDeserialize(JsonUtility.ToJson(source), out var restored);
+            var suppressionPreserved = roundTripSucceeded && restored.regularEncounter.hasValue &&
+                                       restored.regularEncounter.day == 7 && restored.regularEncounter.isNight &&
+                                       restored.regularEncounter.discardRegularForCurrentNight &&
+                                       restored.regularEncounter.remainingRegularYokaiIds.Count == 0;
+            var legacySucceeded = SaveManager.TryDeserialize("{\"schemaVersion\":10}", out var legacy);
+            var legacyUsesFallback = legacySucceeded && legacy.regularEncounter != null &&
+                                     !legacy.regularEncounter.hasValue &&
+                                     legacy.regularEncounter.remainingRegularYokaiIds.Count == 0;
+
+            if (suppressionPreserved && legacyUsesFallback)
+                Debug.Log("[Nyangbingo] Regular yokai encounter suppression save round-trip completed.");
+            else
+                Debug.LogError("[Nyangbingo] Regular yokai encounter suppression save round-trip test failed.");
         }
 
         private void TestV24SaveIdMigration()
