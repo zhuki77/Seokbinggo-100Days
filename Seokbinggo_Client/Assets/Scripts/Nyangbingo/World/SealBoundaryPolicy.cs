@@ -66,10 +66,14 @@ namespace Nyangbingo.World
 
             // Attachments modify a base wall instead of sealing as standalone tiles.
             // Until door state exists, a placed door tile represents its closed state.
-            return !string.IsNullOrEmpty(tile.elementType) &&
-                   RuntimeElementRules.TryGetValue(tile.elementType, out var officialElement) &&
-                   Resolve(officialElement);
+            return SealsPlacedElement(tile.elementType);
         }
+
+        /// <summary>설치물 definitionId가 공식 차열 경계로 인정되는지 조회한다.</summary>
+        public bool SealsPlacedElement(string definitionId) =>
+            !string.IsNullOrEmpty(definitionId) &&
+            RuntimeElementRules.TryGetValue(definitionId, out var officialElement) &&
+            Resolve(officialElement);
 
         private bool Resolve(string element) =>
             sealsByElement.TryGetValue(element, out var seals) && seals;

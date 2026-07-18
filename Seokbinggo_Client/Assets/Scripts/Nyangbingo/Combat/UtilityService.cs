@@ -5,7 +5,7 @@ using Nyangbingo.Data;
 
 namespace Nyangbingo.Combat
 {
-    public sealed class UtilityService
+    public sealed class UtilityService : IGameSecondsTickable
     {
         private readonly Dictionary<UtilityKind, float> cooldowns = new Dictionary<UtilityKind, float>();
         private readonly Nyangbingo.Inventory.Inventory inventory;

@@ -65,6 +65,7 @@ namespace Nyangbingo.Debugging
             TestImportedCombatProfiles();
             TestGameDataCatalogInvalidEntryRejection();
             TestImportedBossDefinitions();
+            TestBossCombatRuntime();
             TestBossStartValidation();
             TestBossSummonPaymentTransaction();
             TestBossSummonAndForcedEncounterRules();
@@ -1093,6 +1094,57 @@ namespace Nyangbingo.Debugging
                 Debug.Log("[Nyangbingo] Imported boss extended combat, summon materials, and drops.csv rewards completed.");
             else
                 Debug.LogError("[Nyangbingo] Imported boss definition test failed.");
+        }
+
+        private void TestBossCombatRuntime()
+        {
+            var definition = gameDataCatalog != null ? gameDataCatalog.FindBoss("king_dokkaebi") : null;
+            var bossObject = new GameObject("TemporaryBossCombatRuntime");
+            var targetObject = new GameObject("TemporaryBossCombatTarget");
+            try
+            {
+                var bossHealth = bossObject.AddComponent<Health>();
+                bossHealth.ConfigureForRuntime(definition != null ? definition.HitPoints : 1);
+                var targetBody = targetObject.AddComponent<Rigidbody2D>();
+                targetBody.bodyType = RigidbodyType2D.Kinematic;
+                targetBody.gravityScale = 0f;
+                var targetHealth = targetObject.AddComponent<Health>();
+                targetHealth.ConfigureForRuntime(100);
+                var target = targetObject.AddComponent<MainGameRaidTarget>();
+                var combat = bossObject.AddComponent<BossCombatController>();
+
+                bossObject.transform.position = Vector3.zero;
+                targetBody.position = Vector2.right * 6f;
+                targetObject.transform.position = targetBody.position;
+                var configured = combat.ConfigureForRuntime(definition, target);
+                combat.Tick(1f);
+                var approached = Mathf.Approximately(bossObject.transform.position.x, 1.25f) &&
+                                 targetHealth.Current == 100;
+
+                var nearPosition = (Vector2)bossObject.transform.position + Vector2.right;
+                targetBody.position = nearPosition;
+                targetObject.transform.position = nearPosition;
+                combat.Tick(definition != null ? definition.SpecialCooldownSeconds : 0f);
+                var telegraphed = combat.IsTelegraphing;
+                combat.Tick(definition != null ? definition.TelegraphSeconds : 0f);
+                var expectedKnockbackX = nearPosition.x + (definition != null ? definition.SpecialKnockbackTiles : 0f);
+                var specialHit = definition != null && targetHealth.Current == 100 - definition.SpecialDamagePerHit &&
+                                 !combat.IsTelegraphing && !combat.IsSpecialActive &&
+                                 combat.SpecialCooldownRemaining > 0f &&
+                                 Mathf.Abs(targetBody.position.x - expectedKnockbackX) <= .001f;
+
+                if (configured && approached && telegraphed && specialHit)
+                    Debug.Log("[Nyangbingo] Boss combat approach, exact telegraph, CSV special damage, knockback, and cooldown completed.");
+                else Debug.LogError($"[Nyangbingo] Boss combat runtime test failed: configured={configured}, " +
+                                    $"approached={approached}, telegraphed={telegraphed}, specialHit={specialHit}, " +
+                                    $"hp={targetHealth.Current}, bodyX={targetBody.position.x:0.###}, " +
+                                    $"expectedX={expectedKnockbackX:0.###}.");
+            }
+            finally
+            {
+                Destroy(bossObject);
+                Destroy(targetObject);
+            }
         }
 
         private void TestBossStartValidation()

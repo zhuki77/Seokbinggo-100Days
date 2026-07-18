@@ -2,7 +2,7 @@ using Nyangbingo.Data;
 
 namespace Nyangbingo.Crafting
 {
-    public sealed class CraftingProcess
+    public sealed class CraftingProcess : Nyangbingo.Core.IGameSecondsTickable
     {
         private readonly CraftingService crafting;
         private RecipeDefinition active;
@@ -25,6 +25,8 @@ namespace Nyangbingo.Crafting
             if (remaining > 0f || !crafting.Inventory.TryAdd(active.Output.item.Id, active.Output.amount)) return false;
             active = null; return true;
         }
+
+        void Nyangbingo.Core.IGameSecondsTickable.Tick(float deltaGameSeconds) => Tick(deltaGameSeconds);
 
         public bool RestoreState(RecipeDefinition activeRecipe, float remainingSeconds)
         {
