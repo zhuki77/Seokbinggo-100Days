@@ -4,8 +4,13 @@
 #
 .utmp/
 [Ll]ibrary/
-[Tt]emp/
+# Unity 프로젝트 루트의 Temp만 무시한다.
+# (앞에 / 없으면 Assets/Tiles/Temp, Assets/Sprites/Temp 같은 에셋 폴더까지 무시되어 A-01 전달물이 커밋에서 빠진다.)
+/[Tt]emp/
 [Oo]bj/
+# 로컬 정리 백업·내보내기 폴더는 커밋하지 않는다.
+_backup_A01_cleanup_*/
+ExportBlock-*/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/

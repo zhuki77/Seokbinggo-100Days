@@ -30,21 +30,72 @@ namespace Nyangbingo.World
         [SerializeField] private Tilemap foregroundTilemap;
         [SerializeField] private Tilemap backgroundTilemap;
 
-        [Header("elementType ↔ TileBase 매핑 (드래그앤드롭)")]
+        [Header("elementType ↔ TileBase 매핑 (드래그앤드롭) — 1순위: 인스펙터 명시 매핑")]
         [SerializeField] private TileVisual[] tileVisuals = Array.Empty<TileVisual>();
+
+        [Tooltip("1순위(인스펙터 매핑)에 없는 elementType을 만나면 이 폴더 아래에서 " +
+                 "Resources.Load<TileBase>(\"{이 값}/{elementType}\")로 한 번 더 찾아본다(2순위, 선택 사항). " +
+                 "예: 값이 'Tiles'이고 elementType이 'dirt'면 'Assets/Resources/Tiles/dirt.asset'을 찾는다. " +
+                 "비워두면 이 단계를 건너뛰고 곧장 폴백 타일로 넘어간다.")]
+        [SerializeField] private string resourcesFallbackFolder = "Tiles";
+
+        [Tooltip("1·2순위 모두 실패했을 때 빈 칸(투명) 대신 그려줄 최종 대체 타일(3순위). 눈에 띄는 색(예: " +
+                 "마젠타)의 더미 타일을 연결해두면 매핑 누락 칸이 '검은 화면'처럼 안 보이는 게 아니라 화면에 " +
+                 "바로 도드라져서 원인을 즉시 알 수 있다. 비워두면 기존처럼 완전히 투명하게 처리된다.")]
+        [SerializeField] private TileBase fallbackTile;
+
+        [Tooltip("켜두면 매핑이 없는 elementType을 만나도 콘솔에 경고를 남기지 않는다. 시각 자료 없이 " +
+                 "로직만 확인하는 회귀 테스트용 더미 렌더러에서만 true로 설정할 것 — 실제 게임 씬에서는 " +
+                 "매핑 누락을 바로 알 수 있어야 하므로 항상 false로 둔다.")]
+        [SerializeField] private bool suppressMissingTileWarning;
 
         public Tilemap Foreground => foregroundTilemap;
         public Tilemap Background => backgroundTilemap;
 
-        private Dictionary<string, TileBase> _lookup;
+        // 초기값을 빈 딕셔너리로 잡아둔다 — RebuildLookupTable()이 "성급한 0개 갱신"을 막느라 조기
+        // 반환하는 경로를 타더라도 _lookup 자체는 항상 non-null이라, ResolveTile/TryGetTileBase가
+        // NullReferenceException 없이 안전하게 동작한다.
+        private Dictionary<string, TileBase> _lookup = new Dictionary<string, TileBase>();
 
         private void Awake()
         {
-            BuildLookup();
+            RebuildLookupTable();
         }
 
-        private void BuildLookup()
+        /// <summary>
+        /// 에디터 자동화 스크립트(A-01 SetupDevATileAssets 등)가 tileVisuals/fallbackTile을 코드로 직접
+        /// 설정할 때 쓰는 진입점. SerializedObject/SerializedProperty를 거치지 않고 이 클래스 내부에서
+        /// 필드에 바로 대입하므로, Editor 직렬화 마샬링 타이밍에 좌우되지 않고 항상 확정적으로 반영된다.
+        ///
+        /// 주의: 여기서는 절대로 RebuildLookupTable()을 호출하지 않는다 — 호출자가 AssetDatabase 저장/
+        /// SaveScene까지 전부 끝낸 뒤 딱 한 번만 명시적으로 호출해야, 디스크 반영이 끝나기도 전에 캐시가
+        /// 먼저 굳어버리는(그리고 그 결과가 "0개 갱신"으로 로그에 찍히는) 시간차 문제를 피할 수 있다.
+        /// 호출 후에는 EditorUtility.SetDirty(renderer) + 씬 저장을 별도로 해줘야 디스크에 영구 반영된다.
+        /// </summary>
+        public void SetTileVisualsForEditorSetup(TileVisual[] visuals, TileBase newFallbackTile)
         {
+            tileVisuals = visuals ?? Array.Empty<TileVisual>();
+            fallbackTile = newFallbackTile;
+        }
+
+        /// <summary>
+        /// tileVisuals(인스펙터 매핑)를 기준으로 조회용 딕셔너리를 처음부터 다시 만든다. 런타임에는
+        /// Awake()가 자동으로 호출하므로 직접 부를 필요가 없지만, 에디터 스크립트가 tileVisuals를
+        /// 코드로 갱신한 직후(예: SetupDevATileAssets) 실제로 몇 개가 유효하게 등록됐는지 즉시 확인하고
+        /// 싶을 때, 또는 런타임에 tileVisuals를 동적으로 바꾼 뒤 캐시를 갱신하고 싶을 때 호출한다.
+        /// </summary>
+        public void RebuildLookupTable()
+        {
+            // tileVisuals가 아직 비어 있다면(=배선 대기 중) 굳이 0개짜리 테이블로 덮어써서 "굳혀"버리지
+            // 않고 여기서 탈출한다. 기존에 이미 유효한 매핑이 캐싱돼 있었다면 그대로 보존되므로, 배선이
+            // 아직 안 끝난 시점에 실수로 호출되어도 이전의 정상 캐시를 0개로 뭉개는 사고를 막을 수 있다.
+            if (tileVisuals == null || tileVisuals.Length == 0)
+            {
+                Debug.LogWarning("[Nyangbingo] TilemapRenderer: tileVisuals가 비어 있어 룩업 테이블 갱신을 " +
+                                 "보류합니다. (배선 대기 중)");
+                return;
+            }
+
             _lookup = new Dictionary<string, TileBase>(tileVisuals.Length);
             foreach (var visual in tileVisuals)
             {
@@ -55,6 +106,7 @@ namespace Nyangbingo.World
                                       "중복 등록되어 있습니다. 첫 번째 항목만 사용합니다.");
                 }
             }
+            Debug.Log($"[Nyangbingo] TilemapRenderer: 룩업 테이블이 {_lookup.Count}개의 타일로 갱신되었습니다.");
         }
 
         /// <summary>
@@ -75,7 +127,7 @@ namespace Nyangbingo.World
                 return;
             }
 
-            if (_lookup == null) BuildLookup();
+            if (_lookup == null) RebuildLookupTable();
 
             var width = tiles.GetLength(0);
             var height = tiles.GetLength(1);
@@ -104,7 +156,7 @@ namespace Nyangbingo.World
                 }
             }
 
-            if (missing != null && missing.Count > 0)
+            if (missing != null && missing.Count > 0 && !suppressMissingTileWarning)
             {
                 var sb = new StringBuilder("[Nyangbingo] TilemapRenderer: 다음 elementType에 TileBase 매핑이 없어 빈 칸으로 처리했습니다: ");
                 sb.Append(string.Join(", ", missing));
@@ -124,18 +176,46 @@ namespace Nyangbingo.World
         /// <summary>이후 TileService(채굴)가 elementType → TileBase를 조회할 때도 재사용할 수 있게 공개한다.</summary>
         public bool TryGetTileBase(string elementType, out TileBase tile)
         {
-            if (_lookup == null) BuildLookup();
+            if (_lookup == null) RebuildLookupTable();
             return _lookup.TryGetValue(elementType, out tile);
         }
 
+        /// <summary>
+        /// 3단계 안전장치: 1) 인스펙터 명시 매핑 → 2) Resources.Load 동적 폴백(선택) → 3) 최종 fallbackTile.
+        /// 1순위가 항상 우선이므로, 인스펙터에 등록해둔 타일이 있으면 Resources 폴더 내용과 무관하게 그걸 쓴다.
+        /// </summary>
         private TileBase ResolveTile(string elementType, ref HashSet<string> missing)
         {
             if (string.IsNullOrEmpty(elementType)) return null;
-            if (_lookup.TryGetValue(elementType, out var found)) return found;
 
+            // 1순위: 인스펙터에 직접 드래그앤드롭으로 연결해둔 명시적 매핑.
+            if (_lookup.TryGetValue(elementType, out var explicitTile) && explicitTile != null)
+                return explicitTile;
+
+            // 2순위: Resources.Load 동적 폴백(선택 사항) — 파일명이 elementType과 정확히 일치해야 한다.
+            // suppressMissingTileWarning이 켜진 더미 렌더러(회귀 테스트 등)에서는 애초에 시도할 필요가
+            // 없는 진단용 기능이므로 함께 건너뛴다.
+            if (!string.IsNullOrEmpty(resourcesFallbackFolder) && !suppressMissingTileWarning)
+            {
+                var resourcePath = $"{resourcesFallbackFolder}/{elementType}";
+                var loaded = Resources.Load<TileBase>(resourcePath);
+                if (loaded != null)
+                {
+                    _lookup[elementType] = loaded; // 다음부터는 1순위 캐시로 바로 히트하게 저장.
+                    Debug.Log($"[Nyangbingo] TilemapRenderer: '{elementType}' 인스펙터 매핑이 없어 " +
+                              $"Resources.Load(\"{resourcePath}\")로 대신 찾았습니다. 가능하면 인스펙터에 " +
+                              "직접 등록해두는 것을 권장합니다(1순위가 더 안전함).");
+                    return loaded;
+                }
+                Debug.LogWarning($"[Nyangbingo] TilemapRenderer: [Resources/{resourcePath}] 로드 실패! " +
+                                  $"인스펙터 매핑도 없고 'Assets/Resources/{resourcePath}.asset' 경로에도 " +
+                                  "TileBase 에셋이 없습니다.");
+            }
+
+            // 3순위: 최종 폴백 타일(설정돼 있으면 화면에서 바로 눈에 띔), 없으면 투명 빈 칸.
             missing ??= new HashSet<string>();
             missing.Add(elementType);
-            return null;
+            return fallbackTile;
         }
 
         /// <summary>

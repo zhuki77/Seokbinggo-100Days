@@ -37,6 +37,18 @@ namespace Nyangbingo.Debugging
         [Min(0)][SerializeField] private int spawnQueryMinRange = 4;
         [Min(1)][SerializeField] private int spawnQueryMaxRange = 12;
 
+        [Header("7단계: 새벽 자동 저장(DawnAutoSave) 배선 — DEV_B_TO_DEV_A_HANDOFF.md §11.4")]
+        [SerializeField] private bool enableDawnAutoSave = true;
+        [SerializeField] private WorldSessionSaveProviderAdapter saveProviderAdapter;
+        [SerializeField] private DawnAutoSave dawnAutoSave;
+
+        [Header("8단계: 중앙 game seconds Tick 드라이버 (A-04) — 제작/제련/AI 등 Dev B 소비자가 연결하는 지점")]
+        [SerializeField] private bool enableCentralTickDriver = true;
+        [SerializeField] private CentralTickDriver tickDriver;
+        [Tooltip("Tick 드라이버가 실제로 누적값을 relay하는지 눈으로 확인하기 위한 Dev A 자체 테스트 소비자.")]
+        [SerializeField] private bool registerTickProbe = true;
+        private DevATickProbe tickProbe;
+
         private const int MaxSpawnQueryMarkers = 40;
 
         private WorldSessionController session;
@@ -49,6 +61,9 @@ namespace Nyangbingo.Debugging
         /// <summary>WorldSessionController와 함께 생성된다. SealSystemDebugView 등이 이 인스턴스로 밀폐 상태를 조회/시각화한다.</summary>
         public SealSystem SealSystem => session?.SealSystem;
 
+        /// <summary>개발 B가 제작/제련/AI 등 Tick(float deltaGameSeconds) 소비자를 등록·해제하는 진입점(A-04).</summary>
+        public IGameSecondsTickDriver TickDriver => tickDriver;
+
         private void Start()
         {
             if (config == null)
@@ -57,10 +72,32 @@ namespace Nyangbingo.Debugging
                 return;
             }
 
+            // "개발 A 보완 작업 명세서" §5: session.TimeService/TickDriver가 StartNewWorld 완료(=WorldLoaded
+            // 발행) 시점에 이미 채워져 있어야 하므로, 세션을 만들기 전에 DayNightService/CentralTickDriver를
+            // 먼저 준비한다.
+            SetupDayNightCycle();
+            SetupCentralTickDriver();
+
             if (tilemapRenderer != null)
             {
                 session = new WorldSessionController(config, tilemapRenderer, catalog);
-                var result = session.StartNewWorld(seed);
+                session.BindTimeService(dayNightService);
+                session.BindTickDriver(tickDriver);
+                session.WorldLoaded += HandleWorldLoaded; // §5 항목 7 검증용 — 실제 배선 예시는 §2 문서 참고.
+
+                WorldGenerationResult result;
+                try
+                {
+                    result = session.StartNewWorld(seed);
+                }
+                catch (System.InvalidOperationException ex)
+                {
+                    // A-08: 검증 실패 월드를 조용히 시작하지 않는다 — 세션을 만들지 않고 명확한 오류만 남긴다.
+                    Debug.LogError($"[Nyangbingo] MapGeneratorTestHarness: 월드 생성 검증에 실패해 씬을 시작하지 않습니다. {ex.Message}");
+                    session.WorldLoaded -= HandleWorldLoaded;
+                    session = null;
+                    return;
+                }
                 LogGenerationSummary(result);
                 BuildChestMarkers(result);
                 BindSealSystemToDebugViews();
@@ -78,12 +115,21 @@ namespace Nyangbingo.Debugging
                 FrameCamera(result.width, result.height);
             }
 
-            if (enableSaveLoadHotkeys && saveManager == null)
-                saveManager = GetComponent<SaveManager>() ?? gameObject.AddComponent<SaveManager>();
+            if (enableSaveLoadHotkeys) EnsureSaveManager();
 
-            SetupDayNightCycle();
+            SetupDawnAutoSave();
 
             if (logLegend) LogLegend();
+        }
+
+        /// <summary>
+        /// §5 항목 7 배선 예시: 개발 B 시스템은 이 이벤트가 발행된 시점부터 session.TileService/SealSystem/
+        /// TimeService/TickDriver를 안전하게 조회할 수 있다(그 이전 시점의 참조는 아직 없거나 이전 월드의 것).
+        /// </summary>
+        private void HandleWorldLoaded()
+        {
+            Debug.Log("[Nyangbingo] WorldLoaded 발행 — session.TileService/SealSystem/TimeService/TickDriver가 " +
+                      "모두 최신 라이브 상태를 가리킵니다.");
         }
 
         private void Update()
@@ -97,10 +143,13 @@ namespace Nyangbingo.Debugging
         private void OnDestroy()
         {
             // SealSystem/GameEvents는 정적 이벤트를 구독하므로 반드시 해제한다.
+            if (session != null) session.WorldLoaded -= HandleWorldLoaded;
             session?.Dispose();
             GameEvents.OnDayStart -= HandleDayStart;
             GameEvents.OnNightStart -= HandleNightStart;
             GameEvents.OnDawnWarning -= HandleDawnWarning;
+
+            if (tickDriver != null && tickProbe != null) tickDriver.Unregister(tickProbe);
         }
 
         /// <summary>
@@ -117,6 +166,59 @@ namespace Nyangbingo.Debugging
             GameEvents.OnDayStart += HandleDayStart;
             GameEvents.OnNightStart += HandleNightStart;
             GameEvents.OnDawnWarning += HandleDawnWarning;
+        }
+
+        private void EnsureSaveManager()
+        {
+            if (saveManager == null)
+                saveManager = GetComponent<SaveManager>() ?? gameObject.AddComponent<SaveManager>();
+        }
+
+        /// <summary>
+        /// A-04: 개발 B의 제작/제련/유틸리티/AI/전투 Tick 소비자가 연결할 공통 game seconds Tick 드라이버를
+        /// 씬에 준비한다(없으면 자동 부착). 실제로 delta game seconds가 relay되는지 눈으로 확인할 수 있도록
+        /// Dev A 자체 테스트 소비자(DevATickProbe)를 하나 등록해 누적값을 HUD/로그로 노출한다.
+        /// </summary>
+        private void SetupCentralTickDriver()
+        {
+            if (!enableCentralTickDriver) return;
+
+            if (tickDriver == null)
+                tickDriver = GetComponent<CentralTickDriver>() ?? gameObject.AddComponent<CentralTickDriver>();
+            tickDriver.Configure(dayNightService);
+
+            if (registerTickProbe)
+            {
+                tickProbe = new DevATickProbe();
+                tickDriver.Register(tickProbe);
+            }
+
+            Debug.Log("[Nyangbingo] 중앙 game seconds Tick 드라이버 준비 완료 — IGameSecondsTickable 구현체를 " +
+                      "harness.TickDriver.Register(...)로 등록하면 매 프레임 delta game seconds를 받습니다.");
+        }
+
+        /// <summary>
+        /// DEV_B_TO_DEV_A_HANDOFF.md §11.4/§13 1단계 완료 기준("새벽 시... 자동 저장이 한 번만 실행")을
+        /// 이 하네스 안에서 실제로 배선한다. WorldSessionController는 MonoBehaviour가 아니라 씬에 미리
+        /// 인스펙터로 꽂아둘 수 없으므로, 세션이 만들어진 뒤 WorldSessionSaveProviderAdapter를 통해
+        /// 코드로 연결한다 — F5/F9 수동 저장과 동일한 session/saveManager/saveSlot을 그대로 재사용해,
+        /// 새벽 자동 저장과 수동 저장이 같은 슬롯을 놓고 서로 다른 상태를 남기지 않게 한다.
+        /// </summary>
+        private void SetupDawnAutoSave()
+        {
+            if (!enableDawnAutoSave || session == null) return;
+
+            EnsureSaveManager();
+
+            if (saveProviderAdapter == null)
+                saveProviderAdapter = GetComponent<WorldSessionSaveProviderAdapter>() ?? gameObject.AddComponent<WorldSessionSaveProviderAdapter>();
+            saveProviderAdapter.Configure(session);
+
+            if (dawnAutoSave == null)
+                dawnAutoSave = GetComponent<DawnAutoSave>() ?? gameObject.AddComponent<DawnAutoSave>();
+            dawnAutoSave.Configure(saveManager, dayNightService, saveProviderAdapter, saveSlot);
+
+            Debug.Log($"[Nyangbingo] 새벽 자동 저장 배선 완료 — 슬롯 {saveSlot}. 새벽(ITimeSource.Dawn)마다 자동 저장됩니다.");
         }
 
         private void HandleDayStart()
@@ -172,7 +274,7 @@ namespace Nyangbingo.Debugging
         }
 
         /// <summary>
-        /// 낮/밤 상태와 D-30 카운트다운을 화면에 바로 찍어주는 디버그 HUD. 배속 버튼으로 인스펙터를
+        /// 낮/밤 상태와 D-100 카운트다운을 화면에 바로 찍어주는 디버그 HUD. 배속 버튼으로 인스펙터를
         /// 열지 않고도 빠르게 밤/낮 전환을 재현해 이벤트 발행을 확인할 수 있다.
         /// </summary>
         private void OnGUI()
@@ -184,7 +286,10 @@ namespace Nyangbingo.Debugging
             {
                 $"D-{dayNightService.DaysRemaining} (Day {dayNightService.Day})",
                 $"상태: {dayNightService.State} — 다음 전환까지 {dayNightService.SecondsUntilNextTransition:0.0}초",
-                $"누적 GameSeconds: {dayNightService.GameSeconds:0.0}s"
+                $"누적 GameSeconds: {dayNightService.GameSeconds:0.0}s",
+                tickProbe != null
+                    ? $"TickDriver 소비자 {tickDriver?.RegisteredCount ?? 0}명 — 프로브 누적 {tickProbe.AccumulatedGameSeconds:0.0}s ({tickProbe.TickCallCount}회)"
+                    : "TickDriver 비활성"
             };
 
             GUI.Box(new Rect(10, 10, 340, 24 * lines.Length + 44), string.Empty);
@@ -268,7 +373,7 @@ namespace Nyangbingo.Debugging
         /// </summary>
         private void BindSealSystemToDebugViews()
         {
-            foreach (var debugView in FindObjectsByType<SealSystemDebugView>(FindObjectsSortMode.None))
+            foreach (var debugView in FindObjectsByType<SealSystemDebugView>())
             {
                 if (debugView.Harness == this) debugView.BindSealSystem(SealSystem);
             }
@@ -402,13 +507,30 @@ namespace Nyangbingo.Debugging
             };
         }
 
+        /// <summary>
+        /// A-04 검증용 Dev A 자체 Tick 소비자. CentralTickDriver.Register(this)로 등록되어 매 프레임
+        /// delta game seconds를 누적한다 — 누적값이 dayNightService.GameSeconds와 항상 같은 속도로
+        /// 늘어나는지(=배속/정지가 정확히 반영되는지)를 HUD로 바로 확인할 수 있다.
+        /// </summary>
+        private sealed class DevATickProbe : Nyangbingo.Core.IGameSecondsTickable
+        {
+            public float AccumulatedGameSeconds { get; private set; }
+            public int TickCallCount { get; private set; }
+
+            public void Tick(float deltaGameSeconds)
+            {
+                AccumulatedGameSeconds += deltaGameSeconds;
+                TickCallCount++;
+            }
+        }
+
         private static void LogLegend()
         {
             Debug.Log("[Nyangbingo] 범례 — 초록: 스폰(반지하 알코브), 빨강: 이무기 제단, 노랑: 미개봉 상자, 회색: 개봉된 상자, " +
                       "보라: 밤 시간대 요괴 스폰 후보(GetValidSpawnPositions 데모), " +
                       "하늘색: 개방 공중, 어두운 무채색: 동굴(배경벽), 갈색: 흙, 회색: 돌, 검정: 석탄, 주황: 점토, " +
                       "적갈색: 철광석, 금색: 구리광석, 청록: 얼음조각/서리류, 진남색: 심층암, 보라: 폐허, 마젠타: 미매핑 타일. " +
-                      "F5: 저장, F9: 로드(세이브/상자 개봉 테스트). 좌상단 HUD: D-30/낮밤 상태/배속 조절.");
+                      "F5: 저장, F9: 로드(세이브/상자 개봉 테스트). 좌상단 HUD: D-100/낮밤 상태/배속 조절.");
         }
     }
 }

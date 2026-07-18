@@ -288,6 +288,12 @@ MonoBehaviour:
   showSpawnQueryDemoAtNight: 1
   spawnQueryMinRange: 4
   spawnQueryMaxRange: 12
+  enableDawnAutoSave: 1
+  saveProviderAdapter: {fileID: 0}
+  dawnAutoSave: {fileID: 0}
+  enableCentralTickDriver: 1
+  tickDriver: {fileID: 0}
+  registerTickProbe: 1
 --- !u!4 &916007806
 Transform:
   m_ObjectHideFlags: 0
@@ -337,41 +343,44 @@ MonoBehaviour:
   backgroundTilemap: {fileID: 1519643774}
   tileVisuals:
   - elementType: dirt
-    tile: {fileID: 11400000, guid: e0b037beb8033914fb87634b26366e8e, type: 2}
+    tile: {fileID: 11400000, guid: cd072d0f4b4211044b52711b7663b3b5, type: 2}
   - elementType: stone
-    tile: {fileID: 11400000, guid: c914c88063978f44d80dcd8cee8bddf1, type: 2}
+    tile: {fileID: 11400000, guid: d255f62c3e6942a48807cda3eb0d99f5, type: 2}
   - elementType: coal
-    tile: {fileID: 11400000, guid: 5e4e582f2f9afdf438eaa0654a3ccec9, type: 2}
+    tile: {fileID: 11400000, guid: 240a0f23c7c08644aa7bf7790fa09cc5, type: 2}
   - elementType: clay
-    tile: {fileID: 11400000, guid: 70e3afde47e30d047a3aeb4b82218cab, type: 2}
+    tile: {fileID: 11400000, guid: 9a616cfd585433f42a3d9a98538e6526, type: 2}
   - elementType: stone_mid
-    tile: {fileID: 11400000, guid: a1c40c88269c80e4c931fec3de8796bc, type: 2}
+    tile: {fileID: 11400000, guid: 1e8bd955239ffd74681173f48b1578f9, type: 2}
   - elementType: iron_ore
-    tile: {fileID: 11400000, guid: f55e495145aa59d4398a204e3e774ac8, type: 2}
+    tile: {fileID: 11400000, guid: 26081705d24e73548ad9259732df8c63, type: 2}
   - elementType: copper_ore
-    tile: {fileID: 11400000, guid: 9caf20702ce0b684f94d328fb0cfad98, type: 2}
+    tile: {fileID: 11400000, guid: d366259fa61bd054ab60880ac4141b74, type: 2}
   - elementType: ice_shard
-    tile: {fileID: 11400000, guid: 91cd996e805ec8948be498121cbfff78, type: 2}
+    tile: {fileID: 11400000, guid: 37e1936fba65a7c41b8424e624f66e0c, type: 2}
   - elementType: stone_deep
-    tile: {fileID: 11400000, guid: 68c5a56826aff704c9a6bb47d93e9c8e, type: 2}
+    tile: {fileID: 11400000, guid: e52b39d0b5d052b4bb1f2938cc2ded7c, type: 2}
   - elementType: ice_steel_ore
-    tile: {fileID: 11400000, guid: bf877346e59fb1a4b995d22bb9b9dc33, type: 2}
+    tile: {fileID: 11400000, guid: bd2229803aacb724c8e89044305e594d, type: 2}
   - elementType: frost_essence
-    tile: {fileID: 11400000, guid: 00e45c48ea58ec74dbaff58561aa7d78, type: 2}
+    tile: {fileID: 11400000, guid: c14b7dbcf4c572b4a9ff186f0e706cfc, type: 2}
   - elementType: bedrock
-    tile: {fileID: 11400000, guid: 5676d3fbea401d7478bff8eeb623aa0c, type: 2}
+    tile: {fileID: 11400000, guid: f0ea099369579ff4bb6e4acd127b0929, type: 2}
   - elementType: ruin_wall
-    tile: {fileID: 11400000, guid: f2b4db2d4cce1274a901190cdf9fe304, type: 2}
+    tile: {fileID: 11400000, guid: c19e39b585577b14eb418daf8e1f6394, type: 2}
   - elementType: ice_lake
-    tile: {fileID: 11400000, guid: 7e8088e8bee84004c9a23c2d7226f35e, type: 2}
+    tile: {fileID: 11400000, guid: d0b3d85d7f2db594a9c9af26229af576, type: 2}
   - elementType: ice_altar
-    tile: {fileID: 11400000, guid: 720eedef6e4a7374f9927d8b00e504a7, type: 2}
+    tile: {fileID: 11400000, guid: 2d0f1834e4984a8499e4f44da1390064, type: 2}
   - elementType: bg_dirt
-    tile: {fileID: 11400000, guid: 89d988da1fb2e7a4482e7c3431b9e95b, type: 2}
+    tile: {fileID: 11400000, guid: e5f7de40ed6361745b96f20ec47d3f1f, type: 2}
   - elementType: bg_stone
-    tile: {fileID: 11400000, guid: 9a0bedd6aaf200b4691399c03767fc83, type: 2}
+    tile: {fileID: 11400000, guid: 2178abaf8f5ac9b47820ca38f64ae6f7, type: 2}
   - elementType: bg_deep
-    tile: {fileID: 11400000, guid: 089b8bfc8c722804f873f4f10b9e8b67, type: 2}
+    tile: {fileID: 11400000, guid: 26980fc3e58a59a4cba0577293a53927, type: 2}
+  resourcesFallbackFolder: Tiles
+  fallbackTile: {fileID: 11400000, guid: d110b510a41ecbc4db89aec3f0bf0be5, type: 2}
+  suppressMissingTileWarning: 0
 --- !u!156049354 &965551042
 Grid:
   m_ObjectHideFlags: 0
@@ -592,7 +601,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 90
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -617,7 +626,7 @@ Transform:
   m_GameObject: {fileID: 2121107463}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 200, y: 80, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

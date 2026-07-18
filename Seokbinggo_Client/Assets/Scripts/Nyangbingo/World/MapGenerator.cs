@@ -50,6 +50,20 @@ namespace Nyangbingo.World
         public const string BackgroundDirt = "bg_dirt";
         public const string BackgroundStone = "bg_stone";
         public const string BackgroundDeep = "bg_deep";
+
+        /// <summary>
+        /// Air를 제외한 모든 알려진 elementType(전경 15종 + 배경벽 3종 = 18종, 임시 타일 팔레트와 정확히 대응).
+        /// 세이브 로드 시 타일 변경 이력의 tileId가 이 목록에 없으면 손상된(또는 알 수 없는) 데이터로 간주해
+        /// 거부한다(A-06/A-08 — 문자열을 직접 이곳저곳에서 비교하지 않고 단일 출처로 검증).
+        /// </summary>
+        public static readonly HashSet<string> AllElementTypes = new HashSet<string>(StringComparer.Ordinal)
+        {
+            Dirt, Stone, Coal, Clay,
+            StoneMid, IronOre, CopperOre, IceShard,
+            StoneDeep, IceSteelOre, FrostEssence,
+            Bedrock, RuinWall, IceLake, IceAltar,
+            BackgroundDirt, BackgroundStone, BackgroundDeep
+        };
     }
 
     /// <summary>
@@ -866,19 +880,26 @@ namespace Nyangbingo.World
             var height = result.height;
             var spawn = result.spawnPoint;
 
-            if (!CheckOnboardingResources(grid, width, height, spawn, config)) return false;
-
             var reachable = FloodFillTraversable(grid, spawn, width, height);
 
             if (!CheckSpawnToBaseConnectivity(reachable, spawn)) return false;
+            if (!CheckOnboardingResources(grid, width, height, spawn, config, reachable)) return false;
             if (!CheckDeepLayerConnectivity(reachable, config)) return false;
             if (!CheckAltarReachability(reachable, result.altarPosition)) return false;
 
             return true;
         }
 
-        /// <summary>1) 스폰 주변에서 20초 이내(recipes.csv workbench: 흙8+돌12) 온보딩 재료 채굴이 가능한가.</summary>
-        private static bool CheckOnboardingResources(TileData[,] grid, int width, int height, Vector2Int spawn, WorldGenerationConfig config)
+        /// <summary>
+        /// 1) 스폰 반경 안에서 "실제로 걸어가 채굴할 수 있는" 온보딩 재료(recipes.csv workbench: 흙8+돌12)가
+        /// 충분한가. A-08: 예전에는 반경 안의 총 개수만 셌기 때문에, 반경 안이라도 벽 너머(도달 불가능한
+        /// 고립 포켓)에 있는 흙/돌까지 "확보 가능"으로 잘못 인정하는 결함이 있었다. 지금은 각 자원 후보 칸이
+        /// <paramref name="reachable"/>(스폰에서 공기 칸만 타고 갈 수 있는 네트워크)에 실제로 인접해 있어야만
+        /// 센다 — "채굴 소요 시간(초)"까지 시뮬레이션하지는 않지만, 최소한 "실제로 접근해서 채굴 가능한
+        /// 위치인가"는 정직하게 검증한다(인수인계 문서 A-08/A-11에 이 정책을 그대로 기록할 것).
+        /// </summary>
+        private static bool CheckOnboardingResources(TileData[,] grid, int width, int height, Vector2Int spawn,
+            WorldGenerationConfig config, HashSet<Vector2Int> reachable)
         {
             var radius = config.OnboardingSearchRadius;
             var dirtCount = 0;
@@ -888,7 +909,10 @@ namespace Nyangbingo.World
             {
                 for (var y = spawn.y - radius; y <= spawn.y + radius; y++)
                 {
-                    if (!InBounds(x, y, width, height)) continue;
+                    var point = new Vector2Int(x, y);
+                    if (!InBounds(point, width, height)) continue;
+                    if (!IsAdjacentToReachable(point, reachable, width, height)) continue; // 걸어서 인접할 수 없으면 "확보 가능"이 아니다.
+
                     var tile = grid[x, y];
                     if (string.Equals(tile.elementType, WorldTileTypes.Dirt, StringComparison.Ordinal)) dirtCount++;
                     else if (string.Equals(tile.elementType, WorldTileTypes.Stone, StringComparison.Ordinal)) stoneCount++;
@@ -896,6 +920,18 @@ namespace Nyangbingo.World
             }
 
             return dirtCount >= config.OnboardingRequiredDirt && stoneCount >= config.OnboardingRequiredStone;
+        }
+
+        /// <summary>해당 칸의 4방향 인접 칸 중 하나라도 스폰에서 걸어갈 수 있는 공기 네트워크(reachable)에 속하면
+        /// "그 자리에서 바로 채굴 가능"으로 간주한다.</summary>
+        private static bool IsAdjacentToReachable(Vector2Int point, HashSet<Vector2Int> reachable, int width, int height)
+        {
+            foreach (var offset in FourNeighbors)
+            {
+                var neighbor = point + offset;
+                if (InBounds(neighbor, width, height) && reachable.Contains(neighbor)) return true;
+            }
+            return false;
         }
 
         /// <summary>2) 스폰 지점(알코브 개방부)이 실제로 걸어 다닐 수 있는 공기 네트워크로 연결돼 있는가.</summary>
