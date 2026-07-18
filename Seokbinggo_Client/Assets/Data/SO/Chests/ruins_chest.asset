@@ -14,7 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ChestDefinition
   id: ruins_chest
   region: 0
-  rewards: []
+  spawnCount: 4
+  rewards:
+  - item: {fileID: 11400000, guid: ddc78b50168b1854f9b73807b3594b6b, type: 2}
+    amount: 4
+  - item: {fileID: 11400000, guid: d0cbb55eb184479478a337cef0a50eb8, type: 2}
+    amount: 6
   equipmentPool:
-  - {fileID: 11400000, guid: f387a6e6892109e40b2f141510c641e9, type: 2}
   - {fileID: 11400000, guid: ec209317bfed97241bd8c5baa8e9b83f, type: 2}
+  - {fileID: 11400000, guid: 3c360e633cdbe634990f8c8c10caa5b4, type: 2}
+  note: "\uBC24 \uC9C0\uC0C1 \uD0D0\uC0C9 \uBCF4\uC0C1"

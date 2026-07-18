@@ -13,13 +13,26 @@ MonoBehaviour:
   m_Name: bulgasari
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.YokaiDefinition
   id: bulgasari
+  displayName: "\uBD88\uAC00\uC0AC\uB9AC"
+  appearanceHint: "6\uC77C\uCC28 \uBC24~"
+  codexNote: "\uC1E0 \uD3EC\uC2DD \uD0F1\uCEE4 \u2014 \uD654\uC5FC \uC228\uACB0\uB85C
+    \uC5BC\uC74C \uC6A9\uD574"
   kind: 1
   hitPoints: 750
   moveSpeed: 1
   contactDamage: 10
-  wallDamagePerSecond: 16
+  contactDamageNoLantern: 10
+  wallDamageDefault: 16
+  wallDamageIce: 32
+  wallDamageIronWall: 0
+  damageTakenMultiplier: 1
+  damageTakenCondition: 0
+  stealSlots: 0
+  stealMaxItems: 0
   tearItem: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
   tearDrop: 2
   signatureItem: {fileID: 11400000, guid: 540b127e4916df045abc9c709e118208, type: 2}
   signatureChance: 0.5
+  spawnTracks: 1
+  raidFleesAtDawn: 1
   drops: []

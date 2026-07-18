@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: crafting_b_ui
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: crafting_b_ui
+  value: hidden
+  unit: rule
+  note: "MVP \uBC94\uC704 B \uB808\uC2DC\uD53C(crafting-tree.mvp_scope=B)\uB294 \uC81C\uC791
+    UI \uBBF8\uB178\uCD9C \u2014 \uB370\uC774\uD130 \uB85C\uB4DC\uB9CC \uD55C\uB2E4.
+    \uC624\uB108 \uD655\uC815(v23 2026-07-16): MVP \uBCF4\uC2A4 = \uB3C4\uAE68\uBE44
+    \uB300\uC7A5\xB7\uAC15\uCCA0\uC774 2\uC885. B \uC0AC\uC2AC(\uBB34\uC1E0 \uBBF8\uB07C
+    \uB354\uBBF8\xB7\uC5BC\uC74C \uC81C\uB2E8 \uBD09\uD5CC\xB7\uC2E0\uAE30\uC804
+    \uD654\uCC28\xB7\uBE59\uC815 \uB0C9\uAC01\uB85C)\uC740 31\uC77C~ \uD655\uC7A5\uC5D0\uC11C
+    \uC2B9\uACA9"

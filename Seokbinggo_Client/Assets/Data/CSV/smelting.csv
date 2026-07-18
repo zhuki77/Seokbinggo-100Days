@@ -1,4 +1,4 @@
-id,station,input,inputAmount,fuel,fuelAmount,output,outputAmount,durationSeconds
-smelt_iron,Furnace,iron_ore,2,coal,1,iron_ingot,1,20
-smelt_copper,Furnace,copper_ore,2,coal,1,copper_ingot,1,20
-smelt_ice_steel,Foundry,ice_steel_ore,2,coal,2,ice_steel_ingot,1,45
+id,station,input,inputAmount,fuel,fuelAmount,output,outputAmount,durationSeconds,batchCapacity,note
+smelt_iron,Furnace,iron_ore,2,coal,1,iron_ingot,1,20,6,풀배치 120초 방치
+smelt_copper,Furnace,copper_ore,2,coal,1,copper_ingot,1,20,6,철과 동일 규격
+smelt_icesteel,Foundry,icesteel_ore,2,coal,2,icesteel_ingot,1,45,4,상위 제련 석탄 2배

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Nyangbingo.Core;
 using Nyangbingo.Data;
 
 namespace Nyangbingo.Inventory
@@ -18,6 +19,7 @@ namespace Nyangbingo.Inventory
             foreach (var reward in definition.Rewards)
                 ItemAcquisition.Request(reward.item, reward.amount);
             if (equipmentReward != null) EquipmentAcquisition.Request(equipmentReward);
+            GameEvents.RaiseChestOpened();
             return true;
         }
         public List<string> Export() => new List<string>(opened);

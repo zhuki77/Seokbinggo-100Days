@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Nyangbingo.Bosses;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using Nyangbingo.Yokai;
 using UnityEngine;
 
@@ -73,18 +74,34 @@ namespace Nyangbingo.Debugging
     {
         private readonly List<DevBTestBaekjungSpawnRecord> records = new List<DevBTestBaekjungSpawnRecord>();
 
-        public int ActiveCount { get; private set; }
+        public int ActiveRaidCount { get; private set; }
+        public int ResidentCount { get; private set; }
         public IReadOnlyList<DevBTestBaekjungSpawnRecord> Records => records;
+        public event Action RaidSlotAvailable;
 
         public bool TrySpawn(YokaiKind kind, int waveIndex)
         {
             records.Add(new DevBTestBaekjungSpawnRecord(kind, waveIndex));
-            ActiveCount++;
+            ActiveRaidCount++;
             return true;
         }
 
-        public void DefeatAll() => ActiveCount = 0;
-        public void SeedActive(int amount) => ActiveCount = Math.Max(0, amount);
+        public void DefeatAll()
+        {
+            if (ActiveRaidCount <= 0) return;
+            ActiveRaidCount = 0;
+            RaidSlotAvailable?.Invoke();
+        }
+
+        public void DefeatRaid(int amount)
+        {
+            if (amount <= 0 || ActiveRaidCount <= 0) return;
+            ActiveRaidCount = Math.Max(0, ActiveRaidCount - amount);
+            RaidSlotAvailable?.Invoke();
+        }
+
+        public void SeedActive(int amount) => ActiveRaidCount = Math.Max(0, amount);
+        public void SeedResident(int amount) => ResidentCount = Math.Max(0, amount);
 
         public int Count(YokaiKind kind, int waveIndex)
         {
@@ -145,9 +162,10 @@ namespace Nyangbingo.Debugging
         public float EoduksiniLanternPauseSeconds { get; set; }
         public float EoduksiniBloomCooldownSeconds { get; set; }
         public float EoduksiniLanternDamageMultiplier { get; set; }
-        public bool IsIronHeatWall { get; set; }
+        public YokaiWallMaterial WallMaterial { get; set; }
         public int GroundLootStealCount { get; private set; }
         public int InventoryStealCount { get; private set; }
+        public int LastInventoryStealSlots { get; private set; }
         public int LastInventoryStealLimit { get; private set; }
         public float WallDamageReceived { get; private set; }
 
@@ -159,10 +177,11 @@ namespace Nyangbingo.Debugging
             GroundLootStealCount++;
             return true;
         }
-        public bool TryStealInventory(int maxAmount)
+        public bool TryStealInventory(int maxSlots, int maxAmount)
         {
-            if (IsInventoryTheftBlocked || maxAmount <= 0) return false;
+            if (IsInventoryTheftBlocked || maxSlots <= 0 || maxAmount <= 0) return false;
             InventoryStealCount++;
+            LastInventoryStealSlots = maxSlots;
             LastInventoryStealLimit = maxAmount;
             return true;
         }

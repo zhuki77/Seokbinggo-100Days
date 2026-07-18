@@ -11,7 +11,6 @@ namespace Nyangbingo.Combat
         private readonly Nyangbingo.Inventory.Inventory inventory;
         public event Action<float> FanUsed;
         public event Action<float> AlarmPlaced;
-        public event Action<float> FireBufferActivated;
 
         public UtilityService(Nyangbingo.Inventory.Inventory inventory = null)
         {
@@ -32,9 +31,8 @@ namespace Nyangbingo.Combat
             var used = false;
             switch (utility.Kind)
             {
-                case UtilityKind.FoldingFan: FanUsed?.Invoke(utility.Value); used = true; break;
+                case UtilityKind.Hapjukseon: FanUsed?.Invoke(utility.Value); used = true; break;
                 case UtilityKind.BellRope: AlarmPlaced?.Invoke(utility.Value); used = true; break;
-                case UtilityKind.FoxRainCharm: FireBufferActivated?.Invoke(utility.Value); used = true; break;
             }
 
             if (used && utility.CooldownSeconds > 0f) cooldowns[utility.Kind] = utility.CooldownSeconds;
@@ -73,7 +71,7 @@ namespace Nyangbingo.Combat
             return true;
         }
 
-        private static bool IsSupported(UtilityKind kind) => kind == UtilityKind.FoldingFan ||
-            kind == UtilityKind.BellRope || kind == UtilityKind.FoxRainCharm;
+        private static bool IsSupported(UtilityKind kind) => kind == UtilityKind.Hapjukseon ||
+            kind == UtilityKind.BellRope;
     }
 }

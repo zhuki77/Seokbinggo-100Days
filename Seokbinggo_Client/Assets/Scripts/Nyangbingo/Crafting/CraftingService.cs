@@ -35,7 +35,11 @@ namespace Nyangbingo.Crafting
         {
             if (!CanCraft(recipe, station, recipeBook)) return false;
             foreach (var ingredient in recipe.Ingredients) inventory.TryRemove(ingredient.item.Id, ingredient.amount);
-            if (inventory.TryAdd(recipe.Output.item.Id, recipe.Output.amount)) return true;
+            if (inventory.TryAdd(recipe.Output.item.Id, recipe.Output.amount))
+            {
+                GameEvents.RaiseCraftingCompleted();
+                return true;
+            }
             foreach (var ingredient in recipe.Ingredients) inventory.TryAdd(ingredient.item.Id, ingredient.amount);
             return false;
         }

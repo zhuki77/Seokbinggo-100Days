@@ -15,3 +15,6 @@ MonoBehaviour:
   id: lantern
   displayName: "\uB4F1\uBD88"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

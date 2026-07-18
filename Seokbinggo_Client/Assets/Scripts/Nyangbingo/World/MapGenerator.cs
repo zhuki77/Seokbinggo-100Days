@@ -37,7 +37,7 @@ namespace Nyangbingo.World
 
         // 심층 (T3)
         public const string StoneDeep = "stone_deep";
-        public const string IceSteelOre = "ice_steel_ore";
+        public const string IceSteelOre = "icesteel_ore";
         public const string FrostEssence = "frost_essence";
 
         // 구조물 / 최하단

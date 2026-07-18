@@ -1,5 +1,6 @@
 using System;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -27,6 +28,9 @@ namespace Nyangbingo.World
     /// </summary>
     public sealed class DayNightService : MonoBehaviour, IGameSecondsSource, ISaveableTimeSource
     {
+        [Header("Official day-curve.csv catalog")]
+        [SerializeField] private GameDataCatalog gameDataCatalog;
+
         [Header("낮/밤 길이 (기획 정본: 낮 900초 / 밤 540초)")]
         [Min(1f)][SerializeField] private float dayDurationSeconds = 900f;
         [Min(1f)][SerializeField] private float nightDurationSeconds = 540f;
@@ -49,6 +53,7 @@ namespace Nyangbingo.World
         private int day;
         private bool isNight;
         private bool dawnWarningFired;
+        private GlobalSettings globalSettings;
 
         /// <summary>새벽(밤→낮) 전환이 확정된 순간 정확히 한 번 호출된다. ITimeSource 계약.</summary>
         public event Action Dawn;
@@ -62,6 +67,10 @@ namespace Nyangbingo.World
         public float NightDurationSeconds => nightDurationSeconds;
         public float CycleLengthSeconds => dayDurationSeconds + nightDurationSeconds;
         public int SurvivalDayLimit => survivalDayLimit;
+        public int MvpContentDayLimit { get; private set; } = 30;
+        public DayCurveDefinition CurrentDayCurve => gameDataCatalog != null
+            ? gameDataCatalog.FindDayCurve(day) : null;
+        public GlobalSettings OfficialGlobals => globalSettings;
 
         /// <summary>D-100 HUD 표시용 — 생존 목표일까지 남은 날짜(도달/초과 시 0).</summary>
         public int DaysRemaining => Mathf.Max(0, survivalDayLimit - day);
@@ -77,8 +86,24 @@ namespace Nyangbingo.World
             set => timeScale = Mathf.Max(0f, value);
         }
 
+        public bool ConfigureDayCurve(GameDataCatalog catalog) => ConfigureOfficialData(catalog);
+
+        public bool ConfigureOfficialData(GameDataCatalog catalog)
+        {
+            gameDataCatalog = catalog;
+            if (!ApplyOfficialGlobals() || CurrentDayCurve == null) return false;
+            if (gameSeconds <= 0f && day <= 1)
+            {
+                isNight = startAtNight;
+                timeOfDayGameSeconds = isNight ? dayDurationSeconds : 0f;
+                dawnWarningFired = false;
+            }
+            return true;
+        }
+
         private void Awake()
         {
+            ApplyOfficialGlobals();
             day = Mathf.Max(1, startDay);
             isNight = startAtNight;
             // timeOfDayGameSeconds는 하루 전체(낮+밤) 누적 축이라 밤은 dayDurationSeconds 지점부터 시작한다.
@@ -86,6 +111,27 @@ namespace Nyangbingo.World
             // 첫 밤이 (dayDurationSeconds + nightDurationSeconds)만큼 길어지는 버그가 있었다(A-02).
             timeOfDayGameSeconds = isNight ? dayDurationSeconds : 0f;
             dawnWarningFired = false;
+        }
+
+        private bool ApplyOfficialGlobals()
+        {
+            globalSettings = gameDataCatalog != null ? new GlobalSettings(gameDataCatalog.Globals) : null;
+            if (globalSettings == null || !globalSettings.IsValid ||
+                !globalSettings.TryGetFloat(GlobalKeys.DayLengthSeconds, out var officialDayLength) ||
+                !globalSettings.TryGetFloat(GlobalKeys.NightLengthSeconds, out var officialNightLength) ||
+                !globalSettings.TryGetInt(GlobalKeys.MvpDays, out var officialMvpDays) ||
+                !globalSettings.TryGetInt(GlobalKeys.TotalDays, out var officialTotalDays) ||
+                !globalSettings.TryGetBool(GlobalKeys.StartAtNight, out var officialStartAtNight) ||
+                officialDayLength <= 0f || officialNightLength <= 0f || officialMvpDays <= 0 ||
+                officialTotalDays < officialMvpDays)
+                return false;
+
+            dayDurationSeconds = officialDayLength;
+            nightDurationSeconds = officialNightLength;
+            MvpContentDayLimit = officialMvpDays;
+            survivalDayLimit = officialTotalDays;
+            startAtNight = officialStartAtNight;
+            return true;
         }
 
         private void Update()

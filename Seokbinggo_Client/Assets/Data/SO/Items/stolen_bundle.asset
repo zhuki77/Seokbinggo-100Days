@@ -15,3 +15,6 @@ MonoBehaviour:
   id: stolen_bundle
   displayName: "\uD6D4\uCE5C \uBCF4\uB530\uB9AC"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

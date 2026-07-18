@@ -1,0 +1,10 @@
+source_id,source_type,source_ko,tears,tears_bonus,sig_drop_id,sig_drop_ko,sig_rate,sig_condition,extra_drops,sig_use
+club,yokai,방망이 도깨비,1,0,club_shard,도깨비 방망이 조각,0.25,none,,도깨비 방망이(조각x3)
+bulgasari,yokai,불가사리,2,0,iron_scale,무쇠 비늘,0.50,none,,무쇠 차열벽(비늘x2/장)
+yakwang,yokai,야광귀,2,2,stolen_bundle,훔친 보따리,1.00,steal_success,,절도품 전액 반환+보너스
+eoduksini,yokai,어둑시니,4,0,shadow_shard,그림자 조각,0.40,none,,서리발톱 장갑(x5)
+gangcheol,yokai,강철이,8,0,gangcheol_scale,강철이 역린,1.00,none,,서리발톱 장갑(x1 확정)
+king_dokkaebi,boss,도깨비 대장(보스),3,0,dokkaebi_fire_essence,도깨비불 정수+조각x2,1.00,none,club_shard:2,도깨비불 등탑(터렛)
+mother_bulgasari,boss,어미 불가사리(보스),4,0,iron_forge_core,무쇠 용광심+비늘x4,1.00,none,iron_scale:4,신기전 화차(터렛)
+imugi,boss,이무기(보스),8,0,yeouiju,여의주,1.00,none,,빙정 냉각로(냉각)
+gangcheol_boss,boss,강철이(보스),8,0,drought_heart,가뭄 심장+역린,1.00,none,gangcheol_scale:1,한파 코어(냉각)·서리발톱 장갑

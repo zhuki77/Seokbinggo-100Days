@@ -14,8 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ChestDefinition
   id: deep_chest
   region: 3
-  rewards: []
+  spawnCount: 4
+  rewards:
+  - item: {fileID: 11400000, guid: 435b63eb27105704da408f7c964ddb4e, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 3d3a021a3305ee94383f99102a9b7039, type: 2}
+    amount: 1
   equipmentPool:
   - {fileID: 11400000, guid: 60d33c6ec18b6384296cdb5e605b4cf9, type: 2}
   - {fileID: 11400000, guid: 85da604b6e837904ba37e95e8fd73fa6, type: 2}
+  - {fileID: 11400000, guid: f387a6e6892109e40b2f141510c641e9, type: 2}
   - {fileID: 11400000, guid: 3c360e633cdbe634990f8c8c10caa5b4, type: 2}
+  note: "\uACE0\uC704\uD5D8 \uBCF4\uC0C1 \u2014 \uC694\uAD34 \uB208\uBB3C \uBBF8\uB3D9\uBD09"

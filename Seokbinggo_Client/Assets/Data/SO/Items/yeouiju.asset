@@ -15,3 +15,6 @@ MonoBehaviour:
   id: yeouiju
   displayName: "\uC5EC\uC758\uC8FC"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

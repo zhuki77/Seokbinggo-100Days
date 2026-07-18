@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c65a54549d049ba83ababea58bec7ac, type: 3}
+  m_Name: dokkaebi_club
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
+  id: dokkaebi_club
+  tier: W1
+  hasBasicAttack: 1
+  attackDamage: 7
+  attacksPerSecond: 1.5
+  damagePerSecond: 10.5
+  knockbackTiles: 2
+  rangeTiles: 2
+  arcDegrees: 90
+  multiTarget: 1
+  hitsWalls: 1
+  note: "\uC870\uAC01\xD73 \uC81C\uC791 \u2014 8~17\uC77C\uCC28 \uC720\uD6A8 \uB109\uBC31
+    \uD2B9\uD654"

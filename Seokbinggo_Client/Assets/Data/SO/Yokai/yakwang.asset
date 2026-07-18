@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3ee09083b2583a42a3f026dafff4819, type: 3}
+  m_Name: yakwang
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.YokaiDefinition
+  id: yakwang
+  displayName: "\uC57C\uAD11\uADC0"
+  appearanceHint: "11\uC77C\uCC28 \uBC24~"
+  codexNote: "\uCCB4 \uBC18\uACBD 4\uD0C0\uC77C 12\uCD08 \uC815\uC9C0+\uD53C\uD574
+    1.5\uBC30"
+  kind: 2
+  hitPoints: 150
+  moveSpeed: 3.5
+  contactDamage: 12
+  contactDamageNoLantern: 12
+  wallDamageDefault: 0
+  wallDamageIce: 0
+  wallDamageIronWall: 0
+  damageTakenMultiplier: 1
+  damageTakenCondition: 2
+  stealSlots: 1
+  stealMaxItems: 10
+  tearItem: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+  tearDrop: 2
+  signatureItem: {fileID: 11400000, guid: 10acced314fea324a8c2fb96c08fae2f, type: 2}
+  signatureChance: 1
+  spawnTracks: 1
+  raidFleesAtDawn: 1
+  drops: []

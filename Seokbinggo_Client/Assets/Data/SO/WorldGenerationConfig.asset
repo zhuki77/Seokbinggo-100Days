@@ -55,7 +55,7 @@ MonoBehaviour:
     frequencyPer100Tiles: 10
     minClusterSize: 3
     maxClusterSize: 6
-  - elementType: ice_steel_ore
+  - elementType: icesteel_ore
     layer: 3
     hardness: 3
     frequencyPer100Tiles: 12

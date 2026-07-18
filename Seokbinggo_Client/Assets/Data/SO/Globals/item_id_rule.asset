@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: item_id_rule
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: item_id_rule
+  value: snake_case
+  unit: rule
+  note: "\uC544\uC774\uD15C id \uBA85\uBA85(v24) \u2014 \uC77C\uBC18 \uBA85\uC0AC\uB294
+    \uC758\uBBF8 \uC601\uC5B4(iron_ore\xB7stone\xB7lantern) \uD55C\uAD6D \uACE0\uC720
+    \uBB38\uD654\uC5B4\uB294 \uB85C\uB9C8\uC790 \uC74C\uCC28(hapjukseon\xB7haetae_statue\xB7yeouiju).
+    \uC804\uBD80 snake_case. \uD55C\uBC88 \uC815\uD55C id\uB294 \uC138\uC774\uBE0C
+    \uD638\uD658 \uB54C\uBB38\uC5D0 \uBCC0\uACBD \uAE08\uC9C0"

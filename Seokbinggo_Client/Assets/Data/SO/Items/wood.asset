@@ -15,3 +15,6 @@ MonoBehaviour:
   id: wood
   displayName: "\uB098\uBB34"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

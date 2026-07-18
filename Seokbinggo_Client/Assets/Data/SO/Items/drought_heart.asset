@@ -15,3 +15,6 @@ MonoBehaviour:
   id: drought_heart
   displayName: "\uAC00\uBB44 \uC2EC\uC7A5"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: seal_window_rx
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: seal_window_rx
+  value: 28
+  unit: tile
+  note: "\uBC00\uD3D0 \uCC3D \uAC00\uB85C \uBC18\uACBD(v15 QA-G \uD655\uC815) \u2014
+    \uC2E4\uC218\uC694 \uD3ED 26\uC758 2.2\uBC30\xB7\uD654\uBA74 \uAC00\uB85C 1.3\uBC30.
+    RX 32\uB97C \uC548 \uC4F0\uB294 \uC774\uC720=\uCC3D\uC774 \uB113\uC744\uC218\uB85D
+    \uCC3D \uC548 \uAC00\uB85C \uAC31\uB3C4\uAC00 leak \uC5C6\uC774 \uBED7\uC5B4
+    \uBD84\uC790 \uACF5\uC7A5 \uBB38\uC81C \uBD80\uBD84 \uC7AC\uBC1C"

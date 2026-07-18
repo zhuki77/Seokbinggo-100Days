@@ -21,6 +21,13 @@ namespace Nyangbingo.Save
     public struct CodexRecord { public string yokaiId; public int kills; }
 
     [Serializable]
+    public sealed class RunStatsRecord
+    {
+        public int minedTiles;
+        public int deaths;
+    }
+
+    [Serializable]
     public struct TurretFuelRecord
     {
         public string objectId;
@@ -118,7 +125,9 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 6;
+        public const int CurrentSchemaVersion = 10;
+        private const string FoxRainCharmId = "fox_rain_charm";
+        private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
         public int seed; public int day = 1; public float timeOfDaySec;
         public List<InventorySlot> inventory = new List<InventorySlot>();
@@ -147,12 +156,14 @@ namespace Nyangbingo.Save
         public List<ChestStateRecord> chests = new List<ChestStateRecord>();
         public PlayerStateRecord playerState = new PlayerStateRecord();
         public TimeStateRecord timeState = new TimeStateRecord();
-        public ActiveBossStateRecord activeBoss = new ActiveBossStateRecord();
+        [NonSerialized] public ActiveBossStateRecord activeBoss = new ActiveBossStateRecord();
         public BaekjungSchedulerState baekjungProgress = new BaekjungSchedulerState();
         public float baekjungTearRemainder;
+        public RunStatsRecord stats = new RunStatsRecord();
 
         public void NormalizeAfterLoad()
         {
+            var loadedSchemaVersion = schemaVersion;
             var isLegacySchema = schemaVersion <= 0;
             if (inventory == null) inventory = new List<InventorySlot>();
             if (unlockedRecipes == null) unlockedRecipes = new List<string>();
@@ -176,8 +187,11 @@ namespace Nyangbingo.Save
             if (chests == null) chests = new List<ChestStateRecord>();
             if (playerState == null) playerState = new PlayerStateRecord();
             if (timeState == null) timeState = new TimeStateRecord();
-            if (activeBoss == null) activeBoss = new ActiveBossStateRecord();
+            activeBoss = new ActiveBossStateRecord();
             if (baekjungProgress == null) baekjungProgress = new BaekjungSchedulerState();
+            if (stats == null) stats = new RunStatsRecord();
+            stats.minedTiles = Math.Max(0, stats.minedTiles);
+            stats.deaths = Math.Max(0, stats.deaths);
             if (isLegacySchema)
             {
                 for (var i = 0; i < smelting.Count; i++)
@@ -188,7 +202,250 @@ namespace Nyangbingo.Save
                     smelting[i] = record;
                 }
             }
+            if (loadedSchemaVersion < 7) MigrateHapjukseonIds();
+            if (loadedSchemaVersion < 8) MigrateV24Ids();
             if (schemaVersion < CurrentSchemaVersion) schemaVersion = CurrentSchemaVersion;
+        }
+
+        private void MigrateHapjukseonIds()
+        {
+            for (var i = 0; i < inventory.Count; i++)
+            {
+                var slot = inventory[i];
+                if (slot.itemId == FanItemIds.LegacyFoldingFan)
+                {
+                    slot.itemId = FanItemIds.Hapjukseon;
+                    inventory[i] = slot;
+                }
+            }
+
+            for (var i = 0; i < pendingItemAcquisitions.Count; i++)
+            {
+                var record = pendingItemAcquisitions[i];
+                if (record.itemId == FanItemIds.LegacyFoldingFan)
+                {
+                    record.itemId = FanItemIds.Hapjukseon;
+                    pendingItemAcquisitions[i] = record;
+                }
+            }
+
+            for (var i = 0; i < smeltingOutputs.Count; i++)
+            {
+                var record = smeltingOutputs[i];
+                if (record.itemId == FanItemIds.LegacyFoldingFan)
+                {
+                    record.itemId = FanItemIds.Hapjukseon;
+                    smeltingOutputs[i] = record;
+                }
+            }
+
+            for (var i = 0; i < placedObjects.Count; i++)
+                if (placedObjects[i] == FanItemIds.LegacyFoldingFan) placedObjects[i] = FanItemIds.Hapjukseon;
+
+            for (var i = 0; i < placedObjectRecords.Count; i++)
+            {
+                var record = placedObjectRecords[i];
+                if (record.definitionId == FanItemIds.LegacyFoldingFan)
+                {
+                    record.definitionId = FanItemIds.Hapjukseon;
+                    placedObjectRecords[i] = record;
+                }
+            }
+
+            for (var i = 0; i < utilityCooldowns.Count; i++)
+            {
+                var record = utilityCooldowns[i];
+                if (record.kind == "FoldingFan")
+                {
+                    record.kind = UtilityKind.Hapjukseon.ToString();
+                    utilityCooldowns[i] = record;
+                }
+            }
+        }
+
+        private void MigrateV24Ids()
+        {
+            var migrations = IdMigrationRuntime.LoadOfficial();
+            var refundRule = migrations.Find(IdMigrationDomain.Item, FoxRainCharmId);
+            if (refundRule == null || refundRule.Action != IdMigrationAction.RemoveRefund)
+                throw new InvalidOperationException("The fox-rain removal/refund migration is missing.");
+
+            long foxRainCharmCount = 0;
+            for (var i = 0; i < inventory.Count; i++)
+            {
+                var slot = inventory[i];
+                if (slot.itemId == FoxRainCharmId)
+                {
+                    if (slot.amount > 0) foxRainCharmCount += slot.amount;
+                    inventory[i] = default;
+                    continue;
+                }
+                slot.itemId = MigrateItemId(migrations, slot.itemId);
+                inventory[i] = slot;
+            }
+
+            MigrateItemIdList(migrations, unlockedRecipes);
+            MigrateItemIdList(migrations, placedObjects, preserveDuplicates: true);
+            for (var i = placedObjectRecords.Count - 1; i >= 0; i--)
+            {
+                var record = placedObjectRecords[i];
+                record.definitionId = MigrateItemId(migrations, record.definitionId);
+                if (string.IsNullOrWhiteSpace(record.definitionId)) placedObjectRecords.RemoveAt(i);
+                else placedObjectRecords[i] = record;
+            }
+
+            for (var i = equipment.Count - 1; i >= 0; i--)
+            {
+                var record = equipment[i];
+                record.equipmentId = MigrateItemId(migrations, record.equipmentId);
+                if (string.IsNullOrWhiteSpace(record.equipmentId)) equipment.RemoveAt(i);
+                else equipment[i] = record;
+            }
+            MigrateItemIdList(migrations, ownedEquipmentIds);
+
+            for (var i = pendingItemAcquisitions.Count - 1; i >= 0; i--)
+            {
+                var record = pendingItemAcquisitions[i];
+                if (record.itemId == FoxRainCharmId)
+                {
+                    if (record.amount > 0) foxRainCharmCount += record.amount;
+                    pendingItemAcquisitions.RemoveAt(i);
+                    continue;
+                }
+                record.itemId = MigrateItemId(migrations, record.itemId);
+                if (string.IsNullOrWhiteSpace(record.itemId)) pendingItemAcquisitions.RemoveAt(i);
+                else pendingItemAcquisitions[i] = record;
+            }
+
+            activeCrafting.recipeId = MigrateItemId(migrations, activeCrafting.recipeId);
+            if (string.IsNullOrWhiteSpace(activeCrafting.recipeId)) activeCrafting = new CraftingProcessRecord();
+
+            for (var i = 0; i < smelting.Count; i++)
+            {
+                var record = smelting[i];
+                record.stationId = MigrateItemId(migrations, record.stationId);
+                record.recipeId = migrations.Migrate(IdMigrationDomain.Smelting, record.recipeId);
+                smelting[i] = record;
+            }
+            for (var i = smeltingOutputs.Count - 1; i >= 0; i--)
+            {
+                var record = smeltingOutputs[i];
+                record.stationId = MigrateItemId(migrations, record.stationId);
+                record.itemId = MigrateItemId(migrations, record.itemId);
+                if (string.IsNullOrWhiteSpace(record.itemId)) smeltingOutputs.RemoveAt(i);
+                else smeltingOutputs[i] = record;
+            }
+
+            MigrateBossRecords(migrations);
+            MigrateForcedBossEncounters(migrations);
+            MigrateCodexRecords(migrations);
+            activeBoss = new ActiveBossStateRecord();
+            utilityCooldowns.RemoveAll(record => record.kind == "FoxRainCharm");
+
+            AddRemovalRefund(foxRainCharmCount, refundRule.RefundItemId, refundRule.RefundAmount);
+        }
+
+        private void AddRemovalRefund(long removedCount, string refundItemId, int refundAmount)
+        {
+            var remaining = Math.Min((long)int.MaxValue, removedCount * refundAmount);
+            for (var i = 0; i < inventory.Count && remaining > 0; i++)
+            {
+                var slot = inventory[i];
+                if (slot.itemId != refundItemId || slot.amount <= 0 || slot.amount >= RefundItemMaxStack) continue;
+                var added = (int)Math.Min(remaining, RefundItemMaxStack - slot.amount);
+                slot.amount += added;
+                remaining -= added;
+                inventory[i] = slot;
+            }
+            for (var i = 0; i < inventory.Count && remaining > 0; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(inventory[i].itemId)) continue;
+                var added = (int)Math.Min(remaining, RefundItemMaxStack);
+                inventory[i] = new InventorySlot { itemId = refundItemId, amount = added };
+                remaining -= added;
+            }
+            while (inventory.Count < Inventory.Inventory.SlotCount && remaining > 0)
+            {
+                var added = (int)Math.Min(remaining, RefundItemMaxStack);
+                inventory.Add(new InventorySlot { itemId = refundItemId, amount = added });
+                remaining -= added;
+            }
+            while (remaining > 0)
+            {
+                var added = (int)Math.Min(remaining, RefundItemMaxStack);
+                pendingItemAcquisitions.Add(new PendingItemRecord { itemId = refundItemId, amount = added });
+                remaining -= added;
+            }
+        }
+
+        private static string MigrateItemId(IdMigrationPolicy migrations, string id) =>
+            migrations.Migrate(IdMigrationDomain.Item, id);
+
+        private static void MigrateItemIdList(IdMigrationPolicy migrations, List<string> ids,
+            bool preserveDuplicates = false)
+        {
+            var unique = preserveDuplicates ? null : new HashSet<string>(StringComparer.Ordinal);
+            for (var i = ids.Count - 1; i >= 0; i--)
+            {
+                var migrated = MigrateItemId(migrations, ids[i]);
+                if (string.IsNullOrWhiteSpace(migrated) || (unique != null && !unique.Add(migrated))) ids.RemoveAt(i);
+                else ids[i] = migrated;
+            }
+        }
+
+        private void MigrateBossRecords(IdMigrationPolicy migrations)
+        {
+            var merged = new Dictionary<string, BossRecord>(StringComparer.Ordinal);
+            foreach (var source in bossRecords)
+            {
+                var record = source;
+                record.bossId = migrations.Migrate(IdMigrationDomain.Boss, record.bossId);
+                if (string.IsNullOrWhiteSpace(record.bossId)) continue;
+                if (merged.TryGetValue(record.bossId, out var existing))
+                {
+                    existing.count = (int)Math.Min(int.MaxValue, (long)Math.Max(0, existing.count) + Math.Max(0, record.count));
+                    if (existing.firstDay <= 0 || record.firstDay > 0 && record.firstDay < existing.firstDay)
+                        existing.firstDay = record.firstDay;
+                    merged[record.bossId] = existing;
+                }
+                else merged.Add(record.bossId, record);
+            }
+            bossRecords.Clear();
+            bossRecords.AddRange(merged.Values);
+            bossRecords.Sort((left, right) => string.CompareOrdinal(left.bossId, right.bossId));
+        }
+
+        private void MigrateForcedBossEncounters(IdMigrationPolicy migrations)
+        {
+            var merged = new Dictionary<string, bool>(StringComparer.Ordinal);
+            foreach (var source in forcedBossEncounters)
+            {
+                var bossId = migrations.Migrate(IdMigrationDomain.Boss, source.bossId);
+                if (string.IsNullOrWhiteSpace(bossId)) continue;
+                merged[bossId] = source.triggered || merged.TryGetValue(bossId, out var triggered) && triggered;
+            }
+            forcedBossEncounters.Clear();
+            foreach (var pair in merged)
+                forcedBossEncounters.Add(new ForcedBossEncounterRecord { bossId = pair.Key, triggered = pair.Value });
+            forcedBossEncounters.Sort((left, right) => string.CompareOrdinal(left.bossId, right.bossId));
+        }
+
+        private void MigrateCodexRecords(IdMigrationPolicy migrations)
+        {
+            var merged = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var source in dogam)
+            {
+                var yokaiId = migrations.Migrate(IdMigrationDomain.Yokai, source.yokaiId);
+                if (string.IsNullOrWhiteSpace(yokaiId)) continue;
+                var kills = Math.Max(0, source.kills);
+                merged[yokaiId] = merged.TryGetValue(yokaiId, out var existing)
+                    ? (int)Math.Min(int.MaxValue, (long)existing + kills)
+                    : kills;
+            }
+            dogam.Clear();
+            foreach (var pair in merged)
+                dogam.Add(new CodexRecord { yokaiId = pair.Key, kills = pair.Value });
+            dogam.Sort((left, right) => string.CompareOrdinal(left.yokaiId, right.yokaiId));
         }
     }
 
@@ -374,6 +631,191 @@ namespace Nyangbingo.Save
         }
     }
 
+    public sealed class YokaiCodexCard
+    {
+        internal YokaiCodexCard(string entryId, bool isBoss, string displayName, string appearanceHint,
+            string sourceText, int killCount, int firstKillDay)
+        {
+            EntryId = entryId;
+            IsBoss = isBoss;
+            IsUnlocked = killCount > 0;
+            KillCount = Math.Max(0, killCount);
+            FirstKillDay = Math.Max(0, firstKillDay);
+            DisplayName = IsUnlocked ? displayName : "?";
+            AppearanceHint = IsUnlocked ? appearanceHint : string.Empty;
+            SourceText = IsUnlocked ? sourceText : string.Empty;
+        }
+
+        public string EntryId { get; }
+        public bool IsBoss { get; }
+        public bool IsUnlocked { get; }
+        public bool UsesInkSilhouette => !IsUnlocked;
+        public int KillCount { get; }
+        public int FirstKillDay { get; }
+        public string DisplayName { get; }
+        public string AppearanceHint { get; }
+        public string SourceText { get; }
+    }
+
+    public sealed class YokaiCodexPresentationModel
+    {
+        public const int ExpectedCardCount = 8;
+        public const int GridColumns = 3;
+        public static readonly Vector2 GridCardSize = new Vector2(72f, 96f);
+        public static readonly Vector2 EnlargedCardSize = new Vector2(192f, 256f);
+
+        private readonly GameDataCatalog catalog;
+        private readonly SaveGame save;
+        private readonly List<YokaiCodexCard> cards = new List<YokaiCodexCard>(ExpectedCardCount);
+        private string selectedEntryId;
+        private bool backVisible;
+
+        public YokaiCodexPresentationModel(GameDataCatalog catalog, SaveGame save)
+        {
+            this.catalog = catalog != null ? catalog : throw new ArgumentNullException(nameof(catalog));
+            this.save = save ?? throw new ArgumentNullException(nameof(save));
+            if (!catalog.IsValid) throw new ArgumentException("Game data catalog is invalid.", nameof(catalog));
+            Refresh();
+        }
+
+        public IReadOnlyList<YokaiCodexCard> Cards => cards;
+        public bool HasEnlargedCard => SelectedCard != null;
+        public bool IsBackVisible => backVisible;
+        public YokaiCodexCard SelectedCard
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(selectedEntryId)) return null;
+                for (var i = 0; i < cards.Count; i++)
+                    if (cards[i].EntryId == selectedEntryId) return cards[i];
+                return null;
+            }
+        }
+
+        public void Refresh()
+        {
+            save.NormalizeAfterLoad();
+            var yokaiKills = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < save.dogam.Count; i++)
+            {
+                var record = save.dogam[i];
+                if (!string.IsNullOrWhiteSpace(record.yokaiId) && record.kills > 0)
+                    yokaiKills[record.yokaiId] = record.kills;
+            }
+
+            var bossRecords = new Dictionary<string, BossRecord>(StringComparer.Ordinal);
+            for (var i = 0; i < save.bossRecords.Count; i++)
+            {
+                var record = save.bossRecords[i];
+                if (!string.IsNullOrWhiteSpace(record.bossId) && record.count > 0)
+                    bossRecords[record.bossId] = record;
+            }
+
+            cards.Clear();
+            var entryIds = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < catalog.Yokai.Count; i++)
+            {
+                var definition = catalog.Yokai[i];
+                var kills = yokaiKills.TryGetValue(definition.Id, out var savedKills) ? savedKills : 0;
+                var firstKillDay = 0;
+                if (definition.Kind == YokaiKind.Gangcheori)
+                {
+                    for (var bossIndex = 0; bossIndex < catalog.Bosses.Count; bossIndex++)
+                    {
+                        var boss = catalog.Bosses[bossIndex];
+                        if (boss.Kind != BossKind.Gangcheori || !bossRecords.TryGetValue(boss.Id, out var record)) continue;
+                        kills = Math.Max(kills, record.count);
+                        firstKillDay = record.firstDay;
+                    }
+                }
+                AddCard(entryIds, definition.Id, false, definition.DisplayName, definition.AppearanceHint,
+                    CodexSourceFor(definition.Kind), kills, firstKillDay);
+            }
+
+            for (var i = 0; i < catalog.Bosses.Count; i++)
+            {
+                var definition = catalog.Bosses[i];
+                if (definition.Kind == BossKind.Gangcheori) continue;
+                bossRecords.TryGetValue(definition.Id, out var record);
+                AddCard(entryIds, definition.Id, true, definition.DisplayName, definition.RecommendedDay,
+                    CodexSourceFor(definition.Kind), record.count, record.firstDay);
+            }
+
+            if (cards.Count != ExpectedCardCount)
+                throw new InvalidOperationException($"Yokai codex requires exactly {ExpectedCardCount} unique cards, but found {cards.Count}.");
+            if (SelectedCard == null)
+            {
+                selectedEntryId = null;
+                backVisible = false;
+            }
+            else if (!SelectedCard.IsUnlocked) backVisible = false;
+        }
+
+        public bool TryTapCard(string entryId)
+        {
+            if (string.IsNullOrWhiteSpace(entryId)) return false;
+            if (selectedEntryId == entryId) return TryFlipSelected();
+            for (var i = 0; i < cards.Count; i++)
+            {
+                if (cards[i].EntryId != entryId) continue;
+                selectedEntryId = entryId;
+                backVisible = false;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryFlipSelected()
+        {
+            var selected = SelectedCard;
+            if (selected == null || !selected.IsUnlocked) return false;
+            backVisible = !backVisible;
+            return true;
+        }
+
+        public void TapOutside()
+        {
+            selectedEntryId = null;
+            backVisible = false;
+        }
+
+        private void AddCard(HashSet<string> entryIds, string entryId, bool isBoss, string displayName,
+            string appearanceHint, string sourceText, int killCount, int firstKillDay)
+        {
+            if (string.IsNullOrWhiteSpace(entryId) || !entryIds.Add(entryId))
+                throw new InvalidOperationException($"Yokai codex contains an invalid or duplicate entry ID '{entryId}'.");
+            if (string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(sourceText))
+                throw new InvalidOperationException($"Yokai codex entry '{entryId}' is missing display or source text.");
+            cards.Add(new YokaiCodexCard(entryId, isBoss, displayName, appearanceHint, sourceText,
+                killCount, firstKillDay));
+        }
+
+        private static string CodexSourceFor(YokaiKind kind)
+        {
+            switch (kind)
+            {
+                case YokaiKind.ClubGoblin: return "구비 도깨비 씨름담 — 사람에게 씨름을 걸고 방망이를 휘두르는 익살꾼.";
+                case YokaiKind.Bulgasari: return "《송남잡지》 — 쇠를 먹으며 자라나는 불가사리 전승.";
+                case YokaiKind.Yagwanggwi: return "《동국세시기》 — 설날 밤 신발을 훔쳐 가는 야광귀 전승.";
+                case YokaiKind.Eoduksini: return "어둑시니 구전 — 바라볼수록 어둠 속에서 거대해지는 요괴.";
+                case YokaiKind.Gangcheori: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
+                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown yokai codex source.");
+            }
+        }
+
+        private static string CodexSourceFor(BossKind kind)
+        {
+            switch (kind)
+            {
+                case BossKind.GoblinChief: return "구비 도깨비 씨름담 — 씨름 한판을 걸어오는 도깨비 이야기.";
+                case BossKind.MotherBulgasari: return "《송남잡지》 — 쇠를 먹으며 자라나는 불가사리 전승.";
+                case BossKind.Imugi: return "이무기 구전 — 물 아래에서 여의주를 기다리며 용이 되기를 바라는 뱀.";
+                case BossKind.Gangcheori: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
+                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown boss codex source.");
+            }
+        }
+    }
+
     public static class EquipmentCollectionSaveAdapter
     {
         public static bool Capture(SaveGame save, EquipmentCollection collection)
@@ -418,12 +860,22 @@ namespace Nyangbingo.Save
             for (var i = 0; i < save.utilityCooldowns.Count; i++)
             {
                 var record = save.utilityCooldowns[i];
-                if (!Enum.TryParse(record.kind, out UtilityKind kind) || cooldowns.ContainsKey(kind) ||
+                if (!TryParseKind(record.kind, out var kind) || cooldowns.ContainsKey(kind) ||
                     record.remainingGameSeconds <= 0f || float.IsNaN(record.remainingGameSeconds) ||
                     float.IsInfinity(record.remainingGameSeconds)) return false;
                 cooldowns.Add(kind, record.remainingGameSeconds);
             }
             return service.RestoreCooldowns(cooldowns);
+        }
+
+        private static bool TryParseKind(string value, out UtilityKind kind)
+        {
+            if (value == "FoldingFan")
+            {
+                kind = UtilityKind.Hapjukseon;
+                return true;
+            }
+            return Enum.TryParse(value, out kind);
         }
     }
 
@@ -529,6 +981,7 @@ namespace Nyangbingo.Save
     public sealed class SaveManager : MonoBehaviour
     {
         public const int SlotCount = 3;
+        private static readonly int[] DemoDays = { 1, 15, 30 };
         public void Save(int slot, SaveGame data)
         {
             ValidateSlot(slot);
@@ -538,6 +991,17 @@ namespace Nyangbingo.Save
             data.NormalizeAfterLoad();
             WriteAtomically(PathFor(slot), JsonUtility.ToJson(data, true));
         }
+
+        public bool TrySaveManual(int slot, SaveGame data, BossManager bossManager)
+        {
+            ValidateSlot(slot);
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            if (bossManager == null || bossManager.IsBossActive) return false;
+            Save(slot, data);
+            return true;
+        }
+
+        public void SaveAtDawn(int slot, SaveGame data) => Save(slot, data);
         public bool TryLoad(int slot, out SaveGame data)
         {
             ValidateSlot(slot);
@@ -562,6 +1026,45 @@ namespace Nyangbingo.Save
                 data = null;
                 return false;
             }
+        }
+        public bool HasSave(int slot)
+        {
+            ValidateSlot(slot);
+            return File.Exists(PathFor(slot));
+        }
+        public bool TryLoadLatest(out int slot, out SaveGame data)
+        {
+            slot = -1;
+            data = null;
+            var latestWrite = DateTime.MinValue;
+            for (var candidate = 0; candidate < SlotCount; candidate++)
+            {
+                var path = PathFor(candidate);
+                if (!File.Exists(path) || !TryLoad(candidate, out var loaded)) continue;
+                DateTime written;
+                try { written = File.GetLastWriteTimeUtc(path); }
+                catch (IOException) { continue; }
+                catch (UnauthorizedAccessException) { continue; }
+                if (slot >= 0 && written <= latestWrite) continue;
+                slot = candidate;
+                data = loaded;
+                latestWrite = written;
+            }
+            return slot >= 0;
+        }
+        public bool TryCopyDemoToAutoSave(int day, out SaveGame data)
+        {
+            data = null;
+            if (Array.IndexOf(DemoDays, day) < 0) return false;
+            var path = Path.Combine(Application.streamingAssetsPath, "DemoSaves", $"day-{day}.json");
+            try
+            {
+                if (!File.Exists(path) || !TryDeserialize(File.ReadAllText(path), out data)) return false;
+                Save(0, data);
+                return true;
+            }
+            catch (IOException) { data = null; return false; }
+            catch (UnauthorizedAccessException) { data = null; return false; }
         }
         public static bool TryDeserialize(string json, out SaveGame data)
         {
@@ -602,6 +1105,38 @@ namespace Nyangbingo.Save
         private static void ValidateSlot(int slot)
         {
             if (slot < 0 || slot >= SlotCount) throw new ArgumentOutOfRangeException(nameof(slot));
+        }
+    }
+
+    public sealed class RunStatsBinding : IDisposable
+    {
+        private readonly SaveGame save;
+        private bool disposed;
+
+        public RunStatsBinding(SaveGame save)
+        {
+            this.save = save ?? throw new ArgumentNullException(nameof(save));
+            save.NormalizeAfterLoad();
+            GameEvents.OnTileBroken += HandleTileBroken;
+            GameEvents.OnPlayerDied += HandlePlayerDied;
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            GameEvents.OnTileBroken -= HandleTileBroken;
+            GameEvents.OnPlayerDied -= HandlePlayerDied;
+        }
+
+        private void HandleTileBroken(Vector3Int _)
+        {
+            if (!disposed && save.stats.minedTiles < int.MaxValue) save.stats.minedTiles++;
+        }
+
+        private void HandlePlayerDied()
+        {
+            if (!disposed && save.stats.deaths < int.MaxValue) save.stats.deaths++;
         }
     }
 
@@ -889,11 +1424,6 @@ namespace Nyangbingo.Save
                 playerHealth.Current > playerHealth.MaxHealth || timeSource.Day < 1 ||
                 timeSource.TimeOfDayGameSeconds < 0f || float.IsNaN(timeSource.TimeOfDayGameSeconds) ||
                 float.IsInfinity(timeSource.TimeOfDayGameSeconds)) return false;
-            if (bossManager.IsBossActive && (bossManager.ActiveDefinition == null || bossManager.ActiveHealth == null ||
-                bossManager.ActiveHealth.IsDead || !IsFinite(bossManager.ActiveHealth.transform.position) ||
-                float.IsNaN(bossManager.ActiveSummonedAtGameSeconds) ||
-                float.IsInfinity(bossManager.ActiveSummonedAtGameSeconds) ||
-                bossManager.ActiveSummonedAtGameSeconds < 0f)) return false;
             save.NormalizeAfterLoad();
 
             save.playerState = new PlayerStateRecord
@@ -913,24 +1443,15 @@ namespace Nyangbingo.Save
             save.day = timeSource.Day;
             save.timeOfDaySec = timeSource.TimeOfDayGameSeconds;
 
-            save.activeBoss = new ActiveBossStateRecord { active = bossManager.IsBossActive };
-            if (bossManager.IsBossActive)
-            {
-                save.activeBoss.bossId = bossManager.ActiveDefinition.Id;
-                save.activeBoss.position = bossManager.ActiveHealth.transform.position;
-                save.activeBoss.currentHealth = bossManager.ActiveHealth.Current;
-                save.activeBoss.maxHealth = bossManager.ActiveHealth.MaxHealth;
-                save.activeBoss.summonedAtGameSeconds = bossManager.ActiveSummonedAtGameSeconds;
-            }
+            save.activeBoss = new ActiveBossStateRecord();
             return true;
         }
 
         public static bool Restore(SaveGame save, Transform player, Health playerHealth,
-            ISaveableTimeSource timeSource, BossManager bossManager, Func<string, BossDefinition> findBoss,
-            Func<BossDefinition, int, Health> spawnBoss)
+            ISaveableTimeSource timeSource, BossManager bossManager)
         {
             if (save == null || player == null || playerHealth == null || timeSource == null || bossManager == null ||
-                findBoss == null || spawnBoss == null || bossManager.IsBossActive) return false;
+                bossManager.IsBossActive) return false;
             save.NormalizeAfterLoad();
             if (!save.playerState.hasValue || !save.timeState.hasValue || save.playerState.maxHealth <= 0 ||
                 save.playerState.currentHealth < 0 || save.playerState.currentHealth > save.playerState.maxHealth ||
@@ -938,18 +1459,6 @@ namespace Nyangbingo.Save
                 save.timeState.timeOfDayGameSeconds < 0f || float.IsNaN(save.timeState.timeOfDayGameSeconds) ||
                 float.IsInfinity(save.timeState.timeOfDayGameSeconds))
                 return false;
-            BossDefinition activeDefinition = null;
-            if (save.activeBoss.active)
-            {
-                if (!save.timeState.isNight || string.IsNullOrWhiteSpace(save.activeBoss.bossId) ||
-                    save.activeBoss.maxHealth <= 0 || save.activeBoss.currentHealth <= 0 ||
-                    save.activeBoss.currentHealth > save.activeBoss.maxHealth ||
-                    !IsFinite(save.activeBoss.position) || float.IsNaN(save.activeBoss.summonedAtGameSeconds) ||
-                    float.IsInfinity(save.activeBoss.summonedAtGameSeconds) ||
-                    save.activeBoss.summonedAtGameSeconds < 0f) return false;
-                activeDefinition = findBoss(save.activeBoss.bossId);
-                if (activeDefinition == null || activeDefinition.Id != save.activeBoss.bossId) return false;
-            }
             var originalPlayerPosition = player.position;
             var originalPlayerMaxHealth = playerHealth.MaxHealth;
             var originalPlayerCurrentHealth = playerHealth.Current;
@@ -979,22 +1488,6 @@ namespace Nyangbingo.Save
             playerHealth.ConfigureForRuntime(save.playerState.maxHealth, playerHealth.Defense);
             if (!playerHealth.RestoreCurrent(save.playerState.currentHealth))
             {
-                RollbackPlayerAndTime();
-                return false;
-            }
-            if (!save.activeBoss.active) return true;
-            var bossHealth = spawnBoss(activeDefinition, save.activeBoss.maxHealth);
-            if (bossHealth == null)
-            {
-                RollbackPlayerAndTime();
-                return false;
-            }
-            bossHealth.transform.position = save.activeBoss.position;
-            bossHealth.ConfigureForRuntime(save.activeBoss.maxHealth);
-            if (!bossHealth.RestoreCurrent(save.activeBoss.currentHealth) ||
-                !bossManager.RestoreActive(activeDefinition, bossHealth, save.activeBoss.summonedAtGameSeconds))
-            {
-                UnityEngine.Object.Destroy(bossHealth.gameObject);
                 RollbackPlayerAndTime();
                 return false;
             }
@@ -1029,7 +1522,8 @@ namespace Nyangbingo.Save
         private void OnDisable() { if (timeSource != null) timeSource.Dawn -= SaveAtDawn; }
         private void SaveAtDawn()
         {
-            if (saveManager != null && snapshotProvider != null) saveManager.Save(slot, snapshotProvider.CaptureSnapshot());
+            if (saveManager != null && snapshotProvider != null)
+                saveManager.SaveAtDawn(slot, snapshotProvider.CaptureSnapshot());
         }
 
         /// <summary>

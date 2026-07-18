@@ -15,3 +15,6 @@ MonoBehaviour:
   id: clay
   displayName: "\uC810\uD1A0"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

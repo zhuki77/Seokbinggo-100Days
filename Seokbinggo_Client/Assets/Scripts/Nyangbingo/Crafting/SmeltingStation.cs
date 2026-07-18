@@ -1,6 +1,7 @@
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.Core;
+using System;
 using System.Collections.Generic;
 
 namespace Nyangbingo.Crafting
@@ -22,11 +23,13 @@ namespace Nyangbingo.Crafting
         public IReadOnlyList<ItemAmount> Completed => completed;
         public IReadOnlyList<SmeltingDefinition> Queue => queued;
         public SmeltingStation(Nyangbingo.Inventory.Inventory inventory,
-            SmeltingStationKind stationKind = SmeltingStationKind.Furnace)
+            SmeltingStationKind stationKind, int batchCapacity)
         {
+            if (inventory == null) throw new ArgumentNullException(nameof(inventory));
+            if (batchCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(batchCapacity));
             this.inventory = inventory;
             this.stationKind = stationKind;
-            queueCapacity = stationKind == SmeltingStationKind.Furnace ? 6 : 4;
+            queueCapacity = batchCapacity;
         }
 
         public bool TryStart(SmeltingDefinition definition)
@@ -123,6 +126,7 @@ namespace Nyangbingo.Crafting
         private bool IsValidDefinition(SmeltingDefinition definition)
         {
             return definition != null && definition.StationKind == stationKind &&
+                   definition.BatchCapacity == queueCapacity &&
                    definition.Input.item != null && definition.Fuel.item != null && definition.Output.item != null &&
                    definition.Input.amount > 0 && definition.Fuel.amount > 0 && definition.Output.amount > 0 &&
                    definition.DurationSeconds > 0f && !float.IsNaN(definition.DurationSeconds) &&

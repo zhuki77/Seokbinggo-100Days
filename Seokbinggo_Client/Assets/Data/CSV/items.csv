@@ -1,11 +1,12 @@
 id,displayName,maxStack
-club_fragment,도깨비 방망이 조각,99
+bare_claw,맨발톱,0
+club_shard,도깨비 방망이 조각,99
 iron_scale,무쇠 비늘,99
 stolen_bundle,훔친 보따리,99
-shadow_fragment,그림자 조각,99
-reverse_scale,강철이 역린,99
+shadow_shard,그림자 조각,99
+gangcheol_scale,강철이 역린,99
 wood,나무,99
-hemp,삼줄기,99
+hemp_stalk,삼줄기,99
 rebar,철근,99
 dirt,흙,99
 stone,돌,99
@@ -14,31 +15,70 @@ clay,점토,99
 iron_ore,철 광석,99
 copper_ore,구리 광석,99
 ice_shard,얼음 조각,99
-ice_steel_ore,얼음강철 원석,99
+icesteel_ore,얼음강철 원석,99
 frost_essence,서리정수,99
 iron_ingot,철 주괴,99
 copper_ingot,구리 주괴,99
-ice_steel_ingot,얼음강철 주괴,99
-yokai_tears,요괴 눈물,99
+icesteel_ingot,얼음강철 주괴,99
+yokai_tear,요괴 눈물,99
 workbench,작업대,99
 furnace,화로,99
-foundry,용광로,99
+blast_furnace,용광로,99
 ice_anvil,얼음 모루,99
-iron_claws,무쇠 발톱,1
-ice_steel_claws,얼음강철 발톱,1
+iron_claw,무쇠 발톱,1
+icesteel_claw,얼음강철 발톱,1
+straw_helm,짚 투구,1
+straw_armor,짚 갑옷,1
+straw_boots,짚 신발,1
+iron_helm,무쇠 투구,1
+iron_armor,무쇠 갑옷,1
+iron_boots,무쇠 신발,1
+icesteel_helm,얼음강철 투구,1
+icesteel_armor,얼음강철 갑옷,1
+icesteel_boots,얼음강철 신발,1
+bell_norigae,방울 노리개,1
+wind_daenggi,바람 댕기,1
+tiger_eye_bead,호랑이 눈 구슬,1
+ice_heart_norigae,얼음 심장 노리개,1
+bokjumeoni,복주머니,1
+dokkaebi_gamtu,도깨비 감투,1
 lantern,등불,99
 sieve,체,99
 haetae_statue,해태 석상,99
-nest,보금자리,99
+nest_bed,보금자리,99
 magpie_nest,까치 둥지,99
-wrestling_belt,씨름 샅바,99
+ssireum_satba,씨름 샅바,99
 iron_bait_pile,무쇠 미끼 더미,99
 ice_altar_offering,얼음 제단 봉헌,99
 drought_talisman,가뭄 부적,99
-goblin_fire_essence,도깨비불 정수,99
-iron_furnace_heart,무쇠 용광심,99
+dokkaebi_fire_essence,도깨비불 정수,99
+iron_forge_core,무쇠 용광심,99
 yeouiju,여의주,99
 drought_heart,가뭄 심장,99
-folding_fan,접이부채,1
+hapjukseon,합죽선,1
+cheolseon,철선,1
+dokkaebi_club,도깨비 방망이,1
+frostclaw_gauntlet,서리발톱 장갑,1
 bell_rope,방울 금줄,99
-fox_rain_charm,여우비 부적,99
+iron_bell_rope,쇠 방울 금줄,99
+iron_sieve,무쇠 체,99
+frost_lantern,서리 등불,99
+insul_wall,차열벽,99
+door,단열 문,99
+roof,차열 지붕,99
+jangdok,장독 창고,99
+ice_core,얼음 저장고,99
+iron_insul_wall,무쇠 차열벽,99
+cold_device,냉기 장치,99
+dokkaebi_fire_tower,도깨비불 등탑,99
+cold_wave_core,한파 코어,99
+water_jar,물단지,99
+ice_jar,얼음 항아리,99
+straw_insul,짚 단열재,99
+clay_plaster,점토 미장,99
+munpungji,문풍지,99
+minhwa_scroll,민화 족자,99
+saekdong_lantern,색동 등롱,99
+onggi_pot,옹기 화분,99
+wind_chime,풍경,99
+saekdong_cushion,색동 방석,99

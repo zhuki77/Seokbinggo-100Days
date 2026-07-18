@@ -40,8 +40,7 @@ namespace Nyangbingo.World
         private int seed;
         private bool disposed;
 
-        // SealSystem이 새로 생성될 때마다(RebuildLiveSystems/LoadSnapshot) 재주입해야 하는 B파트 확장 지점.
-        // WorldSessionController가 대신 들고 있다가, SealSystem 인스턴스가 바뀔 때마다 그대로 재연결한다.
+        // SealSystem이 최초 생성될 때 주입하고, 이후 월드 로드에서는 같은 인스턴스가 Rebind되므로 유지되는 확장 지점.
         private ISealBarrierRegistry sealBarrierRegistry;
         private ICoolingSourceProvider coolingSourceProvider;
 
@@ -212,7 +211,7 @@ namespace Nyangbingo.World
             // 전후로 그대로 유지된다. 세션 최초 생성(sealSystem == null)일 때만 새로 만든다.
             if (sealSystem == null)
             {
-                sealSystem = new SealSystem(tileService);
+                sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null);
                 ApplySealExtensions();
             }
             else
@@ -257,7 +256,7 @@ namespace Nyangbingo.World
         {
             sealSystem?.Dispose();
             tileService = new TileService(tiles, renderer, catalog, seed);
-            sealSystem = new SealSystem(tileService);
+            sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null);
             ApplySealExtensions();
         }
 

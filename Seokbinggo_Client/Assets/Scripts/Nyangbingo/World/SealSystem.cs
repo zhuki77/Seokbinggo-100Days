@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -60,6 +61,7 @@ namespace Nyangbingo.World
         };
 
         private TileService tileService;
+        private readonly SealBoundaryPolicy boundaryPolicy;
         private readonly int maxFillCells;
 
         /// <summary>B파트 설치물(차열벽/차열 지붕/단열 문) 화이트리스트 조회 — 없으면 자연 지형만 인정(기존 동작).</summary>
@@ -87,8 +89,16 @@ namespace Nyangbingo.World
 
         public SealSystem(TileService tileService, int maxFillCells = DefaultMaxFillCells,
             ISealBarrierRegistry barrierRegistry = null, ICoolingSourceProvider coolingSourceProvider = null)
+            : this(tileService, null, maxFillCells, barrierRegistry, coolingSourceProvider)
+        {
+        }
+
+        public SealSystem(TileService tileService, IReadOnlyList<SealWhitelistDefinition> sealWhitelist,
+            int maxFillCells = DefaultMaxFillCells,
+            ISealBarrierRegistry barrierRegistry = null, ICoolingSourceProvider coolingSourceProvider = null)
         {
             this.tileService = tileService ?? throw new ArgumentNullException(nameof(tileService));
+            boundaryPolicy = new SealBoundaryPolicy(sealWhitelist);
             this.maxFillCells = Mathf.Max(16, maxFillCells);
             this.barrierRegistry = barrierRegistry;
             this.coolingSourceProvider = coolingSourceProvider;
@@ -384,7 +394,7 @@ namespace Nyangbingo.World
         /// 인정하는 기존 동작을 그대로 유지한다(연결 전에도 컴파일/동작이 깨지지 않도록 하는 안전한 기본값).
         /// </summary>
         private bool IsRecognizedWall(TileData tile, Vector3Int cell) =>
-            tile.isNaturalTerrain || (barrierRegistry != null && barrierRegistry.IsRecognizedBarrier(cell));
+            boundaryPolicy.Seals(tile) || (barrierRegistry != null && barrierRegistry.IsRecognizedBarrier(cell));
 
         private static IEnumerable<Vector3Int> NeighborsAndSelf(Vector3Int cell)
         {

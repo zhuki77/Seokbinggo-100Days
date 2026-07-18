@@ -6,6 +6,9 @@ using Nyangbingo.Inventory;
 using Nyangbingo.Combat;
 using Nyangbingo.Yokai;
 using Nyangbingo.Bosses;
+using Nyangbingo.Audio;
+using Nyangbingo.UI;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.Debugging
@@ -53,6 +56,13 @@ namespace Nyangbingo.Debugging
             TestSmeltingSharedInputFuelTransaction();
             TestSmeltingRestoreValidation();
             TestGameDataCatalog();
+            TestImportedModules();
+            TestImportedMineralTiers();
+            TestImportedSealWhitelist();
+            TestImportedIdMigrations();
+            TestImportedDayCurve();
+            TestImportedGlobals();
+            TestImportedCombatProfiles();
             TestGameDataCatalogInvalidEntryRejection();
             TestImportedBossDefinitions();
             TestBossStartValidation();
@@ -66,7 +76,11 @@ namespace Nyangbingo.Debugging
             TestBossRecordSaveFlow();
             TestBossRecordSaveValidation();
             TestYokaiCodexKillSaveBinding();
+            TestImportedYokaiCodexPresentation();
+            TestAudioEventRoutingAndRuntimePool();
+            TestGameShellTitlePauseSettingsAndResult();
             TestImportedAccessoryStatsAndTheftProtection();
+            TestImportedArmorStatsRecipesAndSetBonus();
             TestEquipmentCollectionSaveRoundTrip();
             TestEquipmentDefinitionIdentityAndSlotValidation();
             TestEquipmentStatInvalidNumericGuard();
@@ -90,6 +104,7 @@ namespace Nyangbingo.Debugging
                 Debug.LogError("[Nyangbingo] Save test failed.");
             else Debug.Log("[Nyangbingo] Item acquisition, crafting, and save round-trip completed.");
             TestSaveJsonSchemaRejection();
+            TestV24SaveIdMigration();
             TestSaveManagerInputValidation(save);
             TestSaveManagerAtomicReplacement(save);
 
@@ -138,7 +153,7 @@ namespace Nyangbingo.Debugging
                 var testSpawner = gameObject.AddComponent<DevBTestSpawnController>();
                 var bossManager = gameObject.AddComponent<BossManager>();
                 bossManager.ConfigureForRuntime(testTime, testSpawner);
-                var bossDefinition = BossDefinition.CreateRuntime("goblin_chief", YokaiKind.ClubGoblin, workbench,
+                var bossDefinition = BossDefinition.CreateRuntime("king_dokkaebi", YokaiKind.ClubGoblin, workbench,
                     new[] { new ItemAmount { item = wood, amount = 2 } });
                 var bossObject = new GameObject("TemporaryBoss");
                 var bossBody = bossObject.AddComponent<Rigidbody2D>();
@@ -179,6 +194,7 @@ namespace Nyangbingo.Debugging
             TestHealthRuntimeReconfigurationReset();
             TestWireSnareAbility();
             TestYagwanggwiTheftRules();
+            TestImportedYokaiSpawnTracksAndDawnFlee();
             TestYokaiDefinitionHealthInitialization();
             TestYokaiGameSecondsBinding();
             TestYokaiReconfigurationClockReset();
@@ -218,10 +234,11 @@ namespace Nyangbingo.Debugging
             TestPlayerBossSaveSpawnFailureRollback();
 
             inventory.TryAdd(wood.Id, 2); inventory.TryAdd(stone.Id, 1);
-            var smelting = new SmeltingStation(inventory);
             var smeltingRecipe = SmeltingDefinition.CreateRuntime("test_smelting",
                 new ItemAmount { item = wood, amount = 2 }, new ItemAmount { item = stone, amount = 1 },
                 new ItemAmount { item = workbench, amount = 1 }, 1f);
+            var smelting = new SmeltingStation(inventory, smeltingRecipe.StationKind,
+                smeltingRecipe.BatchCapacity);
             if (smelting.TryStart(smeltingRecipe) && smelting.Tick(1f) && smelting.Completed.Count == 1 && smelting.TryCollect(0) && inventory.Count(workbench.Id) >= 2)
                 Debug.Log("[Nyangbingo] Smelting completed.");
             else Debug.LogError("[Nyangbingo] Smelting test failed.");
@@ -234,11 +251,12 @@ namespace Nyangbingo.Debugging
 
             var utilities = new UtilityService(); var fanUsed = false;
             utilities.FanUsed += _ => fanUsed = true;
-            if (utilities.TryUse(UtilityDefinition.CreateRuntime(UtilityKind.FoldingFan, 3f)) && fanUsed)
+            if (utilities.TryUse(UtilityDefinition.CreateRuntime(UtilityKind.Hapjukseon, 3f)) && fanUsed)
                 Debug.Log("[Nyangbingo] Utility event completed.");
             else Debug.LogError("[Nyangbingo] Utility test failed.");
 
             TestImportedUtilities();
+            TestImportedFanIdAndRecipeContract();
             TestUtilityCooldownSaveRoundTrip();
         }
 
@@ -306,9 +324,20 @@ namespace Nyangbingo.Debugging
             var countSaturated = inventory.Count(item.Id) == int.MaxValue && inventory.Has(item.Id, int.MaxValue);
             var removedLargeAmount = inventory.TryRemove(item.Id, int.MaxValue) && inventory.Count(item.Id) == 1;
             var removedRemainder = inventory.TryRemove(item.Id, 1) && inventory.Count(item.Id) == 0;
+            var bodyOnlyItem = ItemDefinition.CreateRuntime("body_only", "Body Only", 0,
+                ItemCategory.Tool, ItemMvpScope.A, "Non-inventory definition");
+            var bodyOnlyInventory = new Nyangbingo.Inventory.Inventory(
+                id => id == bodyOnlyItem.Id ? bodyOnlyItem : null);
+            var bodyOnlyRejected = !bodyOnlyItem.IsInventoryItem &&
+                                   !bodyOnlyInventory.TryAdd(bodyOnlyItem.Id, 1) &&
+                                   !bodyOnlyInventory.CanImport(new[]
+                                   {
+                                       new InventorySlot { itemId = bodyOnlyItem.Id, amount = 1 }
+                                   });
 
-            if (filledFirstSlot && usedSecondSlot && countSaturated && removedLargeAmount && removedRemainder)
-                Debug.Log("[Nyangbingo] Inventory large-stack capacity, count overflow, and removal guard completed.");
+            if (filledFirstSlot && usedSecondSlot && countSaturated && removedLargeAmount && removedRemainder &&
+                bodyOnlyRejected)
+                Debug.Log("[Nyangbingo] Inventory large-stack, non-inventory item, overflow, and removal guard completed.");
             else Debug.LogError("[Nyangbingo] Inventory large-stack overflow guard test failed.");
         }
 
@@ -325,6 +354,98 @@ namespace Nyangbingo.Debugging
             if (emptyRejected && futureRejected && legacyAccepted)
                 Debug.Log("[Nyangbingo] Save JSON future-schema rejection and legacy normalization completed.");
             else Debug.LogError("[Nyangbingo] Save JSON schema validation test failed.");
+        }
+
+        private void TestV24SaveIdMigration()
+        {
+            var legacy = new SaveGame { schemaVersion = 7 };
+            legacy.inventory.Add(new InventorySlot { itemId = "fox_rain_charm", amount = 99 });
+            legacy.inventory.Add(new InventorySlot { itemId = "yokai_tears", amount = 98 });
+            while (legacy.inventory.Count < Nyangbingo.Inventory.Inventory.SlotCount)
+                legacy.inventory.Add(new InventorySlot { itemId = "migration_blocker", amount = 99 });
+            legacy.unlockedRecipes.Add("ice_steel_claws");
+            legacy.unlockedRecipes.Add("fox_rain_charm");
+            legacy.placedObjects.Add("foundry");
+            legacy.placedObjectRecords.Add(new PlacedObjectRecord { objectId = "legacy_scale", definitionId = "reverse_scale" });
+            legacy.equipment.Add(new EquipmentRecord { slot = EquipmentSlot.AccessoryOne.ToString(), equipmentId = "tiger_eye_orb" });
+            legacy.ownedEquipmentIds.Add("wind_ribbon");
+            legacy.pendingItemAcquisitions.Add(new PendingItemRecord { itemId = "club_fragment", amount = 1 });
+            legacy.activeCrafting = new CraftingProcessRecord { active = true, recipeId = "ice_steel_claws", remainingGameSeconds = 2f };
+            legacy.smelting.Add(new SmeltingRecord { stationId = "foundry", recipeId = "smelt_ice_steel", isActive = true });
+            legacy.smeltingOutputs.Add(new SmeltingOutputRecord { stationId = "foundry", itemId = "ice_steel_ingot", amount = 1 });
+            legacy.bossRecords.Add(new BossRecord { bossId = "gangcheori", count = 2, firstDay = 30 });
+            legacy.bossRecords.Add(new BossRecord { bossId = "gangcheol_boss", count = 3, firstDay = 18 });
+            legacy.bossRecords.Add(new BossRecord { bossId = "goblin_chief", count = 1, firstDay = 8 });
+            legacy.forcedBossEncounters.Add(new ForcedBossEncounterRecord { bossId = "gangcheori", triggered = true });
+            legacy.forcedBossEncounters.Add(new ForcedBossEncounterRecord { bossId = "gangcheol_boss", triggered = false });
+            legacy.dogam.Add(new CodexRecord { yokaiId = "gangcheori", kills = 4 });
+            legacy.dogam.Add(new CodexRecord { yokaiId = "gangcheol", kills = 6 });
+            legacy.dogam.Add(new CodexRecord { yokaiId = "club_goblin", kills = 1 });
+            legacy.dogam.Add(new CodexRecord { yokaiId = "yagwanggwi", kills = 2 });
+            legacy.utilityCooldowns.Add(new UtilityCooldownRecord
+            {
+                kind = "FoxRainCharm",
+                remainingGameSeconds = 10f
+            });
+            legacy.activeBoss = new ActiveBossStateRecord { active = true, bossId = "gangcheori", currentHealth = 100 };
+
+            legacy.NormalizeAfterLoad();
+
+            long tearTotal = 0;
+            var hasFoxRainCharm = false;
+            for (var i = 0; i < legacy.inventory.Count; i++)
+            {
+                var slot = legacy.inventory[i];
+                if (slot.itemId == "yokai_tear") tearTotal += slot.amount;
+                if (slot.itemId == "fox_rain_charm") hasFoxRainCharm = true;
+            }
+            var pendingClubShard = false;
+            for (var i = 0; i < legacy.pendingItemAcquisitions.Count; i++)
+            {
+                var record = legacy.pendingItemAcquisitions[i];
+                if (record.itemId == "yokai_tear") tearTotal += record.amount;
+                if (record.itemId == "club_shard" && record.amount == 1) pendingClubShard = true;
+                if (record.itemId == "fox_rain_charm") hasFoxRainCharm = true;
+            }
+            var bossMergeMatches = legacy.bossRecords.Count == 2;
+            for (var i = 0; i < legacy.bossRecords.Count; i++)
+            {
+                var record = legacy.bossRecords[i];
+                if (record.bossId == "gangcheol_boss")
+                    bossMergeMatches &= record.count == 5 && record.firstDay == 18;
+                else if (record.bossId == "king_dokkaebi") bossMergeMatches &= record.count == 1;
+                else bossMergeMatches = false;
+            }
+            var forcedMergeMatches = legacy.forcedBossEncounters.Count == 1 &&
+                                     legacy.forcedBossEncounters[0].bossId == "gangcheol_boss" &&
+                                     legacy.forcedBossEncounters[0].triggered;
+            var codexMatches = legacy.dogam.Count == 3;
+            for (var i = 0; i < legacy.dogam.Count; i++)
+            {
+                var record = legacy.dogam[i];
+                if (record.yokaiId == "gangcheol") codexMatches &= record.kills == 10;
+                else if (record.yokaiId == "club") codexMatches &= record.kills == 1;
+                else if (record.yokaiId == "yakwang") codexMatches &= record.kills == 2;
+                else codexMatches = false;
+            }
+            var itemFieldsMatch = legacy.unlockedRecipes.Count == 1 && legacy.unlockedRecipes[0] == "icesteel_claw" &&
+                                  legacy.placedObjects.Count == 1 && legacy.placedObjects[0] == "blast_furnace" &&
+                                  legacy.placedObjectRecords.Count == 1 && legacy.placedObjectRecords[0].definitionId == "gangcheol_scale" &&
+                                  legacy.equipment.Count == 1 && legacy.equipment[0].equipmentId == "tiger_eye_bead" &&
+                                  legacy.ownedEquipmentIds.Count == 1 && legacy.ownedEquipmentIds[0] == "wind_daenggi" &&
+                                  pendingClubShard && legacy.activeCrafting.recipeId == "icesteel_claw";
+            var smeltingMatches = legacy.smelting.Count == 1 && legacy.smelting[0].stationId == "blast_furnace" &&
+                                  legacy.smelting[0].recipeId == "smelt_icesteel" && legacy.smeltingOutputs.Count == 1 &&
+                                  legacy.smeltingOutputs[0].stationId == "blast_furnace" &&
+                                  legacy.smeltingOutputs[0].itemId == "icesteel_ingot";
+            var removedStateMatches = !hasFoxRainCharm && legacy.utilityCooldowns.Count == 0 &&
+                                      legacy.activeBoss != null && !legacy.activeBoss.active;
+
+            if (legacy.schemaVersion == SaveGame.CurrentSchemaVersion && tearTotal == 395 &&
+                bossMergeMatches && forcedMergeMatches && codexMatches && itemFieldsMatch && smeltingMatches &&
+                removedStateMatches)
+                Debug.Log("[Nyangbingo] v24.1 save ID migration, collision merge, and fox-rain refund completed.");
+            else Debug.LogError("[Nyangbingo] v24.1 save ID migration test failed.");
         }
 
         private void TestSaveManagerInputValidation(SaveManager saveManager)
@@ -402,9 +523,26 @@ namespace Nyangbingo.Debugging
             var valid = gameDataCatalog.IsValid &&
                         ValidateCatalogEntries(gameDataCatalog.Items, value => value.Id, gameDataCatalog.FindItem) &&
                         ValidateCatalogEntries(gameDataCatalog.Recipes, value => value.Id, gameDataCatalog.FindRecipe) &&
+                        ValidateCatalogEntries(gameDataCatalog.Modules, value => value.Id, gameDataCatalog.FindModule) &&
+                        ValidateCatalogEntries(gameDataCatalog.MineralTiers, value => value.Id,
+                            gameDataCatalog.FindMineralTier) &&
+                        ValidateCatalogEntries(gameDataCatalog.SealWhitelist, value => value.Element,
+                            gameDataCatalog.FindSealRule) &&
+                        ValidateCatalogEntries(gameDataCatalog.IdMigrations, value => value.Key,
+                            key =>
+                            {
+                                var separator = key.IndexOf(':');
+                                return separator > 0 && System.Enum.TryParse(key.Substring(0, separator), out IdMigrationDomain domain)
+                                    ? gameDataCatalog.FindIdMigration(domain, key.Substring(separator + 1)) : null;
+                            }) &&
+                        ValidateCatalogEntries(gameDataCatalog.DayCurves, value => value.Id,
+                            id => int.TryParse(id, out var day) ? gameDataCatalog.FindDayCurve(day) : null) &&
+                        ValidateCatalogEntries(gameDataCatalog.Globals, value => value.Key,
+                            gameDataCatalog.FindGlobal) &&
                         ValidateCatalogEntries(gameDataCatalog.Smelting, value => value.Id, gameDataCatalog.FindSmelting) &&
                         ValidateCatalogEntries(gameDataCatalog.Equipment, value => value.Id, gameDataCatalog.FindEquipment) &&
                         ValidateCatalogEntries(gameDataCatalog.Utilities, value => value.Id, gameDataCatalog.FindUtility) &&
+                        ValidateCatalogEntries(gameDataCatalog.CombatProfiles, value => value.Id, gameDataCatalog.FindCombatProfile) &&
                         ValidateCatalogEntries(gameDataCatalog.Yokai, value => value.Id, gameDataCatalog.FindYokai) &&
                         ValidateCatalogEntries(gameDataCatalog.Bosses, value => value.Id, gameDataCatalog.FindBoss) &&
                         ValidateCatalogEntries(gameDataCatalog.Chests, value => value.Id, gameDataCatalog.FindChest) &&
@@ -414,9 +552,16 @@ namespace Nyangbingo.Debugging
                         importedClubGoblin != null && gameDataCatalog.FindYokai(importedClubGoblin.Id) == importedClubGoblin &&
                         gameDataCatalog.FindItem("__missing__") == null &&
                         gameDataCatalog.FindRecipe("__missing__") == null &&
+                        gameDataCatalog.FindModule("__missing__") == null &&
+                        gameDataCatalog.FindMineralTier("__missing__") == null &&
+                        gameDataCatalog.FindSealRule("__missing__") == null &&
+                        gameDataCatalog.FindIdMigration(IdMigrationDomain.Item, "__missing__") == null &&
+                        gameDataCatalog.FindDayCurve(0) == null && gameDataCatalog.FindDayCurve(31) == null &&
+                        gameDataCatalog.FindGlobal("__missing__") == null &&
                         gameDataCatalog.FindSmelting("__missing__") == null &&
                         gameDataCatalog.FindEquipment("__missing__") == null &&
                         gameDataCatalog.FindUtility("__missing__") == null &&
+                        gameDataCatalog.FindCombatProfile("__missing__") == null &&
                         gameDataCatalog.FindYokai("__missing__") == null &&
                         gameDataCatalog.FindBoss("__missing__") == null &&
                         gameDataCatalog.FindChest("__missing__") == null &&
@@ -424,13 +569,447 @@ namespace Nyangbingo.Debugging
 
             if (valid)
                 Debug.Log($"[Nyangbingo] Game data catalog ID lookup completed: {gameDataCatalog.Items.Count} items, " +
-                          $"{gameDataCatalog.Recipes.Count} recipes, {gameDataCatalog.Smelting.Count} smelting, " +
+                          $"{gameDataCatalog.Recipes.Count} recipes, {gameDataCatalog.Modules.Count} modules, " +
+                          $"{gameDataCatalog.MineralTiers.Count} mineral tiers, " +
+                          $"{gameDataCatalog.SealWhitelist.Count} seal rules, " +
+                          $"{gameDataCatalog.IdMigrations.Count} ID migrations, " +
+                          $"{gameDataCatalog.DayCurves.Count} day curves, " +
+                          $"{gameDataCatalog.Globals.Count} globals, " +
+                          $"{gameDataCatalog.Smelting.Count} smelting, " +
                           $"{gameDataCatalog.Equipment.Count} equipment, {gameDataCatalog.Utilities.Count} utilities, " +
+                          $"{gameDataCatalog.CombatProfiles.Count} combat profiles, " +
                           $"{gameDataCatalog.Yokai.Count} yokai, {gameDataCatalog.Bosses.Count} bosses, " +
                           $"{gameDataCatalog.Chests.Count} chests, " +
                           $"{gameDataCatalog.DayEvents.Count} day events.");
             else
                 Debug.LogError("[Nyangbingo] Game data catalog ID lookup test failed.");
+        }
+
+        private void TestImportedModules()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported module catalog reference is missing.");
+                return;
+            }
+
+            var ids = new[] { "insul_wall", "door", "roof", "jangdok", "ice_core" };
+            var names = new[] { "차열벽", "단열 문", "차열 지붕", "장독 창고", "얼음 저장고" };
+            var roles = new[]
+            {
+                "기본 방벽 HP600", "통행+flood-fill 밀폐 인정", "상부 밀폐", "보관함 12슬롯", "체온 회복 거점(코어)"
+            };
+            var buildTimes = new[] { 5f, 30f, 20f, 45f, 60f };
+            var priorities = new[]
+            {
+                ModulePriority.P0, ModulePriority.P0, ModulePriority.P0, ModulePriority.P1, ModulePriority.P0
+            };
+            var materials = new[]
+            {
+                new[] { "stone:2", "dirt:1" },
+                new[] { "wood:6", "hemp_stalk:4", "ice_shard:4" },
+                new[] { "stone:6", "rebar:3", "hemp_stalk:2" },
+                new[] { "dirt:10", "stone:8", "wood:6" },
+                new[] { "ice_shard:20", "stone:10", "iron_ingot:2" }
+            };
+
+            var valid = gameDataCatalog.Modules.Count == ids.Length;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                var definition = gameDataCatalog.FindModule(ids[i]);
+                var recipe = gameDataCatalog.FindRecipe(ids[i]);
+                valid &= definition != null && definition.Id == ids[i] && definition.DisplayName == names[i] &&
+                         definition.Item == gameDataCatalog.FindItem(ids[i]) && definition.Role == roles[i] &&
+                         Mathf.Approximately(definition.BuildTimeSeconds, buildTimes[i]) &&
+                         definition.Priority == priorities[i] && MatchesItemAmounts(definition.Materials, materials[i]) &&
+                         recipe != null && recipe.Output.item == definition.Item &&
+                         Mathf.Approximately(recipe.DurationSeconds, definition.BuildTimeSeconds) &&
+                         MatchesItemAmounts(recipe.Ingredients, materials[i]);
+            }
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Official five module definitions, recipes, priorities, and materials completed.");
+            else Debug.LogError("[Nyangbingo] Imported module definition test failed.");
+        }
+
+        private void TestImportedMineralTiers()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported mineral tier catalog reference is missing.");
+                return;
+            }
+
+            var ids = new[]
+            {
+                "wood", "hemp_stalk", "rebar", "dirt", "stone", "coal", "iron_ore", "copper_ore",
+                "ice_shard", "icesteel_ore", "frost_essence", "clay"
+            };
+            var layers = new[]
+            {
+                MineralLayer.SurfaceNight, MineralLayer.SurfaceNight, MineralLayer.SurfaceRuinNight,
+                MineralLayer.UndergroundUpper, MineralLayer.UndergroundUpper, MineralLayer.UndergroundUpper,
+                MineralLayer.UndergroundMiddle, MineralLayer.UndergroundMiddle, MineralLayer.UndergroundMiddle,
+                MineralLayer.UndergroundDeep, MineralLayer.UndergroundDeep, MineralLayer.UndergroundUpper
+            };
+            var minimumDepths = new[] { 0, 0, 0, 1, 1, 1, 46, 46, 46, 91, 91, 1 };
+            var maximumDepths = new[] { 0, 0, 0, 45, 45, 45, 90, 90, 90, 135, 135, 45 };
+            var minimumClawTiers = new[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1 };
+            var gates = new[]
+            {
+                MiningGateType.None, MiningGateType.None, MiningGateType.None, MiningGateType.None,
+                MiningGateType.None, MiningGateType.None, MiningGateType.Soft, MiningGateType.Soft,
+                MiningGateType.None, MiningGateType.Hard, MiningGateType.Hard, MiningGateType.None
+            };
+            var tierOne = new[] { 1.5f, .5f, 2f, 1f, 1f, 1.6f, 3f, 3f, 2f, -1f, -1f, 1.2f };
+            var tierTwo = new[] { .75f, .25f, 1f, .5f, .5f, .8f, 1.5f, 1.5f, 1f, 4f, 6f, .6f };
+            var tierThree = new[] { .4f, .25f, .5f, .25f, .25f, .4f, .75f, .75f, .5f, 2f, 3f, .3f };
+            var frequencies = new[] { 8f, 10f, 6f, 45f, 25f, 8f, 18f, 12f, 10f, 12f, 4f, 10f };
+
+            var valid = gameDataCatalog.MineralTiers.Count == ids.Length;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                var definition = gameDataCatalog.FindMineralTier(ids[i]);
+                valid &= definition != null && definition.Id == ids[i] &&
+                         definition.Resource == gameDataCatalog.FindItem(ids[i]) &&
+                         !string.IsNullOrWhiteSpace(definition.DisplayName) &&
+                         !string.IsNullOrWhiteSpace(definition.UsageDescription) &&
+                         !string.IsNullOrWhiteSpace(definition.GateDescription) &&
+                         definition.Layer == layers[i] && definition.MinimumDepth == minimumDepths[i] &&
+                         definition.MaximumDepth == maximumDepths[i] &&
+                         definition.MinimumClawTier == minimumClawTiers[i] && definition.GateType == gates[i] &&
+                         Mathf.Approximately(definition.ClawTierOneSeconds, tierOne[i]) &&
+                         Mathf.Approximately(definition.ClawTierTwoSeconds, tierTwo[i]) &&
+                         Mathf.Approximately(definition.ClawTierThreeSeconds, tierThree[i]) &&
+                         Mathf.Approximately(definition.FrequencyPerHundredTiles, frequencies[i]) &&
+                         Mathf.Approximately(definition.MiningSecondsForClawTier(1),
+                             tierOne[i] > 0f ? tierOne[i] : -1f) &&
+                         Mathf.Approximately(definition.MiningSecondsForClawTier(2), tierTwo[i]) &&
+                         Mathf.Approximately(definition.MiningSecondsForClawTier(3), tierThree[i]) &&
+                         !definition.CanMineWithClawTier(0) && !definition.CanMineWithClawTier(4);
+            }
+
+            var worldConfig = WorldGenerationConfig.CreateDefault();
+            var veinProfilesMatched = 0;
+            var profiles = worldConfig.OreVeins;
+            for (var i = 0; i < profiles.Length; i++)
+            {
+                var definition = gameDataCatalog.FindMineralTier(profiles[i].elementType);
+                if (definition != null &&
+                    Mathf.Approximately(definition.FrequencyPerHundredTiles, profiles[i].frequencyPer100Tiles))
+                    veinProfilesMatched++;
+            }
+            valid &= profiles.Length == 7 && veinProfilesMatched == profiles.Length;
+            Destroy(worldConfig);
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Official 12 mineral tiers, claw mining times, gates, and vein frequencies completed.");
+            else Debug.LogError("[Nyangbingo] Imported mineral tier definition test failed.");
+        }
+
+        private void TestImportedSealWhitelist()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported seal whitelist catalog reference is missing.");
+                return;
+            }
+
+            var whitelist = gameDataCatalog.SealWhitelist;
+            var sealingRuleCount = 0;
+            for (var i = 0; i < whitelist.Count; i++)
+                if (whitelist[i] != null && whitelist[i].Seals) sealingRuleCount++;
+
+            var insulWall = gameDataCatalog.FindSealRule("차열벽");
+            var naturalTerrain = gameDataCatalog.FindSealRule(SealBoundaryPolicy.NaturalTerrainElement);
+            var tunnelAir = gameDataCatalog.FindSealRule(SealBoundaryPolicy.AirElement);
+            var policy = new SealBoundaryPolicy(whitelist);
+            var rulesValid = whitelist.Count == 22 && sealingRuleCount == 7 && policy.IsValid &&
+                             insulWall != null && insulWall.Seals && naturalTerrain != null && naturalTerrain.Seals &&
+                             tunnelAir != null && !tunnelAir.Seals;
+
+            var sealedTiles = CreateSealTestRoom("insul_wall");
+            var sealedService = new TileService(sealedTiles, null, gameDataCatalog, 1);
+            var sealedSystem = new SealSystem(sealedService, whitelist);
+            var artificialRoomSealed = sealedSystem.IsWatchPointSealed(new Vector3Int(1, 1, 0));
+            sealedSystem.Dispose();
+
+            var leakingTiles = CreateSealTestRoom("insul_wall");
+            leakingTiles[1, 2].elementType = "ice_core";
+            var leakingService = new TileService(leakingTiles, null, gameDataCatalog, 1);
+            var leakingSystem = new SealSystem(leakingService, whitelist);
+            var storageDoesNotSeal = !leakingSystem.IsWatchPointSealed(new Vector3Int(1, 1, 0));
+            leakingSystem.Dispose();
+
+            var attachmentTile = new TileData
+            {
+                hardness = 1,
+                isNaturalTerrain = false,
+                elementType = "straw_insul"
+            };
+            var attachmentDoesNotSealAlone = !policy.Seals(attachmentTile);
+
+            if (rulesValid && artificialRoomSealed && storageDoesNotSeal && attachmentDoesNotSealAlone)
+                Debug.Log("[Nyangbingo] Official 22 seal whitelist rules and artificial boundary policy completed.");
+            else Debug.LogError("[Nyangbingo] Imported seal whitelist or boundary policy test failed.");
+        }
+
+        private static TileData[,] CreateSealTestRoom(string boundaryElement)
+        {
+            var tiles = new TileData[3, 3];
+            for (var x = 0; x < 3; x++)
+            for (var y = 0; y < 3; y++)
+                tiles[x, y] = new TileData
+                {
+                    hardness = 1,
+                    isNaturalTerrain = false,
+                    elementType = boundaryElement
+                };
+            tiles[1, 1] = TileData.CreateAir();
+            return tiles;
+        }
+
+        private void TestImportedIdMigrations()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported ID migration catalog reference is missing.");
+                return;
+            }
+
+            IdMigrationPolicy policy;
+            try
+            {
+                policy = IdMigrationRuntime.LoadOfficial();
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] ID migration runtime manifest load failed: {exception.Message}");
+                return;
+            }
+
+            var definitions = gameDataCatalog.IdMigrations;
+            var renameCount = 0;
+            var refundCount = 0;
+            var itemCount = 0;
+            var yokaiCount = 0;
+            var bossCount = 0;
+            var smeltingCount = 0;
+            var valid = definitions.Count == 27 && policy.IsValid && policy.RuleCount == 27;
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                var definition = definitions[i];
+                if (definition == null) { valid = false; continue; }
+                if (definition.Action == IdMigrationAction.Rename) renameCount++;
+                else if (definition.Action == IdMigrationAction.RemoveRefund) refundCount++;
+                switch (definition.Domain)
+                {
+                    case IdMigrationDomain.Item: itemCount++; break;
+                    case IdMigrationDomain.Yokai: yokaiCount++; break;
+                    case IdMigrationDomain.Boss: bossCount++; break;
+                    case IdMigrationDomain.Smelting: smeltingCount++; break;
+                }
+
+                var runtimeDefinition = policy.Find(definition.Domain, definition.LegacyId);
+                valid &= runtimeDefinition == definition &&
+                         policy.Migrate(definition.Domain, definition.LegacyId) ==
+                         (definition.Action == IdMigrationAction.RemoveRefund ? string.Empty : definition.NewId);
+            }
+
+            var refund = policy.Find(IdMigrationDomain.Item, "fox_rain_charm");
+            valid &= renameCount == 26 && refundCount == 1 && itemCount == 21 && yokaiCount == 3 &&
+                     bossCount == 2 && smeltingCount == 1 && refund != null &&
+                     refund.RefundItemId == "yokai_tear" && refund.RefundAmount == 3 &&
+                     policy.Migrate(IdMigrationDomain.Yokai, "gangcheori") == "gangcheol" &&
+                     policy.Migrate(IdMigrationDomain.Boss, "gangcheori") == "gangcheol_boss" &&
+                     policy.Migrate(IdMigrationDomain.Item, "current_id") == "current_id";
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Official 27 ID migrations and runtime save manifest completed.");
+            else Debug.LogError("[Nyangbingo] Imported ID migration manifest test failed.");
+        }
+
+        private void TestImportedDayCurve()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported day curve catalog reference is missing.");
+                return;
+            }
+
+            var curves = gameDataCatalog.DayCurves;
+            var valid = curves.Count == 30;
+            var previousWallDamage = 0f;
+            for (var day = 1; day <= 30; day++)
+            {
+                var curve = gameDataCatalog.FindDayCurve(day);
+                var expectedHeatStage = day <= 10 ? 1 : day <= 20 ? 2 : 3;
+                var expectedFireDamage = expectedHeatStage * 1.5f;
+                var expectedNightCount = Mathf.Min(8, 1 + (day - 1) / 4);
+                var expectedSealPace = Mathf.RoundToInt(day * 100f / 30f);
+                valid &= curve != null && curve.Day == day && curve.HeatStage == expectedHeatStage &&
+                         Mathf.Approximately(curve.DayFireDamagePerSecond, expectedFireDamage) &&
+                         curve.NightYokaiCount == expectedNightCount && curve.PaceMineralTier == expectedHeatStage &&
+                         Mathf.Approximately(curve.PaceSealPercent, expectedSealPace) &&
+                         curve.EffectiveSpawnCount == Mathf.RoundToInt(curve.NightYokaiCount * curve.SpawnMultiplier) &&
+                         curve.MaxActive == curve.EffectiveSpawnCount && curve.YokaiWallDamage >= previousWallDamage &&
+                         curve.DropMultiplier >= 0f;
+                if (curve != null) previousWallDamage = curve.YokaiWallDamage;
+            }
+
+            var dayOne = gameDataCatalog.FindDayCurve(1);
+            var baekjung = gameDataCatalog.FindDayCurve(15);
+            var finalDay = gameDataCatalog.FindDayCurve(30);
+            valid &= dayOne != null && dayOne.SpawnAmount(YokaiKind.ClubGoblin) == 1 &&
+                     baekjung != null && baekjung.EventId == "baekjung" && baekjung.MaxActive == 12 &&
+                     Mathf.Approximately(baekjung.SpawnMultiplier, 3f) &&
+                     baekjung.SpawnAmount(YokaiKind.ClubGoblin) == 3 &&
+                     baekjung.SpawnAmount(YokaiKind.Bulgasari) == 2 &&
+                     baekjung.SpawnAmount(YokaiKind.Yagwanggwi) == 7 &&
+                     finalDay != null && finalDay.EventId == "gangcheol_boss" &&
+                     finalDay.PaceSealPercent == 100f && finalDay.SpawnAmount(YokaiKind.Gangcheori) == 1 &&
+                     gameDataCatalog.FindDayEvent(baekjung.EventId)?.Day == 15 &&
+                     gameDataCatalog.FindBoss(finalDay.EventId) != null;
+
+            var timeObject = new GameObject("TemporaryDayCurveTimeSource");
+            var time = timeObject.AddComponent<DayNightService>();
+            var dayOneBound = time.ConfigureDayCurve(gameDataCatalog) && time.CurrentDayCurve == dayOne;
+            var dayFifteenBound = time.RestoreTimeState(15, 0f, false) && time.CurrentDayCurve == baekjung;
+            var dayThirtyBound = time.RestoreTimeState(30, 0f, false) && time.CurrentDayCurve == finalDay;
+            valid &= dayOneBound && dayFifteenBound && dayThirtyBound;
+            Destroy(timeObject);
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Official 30-day curve, spawn plans, milestones, and time binding completed.");
+            else Debug.LogError("[Nyangbingo] Imported day curve or time binding test failed.");
+        }
+
+        private void TestImportedGlobals()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported globals catalog reference is missing.");
+                return;
+            }
+
+            var definitions = gameDataCatalog.Globals;
+            var settings = new GlobalSettings(definitions);
+            var numericCount = 0;
+            var boolCount = 0;
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                if (definitions[i].TryGetFloat(out _)) numericCount++;
+                if (definitions[i].TryGetBool(out _)) boolCount++;
+            }
+
+            var valid = definitions.Count == 80 && settings.IsValid && settings.Count == 80 &&
+                        numericCount == 68 && boolCount == 2 &&
+                        settings.TryGetFloat(GlobalKeys.DayLengthSeconds, out var dayLength) &&
+                        settings.TryGetFloat(GlobalKeys.NightLengthSeconds, out var nightLength) &&
+                        settings.TryGetFloat(GlobalKeys.DayTotalSeconds, out var totalLength) &&
+                        Mathf.Approximately(dayLength, 900f) && Mathf.Approximately(nightLength, 540f) &&
+                        Mathf.Approximately(dayLength + nightLength, totalLength) &&
+                        settings.TryGetInt(GlobalKeys.MvpDays, out var mvpDays) && mvpDays == 30 &&
+                        settings.TryGetInt(GlobalKeys.TotalDays, out var totalDays) && totalDays == 100 &&
+                        settings.TryGetBool(GlobalKeys.StartAtNight, out var startsAtNight) && startsAtNight &&
+                        settings.TryGetInt(GlobalKeys.BaekjungDay, out var baekjungDay) && baekjungDay == 15 &&
+                        settings.TryGetInt(GlobalKeys.SealWindowRadiusX, out var radiusX) && radiusX == 28 &&
+                        settings.TryGetInt(GlobalKeys.SealWindowRadiusY, out var radiusY) && radiusY == 12 &&
+                        settings.TryGetInt(GlobalKeys.SealCap, out var sealCap) &&
+                        sealCap == (2 * radiusX + 1) * (2 * radiusY + 1) &&
+                        settings.TryGetInt(GlobalKeys.SealTargetCells, out var targetCells) && targetCells == 240 &&
+                        settings.GetString(GlobalKeys.BossSavePolicy) == "no_serialize" &&
+                        settings.GetString(GlobalKeys.BaekjungWaveOverflow) == "queue_until_dawn";
+
+            var timeObject = new GameObject("TemporaryOfficialGlobalsTimeSource");
+            var time = timeObject.AddComponent<DayNightService>();
+            var configured = time.ConfigureOfficialData(gameDataCatalog);
+            var officialStart = configured && time.Day == 1 && time.IsNight &&
+                                Mathf.Approximately(time.DayDurationSeconds, 900f) &&
+                                Mathf.Approximately(time.NightDurationSeconds, 540f) &&
+                                Mathf.Approximately(time.CycleLengthSeconds, 1440f) &&
+                                Mathf.Approximately(time.TimeOfDayGameSeconds, 900f) &&
+                                Mathf.Approximately(time.SecondsUntilNextTransition, 540f) &&
+                                time.MvpContentDayLimit == 30 && time.SurvivalDayLimit == 100 &&
+                                time.CurrentDayCurve?.Day == 1;
+            time.Tick(540f);
+            var firstNightLengthCorrect = time.Day == 2 && !time.IsNight &&
+                                          Mathf.Approximately(time.TimeOfDayGameSeconds, 0f);
+            valid &= officialStart && firstNightLengthCorrect;
+            Destroy(timeObject);
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Official 80 globals, D-100/MVP-30 separation, typed contracts, and 540-second first night completed.");
+            else Debug.LogError("[Nyangbingo] Imported globals or runtime binding test failed.");
+        }
+
+        private void TestImportedCombatProfiles()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported combat profile catalog reference is missing.");
+                return;
+            }
+
+            var ids = new[]
+            {
+                "bare_claw", "iron_claw", "icesteel_claw", "dokkaebi_club",
+                FanItemIds.Cheolseon, "frostclaw_gauntlet", FanItemIds.Hapjukseon
+            };
+            var tiers = new[] { "1", "2", "3", "W1", "E1", "W2", "U1" };
+            var damages = new[] { 5, 8, 20, 7, 6, 28, 0 };
+            var attacksPerSecond = new[] { 1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 0f };
+            var dps = new[] { 7.5f, 12f, 30f, 10.5f, 9f, 42f, 0f };
+            var knockbacks = new[] { .5f, 1f, 1.5f, 2f, 1.5f, 1.5f, 2f };
+            var ranges = new[] { 1.5f, 1.5f, 2f, 2f, 2f, 2f, 2f };
+            var arcs = new[] { 90f, 90f, 120f, 90f, 90f, 120f, 90f };
+            var profilesMatch = gameDataCatalog.CombatProfiles.Count == ids.Length;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                var profile = gameDataCatalog.FindCombatProfile(ids[i]);
+                profilesMatch &= profile != null && profile.Id == ids[i] && profile.Tier == tiers[i] &&
+                                 profile.HasBasicAttack == (i != ids.Length - 1) &&
+                                 profile.AttackDamage == damages[i] &&
+                                 Mathf.Approximately(profile.AttacksPerSecond, attacksPerSecond[i]) &&
+                                 Mathf.Approximately(profile.DamagePerSecond, dps[i]) &&
+                                 Mathf.Approximately(profile.KnockbackTiles, knockbacks[i]) &&
+                                 Mathf.Approximately(profile.RangeTiles, ranges[i]) &&
+                                 Mathf.Approximately(profile.ArcDegrees, arcs[i]) && profile.MultiTarget &&
+                                 profile.HitsWalls == (ids[i] != FanItemIds.Cheolseon && ids[i] != FanItemIds.Hapjukseon) &&
+                                 gameDataCatalog.FindItem(ids[i]) != null;
+            }
+
+            var attacker = new GameObject("TemporaryImportedCombatProfileAttacker");
+            var attack = attacker.AddComponent<MeleeArcAttack>();
+            var firstTarget = new GameObject("TemporaryImportedCombatProfileTargetA");
+            firstTarget.transform.position = Vector3.right;
+            firstTarget.AddComponent<BoxCollider2D>();
+            var firstHealth = firstTarget.AddComponent<Health>();
+            firstHealth.ConfigureForRuntime(10);
+            var secondTarget = new GameObject("TemporaryImportedCombatProfileTargetB");
+            secondTarget.transform.position = new Vector3(1.5f, .2f, 0f);
+            secondTarget.AddComponent<BoxCollider2D>();
+            var secondHealth = secondTarget.AddComponent<Health>();
+            secondHealth.ConfigureForRuntime(10);
+            Physics2D.SyncTransforms();
+
+            var hapjukseonConfigured = attack.ConfigureForRuntime(attacker.transform, Physics2D.AllLayers,
+                gameDataCatalog.FindCombatProfile(FanItemIds.Hapjukseon));
+            attack.Strike(Vector2.right);
+            var noBasicAttack = firstHealth.Current == 10 && secondHealth.Current == 10 && !attack.HitsWalls;
+            var cheolseonConfigured = attack.ConfigureForRuntime(attacker.transform, Physics2D.AllLayers,
+                gameDataCatalog.FindCombatProfile(FanItemIds.Cheolseon));
+            attack.Strike(Vector2.right);
+            var cheolseonSwing = firstHealth.Current == 4 && secondHealth.Current == 4 && !attack.HitsWalls;
+
+            if (profilesMatch && hapjukseonConfigured && noBasicAttack && cheolseonConfigured && cheolseonSwing)
+                Debug.Log("[Nyangbingo] Official seven weapon and claw combat profiles and fan attack contracts completed.");
+            else
+                Debug.LogError("[Nyangbingo] Imported weapon or claw combat profile test failed.");
+
+            Destroy(attacker);
+            Destroy(firstTarget);
+            Destroy(secondTarget);
         }
 
         private void TestGameDataCatalogInvalidEntryRejection()
@@ -480,22 +1059,38 @@ namespace Nyangbingo.Debugging
                 return;
             }
 
-            var goblinChief = gameDataCatalog.FindBoss("goblin_chief");
+            var goblinChief = gameDataCatalog.FindBoss("king_dokkaebi");
             var motherBulgasari = gameDataCatalog.FindBoss("mother_bulgasari");
             var imugi = gameDataCatalog.FindBoss("imugi");
-            var gangcheori = gameDataCatalog.FindBoss("gangcheori");
+            var gangcheori = gameDataCatalog.FindBoss("gangcheol_boss");
 
             var valid = MatchesBossDefinition(goblinChief, BossKind.GoblinChief, 2400, 200f,
-                            "wrestling_belt", false, 0, "goblin_fire_essence") &&
-                        MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 3000, 286f,
-                            "iron_bait_pile", false, 0, "iron_furnace_heart") &&
+                            "ssireum_satba", CraftingStation.Workbench, false, 0,
+                            20f, 20f, 20f, 12, 0.75f, BossSpecialShape.Box, 2f, 0f, 12, 0f, 0f, 4f, 8f,
+                            false, true, ItemMvpScope.A,
+                            new[] { "club_shard:1", "hemp_stalk:10", "wood:5" },
+                            "yokai_tear:3", "dokkaebi_fire_essence:1", "club_shard:2") &&
+                        MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 3000, 285.7f,
+                            "iron_bait_pile", CraftingStation.Furnace, false, 0,
+                            24f, 48f, 0f, 14, 1f, BossSpecialShape.Cone, 4f, 60f, 10, 2f, 1f, 0f, 6f,
+                            true, true, ItemMvpScope.B,
+                            new[] { "iron_ingot:10", "iron_scale:3", "coal:5" },
+                            "yokai_tear:4", "iron_forge_core:1", "iron_scale:4") &&
                         MatchesBossDefinition(imugi, BossKind.Imugi, 6600, 220f,
-                            "ice_altar_offering", true, 0, "yeouiju") &&
-                        MatchesBossDefinition(gangcheori, BossKind.Gangcheori, 2000, 48f,
-                            "drought_talisman", false, 30, "drought_heart");
+                            "ice_altar_offering", CraftingStation.IceAnvil, true, 0,
+                            30f, 30f, 30f, 16, 1.5f, BossSpecialShape.Box, 4f, 0f, 18, 0f, 0f, 3f, 12f,
+                            false, true, ItemMvpScope.B,
+                            new[] { "icesteel_ingot:2", "frost_essence:2", "ice_shard:10" },
+                            "yokai_tear:8", "yeouiju:1") &&
+                        MatchesBossDefinition(gangcheori, BossKind.Gangcheori, 2000, 47.6f,
+                            "drought_talisman", CraftingStation.IceAnvil, false, 30,
+                            40f, 40f, 40f, 18, 1f, BossSpecialShape.Cone, 5f, 60f, 12, 3f, 1f, 0f, 5f,
+                            true, true, ItemMvpScope.A,
+                            new[] { "yokai_tear:30", "shadow_shard:2", "hemp_stalk:5" },
+                            "yokai_tear:8", "drought_heart:1", "gangcheol_scale:1");
 
             if (valid)
-                Debug.Log("[Nyangbingo] Imported boss stats, summon conditions, and guaranteed drops completed.");
+                Debug.Log("[Nyangbingo] Imported boss extended combat, summon materials, and drops.csv rewards completed.");
             else
                 Debug.LogError("[Nyangbingo] Imported boss definition test failed.");
         }
@@ -585,24 +1180,62 @@ namespace Nyangbingo.Debugging
         }
 
         private static bool MatchesBossDefinition(BossDefinition definition, BossKind kind, int hitPoints,
-            float combatSeconds, string summonItemId, bool requiresDeepAltar, int forcedDay, string dropItemId)
+            float combatSeconds, string summonItemId, CraftingStation summonStation, bool requiresDeepAltar,
+            int forcedDay, float wallDamageDefault, float wallDamageIce, float wallDamageIronWall,
+            int contactDamage, float telegraphSeconds, BossSpecialShape specialShape, float specialRange,
+            float specialArc, int specialDamage, float specialDuration, float specialTick, float specialKnockback,
+            float specialCooldown, bool fireTag, bool aimLock, ItemMvpScope mvpScope,
+            string[] expectedMaterials, params string[] expectedDrops)
         {
             if (definition == null || definition.Kind != kind || definition.HitPoints != hitPoints ||
                 !Mathf.Approximately(definition.ExpectedCombatSeconds, combatSeconds) ||
                 definition.SummonItem == null || definition.SummonItem.Id != summonItemId ||
+                definition.SummonStation != summonStation || string.IsNullOrWhiteSpace(definition.DisplayName) ||
+                string.IsNullOrWhiteSpace(definition.RecommendedDay) ||
                 definition.RequiresDeepAltar != requiresDeepAltar || definition.ForcedDay != forcedDay ||
-                definition.GuaranteedDrops == null || definition.GuaranteedDrops.Length != 1)
+                !Mathf.Approximately(definition.WallDamageDefault, wallDamageDefault) ||
+                !Mathf.Approximately(definition.WallDamageIce, wallDamageIce) ||
+                !Mathf.Approximately(definition.WallDamageIronWall, wallDamageIronWall) ||
+                definition.ContactDamage != contactDamage || string.IsNullOrWhiteSpace(definition.SpecialDescription) ||
+                !Mathf.Approximately(definition.TelegraphSeconds, telegraphSeconds) ||
+                definition.SpecialShape != specialShape ||
+                !Mathf.Approximately(definition.SpecialRangeTiles, specialRange) ||
+                !Mathf.Approximately(definition.SpecialArcDegrees, specialArc) ||
+                definition.SpecialDamagePerHit != specialDamage ||
+                !Mathf.Approximately(definition.SpecialDurationSeconds, specialDuration) ||
+                !Mathf.Approximately(definition.SpecialTickSeconds, specialTick) ||
+                !Mathf.Approximately(definition.SpecialKnockbackTiles, specialKnockback) ||
+                !Mathf.Approximately(definition.SpecialCooldownSeconds, specialCooldown) ||
+                definition.SpecialHasFireTag != fireTag || definition.SpecialAimLocks != aimLock ||
+                definition.MvpScope != mvpScope ||
+                !MatchesItemAmounts(definition.SummonMaterials, expectedMaterials) ||
+                definition.GuaranteedDrops == null || definition.GuaranteedDrops.Length != expectedDrops.Length)
                 return false;
 
-            var drop = definition.GuaranteedDrops[0];
-            return drop.item != null && drop.item.Id == dropItemId && drop.amount == 1;
+            return MatchesItemAmounts(definition.GuaranteedDrops, expectedDrops);
+        }
+
+        private static bool MatchesItemAmounts(ItemAmount[] actual, string[] expected)
+        {
+            if (actual == null || expected == null || actual.Length != expected.Length) return false;
+            var unmatched = new System.Collections.Generic.HashSet<string>(expected,
+                System.StringComparer.Ordinal);
+            if (unmatched.Count != expected.Length) return false;
+            for (var i = 0; i < actual.Length; i++)
+            {
+                var entry = actual[i];
+                if (entry.item == null || entry.amount <= 0 ||
+                    !unmatched.Remove($"{entry.item.Id}:{entry.amount}"))
+                    return false;
+            }
+            return unmatched.Count == 0;
         }
 
         private void TestBossSummonAndForcedEncounterRules()
         {
-            var goblinChief = gameDataCatalog != null ? gameDataCatalog.FindBoss("goblin_chief") : null;
+            var goblinChief = gameDataCatalog != null ? gameDataCatalog.FindBoss("king_dokkaebi") : null;
             var imugi = gameDataCatalog != null ? gameDataCatalog.FindBoss("imugi") : null;
-            var gangcheori = gameDataCatalog != null ? gameDataCatalog.FindBoss("gangcheori") : null;
+            var gangcheori = gameDataCatalog != null ? gameDataCatalog.FindBoss("gangcheol_boss") : null;
             if (goblinChief == null || imugi == null || gangcheori == null)
             {
                 Debug.LogError("[Nyangbingo] Boss summon rule definitions are missing.");
@@ -692,7 +1325,7 @@ namespace Nyangbingo.Debugging
 
         private void TestForcedBossEncounterSaveRoundTrip()
         {
-            var gangcheori = gameDataCatalog != null ? gameDataCatalog.FindBoss("gangcheori") : null;
+            var gangcheori = gameDataCatalog != null ? gameDataCatalog.FindBoss("gangcheol_boss") : null;
             if (gangcheori == null)
             {
                 Debug.LogError("[Nyangbingo] Forced boss save definition is missing.");
@@ -703,6 +1336,8 @@ namespace Nyangbingo.Debugging
             ForcedBossEncounterBinding restoredBinding = null;
             ForcedBossEncounterBinding legacyBinding = null;
             ForcedBossEncounterBinding emptyLegacyBinding = null;
+            var migratedGangcheolBoss = BossDefinition.CreateRuntime("gangcheol_boss", BossKind.Gangcheori,
+                gangcheori.SummonItem, gangcheori.GuaranteedDrops);
             try
             {
                 sourceBinding = new ForcedBossEncounterBinding(gangcheori, null, null, null, true);
@@ -717,14 +1352,16 @@ namespace Nyangbingo.Debugging
                 var legacy = JsonUtility.FromJson<SaveGame>(
                     "{\"schemaVersion\":1,\"bossRecords\":[{\"bossId\":\"gangcheori\",\"count\":1,\"firstDay\":30}],\"forcedBossEncounters\":null}");
                 if (legacy != null) legacy.NormalizeAfterLoad();
-                legacyBinding = new ForcedBossEncounterBinding(gangcheori, null, null, null);
-                var legacyRestored = ForcedBossEncounterSaveAdapter.Restore(legacy, gangcheori, legacyBinding);
+                legacyBinding = new ForcedBossEncounterBinding(migratedGangcheolBoss, null, null, null);
+                var legacyRestored = ForcedBossEncounterSaveAdapter.Restore(
+                    legacy, migratedGangcheolBoss, legacyBinding);
 
                 var emptyLegacy = JsonUtility.FromJson<SaveGame>(
                     "{\"schemaVersion\":1,\"bossRecords\":[],\"forcedBossEncounters\":null}");
                 if (emptyLegacy != null) emptyLegacy.NormalizeAfterLoad();
-                emptyLegacyBinding = new ForcedBossEncounterBinding(gangcheori, null, null, null);
-                var emptyLegacyRestored = ForcedBossEncounterSaveAdapter.Restore(emptyLegacy, gangcheori, emptyLegacyBinding);
+                emptyLegacyBinding = new ForcedBossEncounterBinding(migratedGangcheolBoss, null, null, null);
+                var emptyLegacyRestored = ForcedBossEncounterSaveAdapter.Restore(
+                    emptyLegacy, migratedGangcheolBoss, emptyLegacyBinding);
 
                 if (restored && loaded != null && loaded.schemaVersion == SaveGame.CurrentSchemaVersion &&
                     loaded.forcedBossEncounters.Count == 1 && restoredBinding.HasTriggered &&
@@ -741,6 +1378,7 @@ namespace Nyangbingo.Debugging
                 restoredBinding?.Dispose();
                 legacyBinding?.Dispose();
                 emptyLegacyBinding?.Dispose();
+                Destroy(migratedGangcheolBoss);
             }
         }
 
@@ -780,14 +1418,17 @@ namespace Nyangbingo.Debugging
 
         private void TestImportedBossGuaranteedRewardFlow()
         {
-            var bossDefinition = gameDataCatalog != null ? gameDataCatalog.FindBoss("goblin_chief") : null;
-            if (bossDefinition == null || bossDefinition.GuaranteedDrops == null || bossDefinition.GuaranteedDrops.Length != 1)
+            var bossDefinition = gameDataCatalog != null ? gameDataCatalog.FindBoss("king_dokkaebi") : null;
+            var tear = gameDataCatalog != null ? gameDataCatalog.FindItem("yokai_tear") : null;
+            var signature = gameDataCatalog != null ? gameDataCatalog.FindItem("dokkaebi_fire_essence") : null;
+            var extra = gameDataCatalog != null ? gameDataCatalog.FindItem("club_shard") : null;
+            if (bossDefinition == null || bossDefinition.GuaranteedDrops == null ||
+                bossDefinition.GuaranteedDrops.Length != 3 || tear == null || signature == null || extra == null)
             {
                 Debug.LogError("[Nyangbingo] Imported boss reward definition is missing.");
                 return;
             }
 
-            var reward = bossDefinition.GuaranteedDrops[0];
             var inventory = new Nyangbingo.Inventory.Inventory(gameDataCatalog.FindItem);
             var timeSource = gameObject.AddComponent<DevBTestTimeSource>();
             timeSource.IsNight = true;
@@ -798,14 +1439,7 @@ namespace Nyangbingo.Debugging
             receiver.ConfigureForRuntime(bossManager);
 
             var receiverEventCount = 0;
-            ItemDefinition grantedItem = null;
-            var grantedAmount = 0;
-            receiver.RewardGranted += (item, amount) =>
-            {
-                receiverEventCount++;
-                grantedItem = item;
-                grantedAmount = amount;
-            };
+            receiver.RewardGranted += (_, __) => receiverEventCount++;
 
             var acquisitionCount = 0;
             System.Action<ItemDefinition, int> onAcquisition = (item, amount) =>
@@ -823,21 +1457,22 @@ namespace Nyangbingo.Debugging
                 defeatedHealth.ConfigureForRuntime(bossDefinition.HitPoints);
                 var defeatedStarted = bossManager.TryStart(bossDefinition, defeatedHealth);
                 defeatedHealth.ApplyDamage(bossDefinition.HitPoints, DamageTag.Melee);
-                var defeatRewarded = defeatedStarted && receiverEventCount == 1 && acquisitionCount == 1 &&
-                                     grantedItem == reward.item && grantedAmount == reward.amount &&
-                                     inventory.Count(reward.item.Id) == reward.amount &&
+                var defeatRewarded = defeatedStarted && receiverEventCount == 3 && acquisitionCount == 3 &&
+                                     inventory.Count(tear.Id) == 3 && inventory.Count(signature.Id) == 1 &&
+                                     inventory.Count(extra.Id) == 2 &&
                                      !bossManager.IsBossActive && regularSpawner.IsRegularSpawning;
 
                 var fledHealth = fledBossObject.AddComponent<Health>();
                 fledHealth.ConfigureForRuntime(bossDefinition.HitPoints);
                 var fledStarted = bossManager.TryStart(bossDefinition, fledHealth);
                 timeSource.RaiseDawn();
-                var fleeNotRewarded = fledStarted && receiverEventCount == 1 && acquisitionCount == 1 &&
-                                      inventory.Count(reward.item.Id) == reward.amount &&
+                var fleeNotRewarded = fledStarted && receiverEventCount == 3 && acquisitionCount == 3 &&
+                                      inventory.Count(tear.Id) == 3 && inventory.Count(signature.Id) == 1 &&
+                                      inventory.Count(extra.Id) == 2 &&
                                       !bossManager.IsBossActive && regularSpawner.IsRegularSpawning;
 
                 if (defeatRewarded && fleeNotRewarded)
-                    Debug.Log("[Nyangbingo] Imported boss guaranteed reward and dawn-flee exclusion completed.");
+                    Debug.Log("[Nyangbingo] drops.csv boss reward bundle and dawn-flee exclusion completed.");
                 else
                     Debug.LogError("[Nyangbingo] Imported boss guaranteed reward flow test failed.");
             }
@@ -955,7 +1590,7 @@ namespace Nyangbingo.Debugging
 
         private void TestBossRecordSaveFlow()
         {
-            var bossDefinition = gameDataCatalog != null ? gameDataCatalog.FindBoss("goblin_chief") : null;
+            var bossDefinition = gameDataCatalog != null ? gameDataCatalog.FindBoss("king_dokkaebi") : null;
             if (bossDefinition == null)
             {
                 Debug.LogError("[Nyangbingo] Boss record definition is missing.");
@@ -1120,6 +1755,265 @@ namespace Nyangbingo.Debugging
             else Debug.LogError("[Nyangbingo] Yokai codex save binding test failed.");
         }
 
+        private void TestImportedYokaiCodexPresentation()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported yokai codex catalog reference is missing.");
+                return;
+            }
+
+            var save = new SaveGame
+            {
+                dogam = new System.Collections.Generic.List<CodexRecord>
+                {
+                    new CodexRecord { yokaiId = "club", kills = 2 },
+                    new CodexRecord { yokaiId = "gangcheol", kills = 1 }
+                },
+                bossRecords = new System.Collections.Generic.List<BossRecord>
+                {
+                    new BossRecord { bossId = "king_dokkaebi", count = 3, firstDay = 9 },
+                    new BossRecord { bossId = "gangcheol_boss", count = 1, firstDay = 30 }
+                }
+            };
+
+            YokaiCodexPresentationModel model;
+            try { model = new YokaiCodexPresentationModel(gameDataCatalog, save); }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] Yokai codex presentation construction failed: {exception.Message}");
+                return;
+            }
+
+            YokaiCodexCard FindCard(string id)
+            {
+                for (var i = 0; i < model.Cards.Count; i++)
+                    if (model.Cards[i].EntryId == id) return model.Cards[i];
+                return null;
+            }
+
+            var club = FindCard("club");
+            var yagwanggwi = FindCard("yakwang");
+            var gangcheol = FindCard("gangcheol");
+            var chief = FindCard("king_dokkaebi");
+            var gangcheolDuplicateRemoved = FindCard("gangcheol_boss") == null;
+            var layoutMatches = model.Cards.Count == YokaiCodexPresentationModel.ExpectedCardCount &&
+                                YokaiCodexPresentationModel.GridColumns == 3 &&
+                                YokaiCodexPresentationModel.GridCardSize == new Vector2(72f, 96f) &&
+                                YokaiCodexPresentationModel.EnlargedCardSize == new Vector2(192f, 256f);
+            var recordsMatch = club != null && club.IsUnlocked && club.KillCount == 2 &&
+                               chief != null && chief.IsBoss && chief.KillCount == 3 && chief.FirstKillDay == 9 &&
+                               gangcheol != null && gangcheol.KillCount == 1 && gangcheol.FirstKillDay == 30;
+            var lockedHidden = yagwanggwi != null && !yagwanggwi.IsUnlocked && yagwanggwi.UsesInkSilhouette &&
+                               yagwanggwi.DisplayName == "?" && yagwanggwi.SourceText == string.Empty;
+            var lockedEnlarged = model.TryTapCard("yakwang") && model.HasEnlargedCard &&
+                                 !model.TryTapCard("yakwang") && !model.IsBackVisible;
+            model.TapOutside();
+            var unlockedFlipped = model.TryTapCard("club") && model.TryTapCard("club") && model.IsBackVisible &&
+                                  model.SelectedCard.SourceText.Contains("씨름담");
+            model.TapOutside();
+            var outsideReturnedToGrid = !model.HasEnlargedCard && !model.IsBackVisible;
+
+            save.dogam.Add(new CodexRecord { yokaiId = "yakwang", kills = 1 });
+            model.Refresh();
+            yagwanggwi = FindCard("yakwang");
+            var refreshUnlocked = yagwanggwi != null && yagwanggwi.IsUnlocked &&
+                                  yagwanggwi.DisplayName == "야광귀" &&
+                                  yagwanggwi.SourceText.Contains("동국세시기");
+
+            if (layoutMatches && recordsMatch && lockedHidden && lockedEnlarged && unlockedFlipped &&
+                outsideReturnedToGrid && refreshUnlocked && gangcheolDuplicateRemoved)
+                Debug.Log("[Nyangbingo] Yokai codex eight-card unlock, enlarge, flip, and source presentation completed.");
+            else Debug.LogError("[Nyangbingo] Yokai codex presentation test failed.");
+        }
+
+        private void TestAudioEventRoutingAndRuntimePool()
+        {
+            var cues = new System.Collections.Generic.List<AudioCue>();
+            var music = new System.Collections.Generic.List<MusicTrack>();
+            var percussion = new System.Collections.Generic.List<bool>();
+            var router = new AudioEventRouter();
+            router.CueRequested += cues.Add;
+            router.MusicRequested += music.Add;
+            router.BaekjungPercussionRequested += percussion.Add;
+
+            var yokai = YokaiDefinition.CreateRuntime(YokaiKind.ClubGoblin, 1, 1f, 1, 1f,
+                System.Array.Empty<ItemAmount>());
+            var boss = BossDefinition.CreateRuntime("audio_test_boss", BossKind.GoblinChief, null,
+                System.Array.Empty<ItemAmount>());
+
+            GameEvents.RaiseDayStart();
+            GameEvents.RaiseNightStart();
+            GameEvents.RaiseBaekjungStart();
+            GameEvents.RaiseMiningImpact(MiningImpactSurface.Dirt);
+            GameEvents.RaiseMiningImpact(MiningImpactSurface.Mineral);
+            GameEvents.RaiseTileBroken(Vector3Int.zero);
+            GameEvents.RaiseItemAcquired();
+            GameEvents.RaisePlayerDamaged();
+            GameEvents.RaiseYokaiDamaged();
+            GameEvents.RaiseYokaiKilled(yokai);
+            GameEvents.RaiseMiningCritical();
+            GameEvents.RaiseCraftingCompleted();
+            GameEvents.RaiseChestOpened();
+            GameEvents.RaiseWallDamaged();
+            GameEvents.RaiseBossSummoned(boss);
+            GameEvents.RaiseBossFled();
+            GameEvents.RaiseEoduksiniBloomed();
+            GameEvents.RaisePlayerHeatPanting();
+            GameEvents.RaiseNapStarted();
+            GameEvents.RaiseGoalBadgeCompleted();
+            GameEvents.RaiseBaekjungEnd();
+
+            var uniqueCues = new System.Collections.Generic.HashSet<AudioCue>(cues);
+            var allCueContractsCovered = uniqueCues.Count == AudioEventRouter.P1CueCount + AudioEventRouter.P2CueCount &&
+                                         cues.Count == uniqueCues.Count + 1;
+            var musicFlowMatches = music.Count == 4 && music[0] == MusicTrack.Day &&
+                                   music[1] == MusicTrack.Night && music[2] == MusicTrack.Boss &&
+                                   music[3] == MusicTrack.Night;
+            var percussionFlowMatches = percussion.Count == 5 && !percussion[0] && percussion[1] &&
+                                        !percussion[2] && percussion[3] && !percussion[4];
+
+            var cueCountBeforeDispose = cues.Count;
+            router.Dispose();
+            GameEvents.RaiseMiningCritical();
+            var disposedCleanly = cues.Count == cueCountBeforeDispose;
+
+            var audioObject = new GameObject("TemporaryNyangbingoAudioService");
+            var service = audioObject.AddComponent<NyangbingoAudioService>();
+            var poolMatches = audioObject.GetComponents<AudioSource>().Length ==
+                              NyangbingoAudioService.SfxChannelCount + 3;
+            var volumesMatch = service.TrySetBusVolumes(.5f, .25f) &&
+                               Mathf.Approximately(service.BgmVolume, .5f) &&
+                               Mathf.Approximately(service.SfxVolume, .25f) &&
+                               !service.TrySetBusVolumes(float.NaN, 1f) &&
+                               Mathf.Approximately(NyangbingoAudioService.NormalizedToDecibels(0f), -80f) &&
+                               Mathf.Approximately(NyangbingoAudioService.NormalizedToDecibels(1f), 0f) &&
+                               Mathf.Approximately(NyangbingoAudioService.CrossfadeSeconds, 2f);
+            Destroy(audioObject);
+
+            if (allCueContractsCovered && musicFlowMatches && percussionFlowMatches && disposedCleanly &&
+                poolMatches && volumesMatch)
+                Debug.Log("[Nyangbingo] Audio P1/P2 routing, BGM variation, two-bus settings, and eight-channel pool completed.");
+            else Debug.LogError("[Nyangbingo] Audio event routing or runtime pool test failed.");
+        }
+
+        private void TestGameShellTitlePauseSettingsAndResult()
+        {
+            var originalTimeScale = Time.timeScale;
+            var originalFullscreen = Screen.fullScreen;
+            var shellObject = new GameObject("TemporaryGameShell");
+            var saveManager = shellObject.AddComponent<SaveManager>();
+            var audioService = shellObject.AddComponent<NyangbingoAudioService>();
+            var timeSource = shellObject.AddComponent<DevBTestTimeSource>();
+            var shell = shellObject.AddComponent<GameShellController>();
+            var activeSave = new SaveGame
+            {
+                day = 30,
+                sealPct = 87.5f,
+                modulesDone = new System.Collections.Generic.List<string>
+                {
+                    "insulated_wall", "insulated_door", "insulated_roof", "jar_storage", "ice_storage"
+                },
+                dogam = new System.Collections.Generic.List<CodexRecord>
+                {
+                    new CodexRecord { yokaiId = "club", kills = 2 },
+                    new CodexRecord { yokaiId = "yakwang", kills = 3 }
+                },
+                bossRecords = new System.Collections.Generic.List<BossRecord>
+                {
+                    new BossRecord { bossId = "gangcheol_boss", count = 1, firstDay = 30 }
+                },
+                stats = new RunStatsRecord { minedTiles = 17, deaths = 2 }
+            };
+            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+
+            var trackedSave = new SaveGame { stats = new RunStatsRecord { minedTiles = int.MaxValue - 1, deaths = 0 } };
+            var statsBinding = new RunStatsBinding(trackedSave);
+            GameEvents.RaiseTileBroken(Vector3Int.zero);
+            GameEvents.RaiseTileBroken(Vector3Int.one);
+            GameEvents.RaisePlayerDied();
+            statsBinding.Dispose();
+            GameEvents.RaisePlayerDied();
+            var statsTracked = trackedSave.stats.minedTiles == int.MaxValue && trackedSave.stats.deaths == 1;
+            var statsRoundTrip = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(trackedSave));
+            statsRoundTrip.NormalizeAfterLoad();
+            var statsSaved = statsRoundTrip.schemaVersion == SaveGame.CurrentSchemaVersion &&
+                             statsRoundTrip.stats.minedTiles == int.MaxValue && statsRoundTrip.stats.deaths == 1;
+
+            saveManager.Save(GameShellController.AutoSaveSlot, new SaveGame { day = 15 });
+            shell.RefreshTitle();
+            var titleMatches = shell.Title.CanContinue && shell.Title.LatestSlot >= 0 &&
+                               shell.Title.DaysUntilBaegilHeat >= 70 && shell.Title.DaysUntilBaegilHeat <= 100 &&
+                               shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit && shell.CanShowFullscreenToggle;
+
+            var newGameSlot = -1;
+            shell.NewGameRequested += slot => newGameSlot = slot;
+            shell.RequestNewGame();
+            var replaceConfirmation = shell.Screen == GameShellScreen.Confirmation &&
+                                      shell.PendingConfirmation == GameShellConfirmation.ReplaceSlotOne;
+            var cancelToTitle = shell.CancelConfirmation() && shell.Screen == GameShellScreen.Title;
+            shell.RequestNewGame();
+            var newGameStarted = shell.Confirm() && shell.Screen == GameShellScreen.Gameplay &&
+                                 newGameSlot == GameShellController.AutoSaveSlot;
+
+            var paused = shell.OpenPause() && shell.Screen == GameShellScreen.Pause &&
+                         Mathf.Approximately(Time.timeScale, 0f);
+            var settingsOpened = shell.OpenSettings() && shell.Screen == GameShellScreen.Settings;
+            var settingsApplied = shell.TryApplySettings(.6f, .4f, originalFullscreen) &&
+                                  Mathf.Approximately(audioService.BgmVolume, .6f) &&
+                                  Mathf.Approximately(audioService.SfxVolume, .4f);
+            var settingsClosed = shell.CloseSettings() && shell.Screen == GameShellScreen.Pause;
+            var returnWarning = shell.RequestReturnToTitle() && shell.Screen == GameShellScreen.Confirmation &&
+                                shell.PendingConfirmation == GameShellConfirmation.ReturnToTitle;
+            var cancelToPause = shell.CancelConfirmation() && shell.Screen == GameShellScreen.Pause &&
+                                Mathf.Approximately(Time.timeScale, 0f);
+            var resumed = shell.ResumeGameplay() && shell.Screen == GameShellScreen.Gameplay &&
+                          Time.timeScale > 0f;
+
+            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+            var gameplayStarted = shell.TryContinue();
+            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+            shell.RequestNewGame();
+            shell.Confirm();
+            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+            shell.TryContinue();
+            timeSource.Day = 31;
+            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+            // Configure leaves the view on its current screen; ensure the result trigger starts from gameplay.
+            if (shell.Screen != GameShellScreen.Gameplay)
+            {
+                shell.RequestNewGame();
+                if (shell.Screen == GameShellScreen.Confirmation) shell.Confirm();
+            }
+            GameEvents.RaiseDayStart();
+            var result = shell.Result;
+            var resultMatches = shell.Screen == GameShellScreen.Result && result != null &&
+                                Mathf.Approximately(result.SealPercentage, 87.5f) &&
+                                result.CompletedModuleIds.Count == 5 && result.GangcheolDefeated &&
+                                result.YokaiKills == 5 && result.MinedTiles == 17 && result.Deaths == 2 &&
+                                DemoResultState.Teaser == "D-70 — 백일폭염까지" &&
+                                Mathf.Approximately(Time.timeScale, 0f);
+            var resultSingleExit = shell.ReturnFromResultToTitle() && shell.Screen == GameShellScreen.Title &&
+                                   Mathf.Approximately(Time.timeScale, 1f);
+            var demoGuard = !shell.RequestDemoSave(14) && shell.RequestDemoSave(15) &&
+                            shell.PendingConfirmation == GameShellConfirmation.LoadDemoSave &&
+                            shell.CancelConfirmation() && shell.Screen == GameShellScreen.Title;
+            var quitRequested = false;
+            shell.QuitRequested += () => quitRequested = true;
+            var desktopQuit = shell.RequestQuit() && quitRequested;
+
+            Time.timeScale = originalTimeScale;
+            Screen.fullScreen = originalFullscreen;
+            Destroy(shellObject);
+
+            if (statsTracked && statsSaved && titleMatches && replaceConfirmation && cancelToTitle &&
+                newGameStarted && paused && settingsOpened && settingsApplied && settingsClosed &&
+                returnWarning && cancelToPause && resumed && gameplayStarted && resultMatches &&
+                resultSingleExit && demoGuard && desktopQuit)
+                Debug.Log("[Nyangbingo] Game shell title, pause, settings, confirmation, and D30 result flow completed.");
+            else Debug.LogError("[Nyangbingo] Game shell flow test failed.");
+        }
+
         private void TestImportedAccessoryStatsAndTheftProtection()
         {
             if (gameDataCatalog == null)
@@ -1128,13 +2022,13 @@ namespace Nyangbingo.Debugging
                 return;
             }
 
-            var bellCharm = gameDataCatalog.FindEquipment("bell_charm");
-            var iceHeart = gameDataCatalog.FindEquipment("ice_heart_charm");
-            var luckyPouch = gameDataCatalog.FindEquipment("lucky_pouch");
-            var windRibbon = gameDataCatalog.FindEquipment("wind_ribbon");
-            var tigerEye = gameDataCatalog.FindEquipment("tiger_eye_orb");
-            var goblinHat = gameDataCatalog.FindEquipment("goblin_hat");
-            var yagwanggwi = gameDataCatalog.FindYokai("yagwanggwi");
+            var bellCharm = gameDataCatalog.FindEquipment("bell_norigae");
+            var iceHeart = gameDataCatalog.FindEquipment("ice_heart_norigae");
+            var luckyPouch = gameDataCatalog.FindEquipment("bokjumeoni");
+            var windRibbon = gameDataCatalog.FindEquipment("wind_daenggi");
+            var tigerEye = gameDataCatalog.FindEquipment("tiger_eye_bead");
+            var goblinHat = gameDataCatalog.FindEquipment("dokkaebi_gamtu");
+            var yagwanggwi = gameDataCatalog.FindYokai("yakwang");
             if (bellCharm == null || iceHeart == null || luckyPouch == null || windRibbon == null ||
                 tigerEye == null || goblinHat == null || yagwanggwi == null)
             {
@@ -1143,10 +2037,11 @@ namespace Nyangbingo.Debugging
             }
 
             var definitionsMatch = bellCharm.IsAccessory && bellCharm.GrantsDoubleJump &&
+                                   Mathf.Approximately(bellCharm.DoubleJumpHeightRatio, .8f) &&
                                    iceHeart.IsAccessory && Mathf.Approximately(iceHeart.TemperatureRiseModifier, -.15f) &&
                                    luckyPouch.IsAccessory && Mathf.Approximately(luckyPouch.MiningCriticalBonus, .1f) &&
-                                   windRibbon.IsAccessory && Mathf.Approximately(windRibbon.MovementBonus, .1f) &&
-                                   tigerEye.IsAccessory && Mathf.Approximately(tigerEye.VisionRadiusBonus, 2f) &&
+                                   windRibbon.IsAccessory && windRibbon.MovementBonus > 0f &&
+                                   tigerEye.IsAccessory && tigerEye.VisionRadiusBonus > 0f &&
                                    goblinHat.IsAccessory && goblinHat.BlocksInventoryTheft;
 
             var combatEquipment = new EquipmentSystem();
@@ -1155,7 +2050,7 @@ namespace Nyangbingo.Debugging
             var invalidThirdSlotRejected = !combatEquipment.TryEquipAccessory(tigerEye, 2);
             var combatStats = new StatSheet();
             combatStats.Recalculate(combatEquipment);
-            var combatStatsMatch = Mathf.Approximately(combatStats.MovementMultiplier, 1.1f) &&
+            var combatStatsMatch = Mathf.Approximately(combatStats.MovementMultiplier, 1f + windRibbon.MovementBonus) &&
                                    combatStats.BlocksInventoryTheft && Mathf.Approximately(combatStats.VisionRadiusBonus, 0f);
 
             var explorationEquipment = new EquipmentSystem();
@@ -1163,8 +2058,10 @@ namespace Nyangbingo.Debugging
             explorationEquipment.TryEquipAccessory(bellCharm, 1);
             var explorationStats = new StatSheet();
             explorationStats.Recalculate(explorationEquipment);
-            var explorationStatsMatch = Mathf.Approximately(explorationStats.VisionRadiusBonus, 2f) &&
-                                        explorationStats.HasDoubleJump && !explorationStats.BlocksInventoryTheft;
+            var explorationStatsMatch = Mathf.Approximately(explorationStats.VisionRadiusBonus, tigerEye.VisionRadiusBonus) &&
+                                        explorationStats.HasDoubleJump &&
+                                        Mathf.Approximately(explorationStats.DoubleJumpHeightRatio, .8f) &&
+                                        !explorationStats.BlocksInventoryTheft;
 
             var targetObject = new GameObject("TemporaryImportedGamtuTarget");
             targetObject.transform.position = Vector3.right * .5f;
@@ -1187,11 +2084,125 @@ namespace Nyangbingo.Debugging
             Destroy(thiefObject);
         }
 
+        private void TestImportedArmorStatsRecipesAndSetBonus()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported armor catalog reference is missing.");
+                return;
+            }
+
+            var ids = new[]
+            {
+                "straw_helm", "straw_armor", "straw_boots",
+                "iron_helm", "iron_armor", "iron_boots",
+                "icesteel_helm", "icesteel_armor", "icesteel_boots"
+            };
+            var slots = new[]
+            {
+                EquipmentSlot.Head, EquipmentSlot.Body, EquipmentSlot.Feet,
+                EquipmentSlot.Head, EquipmentSlot.Body, EquipmentSlot.Feet,
+                EquipmentSlot.Head, EquipmentSlot.Body, EquipmentSlot.Feet
+            };
+            var defenses = new[] { 1, 1, 1, 2, 3, 1, 3, 4, 3 };
+            var armor = new EquipmentDefinition[ids.Length];
+            var definitionsMatch = true;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                armor[i] = gameDataCatalog.FindEquipment(ids[i]);
+                var item = gameDataCatalog.FindItem(ids[i]);
+                definitionsMatch &= armor[i] != null && !armor[i].IsAccessory && armor[i].Slot == slots[i] &&
+                                    armor[i].Defense == defenses[i] && item != null && item.MaxStack == 1;
+            }
+
+            definitionsMatch &= string.IsNullOrWhiteSpace(armor[0]?.SetId) &&
+                                string.IsNullOrWhiteSpace(armor[3]?.SetId) &&
+                                armor[6] != null && armor[6].SetId == "seolhanpung" &&
+                                Mathf.Approximately(armor[6].SetTemperatureRiseModifier, -.20f) &&
+                                Mathf.Approximately(armor[6].SetFireDamageModifier, -.25f);
+
+            var recipesMatch =
+                ArmorRecipeMatches("straw_helm", CraftingStation.Workbench, 10f,
+                    new[] { "hemp_stalk", "wood" }, new[] { 4, 2 }) &&
+                ArmorRecipeMatches("straw_armor", CraftingStation.Workbench, 10f,
+                    new[] { "hemp_stalk", "wood" }, new[] { 6, 4 }) &&
+                ArmorRecipeMatches("straw_boots", CraftingStation.Workbench, 10f,
+                    new[] { "hemp_stalk", "wood" }, new[] { 3, 2 }) &&
+                ArmorRecipeMatches("iron_helm", CraftingStation.Furnace, 30f,
+                    new[] { "iron_ingot", "copper_ingot" }, new[] { 1, 1 }) &&
+                ArmorRecipeMatches("iron_armor", CraftingStation.Furnace, 30f,
+                    new[] { "iron_ingot", "copper_ingot" }, new[] { 3, 1 }) &&
+                ArmorRecipeMatches("iron_boots", CraftingStation.Furnace, 30f,
+                    new[] { "iron_ingot", "copper_ingot" }, new[] { 1, 1 }) &&
+                ArmorRecipeMatches("icesteel_helm", CraftingStation.IceAnvil, 60f,
+                    new[] { "icesteel_ingot" }, new[] { 2 }) &&
+                ArmorRecipeMatches("icesteel_armor", CraftingStation.IceAnvil, 60f,
+                    new[] { "icesteel_ingot" }, new[] { 4 }) &&
+                ArmorRecipeMatches("icesteel_boots", CraftingStation.IceAnvil, 60f,
+                    new[] { "icesteel_ingot" }, new[] { 2 });
+
+            var strawEquipment = new EquipmentSystem();
+            var strawEquipped = strawEquipment.TryEquip(armor[0]) && strawEquipment.TryEquip(armor[1]) &&
+                                strawEquipment.TryEquip(armor[2]);
+            var strawStats = new StatSheet();
+            strawStats.Recalculate(strawEquipment);
+
+            var ironEquipment = new EquipmentSystem();
+            var ironEquipped = ironEquipment.TryEquip(armor[3]) && ironEquipment.TryEquip(armor[4]) &&
+                               ironEquipment.TryEquip(armor[5]);
+            var ironStats = new StatSheet();
+            ironStats.Recalculate(ironEquipment);
+
+            var iceEquipment = new EquipmentSystem();
+            var partialEquipped = iceEquipment.TryEquip(armor[6]) && iceEquipment.TryEquip(armor[7]);
+            var partialStats = new StatSheet();
+            partialStats.Recalculate(iceEquipment);
+            var fullEquipped = iceEquipment.TryEquip(armor[8]);
+            var fullStats = new StatSheet();
+            fullStats.Recalculate(iceEquipment);
+            var iceHeart = gameDataCatalog.FindEquipment("ice_heart_norigae");
+            var heartEquipped = iceEquipment.TryEquipAccessory(iceHeart, 0);
+            var combinedStats = new StatSheet();
+            combinedStats.Recalculate(iceEquipment);
+
+            var statsMatch = strawEquipped && strawStats.Defense == 3 &&
+                             Mathf.Approximately(strawStats.TemperatureRiseModifier, 0f) &&
+                             Mathf.Approximately(strawStats.FireDamageModifier, 0f) &&
+                             ironEquipped && ironStats.Defense == 6 &&
+                             partialEquipped && partialStats.Defense == 7 &&
+                             Mathf.Approximately(partialStats.TemperatureRiseModifier, 0f) &&
+                             Mathf.Approximately(partialStats.FireDamageModifier, 0f) &&
+                             fullEquipped && fullStats.Defense == 10 &&
+                             Mathf.Approximately(fullStats.TemperatureRiseModifier, -.20f) &&
+                             Mathf.Approximately(fullStats.FireDamageModifier, -.25f) &&
+                             heartEquipped && Mathf.Approximately(combinedStats.TemperatureRiseModifier, -.35f) &&
+                             Mathf.Approximately(combinedStats.FireDamageModifier, -.25f);
+
+            if (definitionsMatch && recipesMatch && statsMatch)
+                Debug.Log("[Nyangbingo] Nine imported armor pieces, recipes, and Seolhanpung set bonus completed.");
+            else
+                Debug.LogError("[Nyangbingo] Imported armor, recipe, or set-bonus test failed.");
+        }
+
+        private bool ArmorRecipeMatches(string id, CraftingStation station, float duration,
+            string[] ingredientIds, int[] ingredientAmounts)
+        {
+            var recipe = gameDataCatalog.FindRecipe(id);
+            if (recipe == null || recipe.Station != station || !Mathf.Approximately(recipe.DurationSeconds, duration) ||
+                recipe.Output.item == null || recipe.Output.item.Id != id || recipe.Output.amount != 1 ||
+                recipe.Ingredients == null || recipe.Ingredients.Length != ingredientIds.Length ||
+                ingredientIds.Length != ingredientAmounts.Length) return false;
+            for (var i = 0; i < ingredientIds.Length; i++)
+                if (recipe.Ingredients[i].item == null || recipe.Ingredients[i].item.Id != ingredientIds[i] ||
+                    recipe.Ingredients[i].amount != ingredientAmounts[i]) return false;
+            return true;
+        }
+
         private void TestEquipmentCollectionSaveRoundTrip()
         {
-            var bellCharm = gameDataCatalog != null ? gameDataCatalog.FindEquipment("bell_charm") : null;
-            var goblinHat = gameDataCatalog != null ? gameDataCatalog.FindEquipment("goblin_hat") : null;
-            var tigerEye = gameDataCatalog != null ? gameDataCatalog.FindEquipment("tiger_eye_orb") : null;
+            var bellCharm = gameDataCatalog != null ? gameDataCatalog.FindEquipment("bell_norigae") : null;
+            var goblinHat = gameDataCatalog != null ? gameDataCatalog.FindEquipment("dokkaebi_gamtu") : null;
+            var tigerEye = gameDataCatalog != null ? gameDataCatalog.FindEquipment("tiger_eye_bead") : null;
             if (bellCharm == null || goblinHat == null || tigerEye == null)
             {
                 Debug.LogError("[Nyangbingo] Equipment collection definitions are missing.");
@@ -1330,10 +2341,18 @@ namespace Nyangbingo.Debugging
             var upper = gameDataCatalog.FindChest("upper_chest");
             var middle = gameDataCatalog.FindChest("middle_chest");
             var deep = gameDataCatalog.FindChest("deep_chest");
-            var poolsMatch = MatchesChestPool(ruins, ChestRegion.Ruins, "bell_charm", "wind_ribbon") &&
-                             MatchesChestPool(upper, ChestRegion.Upper, "bell_charm", "wind_ribbon", "lucky_pouch") &&
-                             MatchesChestPool(middle, ChestRegion.Middle, "lucky_pouch", "tiger_eye_orb", "ice_heart_charm") &&
-                             MatchesChestPool(deep, ChestRegion.Deep, "tiger_eye_orb", "ice_heart_charm", "goblin_hat");
+            var poolsMatch = MatchesChestPool(ruins, ChestRegion.Ruins, 4,
+                                 new[] { "wind_daenggi", "dokkaebi_gamtu" },
+                                 new[] { "rebar", "hemp_stalk" }, new[] { 4, 6 }) &&
+                             MatchesChestPool(upper, ChestRegion.Upper, 6,
+                                 new[] { "bell_norigae", "bokjumeoni" },
+                                 new[] { "coal", "clay" }, new[] { 4, 5 }) &&
+                             MatchesChestPool(middle, ChestRegion.Middle, 6,
+                                 new[] { "wind_daenggi", "bokjumeoni", "ice_heart_norigae", "tiger_eye_bead" },
+                                 new[] { "iron_ore", "ice_shard" }, new[] { 5, 4 }) &&
+                             MatchesChestPool(deep, ChestRegion.Deep, 4,
+                                 new[] { "tiger_eye_bead", "ice_heart_norigae", "bell_norigae", "dokkaebi_gamtu" },
+                                 new[] { "icesteel_ore", "frost_essence" }, new[] { 2, 1 });
 
             const int worldSeed = 100;
             const string chestId = "chest_deep_00";
@@ -1344,8 +2363,11 @@ namespace Nyangbingo.Debugging
 
             var collection = new EquipmentCollection(gameDataCatalog.FindEquipment);
             var acquisitionBinding = new EquipmentAcquisitionBinding(collection);
-            var itemRequestCount = 0;
-            System.Action<ItemDefinition, int> onItemRequested = (_, __) => itemRequestCount++;
+            var requestedItems = new System.Collections.Generic.Dictionary<string, int>(System.StringComparer.Ordinal);
+            System.Action<ItemDefinition, int> onItemRequested = (item, amount) =>
+            {
+                if (item != null) requestedItems[item.Id] = amount;
+            };
             ItemAcquisition.Requested += onItemRequested;
             try
             {
@@ -1353,10 +2375,12 @@ namespace Nyangbingo.Debugging
                 var opened = progress.TryOpen(chestId, deep, worldSeed);
                 var duplicateRejected = !progress.TryOpen(chestId, deep, worldSeed);
                 var rewardMatches = opened && duplicateRejected && progress.IsOpened(chestId) &&
-                                    collection.Count == 1 && collection.Contains(selected.Id) && itemRequestCount == 0;
+                                    collection.Count == 1 && collection.Contains(selected.Id) &&
+                                    requestedItems.Count == 2 && requestedItems.TryGetValue("icesteel_ore", out var ore) && ore == 2 &&
+                                    requestedItems.TryGetValue("frost_essence", out var essence) && essence == 1;
 
                 if (poolsMatch && deterministic && rewardMatches)
-                    Debug.Log("[Nyangbingo] Imported chest pools and deterministic accessory acquisition completed.");
+                    Debug.Log("[Nyangbingo] Official 20-chest pools, bonus resources, and deterministic accessory acquisition completed.");
                 else
                     Debug.LogError("[Nyangbingo] Imported chest reward pool test failed.");
             }
@@ -1367,10 +2391,12 @@ namespace Nyangbingo.Debugging
             }
         }
 
-        private static bool MatchesChestPool(ChestDefinition definition, ChestRegion region, params string[] equipmentIds)
+        private static bool MatchesChestPool(ChestDefinition definition, ChestRegion region, int spawnCount,
+            string[] equipmentIds, string[] rewardIds, int[] rewardAmounts)
         {
-            if (definition == null || definition.Region != region || definition.Rewards.Length != 0 ||
-                definition.EquipmentPool.Length != equipmentIds.Length) return false;
+            if (definition == null || definition.Region != region || definition.SpawnCount != spawnCount ||
+                definition.EquipmentPool.Length != equipmentIds.Length ||
+                definition.Rewards.Length != rewardIds.Length || rewardIds.Length != rewardAmounts.Length) return false;
 
             var uniqueIds = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
             for (var i = 0; i < equipmentIds.Length; i++)
@@ -1379,6 +2405,9 @@ namespace Nyangbingo.Debugging
                 if (equipment == null || !equipment.IsAccessory || equipment.Id != equipmentIds[i] ||
                     !uniqueIds.Add(equipment.Id)) return false;
             }
+            for (var i = 0; i < rewardIds.Length; i++)
+                if (definition.Rewards[i].item == null || definition.Rewards[i].item.Id != rewardIds[i] ||
+                    definition.Rewards[i].amount != rewardAmounts[i]) return false;
             return true;
         }
 
@@ -1390,14 +2419,11 @@ namespace Nyangbingo.Debugging
                 return;
             }
 
-            var foldingFan = gameDataCatalog.FindUtility("folding_fan");
+            var hapjukseon = gameDataCatalog.FindUtility("hapjukseon");
             var bellRope = gameDataCatalog.FindUtility("bell_rope");
-            var foxRainCharm = gameDataCatalog.FindUtility("fox_rain_charm");
-            var foldingFanItem = gameDataCatalog.FindItem("folding_fan");
+            var hapjukseonItem = gameDataCatalog.FindItem("hapjukseon");
             var bellRopeItem = gameDataCatalog.FindItem("bell_rope");
-            var foxRainCharmItem = gameDataCatalog.FindItem("fox_rain_charm");
-            if (foldingFan == null || bellRope == null || foxRainCharm == null ||
-                foldingFanItem == null || bellRopeItem == null || foxRainCharmItem == null)
+            if (hapjukseon == null || bellRope == null || hapjukseonItem == null || bellRopeItem == null)
             {
                 Debug.LogError("[Nyangbingo] Imported utility or matching item definitions are missing.");
                 return;
@@ -1405,47 +2431,43 @@ namespace Nyangbingo.Debugging
 
             var fanValue = -1f;
             var alarmValue = -1f;
-            var fireBufferValue = -1f;
             var fanUseCount = 0;
-            var fireBufferUseCount = 0;
+            var alarmUseCount = 0;
             var inventory = new Nyangbingo.Inventory.Inventory(gameDataCatalog.FindItem);
-            inventory.TryAdd(foldingFanItem.Id, 1);
+            inventory.TryAdd(hapjukseonItem.Id, 1);
             inventory.TryAdd(bellRopeItem.Id, 1);
-            inventory.TryAdd(foxRainCharmItem.Id, 2);
             var service = new UtilityService(inventory);
+            var bellService = new UtilityService(inventory);
             service.FanUsed += value => { fanValue = value; fanUseCount++; };
-            service.AlarmPlaced += value => alarmValue = value;
-            service.FireBufferActivated += value => { fireBufferValue = value; fireBufferUseCount++; };
+            bellService.AlarmPlaced += value => { alarmValue = value; alarmUseCount++; };
 
-            var dataMatches = foldingFan.Kind == UtilityKind.FoldingFan &&
-                              Mathf.Approximately(foldingFan.CooldownSeconds, 3f) &&
-                              Mathf.Approximately(foldingFan.Value, 3f) && !foldingFan.Consumable &&
-                              bellRope.Kind == UtilityKind.BellRope &&
-                              Mathf.Approximately(bellRope.CooldownSeconds, 0f) &&
-                              Mathf.Approximately(bellRope.Value, 10f) && !bellRope.Consumable &&
-                              foxRainCharm.Kind == UtilityKind.FoxRainCharm &&
-                              Mathf.Approximately(foxRainCharm.CooldownSeconds, 0f) &&
-                              Mathf.Approximately(foxRainCharm.Value, 30f) && foxRainCharm.Consumable;
+            var dataMatches = hapjukseon.Kind == UtilityKind.Hapjukseon &&
+                               hapjukseon.CooldownSeconds > 0f && hapjukseon.Value > 0f && !hapjukseon.Consumable &&
+                               bellRope.Kind == UtilityKind.BellRope &&
+                               bellRope.CooldownSeconds > 0f && bellRope.Value > 0f && !bellRope.Consumable;
 
-            var firstFanUse = service.TryUse(foldingFan);
-            var immediateFanBlocked = !service.TryUse(foldingFan);
-            var bellIndependent = service.TryUse(bellRope);
-            service.Tick(2.9f);
-            var earlyFanBlocked = !service.TryUse(foldingFan) &&
-                                  Mathf.Approximately(service.GetCooldownRemaining(UtilityKind.FoldingFan), .1f);
-            service.Tick(.1f);
-            var fanReadyAtThreeSeconds = service.TryUse(foldingFan);
-            var firstFoxRainUse = service.TryUse(foxRainCharm);
-            var secondFoxRainUse = service.TryUse(foxRainCharm);
-            var missingFoxRainRejected = !service.TryUse(foxRainCharm);
-            var eventsMatch = fanUseCount == 2 && Mathf.Approximately(fanValue, foldingFan.Value) &&
-                              Mathf.Approximately(alarmValue, bellRope.Value) &&
-                              fireBufferUseCount == 2 && Mathf.Approximately(fireBufferValue, foxRainCharm.Value);
-            var cooldownMatches = firstFanUse && immediateFanBlocked && bellIndependent && earlyFanBlocked &&
-                                  fanReadyAtThreeSeconds && firstFoxRainUse;
-            var inventoryMatches = secondFoxRainUse && missingFoxRainRejected &&
-                                   inventory.Count(foldingFanItem.Id) == 1 && inventory.Count(bellRopeItem.Id) == 1 &&
-                                   inventory.Count(foxRainCharmItem.Id) == 0;
+            var firstFanUse = service.TryUse(hapjukseon);
+            var immediateFanBlocked = !service.TryUse(hapjukseon);
+            var firstBellUse = bellService.TryUse(bellRope);
+            var immediateBellBlocked = !bellService.TryUse(bellRope);
+            var bellCooldownBoundaryStep = bellRope.CooldownSeconds * .1f;
+            bellService.Tick(bellRope.CooldownSeconds - bellCooldownBoundaryStep);
+            var earlyBellBlocked = !bellService.TryUse(bellRope) && Mathf.Approximately(
+                bellService.GetCooldownRemaining(UtilityKind.BellRope), bellCooldownBoundaryStep);
+            bellService.Tick(bellCooldownBoundaryStep);
+            var bellReadyAtCooldown = bellService.TryUse(bellRope);
+            var cooldownBoundaryStep = hapjukseon.CooldownSeconds * .1f;
+            service.Tick(hapjukseon.CooldownSeconds - cooldownBoundaryStep);
+            var earlyFanBlocked = !service.TryUse(hapjukseon) &&
+                                  Mathf.Approximately(service.GetCooldownRemaining(UtilityKind.Hapjukseon), cooldownBoundaryStep);
+            service.Tick(cooldownBoundaryStep);
+            var fanReadyAtCooldown = service.TryUse(hapjukseon);
+            var eventsMatch = fanUseCount == 2 && Mathf.Approximately(fanValue, hapjukseon.Value) &&
+                               alarmUseCount == 2 && Mathf.Approximately(alarmValue, bellRope.Value);
+            var cooldownMatches = firstFanUse && immediateFanBlocked && firstBellUse && immediateBellBlocked &&
+                                   earlyBellBlocked && bellReadyAtCooldown && earlyFanBlocked && fanReadyAtCooldown;
+            var inventoryMatches = inventory.Count(hapjukseonItem.Id) == 1 &&
+                                   inventory.Count(bellRopeItem.Id) == 1;
 
             if (dataMatches && eventsMatch)
                 Debug.Log("[Nyangbingo] Imported utility data lookup and effect events completed.");
@@ -1458,26 +2480,68 @@ namespace Nyangbingo.Debugging
                 Debug.LogError("[Nyangbingo] Utility game-seconds cooldown test failed.");
 
             if (inventoryMatches)
-                Debug.Log("[Nyangbingo] Utility inventory ownership and consumable-only removal completed.");
+                Debug.Log("[Nyangbingo] Utility inventory ownership and non-consumable preservation completed.");
             else
                 Debug.LogError("[Nyangbingo] Utility inventory consumption test failed.");
         }
 
+        private void TestImportedFanIdAndRecipeContract()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported fan item catalog reference is missing.");
+                return;
+            }
+
+            var hapjukseon = gameDataCatalog.FindItem(FanItemIds.Hapjukseon);
+            var cheolseon = gameDataCatalog.FindItem(FanItemIds.Cheolseon);
+            var utility = gameDataCatalog.FindUtility(FanItemIds.Hapjukseon);
+            var idsMatch = FanItemIds.LegacyFoldingFan == "folding_fan" &&
+                           FanItemIds.Hapjukseon == "hapjukseon" && FanItemIds.Cheolseon == "cheolseon" &&
+                           hapjukseon != null && hapjukseon.DisplayName == "합죽선" && hapjukseon.MaxStack == 1 &&
+                           cheolseon != null && cheolseon.DisplayName == "철선" && cheolseon.MaxStack == 1 &&
+                           gameDataCatalog.FindItem(FanItemIds.LegacyFoldingFan) == null &&
+                           gameDataCatalog.FindRecipe(FanItemIds.LegacyFoldingFan) == null;
+            var utilityMatch = utility != null && utility.Kind == UtilityKind.Hapjukseon &&
+                               Mathf.Approximately(utility.CooldownSeconds, 3f) &&
+                               Mathf.Approximately(utility.Value, 2f) && !utility.Consumable &&
+                               gameDataCatalog.FindUtility(FanItemIds.Cheolseon) == null;
+            var recipesMatch =
+                ArmorRecipeMatches(FanItemIds.Hapjukseon, CraftingStation.Workbench, 10f,
+                    new[] { "hemp_stalk", "wood" }, new[] { 6, 3 }) &&
+                ArmorRecipeMatches(FanItemIds.Cheolseon, CraftingStation.Furnace, 30f,
+                    new[] { FanItemIds.Hapjukseon, "iron_ingot", "iron_scale" }, new[] { 1, 2, 1 });
+            var evolutionRecipe = gameDataCatalog.FindRecipe(FanItemIds.Cheolseon);
+            var evolutionInventory = new Nyangbingo.Inventory.Inventory(gameDataCatalog.FindItem);
+            evolutionInventory.TryAdd(FanItemIds.Hapjukseon, 1);
+            evolutionInventory.TryAdd("iron_ingot", 2);
+            evolutionInventory.TryAdd("iron_scale", 1);
+            var evolved = new CraftingService(evolutionInventory).TryCraft(evolutionRecipe, CraftingStation.Furnace) &&
+                          evolutionInventory.Count(FanItemIds.Hapjukseon) == 0 &&
+                          evolutionInventory.Count("iron_ingot") == 0 && evolutionInventory.Count("iron_scale") == 0 &&
+                          evolutionInventory.Count(FanItemIds.Cheolseon) == 1;
+
+            if (idsMatch && utilityMatch && recipesMatch && evolved)
+                Debug.Log("[Nyangbingo] Hapjukseon and Cheolseon IDs, utility data, and evolution recipes completed.");
+            else
+                Debug.LogError("[Nyangbingo] Hapjukseon or Cheolseon ID and recipe contract test failed.");
+        }
+
         private void TestUtilityCooldownSaveRoundTrip()
         {
-            var foldingFan = gameDataCatalog != null ? gameDataCatalog.FindUtility("folding_fan") : null;
-            var foldingFanItem = gameDataCatalog != null ? gameDataCatalog.FindItem("folding_fan") : null;
-            if (foldingFan == null || foldingFanItem == null)
+            var hapjukseon = gameDataCatalog != null ? gameDataCatalog.FindUtility("hapjukseon") : null;
+            var hapjukseonItem = gameDataCatalog != null ? gameDataCatalog.FindItem("hapjukseon") : null;
+            if (hapjukseon == null || hapjukseonItem == null)
             {
                 Debug.LogError("[Nyangbingo] Utility cooldown save definitions are missing.");
                 return;
             }
 
             var sourceInventory = new Nyangbingo.Inventory.Inventory(gameDataCatalog.FindItem);
-            sourceInventory.TryAdd(foldingFanItem.Id, 1);
+            sourceInventory.TryAdd(hapjukseonItem.Id, 1);
             var sourceService = new UtilityService(sourceInventory);
-            var started = sourceService.TryUse(foldingFan);
-            sourceService.Tick(1.25f);
+            var started = sourceService.TryUse(hapjukseon);
+            sourceService.Tick(hapjukseon.CooldownSeconds * .25f);
 
             var save = new SaveGame();
             var captured = UtilityCooldownSaveAdapter.Capture(save, sourceService);
@@ -1485,15 +2549,17 @@ namespace Nyangbingo.Debugging
             if (loaded != null) loaded.NormalizeAfterLoad();
 
             var restoredInventory = new Nyangbingo.Inventory.Inventory(gameDataCatalog.FindItem);
-            restoredInventory.TryAdd(foldingFanItem.Id, 1);
+            restoredInventory.TryAdd(hapjukseonItem.Id, 1);
             var restoredService = new UtilityService(restoredInventory);
             var restored = UtilityCooldownSaveAdapter.Restore(loaded, restoredService);
+            var expectedRemaining = hapjukseon.CooldownSeconds * .75f;
+            var boundaryStep = expectedRemaining * .01f;
             var remainingRestored = Mathf.Approximately(
-                restoredService.GetCooldownRemaining(UtilityKind.FoldingFan), 1.75f);
-            restoredService.Tick(1.74f);
-            var blockedBeforeBoundary = !restoredService.TryUse(foldingFan);
-            restoredService.Tick(.01f);
-            var readyAtBoundary = restoredService.TryUse(foldingFan) && restoredInventory.Count(foldingFanItem.Id) == 1;
+                restoredService.GetCooldownRemaining(UtilityKind.Hapjukseon), expectedRemaining);
+            restoredService.Tick(expectedRemaining - boundaryStep);
+            var blockedBeforeBoundary = !restoredService.TryUse(hapjukseon);
+            restoredService.Tick(boundaryStep);
+            var readyAtBoundary = restoredService.TryUse(hapjukseon) && restoredInventory.Count(hapjukseonItem.Id) == 1;
 
             var corrupt = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
             if (corrupt != null)
@@ -1501,23 +2567,40 @@ namespace Nyangbingo.Debugging
                 corrupt.NormalizeAfterLoad();
                 corrupt.utilityCooldowns[0] = new UtilityCooldownRecord
                 {
-                    kind = UtilityKind.FoldingFan.ToString(),
+                    kind = UtilityKind.Hapjukseon.ToString(),
                     remainingGameSeconds = -1f
                 };
             }
             var corruptRejected = !UtilityCooldownSaveAdapter.Restore(corrupt, sourceService) &&
-                                  Mathf.Approximately(sourceService.GetCooldownRemaining(UtilityKind.FoldingFan), 1.75f);
+                                  Mathf.Approximately(sourceService.GetCooldownRemaining(UtilityKind.Hapjukseon), expectedRemaining);
 
             var legacy = JsonUtility.FromJson<SaveGame>("{\"schemaVersion\":3,\"utilityCooldowns\":null}");
             if (legacy != null) legacy.NormalizeAfterLoad();
             var legacyService = new UtilityService();
             var legacyRestored = UtilityCooldownSaveAdapter.Restore(legacy, legacyService) &&
                                  legacy.schemaVersion == SaveGame.CurrentSchemaVersion &&
-                                 Mathf.Approximately(legacyService.GetCooldownRemaining(UtilityKind.FoldingFan), 0f);
+                                 Mathf.Approximately(legacyService.GetCooldownRemaining(UtilityKind.Hapjukseon), 0f);
+
+            var renamedLegacy = new SaveGame { schemaVersion = 6 };
+            renamedLegacy.inventory.Add(new InventorySlot { itemId = "folding_fan", amount = 1 });
+            renamedLegacy.utilityCooldowns.Add(new UtilityCooldownRecord
+            {
+                kind = "FoldingFan",
+                remainingGameSeconds = expectedRemaining
+            });
+            renamedLegacy.NormalizeAfterLoad();
+            var renamedLegacyService = new UtilityService();
+            var renamedLegacyRestored = renamedLegacy.schemaVersion == SaveGame.CurrentSchemaVersion &&
+                                        renamedLegacy.inventory.Count == 1 &&
+                                        renamedLegacy.inventory[0].itemId == hapjukseonItem.Id &&
+                                        UtilityCooldownSaveAdapter.Restore(renamedLegacy, renamedLegacyService) &&
+                                        Mathf.Approximately(
+                                            renamedLegacyService.GetCooldownRemaining(UtilityKind.Hapjukseon),
+                                            expectedRemaining);
 
             if (started && captured && loaded != null && loaded.schemaVersion == SaveGame.CurrentSchemaVersion &&
                 restored && remainingRestored && blockedBeforeBoundary && readyAtBoundary &&
-                corruptRejected && legacyRestored)
+                corruptRejected && legacyRestored && renamedLegacyRestored)
                 Debug.Log("[Nyangbingo] Utility game-seconds cooldown structured save and v3 migration completed.");
             else
                 Debug.LogError("[Nyangbingo] Utility cooldown save round-trip test failed.");
@@ -1527,7 +2610,7 @@ namespace Nyangbingo.Debugging
         {
             var smeltIron = gameDataCatalog != null ? gameDataCatalog.FindSmelting("smelt_iron") : null;
             var smeltCopper = gameDataCatalog != null ? gameDataCatalog.FindSmelting("smelt_copper") : null;
-            var smeltIceSteel = gameDataCatalog != null ? gameDataCatalog.FindSmelting("smelt_ice_steel") : null;
+            var smeltIceSteel = gameDataCatalog != null ? gameDataCatalog.FindSmelting("smelt_icesteel") : null;
             if (smeltIron == null || smeltCopper == null || smeltIceSteel == null)
             {
                 Debug.LogError("[Nyangbingo] Imported smelting station definitions are missing.");
@@ -1538,44 +2621,52 @@ namespace Nyangbingo.Debugging
             inventory.TryAdd(smeltIron.Input.item.Id, 20);
             inventory.TryAdd(smeltIceSteel.Input.item.Id, 20);
             inventory.TryAdd(smeltIron.Fuel.item.Id, 20);
-            var furnace = new SmeltingStation(inventory, SmeltingStationKind.Furnace);
-            var foundry = new SmeltingStation(inventory, SmeltingStationKind.Foundry);
+            var furnace = new SmeltingStation(inventory, smeltIron.StationKind, smeltIron.BatchCapacity);
+            var foundry = new SmeltingStation(inventory, smeltIceSteel.StationKind, smeltIceSteel.BatchCapacity);
 
             var definitionsMatch = smeltIron.StationKind == SmeltingStationKind.Furnace &&
                                    smeltCopper.StationKind == SmeltingStationKind.Furnace &&
-                                   smeltIceSteel.StationKind == SmeltingStationKind.Foundry;
+                                   smeltIceSteel.StationKind == SmeltingStationKind.Foundry &&
+                                   smeltIron.BatchCapacity > 0 &&
+                                   smeltIron.BatchCapacity == smeltCopper.BatchCapacity &&
+                                   smeltIceSteel.BatchCapacity > 0;
             var crossStationRejected = !furnace.TryStart(smeltIceSteel) && !foundry.TryStart(smeltIron);
 
             var furnaceAccepted = true;
-            for (var i = 0; i < 6; i++) furnaceAccepted &= furnace.TryStart(smeltIron);
-            var furnaceSeventhRejected = !furnace.TryStart(smeltIron);
+            for (var i = 0; i < smeltIron.BatchCapacity; i++) furnaceAccepted &= furnace.TryStart(smeltIron);
+            var furnaceOverflowRejected = !furnace.TryStart(smeltIron);
 
             var foundryAccepted = true;
-            for (var i = 0; i < 4; i++) foundryAccepted &= foundry.TryStart(smeltIceSteel);
-            var foundryFifthRejected = !foundry.TryStart(smeltIceSteel);
+            for (var i = 0; i < smeltIceSteel.BatchCapacity; i++) foundryAccepted &= foundry.TryStart(smeltIceSteel);
+            var foundryOverflowRejected = !foundry.TryStart(smeltIceSteel);
 
-            var capacitiesMatch = furnace.QueueCapacity == 6 && furnace.IsSmelting && furnace.Queue.Count == 5 &&
-                                  foundry.QueueCapacity == 4 && foundry.IsSmelting && foundry.Queue.Count == 3;
+            var capacitiesMatch = furnace.QueueCapacity == smeltIron.BatchCapacity && furnace.IsSmelting &&
+                                  furnace.Queue.Count == smeltIron.BatchCapacity - 1 &&
+                                  foundry.QueueCapacity == smeltIceSteel.BatchCapacity && foundry.IsSmelting &&
+                                  foundry.Queue.Count == smeltIceSteel.BatchCapacity - 1;
 
-            if (definitionsMatch && crossStationRejected && furnaceAccepted && furnaceSeventhRejected &&
-                foundryAccepted && foundryFifthRejected && capacitiesMatch)
-                Debug.Log("[Nyangbingo] Imported smelting station types and furnace-6/foundry-4 capacities completed.");
+            if (definitionsMatch && crossStationRejected && furnaceAccepted && furnaceOverflowRejected &&
+                foundryAccepted && foundryOverflowRejected && capacitiesMatch)
+                Debug.Log("[Nyangbingo] Imported smelting station types and data-driven batch capacities completed.");
             else
                 Debug.LogError("[Nyangbingo] Imported smelting station or capacity test failed.");
 
             var overflowInventory = new Nyangbingo.Inventory.Inventory(gameDataCatalog.FindItem);
             overflowInventory.TryAdd(smeltIron.Input.item.Id, 10);
             overflowInventory.TryAdd(smeltIron.Fuel.item.Id, 10);
-            var overflowFurnace = new SmeltingStation(overflowInventory, SmeltingStationKind.Furnace);
+            var overflowFurnace = new SmeltingStation(overflowInventory, smeltIron.StationKind,
+                smeltIron.BatchCapacity);
             var threeQueued = overflowFurnace.TryStart(smeltIron) && overflowFurnace.TryStart(smeltIron) &&
                               overflowFurnace.TryStart(smeltIron);
             var invalidTicksRejected = !overflowFurnace.Tick(-1f) && !overflowFurnace.Tick(0f) &&
                                        !overflowFurnace.Tick(float.NaN) && !overflowFurnace.Tick(float.PositiveInfinity) &&
-                                       Mathf.Approximately(overflowFurnace.RemainingSeconds, 20f) &&
+                                       Mathf.Approximately(overflowFurnace.RemainingSeconds, smeltIron.DurationSeconds) &&
                                        overflowFurnace.Completed.Count == 0;
-            var overflowCompleted = overflowFurnace.Tick(45f) && overflowFurnace.Completed.Count == 2 &&
+            var overflowCompleted = overflowFurnace.Tick(smeltIron.DurationSeconds * 2.25f) &&
+                                    overflowFurnace.Completed.Count == 2 &&
                                     overflowFurnace.Active == smeltIron && overflowFurnace.Queue.Count == 0 &&
-                                    Mathf.Approximately(overflowFurnace.RemainingSeconds, 15f);
+                                    Mathf.Approximately(overflowFurnace.RemainingSeconds,
+                                        smeltIron.DurationSeconds * .75f);
 
             if (threeQueued && invalidTicksRejected && overflowCompleted)
                 Debug.Log("[Nyangbingo] Smelting invalid game-seconds rejection and queued overflow completed.");
@@ -1593,7 +2684,7 @@ namespace Nyangbingo.Debugging
                 new ItemAmount { item = resource, amount = 1 },
                 new ItemAmount { item = resource, amount = 1 },
                 new ItemAmount { item = output, amount = 1 }, 1f);
-            var station = new SmeltingStation(inventory);
+            var station = new SmeltingStation(inventory, definition.StationKind, definition.BatchCapacity);
 
             inventory.TryAdd(resource.Id, 1);
             var insufficientRejected = !station.TryStart(definition) && inventory.Count(resource.Id) == 1 &&
@@ -1620,7 +2711,7 @@ namespace Nyangbingo.Debugging
             var malformed = SmeltingDefinition.CreateRuntime("smelting_restore_malformed",
                 new ItemAmount { item = input, amount = 1 }, new ItemAmount { item = fuel, amount = 1 },
                 new ItemAmount { item = output, amount = 1 }, float.NaN);
-            var station = new SmeltingStation(inventory);
+            var station = new SmeltingStation(inventory, valid.StationKind, valid.BatchCapacity);
             var noQueue = System.Array.Empty<SmeltingDefinition>();
             var noOutputs = System.Array.Empty<ItemAmount>();
 
@@ -1916,6 +3007,9 @@ namespace Nyangbingo.Debugging
             var capController = new DevBTestBaekjungSpawnController();
             var capScheduler = new BaekjungScheduler(new[] { importedBaekjungEvent });
             var cappedWaveSpawner = new BaekjungWaveSpawner(capScheduler, capController);
+            var dawnController = new DevBTestBaekjungSpawnController();
+            var dawnScheduler = new BaekjungScheduler(new[] { importedBaekjungEvent });
+            var dawnWaveSpawner = new BaekjungWaveSpawner(dawnScheduler, dawnController);
             try
             {
                 var started = scheduler.TryStartNight(importedBaekjungEvent.Day);
@@ -1924,25 +3018,71 @@ namespace Nyangbingo.Debugging
                 controller.DefeatAll();
                 scheduler.Tick(150f);
 
-                var allWavesMatch = controller.Records.Count == 36;
-                for (var waveIndex = 0; waveIndex < 3; waveIndex++)
-                    allWavesMatch &= controller.Count(YokaiKind.ClubGoblin, waveIndex) == 3 &&
-                        controller.Count(YokaiKind.Bulgasari, waveIndex) == 2 &&
-                        controller.Count(YokaiKind.Yagwanggwi, waveIndex) == 7;
+                var composition = importedBaekjungEvent.Composition;
+                var expectedTotal = 0;
+                for (var groupIndex = 0; groupIndex < composition.Length; groupIndex++)
+                    expectedTotal += Mathf.Max(0, composition[groupIndex].amount);
 
-                capController.SeedActive(10);
+                var waveCount = importedBaekjungEvent.WaveOffsets.Length;
+                var allWavesMatch = controller.Records.Count == expectedTotal && waveCount > 0;
+                for (var waveIndex = 0; waveIndex < waveCount; waveIndex++)
+                {
+                    var waveSpawnCount = 0;
+                    for (var recordIndex = 0; recordIndex < controller.Records.Count; recordIndex++)
+                        if (controller.Records[recordIndex].WaveIndex == waveIndex) waveSpawnCount++;
+                    var expectedWaveCount = expectedTotal * (waveIndex + 1) / waveCount -
+                                            expectedTotal * waveIndex / waveCount;
+                    allWavesMatch &= waveSpawnCount == expectedWaveCount;
+                }
+                for (var groupIndex = 0; groupIndex < composition.Length; groupIndex++)
+                {
+                    var kindSpawnCount = 0;
+                    for (var recordIndex = 0; recordIndex < controller.Records.Count; recordIndex++)
+                        if (controller.Records[recordIndex].Kind == composition[groupIndex].kind) kindSpawnCount++;
+                    allWavesMatch &= kindSpawnCount == composition[groupIndex].amount;
+                }
+
+                var firstWaveCount = waveCount > 0 ? expectedTotal / waveCount : 0;
+                capController.SeedResident(50);
+                capController.SeedActive(importedBaekjungEvent.MaxActive - 1);
                 var cappedStarted = capScheduler.TryStartNight(importedBaekjungEvent.Day);
-                var maxActiveRespected = capController.ActiveCount == importedBaekjungEvent.MaxActive &&
-                    capController.Records.Count == 2;
+                var maxActiveRespected = capController.ActiveRaidCount == importedBaekjungEvent.MaxActive &&
+                    capController.ResidentCount == 50 && capController.Records.Count == 1 &&
+                    cappedWaveSpawner.PendingCount == firstWaveCount - 1;
+                capController.DefeatRaid(1);
+                var singleSlotRetriedAutomatically = capController.ActiveRaidCount == importedBaekjungEvent.MaxActive &&
+                    capController.Records.Count == 2 && cappedWaveSpawner.PendingCount == firstWaveCount - 2;
+                capController.DefeatAll();
+                cappedWaveSpawner.RetryPending();
+                var overflowRetriedWithoutDuplicates = capController.Records.Count == firstWaveCount &&
+                    cappedWaveSpawner.PendingCount == 0;
 
-                if (started && scheduler.IsScheduleComplete && allWavesMatch && cappedStarted && maxActiveRespected)
-                    Debug.Log("[Nyangbingo] Baekjung wave composition and max-active spawn requests completed.");
+                dawnController.SeedResident(100);
+                dawnController.SeedActive(importedBaekjungEvent.MaxActive);
+                var dawnStarted = dawnScheduler.TryStartNight(importedBaekjungEvent.Day);
+                var queuedBeforeDawn = dawnWaveSpawner.PendingCount == firstWaveCount &&
+                                       dawnController.Records.Count == 0;
+                GameEvents.RaiseDawnWarning();
+                var discardedAtFleeTime = dawnWaveSpawner.PendingCount == 0 &&
+                                          dawnWaveSpawner.DiscardedAtDawnCount == firstWaveCount;
+                dawnController.DefeatAll();
+                dawnScheduler.Tick(300f);
+                var noSpawnAfterDawnWarning = dawnController.Records.Count == 0 &&
+                                              dawnWaveSpawner.PendingCount == 0 &&
+                                              dawnController.ResidentCount == 100;
+                var dawnEnded = dawnScheduler.TryEndAtDawn();
+
+                if (started && scheduler.IsScheduleComplete && allWavesMatch && cappedStarted && maxActiveRespected &&
+                    singleSlotRetriedAutomatically && overflowRetriedWithoutDuplicates && dawnStarted &&
+                    queuedBeforeDawn && discardedAtFleeTime && noSpawnAfterDawnWarning && dawnEnded)
+                    Debug.Log("[Nyangbingo] Baekjung raid-only cap, automatic overflow queue, and dawn discard completed.");
                 else Debug.LogError("[Nyangbingo] Baekjung wave spawn request test failed.");
             }
             finally
             {
                 waveSpawner.Dispose();
                 cappedWaveSpawner.Dispose();
+                dawnWaveSpawner.Dispose();
             }
         }
 
@@ -2020,6 +3160,18 @@ namespace Nyangbingo.Debugging
                 return;
             }
 
+            var bulgasari = gameDataCatalog.FindYokai("bulgasari");
+            var yagwanggwi = gameDataCatalog.FindYokai("yakwang");
+            var eoduksini = gameDataCatalog.FindYokai("eoduksini");
+            var conditionalStatsMatch = bulgasari != null && yagwanggwi != null && eoduksini != null &&
+                bulgasari.WallDamageFor(YokaiWallMaterial.Ice) >
+                bulgasari.WallDamageFor(YokaiWallMaterial.Default) &&
+                Mathf.Approximately(bulgasari.WallDamageFor(YokaiWallMaterial.IronHeatWall), 0f) &&
+                yagwanggwi.StealSlots > 0 && yagwanggwi.StealMaxItems > 0 &&
+                eoduksini.ContactDamageNoLantern > eoduksini.ContactDamage &&
+                eoduksini.DamageTakenCondition == YokaiDamageTakenCondition.LanternRadius &&
+                eoduksini.DamageTakenMultiplier > 1f;
+
             var rewardRules = new BaekjungRewardRules(importedBaekjungEvent);
             var random = new DevBTestLootRandomSource(.3f, .5f);
             var tearCount = 0;
@@ -2043,10 +3195,11 @@ namespace Nyangbingo.Debugging
                 Destroy(yokaiObject);
             }
 
-            if (importedClubGoblin.Id == "club_goblin" && importedClubGoblin.TearDrop == 1 &&
+            if (importedClubGoblin.Id == "club" && importedClubGoblin.TearDrop == 1 &&
                 Mathf.Approximately(importedClubGoblin.SignatureChance, .25f) &&
-                tearCount == 3 && signatureCount == 1 && unexpectedDropCount == 0 && random.CallCount == 2)
-                Debug.Log("[Nyangbingo] Imported yokai loot and Baekjung reward flow completed.");
+                tearCount == 3 && signatureCount == 1 && unexpectedDropCount == 0 && random.CallCount == 2 &&
+                conditionalStatsMatch)
+                Debug.Log("[Nyangbingo] Imported yokai conditional stats, loot, and Baekjung reward flow completed.");
             else Debug.LogError("[Nyangbingo] Imported yokai loot or Baekjung reward flow test failed.");
         }
 
@@ -2219,8 +3372,9 @@ namespace Nyangbingo.Debugging
 
             var smeltingDefinition = SmeltingDefinition.CreateRuntime("save_smelting",
                 new ItemAmount { item = wood, amount = 2 }, new ItemAmount { item = fuel, amount = 1 },
-                new ItemAmount { item = ingot, amount = 1 }, 1f);
-            var smelting = new SmeltingStation(inventory);
+                new ItemAmount { item = ingot, amount = 1 }, 1f, capacity: 3);
+            var smelting = new SmeltingStation(inventory, smeltingDefinition.StationKind,
+                smeltingDefinition.BatchCapacity);
             smelting.TryStart(smeltingDefinition);
             smelting.TryStart(smeltingDefinition);
             smelting.Tick(1f);
@@ -2237,7 +3391,8 @@ namespace Nyangbingo.Debugging
 
             var restoredInventory = new Nyangbingo.Inventory.Inventory(id => items.TryGetValue(id, out var item) ? item : null);
             var restoredEquipment = new EquipmentSystem();
-            var restoredSmelting = new SmeltingStation(restoredInventory);
+            var restoredSmelting = new SmeltingStation(restoredInventory, smeltingDefinition.StationKind,
+                smeltingDefinition.BatchCapacity);
             var restored = ProgressionSaveAdapter.Restore(loaded, restoredInventory, restoredEquipment,
                 id => equipmentDefinitions.TryGetValue(id, out var definition) ? definition : null,
                 "test_furnace", restoredSmelting,
@@ -2283,10 +3438,11 @@ namespace Nyangbingo.Debugging
                 EquipmentSlot.Head, false, 2);
             var equipment = new EquipmentSystem();
             equipment.TryEquip(originalHelmet);
-            var smelting = new SmeltingStation(inventory);
             var smeltingDefinition = SmeltingDefinition.CreateRuntime("progression_prevalidation_smelting",
                 new ItemAmount { item = input, amount = 1 }, new ItemAmount { item = fuel, amount = 1 },
                 new ItemAmount { item = output, amount = 1 }, 2f);
+            var smelting = new SmeltingStation(inventory, smeltingDefinition.StationKind,
+                smeltingDefinition.BatchCapacity);
             var save = new SaveGame
             {
                 inventory = new System.Collections.Generic.List<InventorySlot>
@@ -2351,7 +3507,8 @@ namespace Nyangbingo.Debugging
             var smeltingDefinition = SmeltingDefinition.CreateRuntime("equipment_prevalidation_smelting",
                 new ItemAmount { item = input, amount = 1 }, new ItemAmount { item = fuel, amount = 1 },
                 new ItemAmount { item = output, amount = 1 }, 2f);
-            var smelting = new SmeltingStation(inventory);
+            var smelting = new SmeltingStation(inventory, smeltingDefinition.StationKind,
+                smeltingDefinition.BatchCapacity);
             var save = new SaveGame
             {
                 inventory = inventory.Export(),
@@ -2602,8 +3759,8 @@ namespace Nyangbingo.Debugging
 
             var save = new SaveGame();
             var captured = PlayerTimeBossSaveAdapter.Capture(save, playerObject.transform, playerHealth, timeSource, bossManager);
-            var loaded = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
-            if (loaded != null) loaded.NormalizeAfterLoad();
+            var serialized = JsonUtility.ToJson(save);
+            SaveManager.TryDeserialize(serialized, out var loaded);
 
             var restoredPlayerObject = new GameObject("TemporaryRestoredSavePlayer");
             var restoredPlayerHealth = restoredPlayerObject.AddComponent<Health>();
@@ -2614,52 +3771,27 @@ namespace Nyangbingo.Debugging
             var restoredSpawnController = gameObject.AddComponent<DevBTestSpawnController>();
             var restoredBossManager = gameObject.AddComponent<BossManager>();
             restoredBossManager.ConfigureForRuntime(restoredTimeSource, restoredSpawnController);
-            Health restoredBossHealth = null;
-            var summonedEventCount = 0;
-            var defeatedEventCount = 0;
-            System.Action<BossDefinition> onSummoned = _ => summonedEventCount++;
-            System.Action<BossDefinition> onDefeated = _ => defeatedEventCount++;
-            GameEvents.OnBossSummoned += onSummoned;
-            GameEvents.OnBossDefeated += onDefeated;
             try
             {
                 var restored = PlayerTimeBossSaveAdapter.Restore(loaded, restoredPlayerObject.transform,
-                    restoredPlayerHealth, restoredTimeSource, restoredBossManager,
-                    id => id == bossDefinition.Id ? bossDefinition : null,
-                    (_, maxHealth) =>
-                    {
-                        var restoredBossObject = new GameObject("TemporaryRestoredSaveBoss");
-                        restoredBossHealth = restoredBossObject.AddComponent<Health>();
-                        restoredBossHealth.ConfigureForRuntime(maxHealth);
-                        return restoredBossHealth;
-                    });
+                    restoredPlayerHealth, restoredTimeSource, restoredBossManager);
 
                 var playerMatches = restoredPlayerObject.transform.position == playerObject.transform.position &&
                     restoredPlayerHealth.MaxHealth == 20 && restoredPlayerHealth.Current == 13 && restoredPlayerHealth.Defense == 2;
                 var timeMatches = restoredTimeSource.Day == 15 && restoredTimeSource.IsNight &&
                     Mathf.Approximately(restoredTimeSource.TimeOfDayGameSeconds, 222f);
-                var bossMatches = restoredBossManager.IsBossActive && restoredBossHealth != null &&
-                    restoredBossHealth.MaxHealth == 50 && restoredBossHealth.Current == 33 &&
-                    restoredBossHealth.transform.position == bossObject.transform.position &&
-                    restoredBossHealth.IsKnockbackImmune && !restoredSpawnController.IsRegularSpawning &&
-                    Mathf.Approximately(restoredBossManager.ActiveSummonedAtGameSeconds, 200f);
-                if (restoredBossHealth != null) restoredBossHealth.ApplyDamage(restoredBossHealth.Current, DamageTag.Melee);
-                var defeatFlowMatches = !restoredBossManager.IsBossActive && restoredSpawnController.IsRegularSpawning &&
-                    defeatedEventCount == 1;
+                var bossOmitted = !serialized.Contains("\"activeBoss\"") && !loaded.activeBoss.active &&
+                                  !restoredBossManager.IsBossActive && restoredSpawnController.IsRegularSpawning;
 
-                if (captured && restored && playerMatches && timeMatches && bossMatches &&
-                    summonedEventCount == 0 && defeatFlowMatches)
-                    Debug.Log("[Nyangbingo] Player, time, and active boss structured save round-trip completed.");
-                else Debug.LogError("[Nyangbingo] Player, time, or boss structured save round-trip test failed.");
+                if (captured && restored && playerMatches && timeMatches && bossOmitted)
+                    Debug.Log("[Nyangbingo] Player/time save omits active boss and restores without boss spawn completed.");
+                else Debug.LogError("[Nyangbingo] Active boss no-serialize capture or restore test failed.");
             }
             finally
             {
-                GameEvents.OnBossSummoned -= onSummoned;
-                GameEvents.OnBossDefeated -= onDefeated;
                 Destroy(playerObject);
                 Destroy(bossObject);
                 Destroy(restoredPlayerObject);
-                if (restoredBossHealth != null) Destroy(restoredBossHealth.gameObject);
                 Destroy(timeSource);
                 Destroy(spawnController);
                 Destroy(bossManager);
@@ -2671,61 +3803,32 @@ namespace Nyangbingo.Debugging
 
         private void TestPlayerBossSaveInvalidPositionRejection()
         {
-            var player = new GameObject("TemporaryInvalidPositionSavePlayer");
-            player.transform.position = Vector3.right * 5f;
+            const string legacyJson = "{\"schemaVersion\":8,\"day\":9,\"playerState\":{" +
+                "\"hasValue\":true,\"position\":{\"x\":2,\"y\":0,\"z\":0},\"currentHealth\":7,\"maxHealth\":10}," +
+                "\"timeState\":{\"hasValue\":true,\"day\":9,\"timeOfDayGameSeconds\":100,\"isNight\":true}," +
+                "\"activeBoss\":{\"active\":true,\"bossId\":\"removed_legacy_boss\"," +
+                "\"position\":{\"x\":999,\"y\":999,\"z\":0},\"currentHealth\":8,\"maxHealth\":10," +
+                "\"summonedAtGameSeconds\":20}}";
+            var player = new GameObject("TemporaryLegacyBossSavePlayer");
             var playerHealth = player.AddComponent<Health>();
-            playerHealth.ConfigureForRuntime(10);
+            playerHealth.ConfigureForRuntime(1);
             var timeSource = gameObject.AddComponent<DevBTestTimeSource>();
-            timeSource.Day = 3;
-            timeSource.TimeOfDayGameSeconds = 40f;
-            timeSource.IsNight = false;
             var spawnController = gameObject.AddComponent<DevBTestSpawnController>();
             var bossManager = gameObject.AddComponent<BossManager>();
             bossManager.ConfigureForRuntime(timeSource, spawnController);
-            var bossItem = ItemDefinition.CreateRuntime("invalid_position_boss_item", "Invalid Position Boss Item");
-            var bossDefinition = BossDefinition.CreateRuntime("invalid_position_boss", BossKind.GoblinChief,
-                bossItem, System.Array.Empty<ItemAmount>(), 10);
+            var deserialized = SaveManager.TryDeserialize(legacyJson, out var migrated);
+            var restored = deserialized && PlayerTimeBossSaveAdapter.Restore(migrated, player.transform, playerHealth,
+                timeSource, bossManager);
+            var legacyIgnored = restored && migrated.schemaVersion == SaveGame.CurrentSchemaVersion &&
+                                !migrated.activeBoss.active &&
+                                !JsonUtility.ToJson(migrated).Contains("\"activeBoss\"") &&
+                                !bossManager.IsBossActive && player.transform.position == Vector3.right * 2f &&
+                                playerHealth.MaxHealth == 10 && playerHealth.Current == 7 &&
+                                timeSource.Day == 9 && timeSource.IsNight;
 
-            var save = new SaveGame
-            {
-                playerState = new PlayerStateRecord
-                {
-                    hasValue = true,
-                    position = Vector3.right * 2f,
-                    currentHealth = 10,
-                    maxHealth = 10
-                },
-                timeState = new TimeStateRecord
-                {
-                    hasValue = true,
-                    day = 9,
-                    timeOfDayGameSeconds = 100f,
-                    isNight = true
-                },
-                activeBoss = new ActiveBossStateRecord
-                {
-                    active = true,
-                    bossId = bossDefinition.Id,
-                    position = new Vector3(float.PositiveInfinity, 0f, 0f),
-                    currentHealth = 10,
-                    maxHealth = 10,
-                    summonedAtGameSeconds = 20f
-                }
-            };
-            var spawnCalls = 0;
-            var rejected = !PlayerTimeBossSaveAdapter.Restore(save, player.transform, playerHealth, timeSource,
-                bossManager, id => id == bossDefinition.Id ? bossDefinition : null, (_, __) =>
-                {
-                    spawnCalls++;
-                    return null;
-                });
-            var stateUnchanged = player.transform.position == Vector3.right * 5f && timeSource.Day == 3 &&
-                                 Mathf.Approximately(timeSource.TimeOfDayGameSeconds, 40f) &&
-                                 !timeSource.IsNight && spawnCalls == 0 && !bossManager.IsBossActive;
-
-            if (rejected && stateUnchanged)
-                Debug.Log("[Nyangbingo] Player and boss invalid save-position prevalidation completed.");
-            else Debug.LogError("[Nyangbingo] Player or boss invalid save-position validation test failed.");
+            if (legacyIgnored)
+                Debug.Log("[Nyangbingo] Legacy activeBoss v8 payload ignore and current-schema migration completed.");
+            else Debug.LogError("[Nyangbingo] Legacy activeBoss ignore migration test failed.");
 
             Destroy(player);
             Destroy(timeSource);
@@ -2735,69 +3838,42 @@ namespace Nyangbingo.Debugging
 
         private void TestPlayerBossSaveSpawnFailureRollback()
         {
-            var player = new GameObject("TemporaryBossSpawnFailurePlayer");
-            player.transform.position = Vector3.right * 5f;
-            var playerHealth = player.AddComponent<Health>();
-            playerHealth.ConfigureForRuntime(20, 3);
-            playerHealth.ApplyDamage(4, DamageTag.Melee);
-            playerHealth.SetDamageTakenMultiplier(.5f);
-            playerHealth.SetFireDamageMultiplier(.75f);
-            playerHealth.SetKnockbackImmune(true);
             var timeSource = gameObject.AddComponent<DevBTestTimeSource>();
-            timeSource.Day = 3;
-            timeSource.TimeOfDayGameSeconds = 40f;
-            timeSource.IsNight = false;
             var spawnController = gameObject.AddComponent<DevBTestSpawnController>();
             var bossManager = gameObject.AddComponent<BossManager>();
             bossManager.ConfigureForRuntime(timeSource, spawnController);
-            var bossItem = ItemDefinition.CreateRuntime("spawn_failure_boss_item", "Spawn Failure Boss Item");
-            var bossDefinition = BossDefinition.CreateRuntime("spawn_failure_boss", BossKind.GoblinChief,
+            var bossItem = ItemDefinition.CreateRuntime("save_policy_boss_item", "Save Policy Boss Item");
+            var bossDefinition = BossDefinition.CreateRuntime("save_policy_boss", BossKind.GoblinChief,
                 bossItem, System.Array.Empty<ItemAmount>(), 10);
-            var save = new SaveGame
-            {
-                playerState = new PlayerStateRecord
-                {
-                    hasValue = true,
-                    position = Vector3.right * 2f,
-                    currentHealth = 7,
-                    maxHealth = 10
-                },
-                timeState = new TimeStateRecord
-                {
-                    hasValue = true,
-                    day = 9,
-                    timeOfDayGameSeconds = 100f,
-                    isNight = true
-                },
-                activeBoss = new ActiveBossStateRecord
-                {
-                    active = true,
-                    bossId = bossDefinition.Id,
-                    position = Vector3.right * 8f,
-                    currentHealth = 8,
-                    maxHealth = 10,
-                    summonedAtGameSeconds = 20f
-                }
-            };
+            var bossObject = new GameObject("TemporarySavePolicyBoss");
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(10);
+            var bossStarted = bossManager.TryStart(bossDefinition, bossHealth);
+            var saveManager = gameObject.AddComponent<SaveManager>();
+            const int testSlot = 2;
+            saveManager.Delete(testSlot);
+            var snapshot = new SaveGame { seed = 913 };
+            var manualBlocked = !saveManager.TrySaveManual(testSlot, snapshot, bossManager) &&
+                                !saveManager.TryLoad(testSlot, out _);
+            saveManager.SaveAtDawn(testSlot, snapshot);
+            var dawnSaved = saveManager.TryLoad(testSlot, out var dawnLoaded) && dawnLoaded.seed == 913 &&
+                            !dawnLoaded.activeBoss.active;
+            saveManager.Delete(testSlot);
+            bossHealth.ApplyDamage(10, DamageTag.Melee);
+            var manualAllowedAfterBoss = !bossManager.IsBossActive &&
+                                         saveManager.TrySaveManual(testSlot, snapshot, bossManager) &&
+                                         saveManager.TryLoad(testSlot, out var manualLoaded) && manualLoaded.seed == 913;
 
-            var rejected = !PlayerTimeBossSaveAdapter.Restore(save, player.transform, playerHealth, timeSource,
-                bossManager, id => id == bossDefinition.Id ? bossDefinition : null, (_, __) => null);
-            var playerRolledBack = player.transform.position == Vector3.right * 5f &&
-                                   playerHealth.MaxHealth == 20 && playerHealth.Current == 19 &&
-                                   playerHealth.Defense == 3 && playerHealth.IsKnockbackImmune &&
-                                   Mathf.Approximately(playerHealth.DamageTakenMultiplier, .5f) &&
-                                   Mathf.Approximately(playerHealth.FireDamageMultiplier, .75f);
-            var timeRolledBack = timeSource.Day == 3 && Mathf.Approximately(timeSource.TimeOfDayGameSeconds, 40f) &&
-                                 !timeSource.IsNight && !bossManager.IsBossActive;
+            if (bossStarted && manualBlocked && dawnSaved && manualAllowedAfterBoss)
+                Debug.Log("[Nyangbingo] Boss-active manual save lock and dawn autosave exception completed.");
+            else Debug.LogError("[Nyangbingo] Boss save policy entry-point test failed.");
 
-            if (rejected && playerRolledBack && timeRolledBack)
-                Debug.Log("[Nyangbingo] Player and time rollback after boss spawn failure completed.");
-            else Debug.LogError("[Nyangbingo] Boss spawn failure rollback test failed.");
-
-            Destroy(player);
+            saveManager.Delete(testSlot);
+            Destroy(bossObject);
             Destroy(timeSource);
             Destroy(spawnController);
             Destroy(bossManager);
+            Destroy(saveManager);
         }
 
         private void TestOverlapBoxAttack()
@@ -2965,7 +4041,8 @@ namespace Nyangbingo.Debugging
 
         private void TestYagwanggwiTheftRules()
         {
-            var definition = YokaiDefinition.CreateRuntime(YokaiKind.Yagwanggwi, 10, 3.5f, 12, 0f, new ItemAmount[0]);
+            var definition = YokaiDefinition.CreateRuntime(YokaiKind.Yagwanggwi, 10, 3.5f, 12, 0f,
+                new ItemAmount[0], inventoryStealSlots: 1, inventoryStealMaxItems: 10);
 
             var groundTargetObject = new GameObject("TemporaryGroundLootTarget");
             groundTargetObject.transform.position = Vector3.right * .5f;
@@ -2997,7 +4074,9 @@ namespace Nyangbingo.Debugging
             blockedBrain.Tick(1f);
 
             if (groundTarget.GroundLootStealCount == 1 && groundTarget.InventoryStealCount == 0 &&
-                inventoryTarget.InventoryStealCount == 1 && inventoryTarget.LastInventoryStealLimit == 10 &&
+                inventoryTarget.InventoryStealCount == 1 &&
+                inventoryTarget.LastInventoryStealSlots == definition.StealSlots &&
+                inventoryTarget.LastInventoryStealLimit == definition.StealMaxItems &&
                 protectedTarget.InventoryStealCount == 0)
                 Debug.Log("[Nyangbingo] Yagwanggwi loot priority and gamtu protection completed.");
             else Debug.LogError("[Nyangbingo] Yagwanggwi theft rule test failed.");
@@ -3008,6 +4087,94 @@ namespace Nyangbingo.Debugging
             Destroy(inventoryThief);
             Destroy(protectedTargetObject);
             Destroy(blockedThief);
+        }
+
+        private void TestImportedYokaiSpawnTracksAndDawnFlee()
+        {
+            var club = gameDataCatalog != null ? gameDataCatalog.FindYokai("club") : null;
+            var eoduksini = gameDataCatalog != null ? gameDataCatalog.FindYokai("eoduksini") : null;
+            if (club == null || eoduksini == null)
+            {
+                Debug.LogError("[Nyangbingo] Imported yokai spawn-track definitions are missing.");
+                return;
+            }
+
+            var dataMatches = club.SpawnTracks == YokaiSpawnTrack.Raid && club.RaidFleesAtDawn &&
+                              eoduksini.SpawnTracks == (YokaiSpawnTrack.Raid | YokaiSpawnTrack.Resident) &&
+                              eoduksini.RaidFleesAtDawn &&
+                              eoduksini.SupportsSpawnTrack(YokaiSpawnTrack.Raid) &&
+                              eoduksini.SupportsSpawnTrack(YokaiSpawnTrack.Resident);
+            var targetObject = new GameObject("TemporaryDawnFleeTarget");
+            targetObject.transform.position = Vector3.right * .5f;
+            var target = targetObject.AddComponent<DevBTestYokaiTarget>();
+
+            var raidObject = new GameObject("TemporaryDawnFleeRaidYokai");
+            var raidHealth = raidObject.AddComponent<Health>();
+            var raidBrain = raidObject.AddComponent<YokaiBrain>();
+            var raidLoot = raidObject.AddComponent<YokaiLoot>();
+            raidBrain.ConfigureForRuntime(club, target, instanceSpawnTrack: YokaiSpawnTrack.Raid);
+            raidLoot.ConfigureForRuntime(club, new DevBTestLootRandomSource(1f));
+            raidBrain.Tick(0f);
+            raidBrain.Tick(1f);
+            var wallDamageBeforeDawn = target.WallDamageReceived;
+            var droppedAmount = 0;
+            var killedCount = 0;
+            var fleeStartedCount = 0;
+            raidLoot.Dropped += (_, amount) => droppedAmount += amount;
+            raidBrain.DawnFleeStarted += _ => fleeStartedCount++;
+            System.Action<YokaiDefinition> onKilled = _ => killedCount++;
+            GameEvents.OnYokaiKilled += onKilled;
+            try
+            {
+                GameEvents.RaiseDawnWarning();
+                raidBrain.Tick(2f);
+                var raidFledAtHalfSpeedWithoutAttacking = raidBrain.IsDawnFleeing && fleeStartedCount == 1 &&
+                    Mathf.Approximately(target.WallDamageReceived, wallDamageBeforeDawn) &&
+                    Mathf.Approximately(raidObject.transform.position.x, -2f);
+                raidHealth.ApplyDamage(club.HitPoints, DamageTag.Melee);
+                var killedWhileFleeingRewarded = raidHealth.IsDead && killedCount == 1 && droppedAmount > 0;
+
+                var residentObject = new GameObject("TemporaryDawnResidentEoduksini");
+                var residentBrain = residentObject.AddComponent<YokaiBrain>();
+                residentBrain.ConfigureForRuntime(eoduksini, target,
+                    instanceSpawnTrack: YokaiSpawnTrack.Resident);
+                residentBrain.Tick(0f);
+                var wallDamageBeforeResidentDawn = target.WallDamageReceived;
+                GameEvents.RaiseDawnWarning();
+                residentBrain.Tick(1f);
+                var residentStayedAndAttacked = !residentBrain.IsDawnFleeing &&
+                    Mathf.Approximately(residentObject.transform.position.x, 0f) &&
+                    target.WallDamageReceived > wallDamageBeforeResidentDawn;
+
+                var offscreenObject = new GameObject("TemporaryDawnOffscreenYokai");
+                var offscreenBrain = offscreenObject.AddComponent<YokaiBrain>();
+                var offscreenLoot = offscreenObject.AddComponent<YokaiLoot>();
+                offscreenBrain.ConfigureForRuntime(club, target, instanceSpawnTrack: YokaiSpawnTrack.Raid);
+                offscreenLoot.ConfigureForRuntime(club, new DevBTestLootRandomSource(0f));
+                var offscreenDropAmount = 0;
+                var offscreenFledCount = 0;
+                offscreenLoot.Dropped += (_, amount) => offscreenDropAmount += amount;
+                offscreenBrain.FledOffscreen += _ => offscreenFledCount++;
+                GameEvents.RaiseDawnWarning();
+                var offscreenDespawned = offscreenBrain.TryDespawnIfOffscreen(false) &&
+                                         offscreenFledCount == 1 && offscreenDropAmount == 0 && killedCount == 1;
+
+                if (dataMatches && raidFledAtHalfSpeedWithoutAttacking && killedWhileFleeingRewarded &&
+                    residentStayedAndAttacked && offscreenDespawned)
+                    Debug.Log("[Nyangbingo] Yokai raid/resident spawn tracks, dawn flee, and reward boundary completed.");
+                else
+                    Debug.LogError("[Nyangbingo] Yokai spawn-track or dawn-flee test failed.");
+
+                Destroy(residentObject);
+                Destroy(offscreenObject);
+            }
+            finally
+            {
+                GameEvents.OnYokaiKilled -= onKilled;
+            }
+
+            Destroy(targetObject);
+            Destroy(raidObject);
         }
 
         private void TestYokaiDefinitionHealthInitialization()
@@ -3312,7 +4479,7 @@ namespace Nyangbingo.Debugging
                                            Mathf.Approximately(brain.SieveCooldownRemaining, 10f) &&
                                            Mathf.Approximately(yokai.transform.position.x, 9f);
             var invalidMultiplierFallback = Mathf.Approximately(
-                YokaiSpecialRules.DamageTakenMultiplier(YokaiKind.Yagwanggwi, target), 1f);
+                YokaiSpecialRules.DamageTakenMultiplier(definition, target), 1f);
 
             if (consumedOnlyStopDuration && invalidMultiplierFallback)
                 Debug.Log("[Nyangbingo] Yokai counter duration large-tick consumption completed.");
@@ -3324,14 +4491,16 @@ namespace Nyangbingo.Debugging
 
         private void TestEoduksiniLanternReaction()
         {
-            var definition = YokaiDefinition.CreateRuntime(YokaiKind.Eoduksini, 20, 2.5f, 14, 24f, new ItemAmount[0]);
+            var definition = YokaiDefinition.CreateRuntime(YokaiKind.Eoduksini, 20, 2.5f, 14, 24f,
+                new ItemAmount[0], noLanternContact: 21, takenMultiplier: 2f,
+                takenCondition: YokaiDamageTakenCondition.LanternRadius);
             var targetObject = new GameObject("TemporaryLanternTarget");
             targetObject.transform.position = Vector3.right * 2f;
             var target = targetObject.AddComponent<DevBTestYokaiTarget>();
             target.IsInLanternRange = true;
             target.EoduksiniLanternPauseSeconds = 6f;
             target.EoduksiniBloomCooldownSeconds = 12f;
-            target.EoduksiniLanternDamageMultiplier = 2f;
+            target.EoduksiniLanternDamageMultiplier = 9f;
 
             var yokai = new GameObject("TemporaryEoduksini");
             var brain = yokai.AddComponent<YokaiBrain>();
@@ -3367,7 +4536,8 @@ namespace Nyangbingo.Debugging
 
         private void TestBulgasariWallRule()
         {
-            var definition = YokaiDefinition.CreateRuntime(YokaiKind.Bulgasari, 20, 1f, 10, 16f, new ItemAmount[0]);
+            var definition = YokaiDefinition.CreateRuntime(YokaiKind.Bulgasari, 20, 1f, 10, 16f,
+                new ItemAmount[0], wallDpsIce: 32f, wallDpsIronWall: 0f);
 
             var normalWallObject = new GameObject("TemporaryNormalWall");
             normalWallObject.transform.position = Vector3.right * .5f;
@@ -3378,23 +4548,39 @@ namespace Nyangbingo.Debugging
             normalBrain.Tick(0f);
             normalBrain.Tick(1f);
 
+            var iceWallObject = new GameObject("TemporaryIceWall");
+            iceWallObject.transform.position = Vector3.right * .5f;
+            var iceWall = iceWallObject.AddComponent<DevBTestYokaiTarget>();
+            iceWall.WallMaterial = YokaiWallMaterial.Ice;
+            var iceWallBulgasari = new GameObject("TemporaryIceWallBulgasari");
+            var iceBrain = iceWallBulgasari.AddComponent<YokaiBrain>();
+            iceBrain.ConfigureForRuntime(definition, iceWall);
+            iceBrain.Tick(0f);
+            iceBrain.Tick(1f);
+
             var protectedWallObject = new GameObject("TemporaryIronHeatWall");
             protectedWallObject.transform.position = Vector3.right * .5f;
             var protectedWall = protectedWallObject.AddComponent<DevBTestYokaiTarget>();
-            protectedWall.IsIronHeatWall = true;
+            protectedWall.WallMaterial = YokaiWallMaterial.IronHeatWall;
             var protectedWallBulgasari = new GameObject("TemporaryProtectedWallBulgasari");
             var protectedBrain = protectedWallBulgasari.AddComponent<YokaiBrain>();
             protectedBrain.ConfigureForRuntime(definition, protectedWall);
             protectedBrain.Tick(0f);
             protectedBrain.Tick(1f);
 
-            if (Mathf.Approximately(normalWall.WallDamageReceived, 16f) &&
-                Mathf.Approximately(protectedWall.WallDamageReceived, 0f))
-                Debug.Log("[Nyangbingo] Bulgasari normal-wall damage and iron-wall protection completed.");
+            if (Mathf.Approximately(normalWall.WallDamageReceived,
+                    definition.WallDamageFor(YokaiWallMaterial.Default)) &&
+                Mathf.Approximately(iceWall.WallDamageReceived,
+                    definition.WallDamageFor(YokaiWallMaterial.Ice)) &&
+                Mathf.Approximately(protectedWall.WallDamageReceived,
+                    definition.WallDamageFor(YokaiWallMaterial.IronHeatWall)))
+                Debug.Log("[Nyangbingo] Bulgasari data-driven default, ice, and iron-wall damage completed.");
             else Debug.LogError("[Nyangbingo] Bulgasari wall rule test failed.");
 
             Destroy(normalWallObject);
             Destroy(normalBulgasari);
+            Destroy(iceWallObject);
+            Destroy(iceWallBulgasari);
             Destroy(protectedWallObject);
             Destroy(protectedWallBulgasari);
         }

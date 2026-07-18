@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c65a54549d049ba83ababea58bec7ac, type: 3}
+  m_Name: hapjukseon
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
+  id: hapjukseon
+  tier: U1
+  hasBasicAttack: 0
+  attackDamage: 0
+  attacksPerSecond: 0
+  damagePerSecond: 0
+  knockbackTiles: 2
+  rangeTiles: 2
+  arcDegrees: 90
+  multiTarget: 1
+  hitsWalls: 0
+  note: "\uAE30\uBCF8 \uACF5\uACA9 \uC5C6\uC74C \u2014 \uC561\uD2F0\uBE0C \uC804\uC6A9:
+    \uBC00\uCE58\uAE30 \uB3800\xB7\uB109\uBC312\uD0C0\uC77C\xB7\uCFE83\uCD08\xB7\uC804\uBC292\uD0C0\uC77C(6-13)"

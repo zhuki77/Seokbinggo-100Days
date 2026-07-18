@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: cheolseon
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: cheolseon
+  station: 2
+  ingredients:
+  - item: {fileID: 11400000, guid: 51b66d4c3050d3246a8b17588cba274b, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 540b127e4916df045abc9c709e118208, type: 2}
+    amount: 1
+  output:
+    item: {fileID: 11400000, guid: 1916f7aabd4e88f4f980ad593f7687eb, type: 2}
+    amount: 1
+  durationSeconds: 30
+  type: 0
+  mvpScope: 0
+  note: 

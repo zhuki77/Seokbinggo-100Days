@@ -6,6 +6,9 @@ using System.Text;
 public static class NyangbingoCsvUtility
 {
     public static List<Dictionary<string, string>> ReadRows(string path)
+        => ReadRows(path, false);
+
+    public static List<Dictionary<string, string>> ReadRows(string path, bool mergeUnquotedTrailingNote)
     {
         var lines = File.ReadAllLines(path, Encoding.UTF8);
         var rows = new List<Dictionary<string, string>>();
@@ -22,6 +25,15 @@ public static class NyangbingoCsvUtility
         {
             if (string.IsNullOrWhiteSpace(lines[rowIndex])) continue;
             var values = Split(lines[rowIndex], path, rowIndex + 1);
+            if (mergeUnquotedTrailingNote && values.Count > headers.Count &&
+                string.Equals(headers[headers.Count - 1], "note", StringComparison.OrdinalIgnoreCase))
+            {
+                var mergedNote = new StringBuilder(values[headers.Count - 1]);
+                for (var valueIndex = headers.Count; valueIndex < values.Count; valueIndex++)
+                    mergedNote.Append(',').Append(values[valueIndex]);
+                values.RemoveRange(headers.Count - 1, values.Count - headers.Count + 1);
+                values.Add(mergedNote.ToString());
+            }
             if (values.Count != headers.Count)
                 throw new InvalidDataException(
                     $"CSV '{path}' row {rowIndex + 1} has {values.Count} columns; expected {headers.Count}.");

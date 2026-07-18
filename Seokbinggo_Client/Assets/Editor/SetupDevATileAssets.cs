@@ -232,7 +232,7 @@ namespace Nyangbingo.Editor
             EditorUtility.SetDirty(renderer);
 
             // 카메라 설정도 같은 트랜잭션 안에서 같이 더티 표시해둔다(월드 전체가 보이도록 조정).
-            var camera = Object.FindObjectOfType<Camera>();
+            var camera = Object.FindAnyObjectByType<Camera>();
             if (camera != null)
             {
                 // 월드 크기: 400x160 (기본 config 기준). 카메라를 월드 중앙에 배치하고,

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: daebal_flame_cut
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: daebal_flame_cut
+  value: 0.25
+  unit: pct
+  note: "\uB300\uBC1C \u2014 \uBC18\uACBD 4\uD0C0\uC77C \uB0AE \uD654\uC5FC \uACBD\uAC10
+    [\uAC00\uC548]. \uD574\uD0DC \uC11D\uC0C1(8\uD0C0\uC77C\xB70.50)\uC758 \uC800\uAC00
+    \uC57D\uD654\uD310. 4-7 \uD654\uC5FC \uD0DC\uADF8 \uC7AC\uC0AC\uC6A9"

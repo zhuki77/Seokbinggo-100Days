@@ -13,13 +13,26 @@ MonoBehaviour:
   m_Name: eoduksini
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.YokaiDefinition
   id: eoduksini
+  displayName: "\uC5B4\uB451\uC2DC\uB2C8"
+  appearanceHint: "16\uC77C\uCC28 \uBC24~ + \uC2EC\uCE35 \uC0C1\uC8FC"
+  codexNote: "\uC5B4\uB460 \uAC70\uB300\uD654 \u2014 \uB4F1\uBD88 \uCE74\uC6B4\uD130
+    \uC804\uC81C"
   kind: 3
   hitPoints: 1600
   moveSpeed: 2.5
   contactDamage: 14
-  wallDamagePerSecond: 24
+  contactDamageNoLantern: 21
+  wallDamageDefault: 24
+  wallDamageIce: 24
+  wallDamageIronWall: 24
+  damageTakenMultiplier: 2
+  damageTakenCondition: 1
+  stealSlots: 0
+  stealMaxItems: 0
   tearItem: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
   tearDrop: 4
   signatureItem: {fileID: 11400000, guid: 1074cfedc9f19914da69bec895f144bd, type: 2}
   signatureChance: 0.4
+  spawnTracks: 3
+  raidFleesAtDawn: 1
   drops: []

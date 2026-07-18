@@ -360,7 +360,7 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 37e1936fba65a7c41b8424e624f66e0c, type: 2}
   - elementType: stone_deep
     tile: {fileID: 11400000, guid: e52b39d0b5d052b4bb1f2938cc2ded7c, type: 2}
-  - elementType: ice_steel_ore
+  - elementType: icesteel_ore
     tile: {fileID: 11400000, guid: bd2229803aacb724c8e89044305e594d, type: 2}
   - elementType: frost_essence
     tile: {fileID: 11400000, guid: c14b7dbcf4c572b4a9ff186f0e706cfc, type: 2}

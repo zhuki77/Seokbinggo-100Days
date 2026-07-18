@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: king_dokkaebi
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: king_dokkaebi
+  displayName: "\uB3C4\uAE68\uBE44 \uB300\uC7A5"
+  kind: 0
+  hitPoints: 2400
+  expectedCombatSeconds: 200
+  summonItem: {fileID: 11400000, guid: cd2bcda8e98d55341aeb99c8ec798bb2, type: 2}
+  summonMaterials:
+  - item: {fileID: 11400000, guid: 568542bf179436e47889cff4d294d8ca, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: d0cbb55eb184479478a337cef0a50eb8, type: 2}
+    amount: 10
+  - item: {fileID: 11400000, guid: d821cf6376d84ed44bb84d57fac7b553, type: 2}
+    amount: 5
+  summonStation: 1
+  recommendedDay: "~8\uC77C\uCC28(T2)"
+  requiresDeepAltar: 0
+  forcedDay: 0
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 3
+  - item: {fileID: 11400000, guid: aa7f10c32a8cc414499089d02a7fa6ef, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 568542bf179436e47889cff4d294d8ca, type: 2}
+    amount: 2
+  wallDamageDefault: 20
+  wallDamageIce: 20
+  wallDamageIronWall: 20
+  contactDamage: 12
+  specialDescription: "\uC528\uB984 \uBC30\uCE58\uAE30: \uC608\uACE0 1f \uD6C4 \uC7A1\uAE30
+    12\uD53C\uD574+\uB109\uBC314\xB7\uCFE88\uCD08"
+  telegraphSeconds: 0.75
+  specialShape: 0
+  specialRangeTiles: 2
+  specialArcDegrees: 0
+  specialDamagePerHit: 12
+  specialDurationSeconds: 0
+  specialTickSeconds: 0
+  specialKnockbackTiles: 4
+  specialCooldownSeconds: 8
+  specialHasFireTag: 0
+  specialAimLocks: 1
+  mvpScope: 1

@@ -13,12 +13,42 @@ MonoBehaviour:
   m_Name: imugi
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
   id: imugi
+  displayName: "\uC774\uBB34\uAE30"
   kind: 2
   hitPoints: 6600
   expectedCombatSeconds: 220
   summonItem: {fileID: 11400000, guid: 8016e4cca3d8e7e43909efcf621d731c, type: 2}
+  summonMaterials:
+  - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 3d3a021a3305ee94383f99102a9b7039, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 8a0f12f13c8cd5b4b93c78c17d4ec5ee, type: 2}
+    amount: 10
+  summonStation: 3
+  recommendedDay: "~18\uC77C\uCC28(T3)"
   requiresDeepAltar: 1
   forcedDay: 0
   guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 8
   - item: {fileID: 11400000, guid: 926572cda191fce4f884b4bf6bd8a4c7, type: 2}
     amount: 1
+  wallDamageDefault: 30
+  wallDamageIce: 30
+  wallDamageIronWall: 30
+  contactDamage: 16
+  specialDescription: "\uC7A0\uC9C0 \uB3CC\uC9C4: \uC608\uACE01.5\uCD08 \uD6C4 \uBC1C\uBC11
+    \uC19F\uAD6C\uCE68 18\uD53C\uD574+\uB109\uBC313\xB7\uCFE812\uCD08"
+  telegraphSeconds: 1.5
+  specialShape: 0
+  specialRangeTiles: 4
+  specialArcDegrees: 0
+  specialDamagePerHit: 18
+  specialDurationSeconds: 0
+  specialTickSeconds: 0
+  specialKnockbackTiles: 3
+  specialCooldownSeconds: 12
+  specialHasFireTag: 0
+  specialAimLocks: 1
+  mvpScope: 2

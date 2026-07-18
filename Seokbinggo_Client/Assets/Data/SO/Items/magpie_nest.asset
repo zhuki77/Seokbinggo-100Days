@@ -15,3 +15,6 @@ MonoBehaviour:
   id: magpie_nest
   displayName: "\uAE4C\uCE58 \uB465\uC9C0"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

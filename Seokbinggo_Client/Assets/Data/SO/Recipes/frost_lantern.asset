@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: frost_lantern
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: frost_lantern
+  station: 3
+  ingredients:
+  - item: {fileID: 11400000, guid: 697912f730beab142971069f5c90ecf0, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 3d3a021a3305ee94383f99102a9b7039, type: 2}
+    amount: 1
+  output:
+    item: {fileID: 11400000, guid: 934863dfb5be53144b5e22e6cc948d9b, type: 2}
+    amount: 1
+  durationSeconds: 30
+  type: 0
+  mvpScope: 0
+  note: 
