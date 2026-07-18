@@ -77,6 +77,7 @@ namespace Nyangbingo.Inventory
     public sealed class EquipmentSystem
     {
         private readonly Dictionary<EquipmentSlot, EquipmentDefinition> equipped = new Dictionary<EquipmentSlot, EquipmentDefinition>();
+        public event Action Changed;
         public int TotalDefense
         {
             get
@@ -92,7 +93,9 @@ namespace Nyangbingo.Inventory
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Id) || item.IsAccessory || (item.Slot != EquipmentSlot.Head &&
                 item.Slot != EquipmentSlot.Body && item.Slot != EquipmentSlot.Feet)) return false;
-            equipped[item.Slot] = item; return true;
+            equipped[item.Slot] = item;
+            Changed?.Invoke();
+            return true;
         }
         public bool TryEquipAccessory(EquipmentDefinition item, int accessoryIndex)
         {
@@ -100,6 +103,7 @@ namespace Nyangbingo.Inventory
                 (item.Slot != EquipmentSlot.AccessoryOne && item.Slot != EquipmentSlot.AccessoryTwo) ||
                 accessoryIndex < 0 || accessoryIndex > 1 || ContainsId(item.Id)) return false;
             equipped[accessoryIndex == 0 ? EquipmentSlot.AccessoryOne : EquipmentSlot.AccessoryTwo] = item;
+            Changed?.Invoke();
             return true;
         }
         public EquipmentDefinition Get(EquipmentSlot slot) => equipped.TryGetValue(slot, out var item) ? item : null;
@@ -128,9 +132,15 @@ namespace Nyangbingo.Inventory
 
             equipped.Clear();
             foreach (var pair in saved) equipped.Add(pair.Key, pair.Value);
+            Changed?.Invoke();
             return true;
         }
-        public void Clear() => equipped.Clear();
+        public void Clear()
+        {
+            if (equipped.Count == 0) return;
+            equipped.Clear();
+            Changed?.Invoke();
+        }
         private bool ContainsId(string id) { foreach (var pair in equipped) if (pair.Value != null && pair.Value.Id == id) return true; return false; }
     }
 }

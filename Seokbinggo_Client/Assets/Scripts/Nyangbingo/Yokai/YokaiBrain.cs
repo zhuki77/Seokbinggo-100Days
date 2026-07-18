@@ -6,12 +6,15 @@ using UnityEngine;
 namespace Nyangbingo.Yokai
 {
     public interface IYokaiTarget { Transform TargetTransform { get; } void DamageWall(float amount); }
+    public interface IYokaiCombatTarget { bool TryApplyContactDamage(int amount); }
     public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxSlots, int maxAmount); }
     public interface IWallMaterialTarget { YokaiWallMaterial WallMaterial { get; } }
 
     [RequireComponent(typeof(Health))]
-    public sealed class YokaiBrain : MonoBehaviour
+    public sealed class YokaiBrain : MonoBehaviour, IGameSecondsTickable
     {
+        private const float ContactAttackIntervalGameSeconds = 1f;
+        private const float AttackRangeTolerance = .05f;
         private enum State { Approach, AttackWall, StealLoot, Retreat, DawnFlee }
         [SerializeField] private YokaiDefinition definition;
         [SerializeField] private MonoBehaviour gameSecondsSourceComponent;
@@ -33,6 +36,7 @@ namespace Nyangbingo.Yokai
         private YokaiSpawnTrack spawnTrack;
         private Vector3 dawnFleeDirection;
         private bool hasFledOffscreen;
+        private float contactAttackRemaining;
         public YokaiDefinition Definition => definition;
         public YokaiSpawnTrack SpawnTrack => spawnTrack;
         public bool IsDawnFleeing => state == State.DawnFlee;
@@ -84,6 +88,7 @@ namespace Nyangbingo.Yokai
             bloomCooldownRemaining = 0f;
             dawnFleeDirection = Vector3.zero;
             hasFledOffscreen = false;
+            contactAttackRemaining = 0f;
             health = GetComponent<Health>();
             if (health != null)
             {
@@ -241,15 +246,17 @@ namespace Nyangbingo.Yokai
             var attackRange = float.IsNaN(wallAttackRange) || float.IsInfinity(wallAttackRange)
                 ? 1f
                 : Mathf.Max(0f, wallAttackRange);
+            contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - actionSeconds);
             switch (state)
             {
                 case State.Approach:
                     if (YokaiSpecialRules.ShouldAttemptTheft(definition.Kind, counters)) state = State.StealLoot;
-                    else if (distance <= attackRange) state = State.AttackWall;
-                    else MoveTowardAttackRange(direction, distance, attackRange, actionSeconds);
+                    else if (IsWithinAttackRange(distance, attackRange)) state = State.AttackWall;
+                    else if (MoveTowardAttackRange(direction, distance, attackRange, actionSeconds))
+                        state = State.AttackWall;
                     break;
                 case State.StealLoot:
-                    if (distance > attackRange)
+                    if (!IsWithinAttackRange(distance, attackRange))
                         MoveTowardAttackRange(direction, distance, attackRange, actionSeconds);
                     else
                     {
@@ -263,7 +270,7 @@ namespace Nyangbingo.Yokai
                     }
                     break;
                 case State.AttackWall:
-                    if (distance > attackRange)
+                    if (!IsWithinAttackRange(distance, attackRange))
                     {
                         state = State.Approach;
                         MoveTowardAttackRange(direction, distance, attackRange, actionSeconds);
@@ -272,6 +279,14 @@ namespace Nyangbingo.Yokai
                     if (YokaiSpecialRules.ShouldAttemptTheft(definition.Kind, counters))
                     {
                         state = State.StealLoot;
+                        break;
+                    }
+                    var combatTarget = target as IYokaiCombatTarget;
+                    if (combatTarget != null)
+                    {
+                        if (contactAttackRemaining <= .0001f && definition.ContactDamage > 0 &&
+                            combatTarget.TryApplyContactDamage(definition.ContactDamage))
+                            contactAttackRemaining = ContactAttackIntervalGameSeconds;
                         break;
                     }
                     var wall = target as IWallMaterialTarget;
@@ -306,15 +321,20 @@ namespace Nyangbingo.Yokai
                 transform.position += direction * retreatDistance;
         }
 
-        private void MoveTowardAttackRange(Vector3 direction, float distance, float attackRange, float actionSeconds)
+        private bool MoveTowardAttackRange(Vector3 direction, float distance, float attackRange, float actionSeconds)
         {
             var moveSpeed = definition.MoveSpeed;
-            if (moveSpeed <= 0f || float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed)) return;
+            if (moveSpeed <= 0f || float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed)) return false;
             var travelDistance = moveSpeed * actionSeconds;
-            if (float.IsNaN(travelDistance)) return;
+            if (float.IsNaN(travelDistance) || float.IsInfinity(travelDistance)) return false;
             var maximumDistance = Mathf.Max(0f, distance - attackRange);
-            transform.position += direction * Mathf.Min(travelDistance, maximumDistance);
+            var movedDistance = Mathf.Min(travelDistance, maximumDistance);
+            transform.position += direction * movedDistance;
+            return IsWithinAttackRange(distance - movedDistance, attackRange);
         }
+
+        private static bool IsWithinAttackRange(float distance, float attackRange) =>
+            distance <= attackRange + AttackRangeTolerance;
 
         private static bool IsFinite(Vector3 value)
         {

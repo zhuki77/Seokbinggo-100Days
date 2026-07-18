@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Nyangbingo.Crafting
 {
-    public sealed class SmeltingStation
+    public sealed class SmeltingStation : IGameSecondsTickable
     {
         private readonly Nyangbingo.Inventory.Inventory inventory;
         private readonly SmeltingStationKind stationKind;
@@ -80,6 +80,8 @@ namespace Nyangbingo.Crafting
             if (active != null && elapsed > 0f) remaining -= elapsed;
             return completedAny;
         }
+
+        void IGameSecondsTickable.Tick(float deltaGameSeconds) => Tick(deltaGameSeconds);
 
         public bool TryCollect(int index)
         {

@@ -56,6 +56,7 @@ namespace Nyangbingo.World
         // 반환하는 경로를 타더라도 _lookup 자체는 항상 non-null이라, ResolveTile/TryGetTileBase가
         // NullReferenceException 없이 안전하게 동작한다.
         private Dictionary<string, TileBase> _lookup = new Dictionary<string, TileBase>();
+        private readonly HashSet<string> _resourceLoadWarnings = new HashSet<string>();
 
         private void Awake()
         {
@@ -207,9 +208,14 @@ namespace Nyangbingo.World
                               "직접 등록해두는 것을 권장합니다(1순위가 더 안전함).");
                     return loaded;
                 }
-                Debug.LogWarning($"[Nyangbingo] TilemapRenderer: [Resources/{resourcePath}] 로드 실패! " +
-                                  $"인스펙터 매핑도 없고 'Assets/Resources/{resourcePath}.asset' 경로에도 " +
-                                  "TileBase 에셋이 없습니다.");
+                // RenderWorld는 같은 elementType을 수천 셀에서 조회할 수 있다. 누락 진단은 타입마다
+                // 한 번만 남기고, 최종 누락 목록은 RenderWorld 끝의 집계 경고로 다시 제공한다.
+                if (_resourceLoadWarnings.Add(elementType))
+                {
+                    Debug.LogWarning($"[Nyangbingo] TilemapRenderer: [Resources/{resourcePath}] 로드 실패! " +
+                                     $"인스펙터 매핑도 없고 'Assets/Resources/{resourcePath}.asset' 경로에도 " +
+                                     "TileBase 에셋이 없습니다.");
+                }
             }
 
             // 3순위: 최종 폴백 타일(설정돼 있으면 화면에서 바로 눈에 띔), 없으면 투명 빈 칸.

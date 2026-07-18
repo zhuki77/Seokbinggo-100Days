@@ -70,6 +70,8 @@ namespace Nyangbingo.Save
         public Vector3 position;
         public int currentHealth;
         public int maxHealth;
+        public bool hasTemperature;
+        public float temperature;
     }
 
     [Serializable]
@@ -978,6 +980,7 @@ namespace Nyangbingo.Save
         }
     }
 
+#if false // Moved to SaveManager.cs so Unity can serialize the MonoBehaviour by script GUID.
     public sealed class SaveManager : MonoBehaviour
     {
         public const int SlotCount = 3;
@@ -1108,6 +1111,7 @@ namespace Nyangbingo.Save
         }
     }
 
+#endif
     public sealed class RunStatsBinding : IDisposable
     {
         private readonly SaveGame save;
@@ -1504,6 +1508,7 @@ namespace Nyangbingo.Save
 
     public interface ISaveSnapshotProvider { SaveGame CaptureSnapshot(); }
 
+#if false // Moved to DawnAutoSave.cs so Unity can serialize the MonoBehaviour by script GUID.
     public sealed class DawnAutoSave : MonoBehaviour
     {
         [SerializeField] private SaveManager saveManager;
@@ -1523,7 +1528,10 @@ namespace Nyangbingo.Save
         private void SaveAtDawn()
         {
             if (saveManager != null && snapshotProvider != null)
-                saveManager.SaveAtDawn(slot, snapshotProvider.CaptureSnapshot());
+            {
+                var snapshot = snapshotProvider.CaptureSnapshot();
+                if (snapshot != null) saveManager.SaveAtDawn(slot, snapshot);
+            }
         }
 
         /// <summary>
@@ -1544,4 +1552,5 @@ namespace Nyangbingo.Save
             if (isActiveAndEnabled && timeSource != null) timeSource.Dawn += SaveAtDawn;
         }
     }
+#endif
 }

@@ -89,6 +89,23 @@ namespace Nyangbingo.UI
             ApplyViewState();
         }
 
+        public void ConfigureViews(GameObject title, GameObject pause, GameObject result, GameObject settings,
+            GameObject confirmation)
+        {
+            titleCanvas = title;
+            pauseCanvas = pause;
+            resultCanvas = result;
+            settingsPanel = settings;
+            confirmationPanel = confirmation;
+            ApplyViewState();
+        }
+
+        public void EnterGameplay(SaveGame currentSave)
+        {
+            activeSave = currentSave ?? activeSave ?? new SaveGame { day = 1 };
+            ShowGameplay();
+        }
+
         public void RefreshTitle()
         {
             Title.ShowsDemoSaves = developmentMenu;

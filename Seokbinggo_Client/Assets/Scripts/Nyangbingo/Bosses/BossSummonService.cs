@@ -40,13 +40,14 @@ namespace Nyangbingo.Bosses
         }
 
         // The caller owns the spawned prefab. Reserve the summon item before start events can mutate inventory.
-        public bool TryConsumeAndStart(BossDefinition definition, Health spawnedBoss)
+        public bool TryConsumeAndStart(BossDefinition definition, Health spawnedBoss,
+            float summonedAtGameSeconds = 0f)
         {
             if (definition == null || definition.SummonItem == null || inventory == null || bossManager == null ||
                 !inventory.Has(definition.SummonItem.Id, 1)) return false;
             if (definition.RequiresDeepAltar && (summonSite == null || !summonSite.IsAtDeepAltar(definition))) return false;
             if (!inventory.TryRemove(definition.SummonItem.Id, 1)) return false;
-            if (bossManager.TryStart(definition, spawnedBoss)) return true;
+            if (bossManager.TryStart(definition, spawnedBoss, summonedAtGameSeconds)) return true;
             inventory.TryAdd(definition.SummonItem.Id, 1);
             return false;
         }

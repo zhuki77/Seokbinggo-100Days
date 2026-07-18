@@ -153,7 +153,7 @@ namespace Nyangbingo.Bosses
             : definition.Id;
     }
 
-    public sealed class BaekjungTimeBinding : IDisposable
+    public sealed class BaekjungTimeBinding : IDisposable, IGameSecondsTickable
     {
         private readonly ITimeSource timeSource;
         private readonly BaekjungScheduler scheduler;

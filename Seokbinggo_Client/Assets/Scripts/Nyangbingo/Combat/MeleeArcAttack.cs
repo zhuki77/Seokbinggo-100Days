@@ -17,6 +17,7 @@ namespace Nyangbingo.Combat
         [SerializeField] private ClawProfile clawProfile;
         public CombatProfileDefinition CombatProfile => combatProfile;
         public bool HitsWalls => combatProfile == null || combatProfile.HitsWalls;
+        public int LastHitCount { get; private set; }
 
         public void ConfigureForRuntime(Transform attackOrigin, LayerMask layers, float attackRange, float attackArc, int attackDamage, float attackKnockback)
         {
@@ -59,6 +60,7 @@ namespace Nyangbingo.Combat
 
         private void StrikeInternal(Vector2 direction, bool useOverride, int overrideDamage, float overrideKnockback)
         {
+            LastHitCount = 0;
             if (float.IsNaN(direction.x) || float.IsInfinity(direction.x) ||
                 float.IsNaN(direction.y) || float.IsInfinity(direction.y) ||
                 direction.sqrMagnitude <= Mathf.Epsilon) return;
@@ -96,18 +98,20 @@ namespace Nyangbingo.Combat
             var querySize = new Vector2(range, activeHeight);
             var queryAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             var damagedTargets = new HashSet<Health>();
+            var attackerHealth = GetComponentInParent<Health>();
             foreach (var hit in Physics2D.OverlapBoxAll(queryCenter, querySize, queryAngle, targetLayers))
             {
                 var toTarget = ((Vector2)hit.transform.position - center).normalized;
                 if (Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
                 var health = hit.GetComponentInParent<Health>();
-                if (health == null || !damagedTargets.Add(health)) continue;
+                if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
                 var healthBeforeDamage = health.Current;
                 health.ApplyDamage(activeDamage, DamageTag.Melee);
                 if (health.Current < healthBeforeDamage) GameEvents.RaiseYokaiDamaged();
                 health.TryApplyKnockback(toTarget * activeKnockback);
                 if (combatProfile != null && !combatProfile.MultiTarget) break;
             }
+            LastHitCount = damagedTargets.Count;
         }
     }
 

@@ -15,6 +15,7 @@ namespace Nyangbingo.Inventory
         private void Awake() => inventory = new Inventory(id => catalog == null ? null : catalog.FindItem(id));
         private void OnEnable() => ItemAcquisition.Requested += Receive;
         private void OnDisable() => ItemAcquisition.Requested -= Receive;
+        public void ConfigureForScene(GameDataCatalog gameDataCatalog) => catalog = gameDataCatalog;
         public bool ConfigureForRuntime(Inventory model)
         {
             if (model == null) return false;
