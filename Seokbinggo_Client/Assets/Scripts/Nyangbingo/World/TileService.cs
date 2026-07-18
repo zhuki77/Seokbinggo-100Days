@@ -23,7 +23,7 @@ namespace Nyangbingo.World
     public sealed class TileService : ITileDiffSource
     {
         private readonly TileData[,] tiles;
-        private readonly TilemapRenderer renderer;
+        private TilemapRenderer renderer;
         private readonly GameDataCatalog catalog;
         private readonly int seed;
 
@@ -89,6 +89,14 @@ namespace Nyangbingo.World
             Width = tiles.GetLength(0);
             Height = tiles.GetLength(1);
         }
+
+        /// <summary>
+        /// A-06: 월드 로드를 트랜잭션화하기 위한 진입점. 검증/재생(RestoreTileChanges) 동안에는 renderer를
+        /// null로 두어 화면에 아무것도 그리지 않다가(생성자 파라미터 renderer=null), 모든 검증이 끝나 라이브
+        /// 상태로 확정된 뒤에야 이 메서드로 실제 렌더러를 연결한다. 그 시점부터의 채굴/설치(TryBreakForeground/
+        /// TryPlaceForeground)는 정상적으로 화면에 반영된다.
+        /// </summary>
+        public void BindRenderer(TilemapRenderer newRenderer) => renderer = newRenderer;
 
         public bool InBounds(Vector3Int cell) => cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
 
@@ -176,6 +184,14 @@ namespace Nyangbingo.World
         /// 밀폐 캐시를 한 번에 갱신해야 한다. 복원한 이력은 changeLog에도 다시 채워, 이후 재저장 시 diff가
         /// 유실되지 않게 한다(이 메서드를 호출하기 전의 changeLog는 전부 버려진다 — 새로 만든 TileService에서만 호출할 것).
         /// </summary>
+        /// <summary>
+        /// A-06/A-08 필수 검증: 좌표 범위, 알려진 tileId(WorldTileTypes.AllElementTypes), 보호 타일
+        /// (빙암/이무기 제단)을 잘못 덮어쓰는지, 그리고 기록된 tileId가 방금 재생성한 배열의 실제 원본
+        /// 타일과 일치하는지(파괴 기록의 경우)를 전부 확인한 뒤에만 배열을 변형한다. 하나라도 위반하면
+        /// 그 즉시 false를 반환한다 — 호출자(WorldSessionController.LoadSnapshot)는 이 인스턴스를 애초에
+        /// renderer=null로 만들어 두었다가 이 메서드가 true를 반환한 뒤에만 라이브 상태로 승격시키므로,
+        /// 실패 시 화면(Tilemap)은 물리적으로 한 칸도 바뀌지 않는다.
+        /// </summary>
         public bool RestoreTileChanges(IEnumerable<TileChangeRecord> records)
         {
             if (records == null) return false;
@@ -186,11 +202,20 @@ namespace Nyangbingo.World
             foreach (var record in records)
             {
                 if (string.IsNullOrWhiteSpace(record.tileId)) return false;
+                if (!WorldTileTypes.AllElementTypes.Contains(record.tileId)) return false; // 알 수 없는 타일 ID 거부.
+
                 var cell = new Vector3Int(record.x, record.y, record.z);
                 if (!InBounds(cell)) return false;
 
+                var original = tiles[cell.x, cell.y];
+
                 if (record.placed)
                 {
+                    // 실제 플레이 중 TryPlaceForeground도 빈 칸에만 성공한다 — 재생도 같은 규칙을 지켜야
+                    // 보호 타일(빙암/이무기 제단) 위에 무언가가 "설치"되는 손상된 기록을 걸러낼 수 있다.
+                    if (!original.IsAir) return false;
+                    if (!PlacementHardness.ContainsKey(record.tileId)) return false; // 플레이어가 실제로 설치 가능한 종류만 인정.
+
                     tiles[cell.x, cell.y] = new TileData
                     {
                         hardness = ResolvePlacementHardness(record.tileId),
@@ -202,6 +227,13 @@ namespace Nyangbingo.World
                 }
                 else
                 {
+                    // 파괴 재생: 원본이 실제로 파괴 가능했어야 하고(빙암/제단이면 안 됨), 기록된 tileId가
+                    // 방금 결정론적으로 재생성된 원본 타일과 정확히 일치해야 한다 — 시드가 같으면 항상 같은
+                    // 결과가 나오므로, 불일치는 저장 데이터가 손상됐거나 다른 시드/룰에서 만들어졌다는 뜻이다.
+                    if (original.IsAir) return false;
+                    if (IndestructibleElementTypes.Contains(original.elementType)) return false;
+                    if (!string.Equals(original.elementType, record.tileId, StringComparison.Ordinal)) return false;
+
                     var background = ResolveBackgroundFor(record.tileId);
                     tiles[cell.x, cell.y] = TileData.CreateCaveAir(background);
                     ApplyForegroundVisual(cell, null);

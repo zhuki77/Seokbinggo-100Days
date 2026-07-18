@@ -8,26 +8,41 @@ namespace Nyangbingo.World
 {
     /// <summary>
     /// 밀폐(실내) 판정 시스템. TileService가 들고 있는 실시간 TileData[,]를 기준으로, 특정 셀에서
-    /// 사방으로 Flood Fill을 수행해 "완전히 자연 지형(isNaturalTerrain==true)으로만 둘러싸인 공간"인지 판정한다.
+    /// 사방으로 Flood Fill을 수행해 "완전히 인정된 벽으로만 둘러싸인 공간"인지 판정한다.
     ///
-    /// 핵심 규칙(v15 QA 경고 반영):
-    ///  - 밀폐 벽으로 인정되는 타일은 오직 isNaturalTerrain == true인 자연 타일뿐이다.
-    ///  - 플레이어가 설치한 인공 타일(isNaturalTerrain == false)은 벽이 아니라 "틈새"로 취급되어 밀폐를 깨뜨린다.
-    ///  - 맵 경계 밖으로 뚫려 있거나 탐색 범위(maxFillCells)를 넘어서면 "실외"로 간주한다.
+    /// 핵심 규칙(v15 QA-F 화이트리스트 + 결재 브리프 v2 처방 C 반영):
+    ///  - 밀폐 벽으로 인정되는 타일은 자연 지형(isNaturalTerrain == true) + <see cref="ISealBarrierRegistry"/>가
+    ///    인정하는 B파트 설치물(차열벽·차열 지붕·단열 문 등)이다. 레지스트리가 연결되지 않으면 자연 지형만 인정한다.
+    ///  - 인정되지 않은 타일, 맵 경계 밖, 탐색 범위(maxFillCells) 초과는 모두 "누출면(leak face)"으로 집계되고,
+    ///    누출면이 하나라도 있으면 그 방은 밀폐되지 않은 것으로 취급한다.
+    ///  - <see cref="SealPercent"/>는 결재 브리프 v2(07-15 오너 승인) 처방 C를 그대로 따른다:
+    ///    <c>leak_faces == 0 ? min(1, region_cells / 240) : 0</c> (0~1 소수 계약 유지 — ×100이 기획 문서의 "%"다).
+    ///    구(舊) "자연 벽 수 / 전체 경계 벽 수" 비율식(v15 QA-F가 결함으로 지적, 구멍 1칸이 1/N로 희석됨)은 폐기했다.
     ///
     /// 성능: 매 타일 변경마다 전체 맵(400x160)을 다시 스캔하지 않는다. 이미 계산해 둔 리전(Region) 캐시를
     /// 셀 단위로 보관하고, 변경된 셀과 그 4방향 인접 셀에 걸쳐 있는 리전만 무효화한 뒤, 실제로 추적 중인
     /// "관찰 지점(watch point)"만 다시 계산한다. Flood Fill 자체도 maxFillCells로 크기가 제한된다.
+    /// 밤 시작(OnNightStart) 시에도 매 프레임이 아니라 딱 한 번, 캐시 전체를 지우고 관찰 지점만 재계산한다.
     /// </summary>
     public sealed class SealSystem : ISealSource, IDisposable
     {
         private const int DefaultMaxFillCells = 3000;
+
+        /// <summary>처방 C 분모(방 크기 상한). 결재 브리프 v2: "region_cells는 이미 계산 중(캡 체크가 씀)이라 신규 자료구조 0".</summary>
+        private const float SealPercentRegionCellCap = 240f;
 
         /// <summary>Flood Fill 한 번의 결과. 내부 공기 칸과 그 경계벽 칸, 밀폐 여부/밀폐율을 담는다.</summary>
         private sealed class SealRegion
         {
             public bool isSealed;
             public float sealPercent;
+
+            /// <summary>처방 C의 region_cells — 이 리전의 내부 공기 칸 수(=interiorAirCells.Count, 조회 편의용 캐시).</summary>
+            public int regionCellCount;
+
+            /// <summary>이 리전 경계에서 발견된 누출면(leak face) 개수. 0이면 처방 C의 leak_faces==0 조건을 만족한다.</summary>
+            public int leakFaceCount;
+
             public HashSet<Vector3Int> interiorAirCells = new HashSet<Vector3Int>();
             public HashSet<Vector3Int> boundaryWallCells = new HashSet<Vector3Int>();
 
@@ -45,9 +60,15 @@ namespace Nyangbingo.World
             new Vector3Int(1, 0, 0), new Vector3Int(-1, 0, 0), new Vector3Int(0, 1, 0), new Vector3Int(0, -1, 0)
         };
 
-        private readonly TileService tileService;
+        private TileService tileService;
         private readonly SealBoundaryPolicy boundaryPolicy;
         private readonly int maxFillCells;
+
+        /// <summary>B파트 설치물(차열벽/차열 지붕/단열 문) 화이트리스트 조회 — 없으면 자연 지형만 인정(기존 동작).</summary>
+        private ISealBarrierRegistry barrierRegistry;
+
+        /// <summary>B파트 온도 시스템의 냉기원 가동 상태 — 없으면 항상 가동 중으로 간주(§ TemperaturePercent 참고).</summary>
+        private ICoolingSourceProvider coolingSourceProvider;
 
         /// <summary>셀 → 그 셀이 속한 리전. 같은 방(room)의 모든 칸이 같은 SealRegion 인스턴스를 가리키므로,
         /// 리전 내부의 다른 칸을 조회해도 캐시 히트로 처리된다(플레이어가 방 안에서 움직여도 재계산 없음).</summary>
@@ -66,20 +87,25 @@ namespace Nyangbingo.World
         /// </summary>
         public event Action<Vector3Int, bool> WatchPointSealChanged;
 
-        public SealSystem(TileService tileService, int maxFillCells = DefaultMaxFillCells)
-            : this(tileService, null, maxFillCells)
+        public SealSystem(TileService tileService, int maxFillCells = DefaultMaxFillCells,
+            ISealBarrierRegistry barrierRegistry = null, ICoolingSourceProvider coolingSourceProvider = null)
+            : this(tileService, null, maxFillCells, barrierRegistry, coolingSourceProvider)
         {
         }
 
         public SealSystem(TileService tileService, IReadOnlyList<SealWhitelistDefinition> sealWhitelist,
-            int maxFillCells = DefaultMaxFillCells)
+            int maxFillCells = DefaultMaxFillCells,
+            ISealBarrierRegistry barrierRegistry = null, ICoolingSourceProvider coolingSourceProvider = null)
         {
             this.tileService = tileService ?? throw new ArgumentNullException(nameof(tileService));
             boundaryPolicy = new SealBoundaryPolicy(sealWhitelist);
             this.maxFillCells = Mathf.Max(16, maxFillCells);
+            this.barrierRegistry = barrierRegistry;
+            this.coolingSourceProvider = coolingSourceProvider;
 
             GameEvents.OnTileBroken += HandleTileChanged;
             GameEvents.OnTilePlaced += HandleTileChanged;
+            GameEvents.OnNightStart += HandleNightStart;
         }
 
         /// <summary>정적 이벤트 구독을 해제한다. 세션/씬 종료 시 반드시 호출해야 한다(개발 가이드 §1.7).</summary>
@@ -87,14 +113,66 @@ namespace Nyangbingo.World
         {
             GameEvents.OnTileBroken -= HandleTileChanged;
             GameEvents.OnTilePlaced -= HandleTileChanged;
+            GameEvents.OnNightStart -= HandleNightStart;
+        }
+
+        // ------------------------------------------------------------------
+        // 확장 지점 — B파트 설치물/온도 시스템이 준비되는 시점에 언제든 뒤늦게 연결할 수 있도록 생성자
+        // 외에도 setter를 노출한다(WorldSessionController가 SealSystem을 재생성할 때 재주입할 수 있게).
+        // ------------------------------------------------------------------
+
+        /// <summary>차열벽/차열 지붕/단열 문 등 B파트 설치물을 밀폐 벽으로 인정할지 조회할 레지스트리를 연결한다.</summary>
+        public void SetBarrierRegistry(ISealBarrierRegistry registry) => barrierRegistry = registry;
+
+        /// <summary>B파트 온도 시스템의 냉기원 가동 상태 조회자를 연결한다(<see cref="TemperaturePercent"/>가 사용).</summary>
+        public void SetCoolingSourceProvider(ICoolingSourceProvider provider) => coolingSourceProvider = provider;
+
+        /// <summary>
+        /// A-07: 월드 로드 등으로 살아있는 TileData[,]가 통째로 새 TileService로 바뀌었을 때, 이 SealSystem
+        /// 인스턴스 자체는 Dispose하지 않고 내부 참조만 교체한다. 이렇게 하면 주 관찰 지점/고정 관찰 지점
+        /// (watchPoints), <see cref="WatchPointSealChanged"/> 구독자, 외부 시스템이 들고 있던 이 SealSystem
+        /// 참조가 로드 전후로 전부 그대로 유지된다. GameEvents 구독은 인스턴스 생성 시 한 번만 걸리는 정적
+        /// 이벤트라 새 TileService와 무관하게 계속 유효하므로 재구독할 필요가 없다 — 오직 리전 캐시만
+        /// 새 데이터 기준으로 다시 계산하면 된다.
+        /// </summary>
+        public void Rebind(TileService newTileService)
+        {
+            tileService = newTileService ?? throw new ArgumentNullException(nameof(newTileService));
+            InvalidateAll(); // 캐시 전체 무효화 + 등록된 관찰 지점만 새 데이터로 재계산(상태가 바뀐 지점만 이벤트 발행).
         }
 
         // ------------------------------------------------------------------
         // ISealSource — WorldContracts.cs 계약. 실내 온도 시스템이 이 인터페이스로 밀폐 상태를 읽는다.
         // ------------------------------------------------------------------
 
-        /// <summary>현재 "주 관찰 지점"(보통 플레이어 위치)의 밀폐율(0~1). 지점이 없으면 0.</summary>
+        /// <summary>
+        /// 현재 "주 관찰 지점"(보통 플레이어 위치)의 밀폐율(0~1, 처방 C). 지점이 없으면 0.
+        /// ×100이 기획 문서가 말하는 "sealPct(%)"다. 냉기원 가동 여부와는 무관하게 순수 밀폐 상태만 반영한다 —
+        /// 냉기원까지 반영한 값이 필요하면 <see cref="TemperaturePercent"/>를 쓴다.
+        /// </summary>
         public float SealPercent => primaryWatchPoint.HasValue ? GetOrComputeRegion(primaryWatchPoint.Value).sealPercent : 0f;
+
+        /// <summary>주 관찰 지점 경계에서 발견된 누출면(leak face) 개수. 0이면 완전 밀폐(처방 C의 leak_faces==0).</summary>
+        public int LeakFaceCount => primaryWatchPoint.HasValue ? GetOrComputeRegion(primaryWatchPoint.Value).leakFaceCount : 0;
+
+        /// <summary>
+        /// "4 시스템"(v17 최종) 온도% 산식: <c>냉기원 가동 && leak_faces == 0 ? 처방 C 값(0~100) : 0</c>.
+        /// <see cref="SealPercent"/>(밀폐율 자체, 결재 브리프 v2 처방 C)와는 별개의 값이므로 혼용하지 말 것 —
+        /// SealPercent는 항상 냉기원과 무관한 순수 밀폐 상태이고, 이 값은 B파트 TemperatureSystem이 온도
+        /// 게이지에 바로 쓸 수 있게 냉기원 게이트까지 얹은 편의값이다. 이 값은 0~100 스케일이다(SealPercent와
+        /// 스케일이 다르니 주의). coolingSourceProvider가 연결돼 있지 않으면(B 시스템 연결 전) 항상 가동 중으로
+        /// 간주해, 연동 전에도 leak_faces==0일 때 처방 C 값을 그대로 볼 수 있게 한다.
+        /// </summary>
+        public float TemperaturePercent
+        {
+            get
+            {
+                if (!primaryWatchPoint.HasValue) return 0f;
+                var region = GetOrComputeRegion(primaryWatchPoint.Value);
+                var coldSourceActive = coolingSourceProvider == null || coolingSourceProvider.IsColdSourceActive;
+                return coldSourceActive && region.leakFaceCount == 0 ? region.sealPercent * 100f : 0f;
+            }
+        }
 
         /// <summary>임의의 월드 좌표가 완전히 밀폐된 실내 안에 있는지. 등록되지 않은 좌표도 즉석으로 계산(캐시됨)한다.</summary>
         public bool IsInsideSealedArea(Vector2 position)
@@ -187,6 +265,14 @@ namespace Nyangbingo.World
             RefreshWatchPoints();
         }
 
+        /// <summary>
+        /// 기획 정본(개발 가이드 ②/결재 브리프 v2) 재계산 트리거 = "타일 배치/파괴 직후 + 밤 시작". 밤 시작은
+        /// 특정 셀 하나가 바뀐 게 아니라 임의의 관찰 지점 어디든 영향을 줄 수 있는 전역 트리거이므로,
+        /// HandleTileChanged처럼 인접 셀만 무효화하지 않고 InvalidateAll()로 캐시 전체를 지운 뒤
+        /// 등록된 관찰 지점만 다시 계산한다(매 프레임이 아니라 밤 시작 시 단 한 번뿐이라 성능 규칙에 안전하다).
+        /// </summary>
+        private void HandleNightStart() => InvalidateAll();
+
         private void RefreshWatchPoints()
         {
             if (watchPoints.Count == 0) return;
@@ -245,7 +331,7 @@ namespace Nyangbingo.World
             var queue = new Queue<Vector3Int>();
             queue.Enqueue(start);
 
-            var escaped = false;
+            var leakFaceCount = 0;
             var cellBudgetExceeded = false;
 
             while (queue.Count > 0)
@@ -257,7 +343,7 @@ namespace Nyangbingo.World
 
                     if (!tileService.InBounds(neighbor))
                     {
-                        escaped = true; // 맵 경계 밖으로 뚫려 있으면 실외로 간주.
+                        leakFaceCount++; // 맵 경계 밖으로 뚫려 있으면 누출면 1개(실외로 새는 면).
                         continue;
                     }
 
@@ -266,14 +352,14 @@ namespace Nyangbingo.World
                     var neighborTile = tileService.GetTile(neighbor);
                     if (neighborTile.IsAir)
                     {
-                        if (cellBudgetExceeded) { escaped = true; continue; }
+                        if (cellBudgetExceeded) { leakFaceCount++; continue; }
 
                         interior.Add(neighbor);
                         if (interior.Count > maxFillCells)
                         {
                             // 이 이상 확장하면 400x160 규모에서 렉을 유발할 수 있다 — 여기서부터는 "너무 커서 실외"로 간주.
                             cellBudgetExceeded = true;
-                            escaped = true;
+                            leakFaceCount++;
                             continue;
                         }
                         queue.Enqueue(neighbor);
@@ -281,25 +367,34 @@ namespace Nyangbingo.World
                     else
                     {
                         boundaryWalls.Add(neighbor);
-                        if (!boundaryPolicy.Seals(neighborTile)) escaped = true;
+                        // 화이트리스트: 자연 지형 + (있다면) B파트 설치물 레지스트리가 인정하는 구조물.
+                        // 인정되지 않으면 그 면은 누출면이다(v15 QA-F: 인공 타일=틈새).
+                        if (!IsRecognizedWall(neighborTile, neighbor)) leakFaceCount++;
                     }
                 }
             }
 
             region.interiorAirCells = interior;
             region.boundaryWallCells = boundaryWalls;
+            region.regionCellCount = interior.Count;
+            region.leakFaceCount = leakFaceCount;
 
-            var sealingWallCount = 0;
-            foreach (var wallCell in boundaryWalls)
-            {
-                if (boundaryPolicy.Seals(tileService.GetTile(wallCell))) sealingWallCount++;
-            }
-
-            region.sealPercent = boundaryWalls.Count == 0 ? 0f : (float)sealingWallCount / boundaryWalls.Count;
-            region.isSealed = !escaped && boundaryWalls.Count > 0 && sealingWallCount == boundaryWalls.Count;
+            // 처방 C(결재 브리프 v2, 07-15 오너 승인 · 처방 B는 밸런스 독립 반증으로 기각):
+            // 밀폐가 안 됐으면 0%(이진 속성을 정직하게), 밀폐됐으면 방을 넓힌 만큼(최대 240칸) 오른다.
+            region.sealPercent = leakFaceCount == 0 ? Mathf.Min(1f, region.regionCellCount / SealPercentRegionCellCap) : 0f;
+            region.isSealed = leakFaceCount == 0 && boundaryWalls.Count > 0;
 
             return region;
         }
+
+        /// <summary>
+        /// v15 QA-F 화이트리스트: 자연 지형(흙·돌·암반) + B파트 설치물(차열벽/차열 지붕/단열 문 등).
+        /// 설치물 데이터는 TileData 그리드가 아니라 B파트가 소유할 가능성이 크므로, SealSystem은 직접 알지
+        /// 못하고 <see cref="barrierRegistry"/>에 위임한다 — 레지스트리가 연결되지 않으면 자연 지형만
+        /// 인정하는 기존 동작을 그대로 유지한다(연결 전에도 컴파일/동작이 깨지지 않도록 하는 안전한 기본값).
+        /// </summary>
+        private bool IsRecognizedWall(TileData tile, Vector3Int cell) =>
+            boundaryPolicy.Seals(tile) || (barrierRegistry != null && barrierRegistry.IsRecognizedBarrier(cell));
 
         private static IEnumerable<Vector3Int> NeighborsAndSelf(Vector3Int cell)
         {

@@ -1525,5 +1525,23 @@ namespace Nyangbingo.Save
             if (saveManager != null && snapshotProvider != null)
                 saveManager.SaveAtDawn(slot, snapshotProvider.CaptureSnapshot());
         }
+
+        /// <summary>
+        /// 인스펙터 드래그 배선 대신 코드로 직접 연결할 때 쓰는 진입점(세션 루트/디버그 하네스 전용).
+        /// <see cref="Nyangbingo.World.WorldSessionSaveProviderAdapter"/>처럼 순수 C# 객체(WorldSessionController)를
+        /// 감싸는 MonoBehaviour는 씬 생성 시점에 미리 인스펙터에 꽂아둘 수 없어 런타임 배선이 필요하다.
+        /// 이미 활성화된 뒤 호출해도 이전 timeSource 구독을 정리하고 새 timeSource로 다시 구독한다.
+        /// </summary>
+        public void Configure(SaveManager manager, ITimeSource source, ISaveSnapshotProvider provider, int saveSlot)
+        {
+            if (timeSource != null) timeSource.Dawn -= SaveAtDawn;
+
+            saveManager = manager;
+            timeSource = source;
+            snapshotProvider = provider;
+            slot = Mathf.Clamp(saveSlot, 0, SaveManager.SlotCount - 1);
+
+            if (isActiveAndEnabled && timeSource != null) timeSource.Dawn += SaveAtDawn;
+        }
     }
 }

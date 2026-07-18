@@ -129,8 +129,14 @@ public static class NyangbingoDevAWorldTestSceneCreator
     /// DevAWorldTest 씬에 "WorldTilemap"(Grid) → Foreground/Background Tilemap 2겹을 자동으로 만들고,
     /// Nyangbingo.World.TilemapRenderer를 붙여 알려진 elementType 슬롯을 전부 채운 뒤
     /// MapGeneratorTestHarness.tilemapRenderer에 연결한다. TileBase 에셋만 드래그해서 채우면 바로 Play 가능.
+    ///
+    /// 주의: SetupDevATileAssets.SetupTilemapRenderingInDevAScene()과 메뉴 경로가 예전에 완전히
+    /// 똑같았다(둘 다 "Nyangbingo/Setup Tilemap Rendering In Dev A Scene") — 두 개의 다른 클래스가
+    /// 같은 메뉴 항목을 두고 경합하면 어느 쪽이 실제로 실행될지 보장할 수 없어, 타일 배선이 원인불명으로
+    /// 계속 실패한 것처럼 보이는 혼란을 유발할 수 있었다. 이 메서드는 harness/PlayerMiningController/
+    /// SealSystemDebugView까지 추가로 배선하는 "풀 셋업" 버전이라 경로를 구분해 명확히 갈라놨다.
     /// </summary>
-    [MenuItem("Nyangbingo/Setup Tilemap Rendering In Dev A Scene")]
+    [MenuItem("Nyangbingo/Setup Full Dev A Scene (Harness+Mining+Seal 포함)")]
     public static void SetupTilemapRendering()
     {
         Scene scene = File.Exists(ScenePath)

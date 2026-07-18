@@ -930,7 +930,8 @@ namespace Nyangbingo.Debugging
                                 Mathf.Approximately(time.CycleLengthSeconds, 1440f) &&
                                 Mathf.Approximately(time.TimeOfDayGameSeconds, 900f) &&
                                 Mathf.Approximately(time.SecondsUntilNextTransition, 540f) &&
-                                time.SurvivalDayLimit == 30 && time.CurrentDayCurve?.Day == 1;
+                                time.MvpContentDayLimit == 30 && time.SurvivalDayLimit == 100 &&
+                                time.CurrentDayCurve?.Day == 1;
             time.Tick(540f);
             var firstNightLengthCorrect = time.Day == 2 && !time.IsNight &&
                                           Mathf.Approximately(time.TimeOfDayGameSeconds, 0f);
@@ -938,7 +939,7 @@ namespace Nyangbingo.Debugging
             Destroy(timeObject);
 
             if (valid)
-                Debug.Log("[Nyangbingo] Official 80 globals, typed contracts, and 540-second first night completed.");
+                Debug.Log("[Nyangbingo] Official 80 globals, D-100/MVP-30 separation, typed contracts, and 540-second first night completed.");
             else Debug.LogError("[Nyangbingo] Imported globals or runtime binding test failed.");
         }
 
