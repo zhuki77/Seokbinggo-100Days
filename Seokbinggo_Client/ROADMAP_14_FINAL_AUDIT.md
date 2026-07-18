@@ -11,7 +11,8 @@
 로드맵의 시스템 구현과 자동 검증 기반은 대부분 완료되었지만, 현재 상태를 **14개 항목 전체가 실제 게임에 완전히 적용된 완성 상태**라고 볼 수는 없다.
 
 - DevBTest 기준: 최신 세션의 108개 성공 신호, 실패/예외 없음
-- 스크립트 컴파일 기준: 오류 0건, 기존 Dev-A API 폐기 예정 경고 2건
+- Dev A 회귀 기준: 최신 `main` 계약 병합 후 6/6 통과, 실패/예외 없음
+- 스크립트 컴파일 기준: 런타임·에디터 어셈블리 경고 0건, 오류 0건
 - 공식 CSV는 16종이 아니라 **17종**이다.
 - Unity CSV 자동 대조기는 정상 동작하며 공식 17종, Unity 17종, 의미 매핑 15쌍을 검사한다.
 - 메인 빌드 씬은 아직 `SampleScene` 한 개뿐이며, 새 게임 셸·오디오 서비스·도감 표현은 씬/프리팹에 배치되지 않았다.
@@ -57,7 +58,7 @@
 - `seal-whitelist.csv -> seal-whitelist.csv`: 공식 22행 / Unity 22행, 불일치 0개. SO·카탈로그·인공 경계 SealSystem·DevBTest까지 연결 완료
 - `id-migration.csv -> id-migration.csv`: 공식 27행 / Unity 27행, 불일치 0개. 런타임 매니페스트가 26개 rename과 여우비 부적 삭제·환불을 SaveGame에 직접 공급한다.
 - `day-curve.csv -> day-curve.csv`: 공식 30행 / Unity 30행, 불일치 0개. 30일 스폰 조합·상한·더위·권장 진척·이벤트 ID를 카탈로그와 DayNightService에 연결했다.
-- `globals.csv -> globals.csv`: 공식 80행 / Unity 80행, 불일치 0개. 타입 계약·카탈로그·DayNightService에 연결했고 첫날 밤 540초 경계를 검증했다.
+- `globals.csv -> globals.csv`: 공식 80행 / Unity 80행, 불일치 0개. 타입 계약·카탈로그·DayNightService에 연결했고 `total_days=100` 생존 목표와 `mvp_days=30` 콘텐츠 범위를 분리해 첫날 밤 540초 경계까지 검증했다.
 - 감사 중 발견된 `ice_anvil` 설비 불일치는 공식 `blast_furnace`에 대응하는 `Foundry`로 수정했고, 재대조 결과 의미상 불일치 0건을 확인했다.
 
 ### 아직 공식 CSV와 직접 매핑되지 않은 2종
@@ -71,9 +72,14 @@ Unity 전용 파이프라인 파일은 `day-events.csv`, `utilities.csv` 2종이
 
 ### P0 — 메인 플레이 연결
 
-1. 타이틀/일시정지/설정/결과 Canvas와 도감 UI를 실제 씬 또는 프리팹에 배치한다.
-2. `NyangbingoAudioService`를 부트스트랩 씬에 배치하고 실제 AudioMixer·클립을 연결한다.
-3. 실제 플레이 씬을 Build Settings에 추가한다. 현재는 `Assets/Scenes/SampleScene.unity`만 등록되어 있다.
+1. 메인 씬 골격에 `WorldSessionController`, `DayNightService`, `CentralTickDriver`를 배선한다(B-08).
+2. 제작·제련·유틸리티와 시간 기반 전투/AI 소비자를 `session.TickDriver`에 등록한다(B-03).
+3. 공식 차열 경계 정책과 실제 설치물 상태를 잇는 `ISealBarrierRegistry`, 냉기원을 잇는 `ICoolingSourceProvider`를 메인 세션에 주입한다(B-04).
+4. 월드·시간·플레이어·인벤토리·장비·진행도를 묶는 통합 `ISaveSnapshotProvider`와 `DawnAutoSave`를 실제 배선한다(B-01/B-02/B-07).
+5. 밤 스폰·요괴·보스가 `session.TimeService`, 최신 `TileService`, `WorldLoaded` 재바인딩을 사용하도록 연결한다(B-05).
+6. 12슬롯 인벤토리 HUD, 체온·밀폐도·D-100·발톱 티어, 타이틀/일시정지/설정/결과 Canvas와 도감 UI를 실제 씬 또는 프리팹에 배치한다(B-06).
+7. `NyangbingoAudioService`를 부트스트랩 씬에 배치하고 실제 AudioMixer·클립을 연결한다.
+8. 실제 플레이 씬을 Build Settings에 추가한다. 현재는 `Assets/Scenes/SampleScene.unity`만 등록되어 있다.
 
 ### P1 — 콘텐츠 자산·배포 준비
 
@@ -87,10 +93,12 @@ Unity 전용 파이프라인 파일은 `day-events.csv`, `utilities.csv` 2종이
 1. Unity 재가져오기 완료: 아이템 83개, 레시피 49개
 2. 공식 CSV 재대조 완료: 공식 17종, Unity 17종, 15개 매핑 의미상 불일치 0건
 3. DevBTest 완료: 성공 신호 108개, 실패·예외 0개
-4. `modules.csv` 완료: 공식 5/5, 카탈로그 5개, 의미상 불일치 0건
-5. `mineral-tiers.csv` 완료: 공식 12/12, 카탈로그 12개, 의미상 불일치 0건
-6. `seal-whitelist.csv` 완료: 공식 22/22, 카탈로그 22개, 인공 차열벽·지붕·문 경계 판정과 비경계 설치물 검증 완료
-7. `id-migration.csv` 완료: 공식 27/27, 카탈로그·런타임 매니페스트 27개, 저장 rename·충돌 병합·삭제 환불 검증 완료
-8. `day-curve.csv` 완료: 공식 30/30, 카탈로그 30개, 15일 백중·30일 강철이 보스 이벤트와 현재 일차 바인딩 검증 완료
-9. `globals.csv` 완료: 공식 80/80, 카탈로그 80개, 타입 계약과 540초 첫날 밤 런타임 바인딩 검증 완료
-10. 공식 MVP CSV 직접 매핑 완료. 남은 `crafting-ext.csv`, `day-curve-ext.csv`는 31일 이후 범위다.
+4. Dev A 회귀 완료: 결정론 생성·상자·원자적 타일 복원·밀폐·낮밤·월드 세션 6/6 통과
+5. 개발 A `main` 계약 병합 완료: `CentralTickDriver`, 원자적 `LoadSnapshot`, `SealSystem.Rebind`, `WorldLoaded` 보존
+6. `modules.csv` 완료: 공식 5/5, 카탈로그 5개, 의미상 불일치 0건
+7. `mineral-tiers.csv` 완료: 공식 12/12, 카탈로그 12개, 의미상 불일치 0건
+8. `seal-whitelist.csv` 완료: 공식 22/22, 카탈로그 22개, 공식 경계 정책·처방 C·A 설치물 확장 계약 통합 완료
+9. `id-migration.csv` 완료: 공식 27/27, 카탈로그·런타임 매니페스트 27개, 저장 rename·충돌 병합·삭제 환불 검증 완료
+10. `day-curve.csv` 완료: 공식 30/30, 카탈로그 30개, 15일 백중·30일 강철이 보스 이벤트와 현재 일차 바인딩 검증 완료
+11. `globals.csv` 완료: 공식 80/80, 카탈로그 80개, D-100/MVP-30 분리와 540초 첫날 밤 런타임 바인딩 검증 완료
+12. 공식 MVP CSV 직접 매핑 완료. 남은 `crafting-ext.csv`, `day-curve-ext.csv`는 31일 이후 범위다.
