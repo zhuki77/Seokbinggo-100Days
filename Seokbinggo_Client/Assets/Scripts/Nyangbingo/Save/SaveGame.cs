@@ -95,6 +95,16 @@ namespace Nyangbingo.Save
     }
 
     [Serializable]
+    public sealed class RegularEncounterStateRecord
+    {
+        public bool hasValue;
+        public int day = 1;
+        public bool isNight;
+        public bool discardRegularForCurrentNight;
+        public List<string> remainingRegularYokaiIds = new List<string>();
+    }
+
+    [Serializable]
     public struct EquipmentRecord { public string slot; public string equipmentId; }
 
     [Serializable]
@@ -127,7 +137,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 10;
+        public const int CurrentSchemaVersion = 11;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -159,6 +169,7 @@ namespace Nyangbingo.Save
         public PlayerStateRecord playerState = new PlayerStateRecord();
         public TimeStateRecord timeState = new TimeStateRecord();
         [NonSerialized] public ActiveBossStateRecord activeBoss = new ActiveBossStateRecord();
+        public RegularEncounterStateRecord regularEncounter = new RegularEncounterStateRecord();
         public BaekjungSchedulerState baekjungProgress = new BaekjungSchedulerState();
         public float baekjungTearRemainder;
         public RunStatsRecord stats = new RunStatsRecord();
@@ -190,6 +201,11 @@ namespace Nyangbingo.Save
             if (playerState == null) playerState = new PlayerStateRecord();
             if (timeState == null) timeState = new TimeStateRecord();
             activeBoss = new ActiveBossStateRecord();
+            if (regularEncounter == null) regularEncounter = new RegularEncounterStateRecord();
+            if (regularEncounter.remainingRegularYokaiIds == null)
+                regularEncounter.remainingRegularYokaiIds = new List<string>();
+            regularEncounter.day = Math.Max(1, regularEncounter.day);
+            regularEncounter.remainingRegularYokaiIds.RemoveAll(string.IsNullOrWhiteSpace);
             if (baekjungProgress == null) baekjungProgress = new BaekjungSchedulerState();
             if (stats == null) stats = new RunStatsRecord();
             stats.minedTiles = Math.Max(0, stats.minedTiles);

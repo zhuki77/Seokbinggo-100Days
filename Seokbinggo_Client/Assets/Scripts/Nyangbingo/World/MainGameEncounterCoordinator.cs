@@ -42,6 +42,7 @@ namespace Nyangbingo.World
         private bool forcedBossSpawnPending;
         private bool initialized;
         private bool restoringSnapshot;
+        private RegularEncounterStateRecord restoredRegularEncounter;
         private int spawnSequence;
         private int debugBossIndex;
         private BossCombatController activeBossCombat;
@@ -266,6 +267,7 @@ namespace Nyangbingo.World
             if (save == null || !CanSerializeProgress || baekjungScheduler == null ||
                 forcedBossDefinitions.Count != forcedBossBindings.Count) return false;
             save.activeBoss = new ActiveBossStateRecord();
+            save.regularEncounter = CaptureRegularEncounterState();
             save.baekjungProgress = baekjungScheduler.CaptureState();
             for (var index = 0; index < forcedBossBindings.Count; index++)
                 ForcedBossEncounterSaveAdapter.Capture(
@@ -277,6 +279,7 @@ namespace Nyangbingo.World
         {
             if (!CanSerializeProgress) return false;
             restoringSnapshot = true;
+            restoredRegularEncounter = null;
             pendingRegular.Clear();
             ClearSpawnedYokai();
             return true;
@@ -291,6 +294,7 @@ namespace Nyangbingo.World
                         save, forcedBossDefinitions[index], forcedBossBindings[index]))
                     return false;
             if (!baekjungScheduler.RestoreState(save.baekjungProgress)) return false;
+            if (!TryStageRegularEncounterRestore(save.regularEncounter)) return false;
             RebuildBaekjungBindings();
             return true;
         }
@@ -299,10 +303,72 @@ namespace Nyangbingo.World
         {
             if (!restoringSnapshot) return;
             restoringSnapshot = false;
+            var regularEncounter = restoredRegularEncounter;
+            restoredRegularEncounter = null;
             if (!succeeded || !bootstrap.TimeService.IsNight) return;
-            HandleNightStart();
+            if (regularEncounter != null && regularEncounter.hasValue)
+                RestoreRegularEncounter(regularEncounter);
+            else
+                HandleNightStart();
             for (var index = 0; index < forcedBossBindings.Count; index++)
                 forcedBossBindings[index].TryStartForCurrentNight();
+        }
+
+        private RegularEncounterStateRecord CaptureRegularEncounterState()
+        {
+            var state = new RegularEncounterStateRecord
+            {
+                hasValue = true,
+                day = bootstrap.TimeService.Day,
+                isNight = bootstrap.TimeService.IsNight,
+                discardRegularForCurrentNight = discardRegularForCurrentNight
+            };
+            if (!state.isNight) return state;
+
+            for (var index = 0; index < spawnedYokai.Count; index++)
+            {
+                var entry = spawnedYokai[index];
+                var definition = entry?.brain?.Definition;
+                if (!entry.raid && IsAlive(entry) && definition != null)
+                    state.remainingRegularYokaiIds.Add(definition.Id);
+            }
+            foreach (var definition in pendingRegular)
+                if (definition != null) state.remainingRegularYokaiIds.Add(definition.Id);
+            return state;
+        }
+
+        private bool TryStageRegularEncounterRestore(RegularEncounterStateRecord state)
+        {
+            if (state == null || !state.hasValue)
+            {
+                restoredRegularEncounter = null;
+                return true;
+            }
+            if (state.day != bootstrap.TimeService.Day || state.isNight != bootstrap.TimeService.IsNight)
+                return false;
+            for (var index = 0; index < state.remainingRegularYokaiIds.Count; index++)
+            {
+                var definition = gameDataCatalog.FindYokai(state.remainingRegularYokaiIds[index]);
+                if (definition == null || !definition.SupportsSpawnTrack(YokaiSpawnTrack.Raid)) return false;
+            }
+            restoredRegularEncounter = state;
+            return true;
+        }
+
+        private void RestoreRegularEncounter(RegularEncounterStateRecord state)
+        {
+            pendingRegular.Clear();
+            currentDayCurve = gameDataCatalog.FindDayCurve(bootstrap.TimeService.Day);
+            discardRegularForCurrentNight = state.discardRegularForCurrentNight;
+            regularSpawningEnabled = !discardRegularForCurrentNight && baekjungScheduler?.IsActive != true;
+            if (regularSpawningEnabled)
+            {
+                for (var index = 0; index < state.remainingRegularYokaiIds.Count; index++)
+                    pendingRegular.Enqueue(gameDataCatalog.FindYokai(state.remainingRegularYokaiIds[index]));
+                TryFillRegularSlots();
+            }
+            Debug.Log($"[Nyangbingo] MainGameEncounterCoordinator: saved regular encounter restored " +
+                      $"(discard={discardRegularForCurrentNight}, remaining={state.remainingRegularYokaiIds.Count}).");
         }
 
         private void HandleWorldReady()
