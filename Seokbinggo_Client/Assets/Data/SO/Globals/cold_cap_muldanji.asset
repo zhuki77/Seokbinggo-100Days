@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: cold_cap_muldanji
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: cold_cap_muldanji
+  value: 25
+  unit: pct
+  note: "\uBB3C\uB2E8\uC9C0 \uC628\uB3C4 \uC0C1\uD55C(v21 \uC624\uB108 \uC2B9\uC778)
+    \u2014 day8 \uAD8C\uC7A5 27% \uBBF8\uB9CC\uC774\uB77C 8\uC77C\uCC28 \uAC08\uC544\uD0C0\uAE30
+    \uC555\uB825 \uC790\uB3D9 \uBC1C\uC0DD"

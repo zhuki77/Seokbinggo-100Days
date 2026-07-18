@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: player_move_speed
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: player_move_speed
+  value: 3.0
+  unit: tile_per_sec
+  note: "\uD50C\uB808\uC774\uC5B4 \uC774\uB3D9 \uC18D\uB3C4(v22 \uC815\uBCF8\uD654)
+    \u2014 6-7 \uC694\uAD34 \uC774\uC18D\uC774 \uAC15\uC81C: \uC57C\uAD11\uADC03.5\uBCF4\uB2E4
+    \uB290\uB824\uC57C \uCCB4\uAC00 \uCE74\uC6B4\uD130\uB85C \uC131\uB9BD\xB7\uC5B4\uB451\uC2DC\uB2C82.5\uBCF4\uB2E4
+    \uBE68\uB77C\uC57C \uC2EC\uCE35 \uD0C8\uCD9C \uAC00\uB2A5. balance \uCD94\uC815
+    4.0\uC740 \uC57C\uAD11\uADC0\uB97C \uB530\uB77C\uC7A1\uC544 \uCCB4\uB97C \uBB34\uC758\uBBF8\uD558\uAC8C
+    \uB9CC\uB4E4\uC5B4 \uAE30\uAC01"

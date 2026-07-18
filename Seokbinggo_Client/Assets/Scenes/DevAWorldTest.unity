@@ -354,7 +354,7 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 91cd996e805ec8948be498121cbfff78, type: 2}
   - elementType: stone_deep
     tile: {fileID: 11400000, guid: 68c5a56826aff704c9a6bb47d93e9c8e, type: 2}
-  - elementType: ice_steel_ore
+  - elementType: icesteel_ore
     tile: {fileID: 11400000, guid: bf877346e59fb1a4b995d22bb9b9dc33, type: 2}
   - elementType: frost_essence
     tile: {fileID: 11400000, guid: 00e45c48ea58ec74dbaff58561aa7d78, type: 2}

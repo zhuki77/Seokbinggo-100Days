@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace Nyangbingo.Core
 {
+    public enum MiningImpactSurface { Dirt, Mineral }
+
     public static class GameEvents
     {
         public static event Action OnDayStart;
@@ -16,6 +18,21 @@ namespace Nyangbingo.Core
         public static event Action<BossDefinition> OnBossDefeated;
         public static event Action OnSealChanged;
         public static event Action OnBaekjungStart;
+        public static event Action OnBaekjungEnd;
+        public static event Action<MiningImpactSurface> OnMiningImpact;
+        public static event Action OnItemAcquired;
+        public static event Action OnPlayerDamaged;
+        public static event Action OnYokaiDamaged;
+        public static event Action OnMiningCritical;
+        public static event Action OnCraftingCompleted;
+        public static event Action OnChestOpened;
+        public static event Action OnWallDamaged;
+        public static event Action OnBossFled;
+        public static event Action OnEoduksiniBloomed;
+        public static event Action OnPlayerHeatPanting;
+        public static event Action OnNapStarted;
+        public static event Action OnGoalBadgeCompleted;
+        public static event Action OnPlayerDied;
 
         public static void RaiseDayStart() => OnDayStart?.Invoke();
         public static void RaiseNightStart() => OnNightStart?.Invoke();
@@ -27,5 +44,20 @@ namespace Nyangbingo.Core
         public static void RaiseBossDefeated(BossDefinition definition) => OnBossDefeated?.Invoke(definition);
         public static void RaiseSealChanged() => OnSealChanged?.Invoke();
         public static void RaiseBaekjungStart() => OnBaekjungStart?.Invoke();
+        public static void RaiseBaekjungEnd() => OnBaekjungEnd?.Invoke();
+        public static void RaiseMiningImpact(MiningImpactSurface surface) => OnMiningImpact?.Invoke(surface);
+        public static void RaiseItemAcquired() => OnItemAcquired?.Invoke();
+        public static void RaisePlayerDamaged() => OnPlayerDamaged?.Invoke();
+        public static void RaiseYokaiDamaged() => OnYokaiDamaged?.Invoke();
+        public static void RaiseMiningCritical() => OnMiningCritical?.Invoke();
+        public static void RaiseCraftingCompleted() => OnCraftingCompleted?.Invoke();
+        public static void RaiseChestOpened() => OnChestOpened?.Invoke();
+        public static void RaiseWallDamaged() => OnWallDamaged?.Invoke();
+        public static void RaiseBossFled() => OnBossFled?.Invoke();
+        public static void RaiseEoduksiniBloomed() => OnEoduksiniBloomed?.Invoke();
+        public static void RaisePlayerHeatPanting() => OnPlayerHeatPanting?.Invoke();
+        public static void RaiseNapStarted() => OnNapStarted?.Invoke();
+        public static void RaiseGoalBadgeCompleted() => OnGoalBadgeCompleted?.Invoke();
+        public static void RaisePlayerDied() => OnPlayerDied?.Invoke();
     }
 }

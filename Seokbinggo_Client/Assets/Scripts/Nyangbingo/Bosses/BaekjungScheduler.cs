@@ -134,6 +134,7 @@ namespace Nyangbingo.Bosses
             if (!IsActive) return false;
             hasEnded = true;
             Ended?.Invoke(activeDefinition);
+            GameEvents.RaiseBaekjungEnd();
             return true;
         }
 

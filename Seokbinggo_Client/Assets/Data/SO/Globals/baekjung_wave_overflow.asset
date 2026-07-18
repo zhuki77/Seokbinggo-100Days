@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: baekjung_wave_overflow
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: baekjung_wave_overflow
+  value: queue_until_dawn
+  unit: rule
+  note: "\uBC31\uC911 \uC6E8\uC774\uBE0C \uCD08\uACFC\uBD84 \uCC98\uB9AC(v23 A\uC548)
+    \u2014 \uB300\uAE30\uC5F4 \uBCF4\uAD00 \uD6C4 \uC790\uB9AC \uB098\uBA74 \uC2A4\uD3F0.
+    \uC0C8\uBCBD \uB3C4\uC8FC \uC2DC\uC810\uC5D0 \uC794\uC5EC \uD3D0\uAE30. \uCD1D12\xB7\uC870\uD569
+    \uBCF4\uC7A5\uC774 \uB208\uBB3C \uACBD\uC81C\uC640 \uAE4C\uCE58 \uC870\uAC74\uC758
+    \uC804\uC81C"

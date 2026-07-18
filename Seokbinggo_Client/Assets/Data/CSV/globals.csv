@@ -1,0 +1,81 @@
+key,value,unit,note
+day_length_sec,900,sec,낮 15분 (테라리아 기준·오너확정)
+night_length_sec,540,sec,밤 9분 (테라리아 기준·오너확정)
+day_total_sec,1440,sec,1일 24분 (테라리아 동일)
+mvp_days,30,day,MVP 확대(오너지시 — 20→30 + 콘텐츠 폭)
+total_days,100,day,백일폭염 도래(정본)
+heat_stage_period,10,day,10일마다 더위단계+1(정본)
+temp_min,0,gauge,체온 시원
+temp_max,100,gauge,체온 열사병
+temp_start,40,gauge,시작 체온
+temp_rise_per_stage,0.10,per_sec,낮 지상 노출 상승/초 x 더위단계(낮 15분 반영해 완화)
+temp_fall_safe,0.15,per_sec,밤/그늘/지하 하강/초
+heatstroke_threshold,80,gauge,이상 시 열사병
+safe_threshold,40,gauge,이하 안전
+yokai_cap,8,count,밤 도깨비 상한(정본 가안)
+win_seal_pct,100,pct,승리 밀폐도
+win_modules,5,count,핵심 모듈 수
+tile_px,16,px,타일 16x16(아트 정합)
+team_dev,2,person,개발 2명(오너확정)
+team_art,2,person,아트 2명(오너확정)
+team_design,1,person,기획 1명=오너(확정)
+baekjung_day,15,day,백중날 밤 이벤트(v6 — 요괴 급증·드랍 강화, 데모 세이브 15일차와 일치)
+nap_timescale,4,mult,냥잠 낮 시간 가속(v6)
+nap_temp_mult,3,mult,냥잠 체온 하강 배수(자연 0.15/게임초 기준 — v6)
+ice_shard_temp_relief,10,gauge,얼음 조각 1개 즉시 체온 -10(v6 신규 정의)
+baekjung_spawn_cap,12,count,백중날 밤 한정 스폰 상한(공식값x3)
+baekjung_spawn_mult,3,mult,백중날 스폰 배율
+baekjung_tears_mult,1.5,mult,백중날 요괴 눈물 배율
+baekjung_sig_mult,2,mult,백중날 시그니처 드랍 배율
+magpie_join_kills,30,count,까치 입주 누적 처치 조건(또는 백중날 생존)
+magpie_magnet_radius,10,tile,까치 줍기 반경
+magpie_magnet_interval,4,sec,까치 줍기 주기
+smelt_iron_ratio,2:1,ore:ingot,철·구리 광석 2+석탄 1=주괴 1(화로 20초 배치 6)
+smelt_icesteel_ratio,2:1,ore:ingot,얼음강철 원석 2+석탄 2=주괴 1(용광로 45초 배치 4)
+claw_t2_mine_crit,0.15,prob,무쇠 발톱 채굴 크리티컬(드랍 2배·채굴 전용)
+claw_t3_slow,0.30,mult,서리 서림 감속(2초)
+insul_straw_bonus,0.05,per_wall,짚 단열재 체온 하강 보정(상한 6장)
+insul_clay_wall_hp,750,hp,점토 미장 차열벽 HP(600→750)
+eoduksini_bloom_pause_sec,6,sec,어둑시니 꽃구경 — 만개(등불 반경 진입) 중 벽 공격 중단(개체당 진입 1회)
+eoduksini_rebloom_cd_sec,12,sec,어둑시니 재개화 쿨(개체당) — 밀어내기 반복 어뷰징 상한
+portable_lantern_radius,3,tile,휴대(활성 슬롯) 등불 광원 — 어둑시니 판정 태그 불참(4-7·설치 전용)
+portable_lantern_fuel_rule,active_slot_only,rule,활성 슬롯에 든 동안만 연료 소모 — 석탄 1=270초(설치와 동일 타이머 재사용)
+dev_speed_mult,8,mult,개발빌드 전용 시연 배속 토글(냥잠 x4와 별개 값) — 지상 노출 중 사용 금지(시연 대본)
+badge_wall_count,1,count,목표 배지 ② 차열벽 판정 — 첫 1장 설치(수량 압박은 밀폐도 게이지 승계)
+badge_window_days,3,day,목표 배지 HUD 기간 — min(3배지 전부 달성·3일차 밤 종료) 소멸
+ice_tile_hp,600,hp,얼음 계열 타일 HP(신규 등재 — 불가사리 얼음 32DPS·확장 용해 대상. 차열벽 600 동급)
+ice_storage_hp,900,hp,얼음 저장고 HP(신규 등재 — 무쇠 차열벽 900 동급·확장 노출 용해 6.7일)
+seal_window_rx,28,tile,밀폐 창 가로 반경(v15 QA-G 확정) — 실수요 폭 26의 2.2배·화면 가로 1.3배. RX 32를 안 쓰는 이유=창이 넓을수록 창 안 가로 갱도가 leak 없이 뻗어 분자 공장 문제 부분 재발
+seal_window_ry,12,tile,밀폐 창 세로 반경 — 창 높이 25=화면 세로 상한이라 반경 토글 시 상하 경계가 한 화면에 보인다(창 경계 걸침=완공 불가 함정의 유일 방어). 갱도 방어선 겸함
+seal_cap,1425,count,폭주 캡 — (2*rx+1)*(2*ry+1)=57*25 유도값. 직접 정하지 말 것. 구조적으로 도달 불가하므로 무한 루프 안전망으로만
+seal_target_cells,240,count,밀폐도 100% 기준 영역 칸 수(처방 C) — 기지 실수요 168칸의 1.43배. 여유 공간의 자리가 곧 완공 요건이 되게(1-5 건설 자유도 정합)
+seal_penalty_start_day,4,day,6-3/6-6 판정 개시 일차 — 코어 실제 하한 3일차(철 주괴=화로 필요)+배지 HUD 소멸 3일차 밤이라 배지→게이지 인수인계가 4일차에 정확히 접합(공백 0일)
+cold_source_required,1,bool,온도 상승 조건 — 냉기원(4-1 4종) 최소 1개 가동 중일 것(v17 오너 지시). 0이면 게이트 무효(구 동작). 코드 1줄
+muldanji_duration,180,sec,물단지 지속 [가안] — 소모형 냉기원. 1일차 온도계 공백 메움(초반 쉬움). 등불 석탄 타이머 1벌 재사용
+icejar_fuel_sec,300,sec,얼음 항아리 얼음 조각 1개당 지속 [가안] — 연료형 냉기원. 등불 연료 슬롯·잔량 아이콘 재사용
+jukbuin_nap_mult,1.5,mult,죽부인 — 보금자리 반경 2타일 내 설치 시 냥잠 체온 회복 배수 [가안]. 6-10 회복 수정자 1개
+daebal_flame_cut,0.25,pct,대발 — 반경 4타일 낮 화염 경감 [가안]. 해태 석상(8타일·0.50)의 저가 약화판. 4-7 화염 태그 재사용
+daebal_radius,4,tile,대발 반경 [가안]
+muldanji_mat,점토2+돌2,recipe,물단지 재료(v20 balance 확정) — 전부 상층 T1·맨발톱·채굴 4.4초. 구 '얼음 조각1+흙2'는 항아리와 게이트가 같아 캡슐이 사장됐다. 점토2+흙2는 점토 미장과 레시피 충돌이라 돌2
+start_at_night,1,bool,게임 시작 = 1일차 밤(v21 오너 확정) — 1일차 낮은 없다. 2일차부터 낮→밤 정상 사이클. 하드코딩 금지
+cold_cap_muldanji,25,pct,물단지 온도 상한(v21 오너 승인) — day8 권장 27% 미만이라 8일차 갈아타기 압력 자동 발생
+cold_cap_icejar,50,pct,얼음 항아리 온도 상한 — day15 백중 권장 50%와 일치
+cold_cap_icestorage,100,pct,얼음 저장고(코어) 온도 상한 — 완공 모듈이자 온도 축 종착
+cold_cap_frostcooler,100,pct,빙정 냉각로 온도 상한 — 보스 보상. 차별점은 기존 체온 회복 x2
+player_move_speed,3.0,tile_per_sec,플레이어 이동 속도(v22 정본화) — 6-7 요괴 이속이 강제: 야광귀3.5보다 느려야 체가 카운터로 성립·어둑시니2.5보다 빨라야 심층 탈출 가능. balance 추정 4.0은 야광귀를 따라잡아 체를 무의미하게 만들어 기각
+surface_y,20,tile,지표 평균선(맵 상단 기준) — 1D 펄린 진폭 +-6. 위 20타일은 하늘·지상 건설 여유(밀폐 창 RY12 상단 d=-7 수용)
+layer_t1_depth,45,tile,상층 T1 하단 깊이(지표 기준) — balance 검증치 강제: 중층 왕복 145초=계단굴착 90타일=수직45. 변경 금지
+layer_t2_depth,90,tile,중층 T2 하단 깊이 — 얼음 조각·철·구리
+layer_t3_depth,135,tile,심층 T3 하단 깊이 — 진입=경계 빙암(경도3)=4-4 유일 하드 게이트(T2 발톱 필수). 어둑시니 상주
+bedrock_depth,140,tile,경계암 하단 = 맵 끝(surface_y 20 + 140 = 160 검증)
+multi_hit_defense,first_tick,rule,다단 히트기 방어 적용(v23) — 첫 틱에만 방어력 차감(최소1 보장·6-12) 나머지 틱은 방어 무시. 풀히트 시 '총피해-방어1회'와 수학적으로 동일하고 중도 이탈 시 자연스럽다
+boss_save_policy,no_serialize,rule,보스전 중 수동 저장 잠금 + 활성 보스 미직렬화(v23 확정 A안) — 구버전 세이브의 activeBoss는 읽되 무시
+boss_night_spawn,discard,rule,보스 소환 시 그날 밤 잔여 일반 스폰 폐기·격퇴/도주 후에도 재개 없음(v23) — 보스 밤은 보스가 주인공. 눈물 수급은 보스 확정 동봉이 대체(6-9)
+baekjung_wave_overflow,queue_until_dawn,rule,백중 웨이브 초과분 처리(v23 A안) — 대기열 보관 후 자리 나면 스폰. 새벽 도주 시점에 잔여 폐기. 총12·조합 보장이 눈물 경제와 까치 조건의 전제
+magpie_nest_limit,1,count,까치 둥지 맵당 1개 제한(v23) — 까치 1마리·보관함 1개라 복수 둥지는 무의미. 철거 시 까치 비활성·재설치 시 다음 아침 복귀(획득 플래그는 영구 저장)
+crafting_b_ui,hidden,rule,MVP 범위 B 레시피(crafting-tree.mvp_scope=B)는 제작 UI 미노출 — 데이터 로드만 한다. 오너 확정(v23 2026-07-16): MVP 보스 = 도깨비 대장·강철이 2종. B 사슬(무쇠 미끼 더미·얼음 제단 봉헌·신기전 화차·빙정 냉각로)은 31일~ 확장에서 승격
+baekjung_wave_size,4,count,백중 웨이브 1회 스폰 수 — 4마리 x 3웨이브(GDD 6-10)
+baekjung_wave_times_sec,0/150/300,sec,백중 웨이브 시작 시각(일몰 기준) — 총 12마리·조합은 day-curve d15 spawn_composition이 정본
+invasion_boss_in_cap,1,rule,내습 보스(30일차 강철이 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 강철이 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 금지 — 내습은 일반 요괴와 공존하고, 소환은 일반 스폰을 정지시킨다
+crafting_material_format,item_id:count,rule,crafting-tree/bosses/chests의 재료 표기 규칙(v24) — 콤마 구분. id는 items.csv가 유일 정본
+item_id_rule,snake_case,rule,아이템 id 명명(v24) — 일반 명사는 의미 영어(iron_ore·stone·lantern) 한국 고유 문화어는 로마자 음차(hapjukseon·haetae_statue·yeouiju). 전부 snake_case. 한번 정한 id는 세이브 호환 때문에 변경 금지

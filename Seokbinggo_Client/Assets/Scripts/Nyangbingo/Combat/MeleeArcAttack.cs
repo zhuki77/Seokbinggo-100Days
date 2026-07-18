@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.Combat
@@ -12,16 +13,35 @@ namespace Nyangbingo.Combat
         [Range(1, 180)][SerializeField] private float arcDegrees = 100f;
         [SerializeField] private int damage = 5;
         [SerializeField] private float knockback = .5f;
+        [SerializeField] private CombatProfileDefinition combatProfile;
         [SerializeField] private ClawProfile clawProfile;
+        public CombatProfileDefinition CombatProfile => combatProfile;
+        public bool HitsWalls => combatProfile == null || combatProfile.HitsWalls;
 
         public void ConfigureForRuntime(Transform attackOrigin, LayerMask layers, float attackRange, float attackArc, int attackDamage, float attackKnockback)
         {
             origin = attackOrigin;
             targetLayers = layers;
+            combatProfile = null;
             if (!float.IsNaN(attackRange) && !float.IsInfinity(attackRange)) range = Mathf.Max(0f, attackRange);
             if (!float.IsNaN(attackArc) && !float.IsInfinity(attackArc)) arcDegrees = Mathf.Clamp(attackArc, 1f, 180f);
             damage = Mathf.Max(1, attackDamage);
             if (!float.IsNaN(attackKnockback) && !float.IsInfinity(attackKnockback)) knockback = Mathf.Max(0f, attackKnockback);
+        }
+
+        public bool ConfigureForRuntime(Transform attackOrigin, LayerMask layers, CombatProfileDefinition profile)
+        {
+            if (profile == null || profile.RangeTiles <= 0f || float.IsNaN(profile.RangeTiles) ||
+                float.IsInfinity(profile.RangeTiles) || profile.ArcDegrees < 1f || profile.ArcDegrees > 180f ||
+                float.IsNaN(profile.ArcDegrees) || float.IsInfinity(profile.ArcDegrees)) return false;
+            origin = attackOrigin;
+            targetLayers = layers;
+            combatProfile = profile;
+            range = profile.RangeTiles;
+            arcDegrees = profile.ArcDegrees;
+            damage = profile.AttackDamage;
+            knockback = profile.KnockbackTiles;
+            return true;
         }
 
         public void Strike(Vector2 direction)
@@ -42,6 +62,7 @@ namespace Nyangbingo.Combat
             if (float.IsNaN(direction.x) || float.IsInfinity(direction.x) ||
                 float.IsNaN(direction.y) || float.IsInfinity(direction.y) ||
                 direction.sqrMagnitude <= Mathf.Epsilon) return;
+            if (!useOverride && combatProfile != null && !combatProfile.HasBasicAttack) return;
             direction.Normalize();
             Vector2 center = origin == null ? (Vector2)transform.position : (Vector2)origin.position;
             if (range <= 0f || float.IsNaN(range) || float.IsInfinity(range)) return;
@@ -52,6 +73,12 @@ namespace Nyangbingo.Combat
             {
                 activeDamage = overrideDamage;
                 activeKnockback = overrideKnockback;
+            }
+            else if (combatProfile != null)
+            {
+                activeDamage = Mathf.Max(1, combatProfile.AttackDamage);
+                if (!float.IsNaN(combatProfile.KnockbackTiles) && !float.IsInfinity(combatProfile.KnockbackTiles))
+                    activeKnockback = Mathf.Max(0f, combatProfile.KnockbackTiles);
             }
             else if (clawProfile != null)
             {
@@ -75,8 +102,11 @@ namespace Nyangbingo.Combat
                 if (Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
                 var health = hit.GetComponentInParent<Health>();
                 if (health == null || !damagedTargets.Add(health)) continue;
+                var healthBeforeDamage = health.Current;
                 health.ApplyDamage(activeDamage, DamageTag.Melee);
+                if (health.Current < healthBeforeDamage) GameEvents.RaiseYokaiDamaged();
                 health.TryApplyKnockback(toTarget * activeKnockback);
+                if (combatProfile != null && !combatProfile.MultiTarget) break;
             }
         }
     }
@@ -273,7 +303,9 @@ namespace Nyangbingo.Combat
             if (distance <= arrivalDistance || travelDistance >= distance)
             {
                 Position = targetPosition;
+                var healthBeforeDamage = target.Current;
                 target.ApplyDamage(damage, damageTag);
+                if (target.Current < healthBeforeDamage) GameEvents.RaiseYokaiDamaged();
                 Deactivate();
                 return true;
             }

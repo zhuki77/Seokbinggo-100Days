@@ -124,7 +124,7 @@ namespace Nyangbingo.World
             // 4) SealSystem은 옛 TileService(옛 배열)를 참조하던 이벤트 구독을 갖고 있으므로 새로 만들고,
             // InvalidateAll()로 리전 캐시를 초기화해 다음 조회부터 새 배열 기준으로 다시 계산되게 한다.
             sealSystem?.Dispose();
-            sealSystem = new SealSystem(tileService);
+            sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null);
             sealSystem.InvalidateAll();
             return true;
         }
@@ -162,7 +162,7 @@ namespace Nyangbingo.World
         {
             sealSystem?.Dispose();
             tileService = new TileService(tiles, renderer, catalog, seed);
-            sealSystem = new SealSystem(tileService);
+            sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null);
         }
 
         private static string RegionCatalogId(ChestRegion region) => region switch

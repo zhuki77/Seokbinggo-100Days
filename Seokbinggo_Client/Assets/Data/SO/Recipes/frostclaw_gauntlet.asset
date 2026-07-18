@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: frostclaw_gauntlet
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: frostclaw_gauntlet
+  station: 3
+  ingredients:
+  - item: {fileID: 11400000, guid: c5639627f57385e49815b1d0195a494e, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 3d3a021a3305ee94383f99102a9b7039, type: 2}
+    amount: 6
+  - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
+    amount: 4
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 25
+  - item: {fileID: 11400000, guid: 1074cfedc9f19914da69bec895f144bd, type: 2}
+    amount: 5
+  output:
+    item: {fileID: 11400000, guid: d4cfecc71d1d3224a93bdf7c1c315824, type: 2}
+    amount: 1
+  durationSeconds: 120
+  type: 0
+  mvpScope: 0
+  note: 

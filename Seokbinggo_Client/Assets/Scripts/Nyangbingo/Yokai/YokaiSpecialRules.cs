@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.Yokai
@@ -21,13 +22,15 @@ namespace Nyangbingo.Yokai
 
     public static class YokaiSpecialRules
     {
-        public static float DamageTakenMultiplier(YokaiKind kind, IYokaiCounterSource counters)
+        public static float DamageTakenMultiplier(YokaiDefinition definition, IYokaiCounterSource counters)
         {
-            if (kind == YokaiKind.Eoduksini && counters != null && counters.IsInLanternRange)
-                return IsFinitePositive(counters.EoduksiniLanternDamageMultiplier)
-                    ? counters.EoduksiniLanternDamageMultiplier
-                    : 1f;
-            if (kind == YokaiKind.Yagwanggwi && counters != null && counters.IsInSieveRange)
+            if (definition == null) return 1f;
+            if (definition.Kind == YokaiKind.Eoduksini)
+            {
+                var multiplier = definition.DamageTakenMultiplierFor(counters?.IsInLanternRange == true);
+                return IsFinitePositive(multiplier) ? multiplier : 1f;
+            }
+            if (definition.Kind == YokaiKind.Yagwanggwi && counters != null && counters.IsInSieveRange)
                 return IsFinitePositive(counters.SieveDamageMultiplier) ? counters.SieveDamageMultiplier : 1f;
             return 1f;
         }
@@ -44,8 +47,6 @@ namespace Nyangbingo.Yokai
         public static bool ShouldAttemptTheft(YokaiKind kind, IYokaiCounterSource counters)
             => ShouldStealGroundLoot(kind, counters) || CanStealInventory(kind, counters);
 
-        public static bool IsBulgasariProtectedWall(YokaiKind kind, bool isIronHeatWall)
-            => kind == YokaiKind.Bulgasari && isIronHeatWall;
     }
 
     public sealed class CounterAura : MonoBehaviour

@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: badge_window_days
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: badge_window_days
+  value: 3
+  unit: day
+  note: "\uBAA9\uD45C \uBC30\uC9C0 HUD \uAE30\uAC04 \u2014 min(3\uBC30\uC9C0 \uC804\uBD80
+    \uB2EC\uC131\xB73\uC77C\uCC28 \uBC24 \uC885\uB8CC) \uC18C\uBA78"

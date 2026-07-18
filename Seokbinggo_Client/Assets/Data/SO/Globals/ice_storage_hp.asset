@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: ice_storage_hp
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: ice_storage_hp
+  value: 900
+  unit: hp
+  note: "\uC5BC\uC74C \uC800\uC7A5\uACE0 HP(\uC2E0\uADDC \uB4F1\uC7AC \u2014 \uBB34\uC1E0
+    \uCC28\uC5F4\uBCBD 900 \uB3D9\uAE09\xB7\uD655\uC7A5 \uB178\uCD9C \uC6A9\uD574
+    6.7\uC77C)"

@@ -55,15 +55,6 @@ namespace Nyangbingo.Bosses
             return true;
         }
 
-        public bool RestoreActive(BossDefinition definition, Health spawnedBoss, float summonedAtGameSeconds)
-        {
-            if (definition == null || spawnedBoss == null || spawnedBoss.IsDead || active != null ||
-                timeSource == null || !timeSource.IsNight || float.IsNaN(summonedAtGameSeconds) ||
-                float.IsInfinity(summonedAtGameSeconds) || summonedAtGameSeconds < 0f) return false;
-            BeginActive(definition, spawnedBoss, summonedAtGameSeconds);
-            return true;
-        }
-
         private void BeginActive(BossDefinition definition, Health spawnedBoss, float summonedAtGameSeconds)
         {
             active = new ActiveBoss
@@ -91,6 +82,7 @@ namespace Nyangbingo.Bosses
             active = null;
             spawnController?.SetRegularSpawning(true);
             if (defeated) GameEvents.RaiseBossDefeated(definition);
+            else GameEvents.RaiseBossFled();
             BossEnded?.Invoke(definition, defeated);
         }
     }

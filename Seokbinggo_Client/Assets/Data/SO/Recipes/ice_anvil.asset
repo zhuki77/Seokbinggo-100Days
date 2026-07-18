@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: ice_anvil
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
   id: ice_anvil
-  station: 2
+  station: 4
   ingredients:
   - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
-    amount: 10
-  - item: {fileID: 11400000, guid: bfbf06795069d8b4cb038e7953262af7, type: 2}
     amount: 5
+  - item: {fileID: 11400000, guid: bfbf06795069d8b4cb038e7953262af7, type: 2}
+    amount: 2
   - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
-    amount: 8
+    amount: 4
   output:
     item: {fileID: 11400000, guid: 1ae8483ef55a2f4479b1bb354caaef5b, type: 2}
     amount: 1
   durationSeconds: 60
+  type: 0
+  mvpScope: 0
+  note: 

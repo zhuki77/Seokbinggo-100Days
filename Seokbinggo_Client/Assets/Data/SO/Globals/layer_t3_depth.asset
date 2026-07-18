@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: layer_t3_depth
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: layer_t3_depth
+  value: 135
+  unit: tile
+  note: "\uC2EC\uCE35 T3 \uD558\uB2E8 \uAE4A\uC774 \u2014 \uC9C4\uC785=\uACBD\uACC4
+    \uBE59\uC554(\uACBD\uB3C43)=4-4 \uC720\uC77C \uD558\uB4DC \uAC8C\uC774\uD2B8(T2
+    \uBC1C\uD1B1 \uD544\uC218). \uC5B4\uB451\uC2DC\uB2C8 \uC0C1\uC8FC"

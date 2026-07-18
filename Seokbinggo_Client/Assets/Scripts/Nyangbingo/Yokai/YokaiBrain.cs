@@ -6,15 +6,16 @@ using UnityEngine;
 namespace Nyangbingo.Yokai
 {
     public interface IYokaiTarget { Transform TargetTransform { get; } void DamageWall(float amount); }
-    public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxAmount); }
-    public interface IWallMaterialTarget { bool IsIronHeatWall { get; } }
+    public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxSlots, int maxAmount); }
+    public interface IWallMaterialTarget { YokaiWallMaterial WallMaterial { get; } }
 
     [RequireComponent(typeof(Health))]
     public sealed class YokaiBrain : MonoBehaviour
     {
-        private enum State { Approach, AttackWall, StealLoot, Retreat }
+        private enum State { Approach, AttackWall, StealLoot, Retreat, DawnFlee }
         [SerializeField] private YokaiDefinition definition;
         [SerializeField] private MonoBehaviour gameSecondsSourceComponent;
+        [SerializeField] private Renderer visibilityRenderer;
         [SerializeField] private float wallAttackRange = 1f;
         [SerializeField] private float retreatSpeedMultiplier = .5f;
         private IYokaiTarget target;
@@ -29,31 +30,51 @@ namespace Nyangbingo.Yokai
         private IGameSecondsSource gameSecondsSource;
         private float lastGameSeconds;
         private bool hasGameSecondsSample;
+        private YokaiSpawnTrack spawnTrack;
+        private Vector3 dawnFleeDirection;
+        private bool hasFledOffscreen;
         public YokaiDefinition Definition => definition;
+        public YokaiSpawnTrack SpawnTrack => spawnTrack;
+        public bool IsDawnFleeing => state == State.DawnFlee;
         public float SieveStopRemaining => sieveStopRemaining;
         public float SieveCooldownRemaining => sieveCooldownRemaining;
         public float LanternPauseRemaining => lanternPauseRemaining;
         public float BloomCooldownRemaining => bloomCooldownRemaining;
         public event System.Action Bloomed;
+        public event System.Action<YokaiDefinition> DawnFleeStarted;
+        public event System.Action<YokaiDefinition> FledOffscreen;
 
         private void Awake()
         {
             health = GetComponent<Health>();
             gameSecondsSource = gameSecondsSourceComponent as IGameSecondsSource;
+            if (visibilityRenderer == null) visibilityRenderer = GetComponentInChildren<Renderer>();
         }
 
-        private void OnEnable() => ResetGameSecondsSample();
+        private void OnEnable()
+        {
+            ResetGameSecondsSample();
+            GameEvents.OnDawnWarning += HandleDawnWarning;
+        }
+
+        private void OnDisable() => GameEvents.OnDawnWarning -= HandleDawnWarning;
 
         public void SetTarget(IYokaiTarget value)
         {
             target = value;
             if (!hasExplicitCounterSource) counterSource = value as IYokaiCounterSource;
-            if (state != State.Retreat) state = State.Approach;
+            if (state != State.Retreat && state != State.DawnFlee) state = State.Approach;
         }
-        public void ConfigureForRuntime(YokaiDefinition value, IYokaiTarget targetValue, IYokaiCounterSource counters = null)
+        public void ConfigureForRuntime(YokaiDefinition value, IYokaiTarget targetValue,
+            IYokaiCounterSource counters = null, YokaiSpawnTrack instanceSpawnTrack = YokaiSpawnTrack.Raid)
         {
             definition = value;
             target = targetValue;
+            spawnTrack = definition != null &&
+                         (instanceSpawnTrack == YokaiSpawnTrack.Raid || instanceSpawnTrack == YokaiSpawnTrack.Resident) &&
+                         definition.SupportsSpawnTrack(instanceSpawnTrack)
+                ? instanceSpawnTrack
+                : YokaiSpawnTrack.None;
             hasExplicitCounterSource = counters != null;
             counterSource = counters ?? targetValue as IYokaiCounterSource;
             state = State.Approach;
@@ -61,6 +82,8 @@ namespace Nyangbingo.Yokai
             sieveCooldownRemaining = 0f;
             lanternPauseRemaining = 0f;
             bloomCooldownRemaining = 0f;
+            dawnFleeDirection = Vector3.zero;
+            hasFledOffscreen = false;
             health = GetComponent<Health>();
             if (health != null)
             {
@@ -69,7 +92,36 @@ namespace Nyangbingo.Yokai
             }
             ResetGameSecondsSample();
         }
-        public void BeginRetreat() => state = State.Retreat;
+        public void BeginRetreat()
+        {
+            if (state != State.DawnFlee) state = State.Retreat;
+        }
+
+        public bool BeginDawnFlee()
+        {
+            if (state == State.DawnFlee || definition == null || spawnTrack != YokaiSpawnTrack.Raid ||
+                !definition.RaidFleesAtDawn) return false;
+            if (health == null) health = GetComponent<Health>();
+            if (health != null && health.IsDead) return false;
+
+            var targetPosition = target?.TargetTransform != null ? target.TargetTransform.position : transform.position;
+            var away = transform.position - targetPosition;
+            dawnFleeDirection = IsFinite(away) && away.sqrMagnitude > Mathf.Epsilon
+                ? away.normalized
+                : Vector3.left;
+            state = State.DawnFlee;
+            DawnFleeStarted?.Invoke(definition);
+            return true;
+        }
+
+        public bool TryDespawnIfOffscreen(bool isVisible)
+        {
+            if (state != State.DawnFlee || isVisible || hasFledOffscreen) return false;
+            hasFledOffscreen = true;
+            FledOffscreen?.Invoke(definition);
+            Destroy(gameObject);
+            return true;
+        }
 
         public void SetGameSecondsSource(IGameSecondsSource source)
         {
@@ -77,7 +129,13 @@ namespace Nyangbingo.Yokai
             ResetGameSecondsSample();
         }
 
-        private void Update() => TickFromGameClock();
+        private void Update()
+        {
+            TickFromGameClock();
+            if (state != State.DawnFlee) return;
+            if (visibilityRenderer == null) visibilityRenderer = GetComponentInChildren<Renderer>();
+            if (visibilityRenderer != null) TryDespawnIfOffscreen(visibilityRenderer.isVisible);
+        }
 
         public void TickFromGameClock()
         {
@@ -99,9 +157,15 @@ namespace Nyangbingo.Yokai
         public void Tick(float deltaSeconds)
         {
             if (deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) ||
-                definition == null || target == null || target.TargetTransform == null) return;
+                definition == null) return;
             if (health == null) health = GetComponent<Health>();
             if (health != null && health.IsDead) return;
+            if (state == State.DawnFlee)
+            {
+                MoveRetreat(dawnFleeDirection, deltaSeconds);
+                return;
+            }
+            if (target == null || target.TargetTransform == null) return;
             var counters = counterSource ?? target as IYokaiCounterSource;
             if (sieveCooldownRemaining > 0f)
             {
@@ -115,7 +179,7 @@ namespace Nyangbingo.Yokai
             }
             if (health != null && (definition.Kind == Nyangbingo.Core.YokaiKind.Yagwanggwi ||
                                    definition.Kind == Nyangbingo.Core.YokaiKind.Eoduksini))
-                health.SetDamageTakenMultiplier(YokaiSpecialRules.DamageTakenMultiplier(definition.Kind, counters));
+                health.SetDamageTakenMultiplier(YokaiSpecialRules.DamageTakenMultiplier(definition, counters));
             var actionSeconds = deltaSeconds;
             if (definition.Kind == Nyangbingo.Core.YokaiKind.Yagwanggwi)
             {
@@ -163,6 +227,7 @@ namespace Nyangbingo.Yokai
                     lanternPauseRemaining = Mathf.Max(0f, lanternPauseSeconds - pausedSeconds);
                     bloomCooldownRemaining = Mathf.Max(0f, bloomCooldownSeconds - actionSeconds);
                     Bloomed?.Invoke();
+                    GameEvents.RaiseEoduksiniBloomed();
                     actionSeconds -= pausedSeconds;
                     if (lanternPauseRemaining > 0f || actionSeconds <= .0001f) return;
                 }
@@ -190,8 +255,10 @@ namespace Nyangbingo.Yokai
                     {
                         var lootTarget = target as IYokaiLootTarget;
                         var stoleLoot = YokaiSpecialRules.ShouldStealGroundLoot(definition.Kind, counters) && lootTarget?.TryStealGroundLoot() == true;
-                        if (!stoleLoot && YokaiSpecialRules.CanStealInventory(definition.Kind, counters))
-                            stoleLoot = lootTarget?.TryStealInventory(10) == true;
+                        if (!stoleLoot && YokaiSpecialRules.CanStealInventory(definition.Kind, counters) &&
+                            definition.StealSlots > 0 && definition.StealMaxItems > 0)
+                            stoleLoot = lootTarget?.TryStealInventory(
+                                definition.StealSlots, definition.StealMaxItems) == true;
                         state = stoleLoot ? State.Retreat : State.Approach;
                     }
                     break;
@@ -208,28 +275,35 @@ namespace Nyangbingo.Yokai
                         break;
                     }
                     var wall = target as IWallMaterialTarget;
-                    var wallDamagePerSecond = definition.WallDamagePerSecond;
-                    if (!YokaiSpecialRules.IsBulgasariProtectedWall(definition.Kind, wall != null && wall.IsIronHeatWall) &&
-                        wallDamagePerSecond > 0f && !float.IsNaN(wallDamagePerSecond) &&
+                    var wallDamagePerSecond = definition.WallDamageFor(
+                        wall?.WallMaterial ?? YokaiWallMaterial.Default);
+                    if (wallDamagePerSecond > 0f && !float.IsNaN(wallDamagePerSecond) &&
                         !float.IsInfinity(wallDamagePerSecond))
                     {
                         var damage = wallDamagePerSecond * actionSeconds;
-                        if (!float.IsNaN(damage) && !float.IsInfinity(damage)) target.DamageWall(damage);
+                        if (!float.IsNaN(damage) && !float.IsInfinity(damage))
+                        {
+                            target.DamageWall(damage);
+                            GameEvents.RaiseWallDamaged();
+                        }
                     }
                     break;
                 case State.Retreat:
-                    var moveSpeed = definition.MoveSpeed;
-                    var retreatMultiplier = retreatSpeedMultiplier;
-                    if (moveSpeed > 0f && retreatMultiplier > 0f && !float.IsNaN(moveSpeed) &&
-                        !float.IsInfinity(moveSpeed) && !float.IsNaN(retreatMultiplier) &&
-                        !float.IsInfinity(retreatMultiplier))
-                    {
-                        var retreatDistance = moveSpeed * retreatMultiplier * actionSeconds;
-                        if (!float.IsNaN(retreatDistance) && !float.IsInfinity(retreatDistance))
-                            transform.position -= direction * retreatDistance;
-                    }
+                    MoveRetreat(-direction, actionSeconds);
                     break;
             }
+        }
+
+        private void MoveRetreat(Vector3 direction, float actionSeconds)
+        {
+            var moveSpeed = definition.MoveSpeed;
+            var retreatMultiplier = retreatSpeedMultiplier;
+            if (moveSpeed <= 0f || retreatMultiplier <= 0f || float.IsNaN(moveSpeed) ||
+                float.IsInfinity(moveSpeed) || float.IsNaN(retreatMultiplier) ||
+                float.IsInfinity(retreatMultiplier) || !IsFinite(direction)) return;
+            var retreatDistance = moveSpeed * retreatMultiplier * actionSeconds;
+            if (!float.IsNaN(retreatDistance) && !float.IsInfinity(retreatDistance))
+                transform.position += direction * retreatDistance;
         }
 
         private void MoveTowardAttackRange(Vector3 direction, float distance, float attackRange, float actionSeconds)
@@ -258,5 +332,7 @@ namespace Nyangbingo.Yokai
             lastGameSeconds = currentGameSeconds;
             hasGameSecondsSample = true;
         }
+
+        private void HandleDawnWarning() => BeginDawnFlee();
     }
 }

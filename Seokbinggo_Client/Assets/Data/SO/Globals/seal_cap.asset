@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: seal_cap
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: seal_cap
+  value: 1425
+  unit: count
+  note: "\uD3ED\uC8FC \uCEA1 \u2014 (2*rx+1)*(2*ry+1)=57*25 \uC720\uB3C4\uAC12. \uC9C1\uC811
+    \uC815\uD558\uC9C0 \uB9D0 \uAC83. \uAD6C\uC870\uC801\uC73C\uB85C \uB3C4\uB2EC
+    \uBD88\uAC00\uD558\uBBC0\uB85C \uBB34\uD55C \uB8E8\uD504 \uC548\uC804\uB9DD\uC73C\uB85C\uB9CC"

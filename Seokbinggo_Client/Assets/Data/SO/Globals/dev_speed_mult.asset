@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: dev_speed_mult
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: dev_speed_mult
+  value: 8
+  unit: mult
+  note: "\uAC1C\uBC1C\uBE4C\uB4DC \uC804\uC6A9 \uC2DC\uC5F0 \uBC30\uC18D \uD1A0\uAE00(\uB0E5\uC7A0
+    x4\uC640 \uBCC4\uAC1C \uAC12) \u2014 \uC9C0\uC0C1 \uB178\uCD9C \uC911 \uC0AC\uC6A9
+    \uAE08\uC9C0(\uC2DC\uC5F0 \uB300\uBCF8)"

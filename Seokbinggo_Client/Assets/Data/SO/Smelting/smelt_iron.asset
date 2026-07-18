@@ -24,3 +24,5 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
     amount: 1
   durationSeconds: 20
+  batchCapacity: 6
+  note: "\uD480\uBC30\uCE58 120\uCD08 \uBC29\uCE58"

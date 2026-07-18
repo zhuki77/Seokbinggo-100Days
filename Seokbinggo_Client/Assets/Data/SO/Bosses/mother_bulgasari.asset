@@ -13,12 +13,44 @@ MonoBehaviour:
   m_Name: mother_bulgasari
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
   id: mother_bulgasari
+  displayName: "\uC5B4\uBBF8 \uBD88\uAC00\uC0AC\uB9AC"
   kind: 1
   hitPoints: 3000
-  expectedCombatSeconds: 286
+  expectedCombatSeconds: 285.7
   summonItem: {fileID: 11400000, guid: ef2da80e2e710484b9cf6a333fd185ef, type: 2}
+  summonMaterials:
+  - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
+    amount: 10
+  - item: {fileID: 11400000, guid: 540b127e4916df045abc9c709e118208, type: 2}
+    amount: 3
+  - item: {fileID: 11400000, guid: aed8994ecde330142b2c13ec869bc0cc, type: 2}
+    amount: 5
+  summonStation: 2
+  recommendedDay: "~13\uC77C\uCC28(T2+\uBC29\uB9DD\uC774)"
   requiresDeepAltar: 0
   forcedDay: 0
   guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 4
   - item: {fileID: 11400000, guid: f0f7e812848260f4dbd1d2e58a963b0a, type: 2}
     amount: 1
+  - item: {fileID: 11400000, guid: 540b127e4916df045abc9c709e118208, type: 2}
+    amount: 4
+  wallDamageDefault: 24
+  wallDamageIce: 48
+  wallDamageIronWall: 0
+  contactDamage: 14
+  specialDescription: "\uB2EC\uAD70 \uCF67\uAE40: \uD654\uC5FC\uD0DC\uADF8 \uBD80\uCC44\uAF344\uD0C0\uC77C
+    10/\uCD08x2\uCD08\xB7\uCFE86\uCD08"
+  telegraphSeconds: 1
+  specialShape: 1
+  specialRangeTiles: 4
+  specialArcDegrees: 60
+  specialDamagePerHit: 10
+  specialDurationSeconds: 2
+  specialTickSeconds: 1
+  specialKnockbackTiles: 0
+  specialCooldownSeconds: 6
+  specialHasFireTag: 1
+  specialAimLocks: 1
+  mvpScope: 2

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: seal_target_cells
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: seal_target_cells
+  value: 240
+  unit: count
+  note: "\uBC00\uD3D0\uB3C4 100% \uAE30\uC900 \uC601\uC5ED \uCE78 \uC218(\uCC98\uBC29
+    C) \u2014 \uAE30\uC9C0 \uC2E4\uC218\uC694 168\uCE78\uC758 1.43\uBC30. \uC5EC\uC720
+    \uACF5\uAC04\uC758 \uC790\uB9AC\uAC00 \uACE7 \uC644\uACF5 \uC694\uAC74\uC774
+    \uB418\uAC8C(1-5 \uAC74\uC124 \uC790\uC720\uB3C4 \uC815\uD569)"

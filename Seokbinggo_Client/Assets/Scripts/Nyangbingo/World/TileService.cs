@@ -112,6 +112,10 @@ namespace Nyangbingo.World
             if (toolTier < current.hardness) return false; // 장비 티어가 경도보다 낮으면 파괴 실패.
 
             var minedElementType = current.elementType;
+            GameEvents.RaiseMiningImpact(minedElementType == WorldTileTypes.Dirt ||
+                                          minedElementType == WorldTileTypes.Clay
+                ? MiningImpactSurface.Dirt
+                : MiningImpactSurface.Mineral);
             var backgroundElementType = ResolveBackgroundFor(minedElementType);
 
             tiles[cell.x, cell.y] = TileData.CreateCaveAir(backgroundElementType);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -45,6 +46,7 @@ namespace Nyangbingo.World
         };
 
         private readonly TileService tileService;
+        private readonly SealBoundaryPolicy boundaryPolicy;
         private readonly int maxFillCells;
 
         /// <summary>셀 → 그 셀이 속한 리전. 같은 방(room)의 모든 칸이 같은 SealRegion 인스턴스를 가리키므로,
@@ -65,8 +67,15 @@ namespace Nyangbingo.World
         public event Action<Vector3Int, bool> WatchPointSealChanged;
 
         public SealSystem(TileService tileService, int maxFillCells = DefaultMaxFillCells)
+            : this(tileService, null, maxFillCells)
+        {
+        }
+
+        public SealSystem(TileService tileService, IReadOnlyList<SealWhitelistDefinition> sealWhitelist,
+            int maxFillCells = DefaultMaxFillCells)
         {
             this.tileService = tileService ?? throw new ArgumentNullException(nameof(tileService));
+            boundaryPolicy = new SealBoundaryPolicy(sealWhitelist);
             this.maxFillCells = Mathf.Max(16, maxFillCells);
 
             GameEvents.OnTileBroken += HandleTileChanged;
@@ -272,7 +281,7 @@ namespace Nyangbingo.World
                     else
                     {
                         boundaryWalls.Add(neighbor);
-                        if (!neighborTile.isNaturalTerrain) escaped = true; // 인공 타일 = 밀폐를 깨뜨리는 틈새.
+                        if (!boundaryPolicy.Seals(neighborTile)) escaped = true;
                     }
                 }
             }
@@ -280,14 +289,14 @@ namespace Nyangbingo.World
             region.interiorAirCells = interior;
             region.boundaryWallCells = boundaryWalls;
 
-            var naturalWallCount = 0;
+            var sealingWallCount = 0;
             foreach (var wallCell in boundaryWalls)
             {
-                if (tileService.GetTile(wallCell).isNaturalTerrain) naturalWallCount++;
+                if (boundaryPolicy.Seals(tileService.GetTile(wallCell))) sealingWallCount++;
             }
 
-            region.sealPercent = boundaryWalls.Count == 0 ? 0f : (float)naturalWallCount / boundaryWalls.Count;
-            region.isSealed = !escaped && boundaryWalls.Count > 0 && naturalWallCount == boundaryWalls.Count;
+            region.sealPercent = boundaryWalls.Count == 0 ? 0f : (float)sealingWallCount / boundaryWalls.Count;
+            region.isSealed = !escaped && boundaryWalls.Count > 0 && sealingWallCount == boundaryWalls.Count;
 
             return region;
         }

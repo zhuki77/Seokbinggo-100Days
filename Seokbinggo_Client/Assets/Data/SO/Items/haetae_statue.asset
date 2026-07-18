@@ -15,3 +15,6 @@ MonoBehaviour:
   id: haetae_statue
   displayName: "\uD574\uD0DC \uC11D\uC0C1"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

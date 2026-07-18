@@ -1,4 +1,5 @@
 using System;
+using Nyangbingo.Core;
 using Nyangbingo.Data;
 
 namespace Nyangbingo.Inventory
@@ -8,7 +9,9 @@ namespace Nyangbingo.Inventory
         public static event Action<ItemDefinition, int> Requested;
         public static void Request(ItemDefinition item, int amount)
         {
-            if (item != null && amount > 0) Requested?.Invoke(item, amount);
+            if (item == null || amount <= 0) return;
+            Requested?.Invoke(item, amount);
+            GameEvents.RaiseItemAcquired();
         }
     }
 

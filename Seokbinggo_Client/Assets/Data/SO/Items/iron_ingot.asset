@@ -15,3 +15,6 @@ MonoBehaviour:
   id: iron_ingot
   displayName: "\uCCA0 \uC8FC\uAD34"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 

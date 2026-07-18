@@ -18,10 +18,13 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: 2fb77bca93d4e9a42874825576ffcd9d, type: 2}
     amount: 20
   - item: {fileID: 11400000, guid: bfbf06795069d8b4cb038e7953262af7, type: 2}
-    amount: 6
+    amount: 3
   - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
     amount: 20
   output:
     item: {fileID: 11400000, guid: cf3f49e2cd7af764e995e6a303fd8f51, type: 2}
     amount: 1
   durationSeconds: 60
+  type: 0
+  mvpScope: 0
+  note: 

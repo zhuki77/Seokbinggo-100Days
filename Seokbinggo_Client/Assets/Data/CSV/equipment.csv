@@ -1,7 +1,16 @@
-id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,visionRadiusBonus,blocksInventoryTheft,note
-bell_charm,AccessoryOne,true,0,0,0,0,0,true,0,false,방울 노리개 - 이중 점프
-ice_heart_charm,AccessoryOne,true,0,0,0,-0.15,0,false,0,false,얼음 심장 노리개 - 체온 상승 15% 감소
-lucky_pouch,AccessoryOne,true,0,0,0.10,0,0,false,0,false,복주머니 - 채굴 크리티컬 10%p
-wind_ribbon,AccessoryOne,true,0,0.10,0,0,0,false,0,false,바람 댕기 - 이동 속도 10% 증가(임시 수치)
-tiger_eye_orb,AccessoryOne,true,0,0,0,0,0,false,2,false,호랑이 눈 구슬 - 시야 반경 2 증가(임시 수치)
-goblin_hat,AccessoryOne,true,0,0,0,0,0,false,0,true,도깨비 감투 - 야광귀 인벤토리 절도 무효
+id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,doubleJumpHeightRatio,visionRadiusBonus,blocksInventoryTheft,setId,setTemperatureRiseModifier,setFireDamageModifier,note
+straw_helm,Head,false,1,0,0,0,0,false,0,0,false,none,0,0,짚 투구 - 방어 1
+straw_armor,Body,false,1,0,0,0,0,false,0,0,false,none,0,0,짚 갑옷 - 방어 1
+straw_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,짚 신발 - 방어 1
+iron_helm,Head,false,2,0,0,0,0,false,0,0,false,none,0,0,무쇠 투구 - 방어 2
+iron_armor,Body,false,3,0,0,0,0,false,0,0,false,none,0,0,무쇠 갑옷 - 방어 3
+iron_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,무쇠 신발 - 방어 1
+icesteel_helm,Head,false,3,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,얼음강철 투구 - 설한풍 한벌옷
+icesteel_armor,Body,false,4,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,얼음강철 갑옷 - 설한풍 한벌옷
+icesteel_boots,Feet,false,3,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,얼음강철 신발 - 설한풍 한벌옷
+bell_norigae,AccessoryOne,true,0,0,0,0,0,true,0.8,0,false,none,0,0,방울 노리개 - 이중 점프 높이 80%
+ice_heart_norigae,AccessoryOne,true,0,0,0,-0.15,0,false,0,0,false,none,0,0,얼음 심장 노리개 - 체온 상승 15% 감소
+bokjumeoni,AccessoryOne,true,0,0,0.10,0,0,false,0,0,false,none,0,0,복주머니 - 채굴 크리티컬 10%p
+wind_daenggi,AccessoryOne,true,0,0.15,0,0,0,false,0,0,false,none,0,0,바람 댕기 - 이동 속도 15% 증가
+tiger_eye_bead,AccessoryOne,true,0,0,0,0,0,false,0,3,false,none,0,0,호랑이 눈 구슬 - 시야 반경 3타일 증가
+dokkaebi_gamtu,AccessoryOne,true,0,0,0,0,0,false,0,0,true,none,0,0,도깨비 감투 - 야광귀 인벤토리 절도 무효

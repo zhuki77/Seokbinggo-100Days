@@ -15,3 +15,6 @@ MonoBehaviour:
   id: copper_ore
   displayName: "\uAD6C\uB9AC \uAD11\uC11D"
   maxStack: 99
+  category: 0
+  mvpScope: 0
+  note: 
