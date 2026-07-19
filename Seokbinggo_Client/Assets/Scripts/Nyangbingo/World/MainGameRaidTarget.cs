@@ -1,3 +1,4 @@
+using System;
 using Nyangbingo.Data;
 using Nyangbingo.Combat;
 using Nyangbingo.Yokai;
@@ -18,11 +19,13 @@ namespace Nyangbingo.World
         public Transform TargetTransform => transform;
         public YokaiWallMaterial WallMaterial => wallMaterial;
         public float AccumulatedWallDamage { get; private set; }
+        public event Action<float> WallDamaged;
 
         public void DamageWall(float amount)
         {
             if (amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount)) return;
             AccumulatedWallDamage += amount;
+            WallDamaged?.Invoke(amount);
         }
 
         public bool TryApplyContactDamage(int amount)

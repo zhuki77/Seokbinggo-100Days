@@ -14,7 +14,8 @@ namespace Nyangbingo.World
     /// </summary>
     [DefaultExecutionOrder(-80)]
     [RequireComponent(typeof(MainGameBootstrap))]
-    public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry, ICoolingSourceProvider
+    public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry, ICoolingSourceProvider,
+        IGameSecondsTickable
     {
         private sealed class Entry
         {
@@ -34,10 +35,13 @@ namespace Nyangbingo.World
         private readonly Dictionary<string, GameObject> visualsByObjectId =
             new Dictionary<string, GameObject>(StringComparer.Ordinal);
         private SealBoundaryPolicy boundaryPolicy;
+        private CoolingSourceRuntime coolingSources;
 
         public bool IsColdSourceActive { get; private set; }
+        public float CoolingCapPercent { get; private set; }
         public int PlacedObjectCount => byObjectId.Count;
         public int ActiveCoolingSourceCount { get; private set; }
+        public BuildingArtCatalog BuildingArtCatalog => buildingArtCatalog;
         public bool IsInitialized { get; private set; }
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
@@ -72,6 +76,9 @@ namespace Nyangbingo.World
             }
 
             bootstrap.Session.ConfigureSealExtensions(this, this);
+            coolingSources = new CoolingSourceRuntime(gameDataCatalog);
+            coolingSources.ConsumableExpired += HandleConsumableExpired;
+            bootstrap.TickDriver.Register(this);
             IsInitialized = true;
             Debug.Log("[Nyangbingo] MainGameEnvironmentState: 공식 설치물 경계와 냉기원 상태를 " +
                       "메인 SealSystem에 연결 완료.");
@@ -95,12 +102,15 @@ namespace Nyangbingo.World
                 Record = record,
                 Cell = cell,
                 BarrierActive = barrierActive && boundaryPolicy.SealsPlacedElement(record.definitionId),
-                CoolingActive = coolingActive
+                CoolingActive = coolingActive && !CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)
             };
+            if (CoolingSourceRuntime.IsCoolingDefinition(record.definitionId) &&
+                !coolingSources.TryRegister(record.objectId, record.definitionId, coolingActive)) return false;
             byObjectId.Add(record.objectId, entry);
             byCell.Add(cell, entry);
             CreateVisual(entry);
             RecomputeCoolingAndInvalidate();
+            GameEvents.RaisePlacedObjectBuilt(record.definitionId);
             return true;
         }
 
@@ -109,6 +119,7 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(objectId) || !byObjectId.TryGetValue(objectId, out var entry)) return false;
             byObjectId.Remove(objectId);
             byCell.Remove(entry.Cell);
+            coolingSources?.Remove(objectId);
             if (visualsByObjectId.TryGetValue(objectId, out var visual))
             {
                 visualsByObjectId.Remove(objectId);
@@ -131,16 +142,69 @@ namespace Nyangbingo.World
         public bool SetCoolingActive(string objectId, bool active)
         {
             if (!byObjectId.TryGetValue(objectId, out var entry)) return false;
+            if (CoolingSourceRuntime.IsCoolingDefinition(entry.Record.definitionId)) return false;
             if (entry.CoolingActive == active) return true;
             entry.CoolingActive = active;
             RecomputeCoolingAndInvalidate();
             return true;
         }
 
+        public bool TryAddIceJarFuel(string objectId, int units = 1)
+        {
+            if (coolingSources == null || !byObjectId.ContainsKey(objectId) ||
+                !coolingSources.TryAddIceFuel(objectId, units)) return false;
+            RecomputeCoolingAndInvalidate();
+            return true;
+        }
+
+        public bool TryGetCoolingRemaining(string objectId, out float remainingGameSeconds)
+        {
+            remainingGameSeconds = 0f;
+            return coolingSources != null &&
+                   coolingSources.TryGetRemaining(objectId, out remainingGameSeconds);
+        }
+
+        public bool TryGetCoolingStatus(string objectId, out float remainingGameSeconds,
+            out float capPercent, out bool active)
+        {
+            remainingGameSeconds = 0f;
+            capPercent = 0f;
+            active = false;
+            return coolingSources != null &&
+                   coolingSources.TryGetStatus(objectId, out remainingGameSeconds, out capPercent, out active);
+        }
+
+        public bool TryGetNearestPlacedObject(Vector2 origin, float radius, out PlacedObjectRecord record)
+        {
+            record = default;
+            if (!IsFinite(origin.x) || !IsFinite(origin.y) || !IsFinite(radius) || radius < 0f) return false;
+            var found = false;
+            var bestDistance = radius * radius;
+            foreach (var entry in byObjectId.Values)
+            {
+                var distance = (entry.Record.position - origin).sqrMagnitude;
+                if (distance > bestDistance || found && Mathf.Approximately(distance, bestDistance) &&
+                    string.CompareOrdinal(entry.Record.objectId, record.objectId) >= 0) continue;
+                found = true;
+                bestDistance = distance;
+                record = entry.Record;
+            }
+            return found;
+        }
+
         public List<PlacedObjectRecord> ExportPlacedObjects() => byObjectId.Values
             .Select(entry => entry.Record)
             .OrderBy(record => record.objectId, StringComparer.Ordinal)
             .ToList();
+
+        public List<CoolingSourceStateRecord> ExportCoolingSources() => coolingSources?.ExportSnapshots()
+            .Select(snapshot => new CoolingSourceStateRecord
+            {
+                objectId = snapshot.ObjectId,
+                definitionId = snapshot.DefinitionId,
+                remainingGameSeconds = snapshot.RemainingGameSeconds
+            })
+            .ToList() ?? new List<CoolingSourceStateRecord>();
 
         public bool TryGetVisual(string objectId, out GameObject visual)
         {
@@ -162,13 +226,55 @@ namespace Nyangbingo.World
                    !tileService.GetTile(ground).IsAir;
         }
 
-        public bool TryRestorePlacedObjects(IEnumerable<PlacedObjectRecord> records)
+        public bool HasPlacedObjectWithin(string definitionId, Vector2 position, float radius)
+        {
+            if (string.IsNullOrWhiteSpace(definitionId) || !IsFinite(position.x) || !IsFinite(position.y) ||
+                !IsFinite(radius) || radius < 0f) return false;
+            var radiusSquared = radius * radius;
+            return byObjectId.Values.Any(entry => entry.Record.definitionId == definitionId &&
+                (entry.Record.position - position).sqrMagnitude <= radiusSquared);
+        }
+
+        public bool TryGetNearestPlacedObjectPosition(string definitionId, Vector2 origin, out Vector2 position)
+        {
+            position = default;
+            if (string.IsNullOrWhiteSpace(definitionId) || !IsFinite(origin.x) || !IsFinite(origin.y)) return false;
+            var found = false;
+            var bestDistance = float.PositiveInfinity;
+            foreach (var entry in byObjectId.Values)
+            {
+                if (entry.Record.definitionId != definitionId) continue;
+                var distance = (entry.Record.position - origin).sqrMagnitude;
+                if (found && distance >= bestDistance) continue;
+                found = true;
+                bestDistance = distance;
+                position = entry.Record.position;
+            }
+            return found;
+        }
+
+        public bool TryRestorePlacedObjects(IEnumerable<PlacedObjectRecord> records) =>
+            TryRestorePlacedObjects(records, null);
+
+        public bool TryRestorePlacedObjects(IEnumerable<PlacedObjectRecord> records,
+            IEnumerable<CoolingSourceStateRecord> coolingStateRecords)
         {
             if (!IsInitialized && !Initialize()) return false;
             if (records == null) return false;
 
             var restoredById = new Dictionary<string, Entry>(StringComparer.Ordinal);
             var restoredByCell = new Dictionary<Vector3Int, Entry>();
+            var restoredCooling = new CoolingSourceRuntime(gameDataCatalog);
+            var coolingStateById = new Dictionary<string, CoolingSourceStateRecord>(StringComparer.Ordinal);
+            if (coolingStateRecords != null)
+            {
+                foreach (var state in coolingStateRecords)
+                {
+                    if (string.IsNullOrWhiteSpace(state.objectId) ||
+                        coolingStateById.ContainsKey(state.objectId)) return false;
+                    coolingStateById.Add(state.objectId, state);
+                }
+            }
             foreach (var record in records)
             {
                 if (!IsValid(record)) return false;
@@ -183,13 +289,27 @@ namespace Nyangbingo.World
                 };
                 restoredById.Add(record.objectId, entry);
                 restoredByCell.Add(cell, entry);
+
+                if (!CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)) continue;
+                if (coolingStateById.TryGetValue(record.objectId, out var state))
+                {
+                    if (state.definitionId != record.definitionId ||
+                        !restoredCooling.TryRestore(record.objectId, record.definitionId,
+                            state.remainingGameSeconds)) return false;
+                    coolingStateById.Remove(record.objectId);
+                }
+                else if (!restoredCooling.TryRegister(record.objectId, record.definitionId)) return false;
             }
+            if (coolingStateById.Count != 0) return false;
 
             byObjectId.Clear();
             byCell.Clear();
             ClearVisuals();
             foreach (var pair in restoredById) byObjectId.Add(pair.Key, pair.Value);
             foreach (var pair in restoredByCell) byCell.Add(pair.Key, pair.Value);
+            coolingSources.ConsumableExpired -= HandleConsumableExpired;
+            coolingSources = restoredCooling;
+            coolingSources.ConsumableExpired += HandleConsumableExpired;
             foreach (var entry in byObjectId.Values) CreateVisual(entry);
             RecomputeCoolingAndInvalidate();
             return true;
@@ -197,25 +317,53 @@ namespace Nyangbingo.World
 
         private void RecomputeCoolingAndInvalidate()
         {
-            ActiveCoolingSourceCount = byObjectId.Values.Count(entry => entry.CoolingActive);
+            ActiveCoolingSourceCount = byObjectId.Values.Count(entry => entry.CoolingActive) +
+                                       (coolingSources?.ActiveCount ?? 0);
             IsColdSourceActive = ActiveCoolingSourceCount > 0;
+            CoolingCapPercent = Mathf.Max(
+                byObjectId.Values.Any(entry => entry.CoolingActive) ? 100f : 0f,
+                coolingSources?.CoolingCapPercent ?? 0f);
+            var iceStorage = byObjectId.Values
+                .Where(entry => entry.Record.definitionId == CoolingSourceRuntime.IceStorageId)
+                .OrderBy(entry => entry.Record.objectId, StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (iceStorage != null)
+                bootstrap?.SealSystem?.SetPrimaryWatchPoint(iceStorage.Cell);
             InvalidateSeal();
         }
+
+        public void Tick(float deltaGameSeconds)
+        {
+            if (coolingSources == null) return;
+            var beforeCount = coolingSources.ActiveCount;
+            var beforeCap = coolingSources.CoolingCapPercent;
+            coolingSources.Tick(deltaGameSeconds);
+            if (beforeCount != coolingSources.ActiveCount ||
+                !Mathf.Approximately(beforeCap, coolingSources.CoolingCapPercent))
+                RecomputeCoolingAndInvalidate();
+        }
+
+        private void HandleConsumableExpired(string objectId) => TryRemove(objectId);
 
         private void InvalidateSeal() => bootstrap?.SealSystem?.InvalidateAll();
 
         private void CreateVisual(Entry entry)
         {
             var art = buildingArtCatalog?.Find(entry.Record.definitionId);
-            if (art?.Sprite == null || visualsByObjectId.ContainsKey(entry.Record.objectId)) return;
+            if (visualsByObjectId.ContainsKey(entry.Record.objectId)) return;
             var visual = new GameObject($"Placed_{entry.Record.objectId}");
             visual.transform.SetParent(transform, false);
             visual.transform.position = entry.Record.position;
             visual.transform.rotation = Quaternion.Euler(0f, 0f, entry.Record.rotationDegrees);
             var renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = art.Sprite;
             renderer.sortingOrder = 12;
-            visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
+            if (art?.Sprite != null)
+            {
+                renderer.sprite = art.Sprite;
+                visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
+            }
+            else
+                RuntimePlaceholderVisual.Configure(renderer, new Color(.55f, .85f, 1f), .75f, 12);
             visualsByObjectId.Add(entry.Record.objectId, visual);
         }
 
@@ -235,5 +383,11 @@ namespace Nyangbingo.World
             IsFinite(record.position.x) && IsFinite(record.position.y) && IsFinite(record.rotationDegrees);
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
+        private void OnDestroy()
+        {
+            bootstrap?.TickDriver?.Unregister(this);
+            if (coolingSources != null) coolingSources.ConsumableExpired -= HandleConsumableExpired;
+        }
     }
 }

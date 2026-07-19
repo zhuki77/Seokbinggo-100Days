@@ -16,6 +16,7 @@ namespace Nyangbingo.World
 
         public bool HasConfiguredArt => artCatalog != null && artCatalog.DistantView != null &&
                                         artCatalog.Clouds != null && artCatalog.Underground != null;
+        public bool IsUnderground => transform.position.y < undergroundThreshold;
 
         public void ConfigureForScene(EnvironmentArtCatalog catalog, float undergroundWorldY)
         {
@@ -79,6 +80,11 @@ namespace Nyangbingo.World
             var viewWidth = viewHeight * targetCamera.aspect;
             var scale = Mathf.Max(viewWidth / bounds.x, viewHeight / bounds.y);
             renderer.transform.localScale = new Vector3(scale, scale, 1f);
+            var spriteCenter = renderer.sprite.bounds.center;
+            renderer.transform.localPosition = new Vector3(
+                -spriteCenter.x * scale,
+                -spriteCenter.y * scale,
+                renderer.transform.localPosition.z);
         }
     }
 }

@@ -650,7 +650,8 @@ public static class NyangbingoMainGameSceneCreator
         var bossSummonUi = canvasObject.AddComponent<MainGameBossSummonUiController>();
         bossSummonUi.ConfigureForScene(catalog, bootstrap, runtimeServices,
             Object.FindAnyObjectByType<MainGameEncounterCoordinator>(),
-            Object.FindAnyObjectByType<MainGameRaidTarget>(), bossSummonStatus);
+            Object.FindAnyObjectByType<MainGameRaidTarget>(), bossSummonStatus,
+            Object.FindAnyObjectByType<MainGameEnvironmentState>());
         Object.FindAnyObjectByType<MainGameTurretRuntime>()?.BindInteractionStatus(turretInteractionStatus);
         var turretBuildUi = canvasObject.AddComponent<MainGameTurretBuildUiController>();
         turretBuildUi.ConfigureForScene(Object.FindAnyObjectByType<MainGameTurretRuntime>(), turretBuildPanel,

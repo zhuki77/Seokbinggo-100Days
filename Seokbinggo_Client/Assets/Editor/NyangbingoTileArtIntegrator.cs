@@ -103,6 +103,7 @@ namespace Nyangbingo.Editor
                 ["iron_sieve"] = "sieve.aseprite",
                 ["haetae_statue"] = "haetae_statue.aseprite",
                 ["ice_core"] = "ice_core.aseprite",
+                ["chest"] = "chest.aseprite",
                 ["dokkaebi_fire_tower"] = "dokkaebi_fire_tower.aseprite",
                 ["cold_wave_core"] = "cold_wave_core.aseprite"
             };
@@ -579,9 +580,9 @@ namespace Nyangbingo.Editor
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
-            NyangbingoMainGameSceneCreator.CreateOrUpdate();
             Debug.Log($"[Nyangbingo] Building art integration completed: " +
-                      $"{BuildingArtFiles.Count} IDs / {framesByFile.Count} art files. MainGame scene updated.");
+                      $"{BuildingArtFiles.Count} IDs / {framesByFile.Count} art files. " +
+                      "Catalog updated without rebuilding MainGame scene.");
         }
 
         [MenuItem("Nyangbingo/Art/Apply World Decoration Art")]

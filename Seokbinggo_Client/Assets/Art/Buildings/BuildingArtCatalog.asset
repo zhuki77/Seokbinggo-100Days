@@ -41,6 +41,10 @@ MonoBehaviour:
   - id: ice_core
     frames:
     - {fileID: -2300316391141292056, guid: d545cc52e1d47154cb1354eef5796384, type: 3}
+  - id: chest
+    frames:
+    - {fileID: 1247225791634500916, guid: 47a265d46e2abaa4291d830b6c5dee74, type: 3}
+    - {fileID: 979315632446884042, guid: 47a265d46e2abaa4291d830b6c5dee74, type: 3}
   - id: dokkaebi_fire_tower
     frames:
     - {fileID: -4454016649895686910, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}

@@ -21,6 +21,7 @@ namespace Nyangbingo.World
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private InventoryRuntime inventoryRuntime;
+        [SerializeField] private MainGameEnvironmentState environmentState;
 
         private readonly HashSet<IGameSecondsTickable> registered = new HashSet<IGameSecondsTickable>();
 
@@ -35,6 +36,8 @@ namespace Nyangbingo.World
         public SmeltingStation Furnace { get; private set; }
         public SmeltingStation Foundry { get; private set; }
         public PlayerTemperatureState PlayerTemperature { get; private set; }
+        public NapService NapService { get; private set; }
+        public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
@@ -57,6 +60,7 @@ namespace Nyangbingo.World
             if (IsInitialized) return true;
             bootstrap ??= GetComponent<MainGameBootstrap>();
             inventoryRuntime ??= GetComponent<InventoryRuntime>();
+            environmentState ??= GetComponent<MainGameEnvironmentState>();
             if (gameDataCatalog == null || bootstrap == null || inventoryRuntime == null ||
                 !bootstrap.InitializeServices())
             {
@@ -96,7 +100,10 @@ namespace Nyangbingo.World
             Furnace = new SmeltingStation(PlayerInventory, SmeltingStationKind.Furnace, furnaceCapacity);
             Foundry = new SmeltingStation(PlayerInventory, SmeltingStationKind.Foundry, foundryCapacity);
             PlayerTemperature = new PlayerTemperatureState(gameDataCatalog, bootstrap.TimeService,
-                bootstrap.SealSystem, EquipmentSystem);
+                bootstrap.SealSystem, EquipmentSystem, environmentState);
+            NapService = new NapService(gameDataCatalog, bootstrap.TimeService,
+                multiplier => PlayerTemperature.SetRecoveryMultiplier(multiplier));
+            DeathTearPouches = new DeathTearPouchRuntime(PlayerInventory, bootstrap.TimeService);
 
             Register(CraftingProcess);
             Register(UtilityService);
@@ -132,6 +139,10 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            NapService?.Dispose();
+            NapService = null;
+            DeathTearPouches?.Dispose();
+            DeathTearPouches = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
             if (bootstrap?.TickDriver != null)

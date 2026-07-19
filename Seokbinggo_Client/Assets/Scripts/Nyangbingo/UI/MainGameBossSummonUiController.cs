@@ -20,14 +20,13 @@ namespace Nyangbingo.UI
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
+        [SerializeField] private MainGameEnvironmentState environmentState;
         [SerializeField] private MainGameEncounterCoordinator encounterCoordinator;
         [SerializeField] private MainGameRaidTarget playerTarget;
         [SerializeField] private Text statusText;
         [Min(.1f)][SerializeField] private float deepAltarInteractionRange = 2.5f;
         [Min(.1f)][SerializeField] private float craftingStationInteractionRange = 1.5f;
 
-        private readonly Dictionary<CraftingStation, Transform> stationAnchors =
-            new Dictionary<CraftingStation, Transform>();
         private int selectedIndex;
         private string transientMessage;
         private float transientMessageUntil;
@@ -36,16 +35,21 @@ namespace Nyangbingo.UI
         public BossDefinition SelectedBoss => gameDataCatalog != null
             ? gameDataCatalog.FindBoss(BossIds[selectedIndex])
             : null;
+        public CraftingStation NearbyCraftingStation => initialized
+            ? ResolveNearbyCraftingStation()
+            : CraftingStation.None;
         public bool HasSceneBindings => gameDataCatalog != null && bootstrap != null && runtimeServices != null &&
-                                        encounterCoordinator != null && playerTarget != null && statusText != null;
+                                        environmentState != null && encounterCoordinator != null &&
+                                        playerTarget != null && statusText != null;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, MainGameEncounterCoordinator encounters,
-            MainGameRaidTarget target, Text text)
+            MainGameRaidTarget target, Text text, MainGameEnvironmentState environment = null)
         {
             gameDataCatalog = catalog;
             bootstrap = mainBootstrap;
             runtimeServices = services;
+            environmentState = environment;
             encounterCoordinator = encounters;
             playerTarget = target;
             statusText = text;
@@ -53,8 +57,9 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
+            if (environmentState == null) environmentState = FindAnyObjectByType<MainGameEnvironmentState>();
             if (gameDataCatalog == null || bootstrap == null || runtimeServices == null ||
-                encounterCoordinator == null || playerTarget == null || statusText == null ||
+                environmentState == null || encounterCoordinator == null || playerTarget == null || statusText == null ||
                 !runtimeServices.Initialize())
             {
                 Debug.LogError("[Nyangbingo] MainGameBossSummonUiController: summon UI wiring is incomplete.");
@@ -62,16 +67,15 @@ namespace Nyangbingo.UI
                 return;
             }
             runtimeServices.PlayerInventory.Changed += RefreshStatus;
-            bootstrap.WorldReady += RebuildCraftingStationAnchors;
             initialized = true;
-            RebuildCraftingStationAnchors();
             RefreshStatus();
-            Debug.Log("[Nyangbingo] MainGame boss summon item, nighttime, and deep altar interaction ready.");
+            Debug.Log("[Nyangbingo] MainGame boss summon item, placed crafting station, nighttime, and deep altar interaction ready.");
         }
 
         private void Update()
         {
             if (!initialized || Time.timeScale <= 0f) return;
+            if (MainGameCraftingUiController.BlocksGameplayInput) return;
             if (Input.GetKeyDown(KeyCode.B))
             {
                 selectedIndex = (selectedIndex + 1) % BossIds.Length;
@@ -120,6 +124,8 @@ namespace Nyangbingo.UI
 
         private void TryCraftSelectedSummonItem()
         {
+            if (runtimeServices?.NapService?.IsNapping == true)
+            { ShowMessage("냥잠 중에는 제작할 수 없습니다."); return; }
             var definition = SelectedBoss;
             if (definition?.SummonItem == null || definition.SummonMaterials.Length == 0)
             { ShowMessage("소환 아이템 제작 데이터가 없습니다."); return; }
@@ -165,6 +171,16 @@ namespace Nyangbingo.UI
         }
 
 #if UNITY_EDITOR
+        public bool TeleportToCraftingStationForEditorTest(CraftingStation station)
+        {
+            var definitionId = DefinitionIdForStation(station);
+            if (environmentState == null || string.IsNullOrEmpty(definitionId) ||
+                !environmentState.TryGetNearestPlacedObjectPosition(definitionId, playerTarget.transform.position,
+                    out var position)) return false;
+            MovePlayerForEditorTest(position);
+            return true;
+        }
+
         private void GrantSelectedSummonMaterialsForEditorTest()
         {
             var definition = SelectedBoss;
@@ -191,10 +207,8 @@ namespace Nyangbingo.UI
         private void TeleportToSelectedCraftingStationForEditorTest()
         {
             var definition = SelectedBoss;
-            if (definition == null || !stationAnchors.TryGetValue(definition.SummonStation, out var anchor) ||
-                anchor == null)
+            if (definition == null || !TeleportToCraftingStationForEditorTest(definition.SummonStation))
             { ShowMessage("선택한 제작대를 찾을 수 없습니다."); return; }
-            MovePlayerForEditorTest(anchor.position);
             ShowMessage($"Shift+F6: {StationLabel(definition.SummonStation)} 앞으로 이동했습니다.");
         }
 
@@ -228,51 +242,46 @@ namespace Nyangbingo.UI
         }
 #endif
 
-        private void RebuildCraftingStationAnchors()
-        {
-            foreach (var entry in stationAnchors)
-                if (entry.Value != null) Destroy(entry.Value.gameObject);
-            stationAnchors.Clear();
-            if (playerTarget == null || bootstrap == null) return;
-            var origin = playerTarget.transform.position;
-            CreateCraftingStationAnchor(CraftingStation.Workbench, origin + new Vector3(-3f, 2f),
-                new Color(.65f, .4f, .18f), "WORKBENCH");
-            CreateCraftingStationAnchor(CraftingStation.Furnace, origin + new Vector3(0f, 3f),
-                new Color(.95f, .3f, .1f), "FURNACE");
-            CreateCraftingStationAnchor(CraftingStation.IceAnvil, origin + new Vector3(3f, 2f),
-                new Color(.25f, .75f, 1f), "ICE ANVIL");
-        }
-
-        private void CreateCraftingStationAnchor(CraftingStation station, Vector3 position, Color color,
-            string label)
-        {
-            var stationObject = new GameObject($"BossSummonStation_{station}");
-            stationObject.transform.SetParent(bootstrap.transform, false);
-            stationObject.transform.position = position;
-            RuntimePlaceholderVisual.Configure(stationObject.AddComponent<SpriteRenderer>(), color, 1f, 12);
-            var labelObject = new GameObject("Label");
-            labelObject.transform.SetParent(stationObject.transform, false);
-            labelObject.transform.localPosition = new Vector3(0f, .8f, 0f);
-            labelObject.transform.localScale = Vector3.one * .12f;
-            var text = labelObject.AddComponent<TextMesh>();
-            text.text = label;
-            text.anchor = TextAnchor.MiddleCenter;
-            text.alignment = TextAlignment.Center;
-            text.fontSize = 28;
-            text.color = Color.white;
-            var renderer = labelObject.GetComponent<MeshRenderer>();
-            if (renderer != null) renderer.sortingOrder = 13;
-            stationAnchors[station] = stationObject.transform;
-        }
-
         private CraftingStation ResolveNearbyCraftingStation()
         {
+            if (environmentState == null || playerTarget == null) return CraftingStation.None;
             var playerPosition = (Vector2)playerTarget.transform.position;
-            foreach (var entry in stationAnchors)
-                if (entry.Value != null &&
-                    Vector2.Distance(playerPosition, entry.Value.position) <= craftingStationInteractionRange)
-                    return entry.Key;
+            var stations = new[]
+            {
+                CraftingStation.Workbench, CraftingStation.Furnace,
+                CraftingStation.IceAnvil, CraftingStation.Foundry
+            };
+            foreach (var station in stations)
+            {
+                var definitionId = DefinitionIdForStation(station);
+                if (environmentState.HasPlacedObjectWithin(
+                        definitionId, playerPosition, craftingStationInteractionRange)) return station;
+            }
             return CraftingStation.None;
+        }
+
+        public static string DefinitionIdForStation(CraftingStation station)
+        {
+            switch (station)
+            {
+                case CraftingStation.Workbench: return "workbench";
+                case CraftingStation.Furnace: return "furnace";
+                case CraftingStation.IceAnvil: return "ice_anvil";
+                case CraftingStation.Foundry: return "blast_furnace";
+                default: return string.Empty;
+            }
+        }
+
+        public static CraftingStation StationForDefinitionId(string definitionId)
+        {
+            switch (definitionId)
+            {
+                case "workbench": return CraftingStation.Workbench;
+                case "furnace": return CraftingStation.Furnace;
+                case "ice_anvil": return CraftingStation.IceAnvil;
+                case "blast_furnace": return CraftingStation.Foundry;
+                default: return CraftingStation.None;
+            }
         }
 
         private static string StationLabel(CraftingStation station)
@@ -282,6 +291,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Workbench: return "작업대";
                 case CraftingStation.Furnace: return "용광로";
                 case CraftingStation.IceAnvil: return "얼음 모루";
+                case CraftingStation.Foundry: return "무쇠 용광로";
                 default: return station.ToString();
             }
         }
@@ -327,10 +337,6 @@ namespace Nyangbingo.UI
         {
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed -= RefreshStatus;
-            if (bootstrap != null) bootstrap.WorldReady -= RebuildCraftingStationAnchors;
-            foreach (var entry in stationAnchors)
-                if (entry.Value != null) Destroy(entry.Value.gameObject);
-            stationAnchors.Clear();
         }
     }
 }

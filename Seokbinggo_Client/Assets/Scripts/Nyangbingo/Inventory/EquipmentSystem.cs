@@ -107,6 +107,12 @@ namespace Nyangbingo.Inventory
             return true;
         }
         public EquipmentDefinition Get(EquipmentSlot slot) => equipped.TryGetValue(slot, out var item) ? item : null;
+        public bool TryUnequip(EquipmentSlot slot)
+        {
+            if (!equipped.Remove(slot)) return false;
+            Changed?.Invoke();
+            return true;
+        }
         public Dictionary<EquipmentSlot, EquipmentDefinition> Export() => new Dictionary<EquipmentSlot, EquipmentDefinition>(equipped);
         public bool CanImport(IReadOnlyDictionary<EquipmentSlot, EquipmentDefinition> saved)
         {

@@ -4,6 +4,7 @@ using Nyangbingo.World;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace Nyangbingo.UI
 {
@@ -34,6 +35,9 @@ namespace Nyangbingo.UI
         [SerializeField] private Button titleQuitButton;
         [SerializeField] private Button resultTitleButton;
         [SerializeField] private Text statusText;
+
+        private readonly List<Button> demoSaveButtons = new List<Button>();
+        private static bool enterGameplayAfterReload;
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
         public bool IsInitialized { get; private set; }
@@ -90,10 +94,15 @@ namespace Nyangbingo.UI
             shell.DemoSaveRequested += HandleDemoSaveRequested;
             shell.TitleRequested += HandleTitleRequested;
             BindButtons();
+            CreateDemoSaveButtons();
             bgmSlider.value = audioService.BgmVolume;
             sfxSlider.value = audioService.SfxVolume;
             fullscreenToggle.isOn = Screen.fullScreen;
-            shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
+            var shouldEnterGameplay = enterGameplayAfterReload;
+            enterGameplayAfterReload = false;
+            if (shouldEnterGameplay) shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
+            else shell.EnterTitle();
+            RefreshTitleControls();
             SetStatus("Esc: 일시정지 · Tab: 도감");
             IsInitialized = true;
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지·3슬롯 저장/로드·설정·타이틀 셸 연결 완료.");
@@ -102,7 +111,10 @@ namespace Nyangbingo.UI
         private void Update()
         {
             if (!IsInitialized) return;
-            if (Input.GetKeyDown(KeyCode.Escape) && (codex == null || !codex.IsOpen))
+            if (Input.GetKeyDown(KeyCode.Escape) &&
+                !MainGameCraftingUiController.ConsumedEscapeThisFrame &&
+                !MainGameTurretRuntime.ConsumedEscapeThisFrame &&
+                (codex == null || !codex.IsOpen))
             {
                 switch (shell.Screen)
                 {
@@ -113,9 +125,20 @@ namespace Nyangbingo.UI
                 }
             }
             if (confirmationText != null && shell.Screen == GameShellScreen.Confirmation)
-                confirmationText.text = shell.PendingConfirmation == GameShellConfirmation.ReturnToTitle
-                    ? "타이틀로 돌아갈까요? 저장하지 않은 진행은 사라집니다."
-                    : "기존 자동 저장을 지우고 새 게임을 시작할까요?";
+            {
+                switch (shell.PendingConfirmation)
+                {
+                    case GameShellConfirmation.ReturnToTitle:
+                        confirmationText.text = "타이틀로 돌아갈까요? 저장하지 않은 진행은 사라집니다.";
+                        break;
+                    case GameShellConfirmation.LoadDemoSave:
+                        confirmationText.text = $"{shell.PendingDemoDay}일차 데모를 자동저장 슬롯에 복사할까요?";
+                        break;
+                    default:
+                        confirmationText.text = "기존 자동 저장을 지우고 새 게임을 시작할까요?";
+                        break;
+                }
+            }
         }
 
         private void BindButtons()
@@ -125,7 +148,7 @@ namespace Nyangbingo.UI
             returnTitleButton.onClick.AddListener(() => shell.RequestReturnToTitle());
             settingsApplyButton.onClick.AddListener(ApplySettings);
             settingsBackButton.onClick.AddListener(() => shell.CloseSettings());
-            confirmButton.onClick.AddListener(() => shell.Confirm());
+            confirmButton.onClick.AddListener(ConfirmPendingAction);
             cancelButton.onClick.AddListener(() => shell.CancelConfirmation());
             titleContinueButton.onClick.AddListener(() => SetStatus(shell.TryContinue() ? "불러오기 완료" : "저장 파일이 없습니다."));
             titleNewGameButton.onClick.AddListener(() => shell.RequestNewGame());
@@ -136,6 +159,69 @@ namespace Nyangbingo.UI
                 var slot = index;
                 saveButtons[index].onClick.AddListener(() => SaveSlot(slot));
                 loadButtons[index].onClick.AddListener(() => LoadSlot(slot));
+            }
+        }
+
+        private void CreateDemoSaveButtons()
+        {
+            if (titleNewGameButton == null || titleQuitButton == null) return;
+            var parent = titleNewGameButton.transform.parent;
+            var templateRect = titleNewGameButton.GetComponent<RectTransform>();
+            var quitRect = titleQuitButton.GetComponent<RectTransform>();
+            if (parent == null || templateRect == null || quitRect == null) return;
+
+            var rowY = -42f;
+            for (var index = 0; index < GameShellController.DemoSaveDays.Length; index++)
+            {
+                var day = GameShellController.DemoSaveDays[index];
+                var button = Instantiate(titleNewGameButton, parent);
+                button.name = $"DemoSaveDay{day}";
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(() => RequestDemoSave(day));
+                var rect = button.GetComponent<RectTransform>();
+                rect.anchoredPosition = new Vector2((index - 1) * 82f, rowY);
+                rect.sizeDelta = new Vector2(76f, 16f);
+                var label = button.GetComponentInChildren<Text>(true);
+                if (label != null)
+                {
+                    label.text = $"{day}일차 데모";
+                    label.fontSize = 8;
+                }
+                demoSaveButtons.Add(button);
+            }
+            quitRect.anchoredPosition = new Vector2(0f, -68f);
+        }
+
+        private void RequestDemoSave(int day)
+        {
+            if (shell.RequestDemoSave(day))
+                SetStatus($"{day}일차 데모를 자동저장 슬롯에 복사합니다.");
+        }
+
+        private void ConfirmPendingAction()
+        {
+            var confirmation = shell.PendingConfirmation;
+            var demoDay = shell.PendingDemoDay;
+            if (shell.Confirm())
+            {
+                if (confirmation == GameShellConfirmation.LoadDemoSave)
+                    SetStatus($"{demoDay}일차 데모 불러오기 완료");
+                return;
+            }
+            if (confirmation == GameShellConfirmation.LoadDemoSave)
+                SetStatus($"{demoDay}일차 데모 세이브가 없거나 올바르지 않습니다.");
+        }
+
+        private void RefreshTitleControls()
+        {
+            if (titleContinueButton != null) titleContinueButton.interactable = shell.Title.CanContinue;
+            if (titleQuitButton != null) titleQuitButton.gameObject.SetActive(shell.Title.ShowsQuit);
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+            {
+                var visible = shell.Title.ShowsDemoSaves;
+                demoSaveButtons[index].gameObject.SetActive(visible);
+                demoSaveButtons[index].interactable = visible &&
+                    saveManager.HasDemoSave(GameShellController.DemoSaveDays[index]);
             }
         }
 
@@ -175,13 +261,19 @@ namespace Nyangbingo.UI
         private void HandleNewGameRequested(int slot)
         {
             if (saveManager.HasSave(slot)) saveManager.Delete(slot);
+            enterGameplayAfterReload = true;
             Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         private void HandleContinueRequested(int slot, SaveGame _) => saveCoordinator.TryLoad(slot);
         private void HandleDemoSaveRequested(SaveGame _) => saveCoordinator.TryLoad(GameShellController.AutoSaveSlot);
-        private void HandleTitleRequested() => Time.timeScale = 0f;
+        private void HandleTitleRequested()
+        {
+            Time.timeScale = 0f;
+            shell.RefreshTitle();
+            RefreshTitleControls();
+        }
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
 
         private void OnDestroy()

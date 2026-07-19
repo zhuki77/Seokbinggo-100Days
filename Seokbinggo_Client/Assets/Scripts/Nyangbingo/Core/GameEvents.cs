@@ -24,7 +24,11 @@ namespace Nyangbingo.Core
         public static event Action OnPlayerDamaged;
         public static event Action OnYokaiDamaged;
         public static event Action OnMiningCritical;
+        public static event Action<Vector3Int, float> OnMiningProgress;
+        public static event Action<Vector3Int, string, int, bool> OnMiningResult;
         public static event Action OnCraftingCompleted;
+        public static event Action<RecipeDefinition> OnRecipeCrafted;
+        public static event Action<string> OnPlacedObjectBuilt;
         public static event Action OnChestOpened;
         public static event Action OnWallDamaged;
         public static event Action OnBossFled;
@@ -50,7 +54,19 @@ namespace Nyangbingo.Core
         public static void RaisePlayerDamaged() => OnPlayerDamaged?.Invoke();
         public static void RaiseYokaiDamaged() => OnYokaiDamaged?.Invoke();
         public static void RaiseMiningCritical() => OnMiningCritical?.Invoke();
-        public static void RaiseCraftingCompleted() => OnCraftingCompleted?.Invoke();
+        public static void RaiseMiningProgress(Vector3Int cell, float normalizedProgress) =>
+            OnMiningProgress?.Invoke(cell, Mathf.Clamp01(normalizedProgress));
+        public static void RaiseMiningResult(Vector3Int cell, string itemName, int amount, bool critical) =>
+            OnMiningResult?.Invoke(cell, itemName, amount, critical);
+        public static void RaiseCraftingCompleted(RecipeDefinition recipe = null)
+        {
+            OnCraftingCompleted?.Invoke();
+            if (recipe != null) OnRecipeCrafted?.Invoke(recipe);
+        }
+        public static void RaisePlacedObjectBuilt(string definitionId)
+        {
+            if (!string.IsNullOrWhiteSpace(definitionId)) OnPlacedObjectBuilt?.Invoke(definitionId);
+        }
         public static void RaiseChestOpened() => OnChestOpened?.Invoke();
         public static void RaiseWallDamaged() => OnWallDamaged?.Invoke();
         public static void RaiseBossFled() => OnBossFled?.Invoke();

@@ -23,7 +23,10 @@ namespace Nyangbingo.Crafting
             if (!IsCrafting || gameSeconds <= 0f || float.IsNaN(gameSeconds) || float.IsInfinity(gameSeconds)) return false;
             remaining = System.Math.Max(0f, remaining - gameSeconds);
             if (remaining > 0f || !crafting.Inventory.TryAdd(active.Output.item.Id, active.Output.amount)) return false;
-            active = null; return true;
+            var completedRecipe = active;
+            active = null;
+            Nyangbingo.Core.GameEvents.RaiseCraftingCompleted(completedRecipe);
+            return true;
         }
 
         void Nyangbingo.Core.IGameSecondsTickable.Tick(float deltaGameSeconds) => Tick(deltaGameSeconds);

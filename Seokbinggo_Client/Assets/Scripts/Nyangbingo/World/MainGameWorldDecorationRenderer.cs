@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Nyangbingo.Core;
 using Nyangbingo.Data;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -15,11 +16,15 @@ namespace Nyangbingo.World
         [SerializeField] private WorldDecorationArtCatalog artCatalog;
         private Transform decorationRoot;
         private GameObject groundCoverRoot;
+        private Tilemap surfaceGroundCoverTilemap;
         private Tile grassSurfaceTile;
         private Tile dryGrassSurfaceTile;
         private int surfaceCoverCount;
+        private readonly Dictionary<string, SpriteRenderer> chestRenderers =
+            new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
 
         public int DecorationCount => decorationRoot != null ? decorationRoot.childCount : 0;
+        public int ChestCount => chestRenderers.Count;
 
         public void ConfigureForScene(MainGameBootstrap mainBootstrap, WorldDecorationArtCatalog catalog)
         {
@@ -32,6 +37,7 @@ namespace Nyangbingo.World
             bootstrap ??= GetComponent<MainGameBootstrap>();
             if (bootstrap == null || artCatalog == null) return;
             bootstrap.WorldReady += Rebuild;
+            GameEvents.OnTileBroken += HandleTileBroken;
             if (bootstrap.IsWorldReady) Rebuild();
         }
 
@@ -49,9 +55,46 @@ namespace Nyangbingo.World
             PlaceSurfaceGroundCover(result, random);
             PlaceSurfaceDecorations(result, random);
             PlaceRuinDecorations(result, random);
+            PlaceChests(result);
             Debug.Log($"[Nyangbingo] World decorations rendered: surface={surfaceCoverCount}, " +
-                      $"objects={DecorationCount} " +
-                      $"(seed={result.acceptedSeed}, cosmetic-only).");
+                      $"objects={DecorationCount}, chests={ChestCount} " +
+                      $"(seed={result.acceptedSeed}).");
+        }
+
+        private void PlaceChests(WorldGenerationResult result)
+        {
+            if (result.chests == null) return;
+            var buildingCatalog = GetComponent<MainGameEnvironmentState>()?.BuildingArtCatalog;
+            var chestArt = buildingCatalog?.Find("chest");
+            var closedSprite = chestArt?.Sprite;
+            var openSprite = chestArt?.Frames.Count > 1 ? chestArt.Frames[1] : closedSprite;
+            var progress = bootstrap?.Session?.ChestProgress;
+            foreach (var chest in result.chests)
+            {
+                var visual = new GameObject($"Chest_{chest.id}");
+                visual.transform.SetParent(decorationRoot, false);
+                visual.transform.position = new Vector2(chest.position.x + .5f, chest.position.y + .5f);
+                var renderer = visual.AddComponent<SpriteRenderer>();
+                renderer.sortingOrder = 11;
+                var opened = progress?.IsOpened(chest.id) == true;
+                if (closedSprite != null)
+                    renderer.sprite = opened ? openSprite : closedSprite;
+                else
+                    RuntimePlaceholderVisual.Configure(renderer,
+                        opened ? new Color(.35f, .35f, .4f) : new Color(.85f, .58f, .16f), .75f, 11);
+                chestRenderers[chest.id] = renderer;
+            }
+        }
+
+        public void MarkChestOpened(string chestId)
+        {
+            if (string.IsNullOrEmpty(chestId) || !chestRenderers.TryGetValue(chestId, out var renderer) ||
+                renderer == null) return;
+            var chestArt = GetComponent<MainGameEnvironmentState>()?.BuildingArtCatalog?.Find("chest");
+            if (chestArt?.Frames.Count > 1)
+                renderer.sprite = chestArt.Frames[1];
+            else
+                renderer.color = new Color(.35f, .35f, .4f);
         }
 
         private void PlaceSurfaceGroundCover(WorldGenerationResult result, System.Random random)
@@ -66,6 +109,7 @@ namespace Nyangbingo.World
                 typeof(UnityEngine.Tilemaps.TilemapRenderer));
             layer.transform.SetParent(groundCoverRoot.transform, false);
             var tilemap = layer.GetComponent<Tilemap>();
+            surfaceGroundCoverTilemap = tilemap;
             layer.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder = 1;
             grassSurfaceTile = CreateRuntimeTile("RuntimeGrassSurface", grass);
             dryGrassSurfaceTile = CreateRuntimeTile("RuntimeDryGrassSurface", dryGrass);
@@ -95,6 +139,12 @@ namespace Nyangbingo.World
             tile.color = Color.white;
             tile.colliderType = Tile.ColliderType.None;
             return tile;
+        }
+
+        private void HandleTileBroken(Vector3Int cell)
+        {
+            if (surfaceGroundCoverTilemap == null) return;
+            surfaceGroundCoverTilemap.SetTile(cell, null);
         }
 
         private void PlaceSurfaceDecorations(WorldGenerationResult result, System.Random random)
@@ -244,14 +294,17 @@ namespace Nyangbingo.World
             if (dryGrassSurfaceTile != null) Destroy(dryGrassSurfaceTile);
             decorationRoot = null;
             groundCoverRoot = null;
+            surfaceGroundCoverTilemap = null;
             grassSurfaceTile = null;
             dryGrassSurfaceTile = null;
             surfaceCoverCount = 0;
+            chestRenderers.Clear();
         }
 
         private void OnDestroy()
         {
             if (bootstrap != null) bootstrap.WorldReady -= Rebuild;
+            GameEvents.OnTileBroken -= HandleTileBroken;
         }
     }
 }

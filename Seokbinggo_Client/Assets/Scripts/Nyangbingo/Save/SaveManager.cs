@@ -79,6 +79,18 @@ namespace Nyangbingo.Save
             catch (UnauthorizedAccessException) { data = null; return false; }
         }
 
+        public bool HasDemoSave(int day)
+        {
+            if (Array.IndexOf(DemoDays, day) < 0) return false;
+            var path = Path.Combine(Application.streamingAssetsPath, "DemoSaves", $"day-{day}.json");
+            try
+            {
+                return File.Exists(path) && TryDeserialize(File.ReadAllText(path), out _);
+            }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
+        }
+
         public static bool TryDeserialize(string json, out SaveGame data)
         {
             data = null;
