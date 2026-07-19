@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.WorldGenerationConfig
   mapWidth: 400
   mapHeight: 160
-  surfaceBaseHeightRatio: 0.82
+  surfaceBaseHeightRatio: 0.86875
   surfaceNoiseAmplitude: 6
   surfaceNoiseFrequency: 0.02
-  upperLayerThickness: 40
-  middleLayerThickness: 55
-  bedrockThickness: 4
+  upperLayerThickness: 45
+  middleLayerThickness: 45
+  bedrockThickness: 5
   upperDirtRatio: 0.64
   caveNoiseFrequency: 0.08
   caveChanceUpper: 0.1
@@ -31,42 +31,56 @@ MonoBehaviour:
     frequencyPer100Tiles: 8
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 1
+    depthMax: 45
   - elementType: clay
     layer: 1
     hardness: 1
     frequencyPer100Tiles: 10
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 1
+    depthMax: 45
   - elementType: iron_ore
     layer: 2
     hardness: 2
     frequencyPer100Tiles: 18
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 46
+    depthMax: 90
   - elementType: copper_ore
     layer: 2
     hardness: 2
     frequencyPer100Tiles: 12
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 46
+    depthMax: 90
   - elementType: ice_shard
     layer: 2
     hardness: 2
     frequencyPer100Tiles: 10
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 46
+    depthMax: 90
   - elementType: icesteel_ore
     layer: 3
     hardness: 3
     frequencyPer100Tiles: 12
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 91
+    depthMax: 135
   - elementType: frost_essence
     layer: 3
     hardness: 3
     frequencyPer100Tiles: 4
     minClusterSize: 3
     maxClusterSize: 6
+    depthMin: 91
+    depthMax: 135
   spawnColumnRatio: 0.5
   alcoveWidth: 5
   alcoveHeight: 4

@@ -298,9 +298,9 @@ Unity 에디터 메뉴: `Nyangbingo > Run Dev A Regression Tests`
 
 전부 통과 시: `[Nyangbingo] Dev A 회귀 테스트 전체 통과 (9/9).`
 
-> **참고**: 이번 세션의 코드 검토는 Unity 에디터가 설치되지 않은 환경에서 진행되어, 실제 Unity
-> 컴파일러를 통한 최종 빌드 확인은 하지 못했습니다. 정적 분석(린터) 기준으로는 오류가 없으나,
-> PR을 열기 전 Unity 에디터에서 위 메뉴를 한 번 실행해 실제 컴파일/테스트 통과를 재확인해 주세요.
+> **참고**: 최초 PR(커밋 `98cd938`) 작성 시점의 코드 검토는 Unity 에디터가 설치되지 않은 환경에서
+> 진행돼 실제 컴파일러를 통한 최종 확인은 못 했습니다. 이후 사용자가 실제 Unity 에디터에서 위 메뉴를
+> 실행해 컴파일 오류 0건을 확인했고, 그 과정에서 §11의 실제 버그 2건을 찾아 각각 커밋으로 수정했습니다.
 
 ---
 
@@ -310,3 +310,37 @@ Unity 에디터 메뉴: `Nyangbingo > Run Dev A Regression Tests`
   전까지는 화면에 아무 것도 그려지지 않지만, 데이터/이벤트 경로는 전부 동작합니다.
 - A-15는 개발 A 소유 범위 안에서 "추가 수정 불필요"로 결론 내렸습니다. 몹/터렛/이펙트 등 개발 B 소유
   오브젝트의 카메라 컬링은 이번 브랜치에서 다루지 않았습니다.
+
+---
+
+## 11. 최초 PR 이후 실제 Unity 실행 중 발견·수정한 이슈
+
+최초 PR(`98cd938`)을 연 뒤, 사용자가 실제 Unity 에디터에서 `Nyangbingo > Run Dev A Regression Tests`를
+실행하며 아래 3건을 확인·조치했습니다. 회귀 로직 자체(A-10~A-13 산식)는 전혀 바뀌지 않았습니다.
+
+1. **(정상 동작, 오해 소지 로그) `WorldSessionController: 타일 변경 이력 재생에 실패해 로드를 중단합니다.`**
+   `TestWorldSessionRoundTrip`이 "범위 밖 좌표가 담긴 손상된 저장 데이터는 거부돼야 한다"를 검증하는
+   의도적 네거티브 테스트라, 실패 로그가 콘솔에 뜨는 것 자체는 정상입니다(테스트는 `LoadSnapshot`이
+   `false`를 반환하는지로 통과/실패를 판정하며 실제로 통과했습니다). 다만 진짜 오류처럼 보여 혼동을
+   줄 수 있어, 이 한 호출만 `RunWithSuppressedLogs` 헬퍼로 로그를 잠시 끄도록 `NyangbingoDevARegressionTests.cs`를
+   수정했습니다(커밋 `b9f77b7`).
+2. **(실제 버그) `지층 깊이·광물 깊이 정합성` 테스트에서 광물 7/9271개가 depth 범위 밖에 배치됨.**
+   `MapGenerator.GrowVeinCluster`가 클러스터 씨드 x열에서 한 번만 계산한 depth 범위(low/high)를 랜덤워크
+   전체에 그대로 썼습니다. 표면 높이는 열마다 펄린 노이즈(±6)로 달라지므로, 클러스터가 다른 열로
+   옮겨가면 그 열의 실제 `depth_min~depth_max`와 어긋났습니다. 매 스텝마다 현재 x열 기준으로 범위를
+   다시 계산해 즉시 clamp하도록 고쳐 위반 0건으로 만들었습니다(커밋 `c26dead`).
+3. **(오늘 추가 발견, 실제 버그) 프로젝트 `.asset` 파일이 코드 기본값과 별도로 구버전 수치로 굳어 있었음.**
+   `WorldGenerationConfig.cs`의 필드 기본값(45/45/5, `depthMin`/`depthMax` 포함)을 바꿔도, 이미
+   직렬화돼 있던 `Assets/Data/SO/WorldGenerationConfig.asset`은 Unity가 자동으로 갱신해 주지 않습니다
+   (Unity SO 직렬화의 일반적인 함정). 실제 확인해 보니 이 에셋에는 여전히
+   `upperLayerThickness: 40 / middleLayerThickness: 55 / bedrockThickness: 4 / surfaceBaseHeightRatio: 0.82`가
+   남아 있었고, `oreVeins` 항목에는 `depthMin`/`depthMax`가 아예 없어(신규 필드) 로드 시 0/0으로
+   채워져 **모든 광물이 depth 기준이 아니라 구(舊) 레이어 두께 기준으로 조용히 폴백**하는 상태였습니다.
+   `TestLayerDepthAndMineralRanges`는 지금까지 `CreateDefault()`(항상 최신 C# 기본값)만 검사했기 때문에
+   이 드리프트를 잡아내지 못했습니다. 조치:
+   - `.asset` 파일을 코드 기본값과 동일하게 직접 교정(45/45/5, `surfaceBaseHeightRatio=0.86875`,
+     7개 `oreVeins` 항목 전부에 CSV와 일치하는 `depthMin`/`depthMax` 추가).
+   - `TestLayerDepthAndMineralRanges`에 `Assets/Data/SO/WorldGenerationConfig.asset`을
+     `AssetDatabase.LoadAssetAtPath`로 직접 로드해 `CreateDefault()`와 필드 단위로 대조하는 검증을
+     추가 — 앞으로 이런 코드/에셋 드리프트가 생기면 회귀 테스트가 즉시 잡아냅니다(완료 조건 1
+     "설정 에셋과 `CreateDefault()` 모두 동일한 깊이값 사용"을 문자 그대로 검사).

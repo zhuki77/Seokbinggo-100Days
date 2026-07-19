@@ -189,6 +189,32 @@ public static class NyangbingoDevARegressionTests
         Assert(config.MiddleLayerThickness == 45, $"T2(중층) 두께가 45가 아님(실제 {config.MiddleLayerThickness}) — layer_t2_depth=90 위반");
         Assert(config.BedrockThickness == 5, $"경계암 두께가 5가 아님(실제 {config.BedrockThickness}) — bedrock_depth=140 위반");
 
+        // 완료 조건 1(엄격 판정): CreateDefault()는 C# 필드 기본값만 반영하므로, 실제 프로젝트에 저장된
+        // .asset 인스펙터 값이 코드 기본값과 따로 굳어(stale) 있어도 이 테스트만으로는 못 잡는다.
+        // 실제 씬/게임이 참조하는 Assets/Data/SO/WorldGenerationConfig.asset을 직접 로드해 대조한다.
+        var projectAsset = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>("Assets/Data/SO/WorldGenerationConfig.asset");
+        Assert(projectAsset != null, "Assets/Data/SO/WorldGenerationConfig.asset을 찾을 수 없음");
+        if (projectAsset != null)
+        {
+            Assert(projectAsset.UpperLayerThickness == config.UpperLayerThickness,
+                $"프로젝트 에셋의 T1 두께({projectAsset.UpperLayerThickness})가 CreateDefault()({config.UpperLayerThickness})와 다름 — 에셋이 구버전 값으로 굳어있음");
+            Assert(projectAsset.MiddleLayerThickness == config.MiddleLayerThickness,
+                $"프로젝트 에셋의 T2 두께({projectAsset.MiddleLayerThickness})가 CreateDefault()({config.MiddleLayerThickness})와 다름 — 에셋이 구버전 값으로 굳어있음");
+            Assert(projectAsset.BedrockThickness == config.BedrockThickness,
+                $"프로젝트 에셋의 경계암 두께({projectAsset.BedrockThickness})가 CreateDefault()({config.BedrockThickness})와 다름 — 에셋이 구버전 값으로 굳어있음");
+            Assert(Mathf.Approximately(projectAsset.SurfaceBaseHeightRatio, config.SurfaceBaseHeightRatio),
+                $"프로젝트 에셋의 surfaceBaseHeightRatio({projectAsset.SurfaceBaseHeightRatio})가 CreateDefault()({config.SurfaceBaseHeightRatio})와 다름");
+            Assert(projectAsset.OreVeins.Length == config.OreVeins.Length, "프로젝트 에셋의 OreVeins 개수가 CreateDefault()와 다름");
+            for (var i = 0; i < Mathf.Min(projectAsset.OreVeins.Length, config.OreVeins.Length); i++)
+            {
+                var a = projectAsset.OreVeins[i];
+                var b = config.OreVeins[i];
+                Assert(a.elementType == b.elementType && a.depthMin == b.depthMin && a.depthMax == b.depthMax,
+                    $"프로젝트 에셋의 OreVeins[{i}]({a.elementType}, {a.depthMin}~{a.depthMax})가 " +
+                    $"CreateDefault()({b.elementType}, {b.depthMin}~{b.depthMax})와 다름 — 에셋이 depthMin/depthMax 없이 구버전으로 저장돼 있으면 0~0으로 굳어 레거시 레이어 배치로 몰래 폴백함");
+            }
+        }
+
         // 완료 조건 2: T1/T2/T3/경계암 경계 테스트 — surface_y=20(±노이즈 없는 평균선) 기준 정확한 경계에서
         // 레이어가 바뀌는지, 실제 생성 코드(ClassifyLayer)를 리플렉션으로 그대로 호출해 검증한다.
         var averageSurfaceY = Mathf.RoundToInt(config.MapHeight * config.SurfaceBaseHeightRatio);
