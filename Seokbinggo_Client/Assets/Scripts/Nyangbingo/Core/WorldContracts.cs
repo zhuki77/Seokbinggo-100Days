@@ -29,8 +29,22 @@ namespace Nyangbingo.Core
     /// <summary>
     /// "4 시스템"(v17 최종) 온도% 산식의 <c>냉기원 가동</c> 조건을 SealSystem 외부(B파트 온도 시스템)에서
     /// 주입받기 위한 계약. 아이스박스 등 냉기원이 실제로 가동 중인지는 SealSystem이 알 수 없는 정보다.
+    ///
+    /// A-12(v26 냉기원 상한 연동 계약): 활성 냉기원 중 최고 온도 상한(%)을 제공해야 한다 — 확정값은
+    /// 물단지 25 / 얼음 항아리 50 / 얼음 저장고 100 / 빙정 냉각로 100, 여러 개가 가동 중이면 최고값,
+    /// 냉기원이 하나도 없으면 0이다. <see cref="CoolingCapPercent"/>는 C# 8 기본 인터페이스 구현으로
+    /// 0을 반환하므로, 이 구현체를 이미 이 계약대로 채워 둔 <c>MainGameEnvironmentState</c>(개발 B) 등
+    /// 기존 구현체는 이 멤버를 추가해도 컴파일이 깨지지 않는다. SealSystem은 <see cref="IsColdSourceActive"/>
+    /// 단일 boolean 대신 이 값을 직접 온도 산식(min(cap, 밀폐율 기반 %))에 사용한다.
     /// </summary>
-    public interface ICoolingSourceProvider { bool IsColdSourceActive { get; } }
+    public interface ICoolingSourceProvider
+    {
+        bool IsColdSourceActive { get; }
+
+        /// <summary>0~100 스케일. Provider가 이 멤버를 구현하지 않았다면(레거시) 0으로 간주 — "연결 안 됨=100%"로
+        /// 잘못 해석되는 사고를 막기 위해 기본값을 100이 아니라 0으로 둔다(A-12 요구사항 그대로).</summary>
+        float CoolingCapPercent => 0f;
+    }
 
     /// <summary>
     /// 개발 A가 제공하는 중앙 game seconds Tick 계약(A-04). 제작·제련·유틸리티·AI·전투 등 매 프레임

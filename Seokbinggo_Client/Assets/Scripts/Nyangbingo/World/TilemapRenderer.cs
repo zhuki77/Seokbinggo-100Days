@@ -30,6 +30,20 @@ namespace Nyangbingo.World
         [SerializeField] private Tilemap foregroundTilemap;
         [SerializeField] private Tilemap backgroundTilemap;
 
+        [Header("A-14: 타일 노출면 먹선(edge) 오버레이 — 전경/배경과 별도의 3번째 레이어")]
+        [Tooltip("먹선 오버레이 전용 Tilemap. foreground/background보다 위(정렬 순서상 더 앞)에 둬야 " +
+                 "테두리 선이 타일 위에 덮여 보인다. 비워두면 A-14 오버레이 기능 전체가 조용히 비활성화된다 " +
+                 "(기존 씬을 깨지 않기 위한 안전한 기본값).")]
+        [SerializeField] private Tilemap edgeOverlayTilemap;
+
+        [Tooltip("공용 edge 모양 5장(TileEdgeOverlayResolver.ShapeStraight/Corner/Through/TJunction/Isolated " +
+                 "순서, 인덱스 0~4). 재질별로 다른 스프라이트를 쓰지 않고 모든 지형이 이 5장만 공유한다 — " +
+                 "나머지 회전 방향은 Tilemap.SetTransformMatrix로 처리하므로 회전판을 따로 만들 필요 없다. " +
+                 "아트 자산이 아직 없다면 이 배열을 비워둬도 컴파일/실행에는 문제없다(오버레이만 그려지지 않음). " +
+                 "개발 B/아트팀에게 요청할 에셋 ID 제안: edge_straight, edge_corner, edge_through, " +
+                 "edge_tjunction, edge_isolated.")]
+        [SerializeField] private TileBase[] edgeShapeTiles = new TileBase[TileEdgeOverlayResolver.ShapeCount];
+
         [Header("elementType ↔ TileBase 매핑 (드래그앤드롭) — 1순위: 인스펙터 명시 매핑")]
         [SerializeField] private TileVisual[] tileVisuals = Array.Empty<TileVisual>();
 
@@ -172,6 +186,57 @@ namespace Nyangbingo.World
             backgroundTilemap.SetTilesBlock(bounds, backgroundBlock);
             foregroundTilemap.RefreshAllTiles();
             backgroundTilemap.RefreshAllTiles();
+
+            // A-14: 월드 전체 먹선 오버레이 최초 1회 계산. 이후에는 TileService가 변경된 셀 +
+            // 그 4방향 이웃만 RefreshEdgeOverlay로 갱신하므로, 이 전체 순회는 월드 생성/로드당 딱 한 번뿐이다.
+            RebuildEdgeOverlayForWorld(tiles);
+        }
+
+        /// <summary>
+        /// A-14: 월드 전체에 대해 먹선 오버레이를 처음부터 다시 계산한다. RenderWorld(최초 생성/로드 복원 후
+        /// 1회)에서만 호출되며, 그 외에는 TileService.RefreshEdgeOverlayAround가 변경 셀 주변만 국소 갱신한다.
+        /// edgeOverlayTilemap이 연결돼 있지 않으면(아트 미배선) 조용히 아무 것도 하지 않는다.
+        /// </summary>
+        public void RebuildEdgeOverlayForWorld(TileData[,] tiles)
+        {
+            if (edgeOverlayTilemap == null || tiles == null) return;
+
+            var width = tiles.GetLength(0);
+            var height = tiles.GetLength(1);
+            edgeOverlayTilemap.ClearAllTiles();
+
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    var mask = TileEdgeOverlayResolver.ComputeExposureMask(tiles, x, y, width, height);
+                    if (mask == TileEdgeMask.None) continue;
+                    RefreshEdgeOverlay(new Vector3Int(x, y, 0), mask);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A-14: 셀 하나의 먹선 오버레이만 갱신한다(변경 셀·인접 셀 국소 갱신용, TileService가 호출).
+        /// mask가 None이면 해당 칸의 오버레이 타일을 지운다. edgeOverlayTilemap 미연결 또는 대응하는
+        /// 모양 스프라이트가 배선되지 않았으면 조용히 무시한다(아트 자산 도착 전에도 컴파일·플레이 가능).
+        /// </summary>
+        public void RefreshEdgeOverlay(Vector3Int cell, TileEdgeMask mask)
+        {
+            if (edgeOverlayTilemap == null) return;
+
+            if (mask == TileEdgeMask.None || !TileEdgeOverlayResolver.TryResolve(mask, out var shapeIndex, out var rotationSteps))
+            {
+                edgeOverlayTilemap.SetTile(cell, null);
+                return;
+            }
+
+            var tile = (edgeShapeTiles != null && shapeIndex >= 0 && shapeIndex < edgeShapeTiles.Length)
+                ? edgeShapeTiles[shapeIndex]
+                : null;
+
+            edgeOverlayTilemap.SetTile(cell, tile);
+            if (tile != null) edgeOverlayTilemap.SetTransformMatrix(cell, TileEdgeOverlayResolver.BuildRotationMatrix(rotationSteps));
         }
 
         /// <summary>이후 TileService(채굴)가 elementType → TileBase를 조회할 때도 재사용할 수 있게 공개한다.</summary>

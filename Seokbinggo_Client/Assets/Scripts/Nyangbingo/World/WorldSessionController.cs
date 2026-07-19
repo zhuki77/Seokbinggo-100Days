@@ -112,6 +112,28 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
+        /// A-11 요구사항 8: 코어 밀폐 창 반경/목표 칸 수를 하드코딩하지 않고 globals.csv(GameDataCatalog)에서
+        /// 읽어 SealSystem 생성자에 주입한다. 카탈로그가 없거나 값이 비어 있으면 SealSystem 자체의 기본값
+        /// (v26 확정값 rx=28/ry=12/target=240)으로 안전하게 폴백한다.
+        /// </summary>
+        private void CreateSealSystem()
+        {
+            var rx = ReadGlobalInt(GlobalKeys.SealWindowRadiusX, 28);
+            var ry = ReadGlobalInt(GlobalKeys.SealWindowRadiusY, 12);
+            var targetCells = ReadGlobalFloat(GlobalKeys.SealTargetCells, 240f);
+            sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null,
+                sealWindowRadiusX: rx, sealWindowRadiusY: ry, sealTargetCells: targetCells);
+        }
+
+        private int ReadGlobalInt(string key, int fallback) =>
+            catalog != null && catalog.FindGlobal(key) is { } definition && definition.TryGetInt(out var value)
+                ? value : fallback;
+
+        private float ReadGlobalFloat(string key, float fallback) =>
+            catalog != null && catalog.FindGlobal(key) is { } definition && definition.TryGetFloat(out var value)
+                ? value : fallback;
+
+        /// <summary>
         /// 결정론적 4패스 생성을 처음부터 실행해 새 게임을 시작한다. A-08: MapGenerator가 이미
         /// WorldGenerationConfig.MaxRerollAttempts까지 seed+1로 재시도했는데도 검증(스폰 접근성/온보딩
         /// 자원/심층 연결/제단 도달성)을 통과하지 못했다면, 그 결과를 "정상 월드처럼 조용히" 라이브 상태로
@@ -211,7 +233,7 @@ namespace Nyangbingo.World
             // 전후로 그대로 유지된다. 세션 최초 생성(sealSystem == null)일 때만 새로 만든다.
             if (sealSystem == null)
             {
-                sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null);
+                CreateSealSystem();
                 ApplySealExtensions();
             }
             else
@@ -256,7 +278,7 @@ namespace Nyangbingo.World
         {
             sealSystem?.Dispose();
             tileService = new TileService(tiles, renderer, catalog, seed);
-            sealSystem = new SealSystem(tileService, catalog != null ? catalog.SealWhitelist : null);
+            CreateSealSystem();
             ApplySealExtensions();
         }
 
