@@ -15,6 +15,7 @@ MonoBehaviour:
   id: rebar
   displayName: "\uCCA0\uADFC"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC9C0\uC0C1 \uD3D0\uD5C8(\uBC24) \u2014 \uCC28\uC5F4 \uC9C0\uBD95 \uBC18\uBCF5
+    \uC18C\uBE44"

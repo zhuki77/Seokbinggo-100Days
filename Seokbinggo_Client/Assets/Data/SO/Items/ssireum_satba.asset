@@ -15,6 +15,6 @@ MonoBehaviour:
   id: ssireum_satba
   displayName: "\uC528\uB984 \uC0C5\uBC14"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 8
+  mvpScope: 1
+  note: "\uB3C4\uAE68\uBE44 \uB300\uC7A5 \uC18C\uD658"

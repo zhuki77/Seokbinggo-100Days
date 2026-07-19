@@ -15,16 +15,19 @@ MonoBehaviour:
   id: blast_furnace
   station: 2
   ingredients:
-  - item: {fileID: 11400000, guid: 6eafd891183383d40b146faf9d5b99c9, type: 2}
-    amount: 12
   - item: {fileID: 11400000, guid: 2fb77bca93d4e9a42874825576ffcd9d, type: 2}
     amount: 20
+  - item: {fileID: 11400000, guid: 6eafd891183383d40b146faf9d5b99c9, type: 2}
+    amount: 12
   - item: {fileID: 11400000, guid: ce9ba450bd7d7574eb1a0c890f4e435a, type: 2}
     amount: 6
   output:
     item: {fileID: 11400000, guid: 424ddeaa2135cf44cb2c79da42f4701b, type: 2}
     amount: 1
   durationSeconds: 45
-  type: 0
-  mvpScope: 0
-  note: 
+  type: 11
+  mvpScope: 1
+  note: "\uC810\uD1A0 \uB0B4\uD654\uBCBD\uB3CC \u2014 T2 \uC9C1\uD6C4 8~9\uC77C\uCC28.
+    v23: \uCCA0 \uC8FC\uAD343\u2192\uAD11\uC11D6(2:1 \uB3D9\uC77C \uD658\uC0B0) \u2014
+    4-7 \u2461 '\uD654\uB85C\xB7\uC6A9\uAD11\uB85C \uB808\uC2DC\uD53C \uC8FC\uAD34
+    \uC694\uAD6C \uAE08\uC9C0' \uC900\uC218(\uAD6C \uD589\uC774 \uADDC\uCE59 \uC704\uBC18\uC774\uC5C8\uB2E4)"

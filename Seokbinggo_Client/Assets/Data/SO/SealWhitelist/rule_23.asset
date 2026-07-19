@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58dfe9cad53f16f4bb4ad028f18e4dc7, type: 3}
+  m_Name: rule_23
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.SealWhitelistDefinition
+  element: "\uBC30\uACBD\uBCBD(\uBCBD\uC9C0)"
+  seals: 0
+  note: "[v25 \uC2E0\uC124] \uB80C\uB354 \uC804\uC6A9 \uB808\uC774\uC5B4 \u2014 \uBC00\uD3D0
+    \uD310\uC815 \uBD88\uCC38. \uD30C\uB0B8 \uC790\uB9AC\xB7\uBC00\uD3D0 \uAD6C\uC5ED
+    \uC2E4\uB0B4\uB97C \uCC44\uC6B0\uB294 \uC2DC\uAC01 \uC694\uC18C\uC774\uBA70 '\uBCBD'\uC774
+    \uC544\uB2C8\uB2E4. \uBC00\uD3D0\uAC00 \uC644\uC131\uB3FC\uC57C \uCC44\uC6CC\uC9C0\uBBC0\uB85C
+    \uACB0\uACFC\uC758 \uC2DC\uAC01 \uC2E0\uD638\uB294 \uB418\uC9C0\uB9CC \uD310\uC815
+    \uC785\uB825\uC740 \uC544\uB2C8\uB2E4(GDD 8-3)"

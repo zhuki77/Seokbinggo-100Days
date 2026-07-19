@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Yokai;
 using UnityEngine;
 
 namespace Nyangbingo.Combat
@@ -15,6 +16,8 @@ namespace Nyangbingo.Combat
         [SerializeField] private float knockback = .5f;
         [SerializeField] private CombatProfileDefinition combatProfile;
         [SerializeField] private ClawProfile clawProfile;
+        private float frostSlowFraction;
+        private float frostSlowDuration;
         public CombatProfileDefinition CombatProfile => combatProfile;
         public bool HitsWalls => combatProfile == null || combatProfile.HitsWalls;
         public int LastHitCount { get; private set; }
@@ -24,6 +27,8 @@ namespace Nyangbingo.Combat
             origin = attackOrigin;
             targetLayers = layers;
             combatProfile = null;
+            frostSlowFraction = 0f;
+            frostSlowDuration = 0f;
             if (!float.IsNaN(attackRange) && !float.IsInfinity(attackRange)) range = Mathf.Max(0f, attackRange);
             if (!float.IsNaN(attackArc) && !float.IsInfinity(attackArc)) arcDegrees = Mathf.Clamp(attackArc, 1f, 180f);
             damage = Mathf.Max(1, attackDamage);
@@ -38,11 +43,19 @@ namespace Nyangbingo.Combat
             origin = attackOrigin;
             targetLayers = layers;
             combatProfile = profile;
+            frostSlowFraction = 0f;
+            frostSlowDuration = 0f;
             range = profile.RangeTiles;
             arcDegrees = profile.ArcDegrees;
             damage = profile.AttackDamage;
             knockback = profile.KnockbackTiles;
             return true;
+        }
+
+        public void ConfigureFrostSlow(float slowFraction, float durationSeconds)
+        {
+            frostSlowFraction = IsFinite(slowFraction) ? Mathf.Clamp01(slowFraction) : 0f;
+            frostSlowDuration = IsFinite(durationSeconds) ? Mathf.Max(0f, durationSeconds) : 0f;
         }
 
         public void Strike(Vector2 direction)
@@ -99,7 +112,10 @@ namespace Nyangbingo.Combat
             var queryAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             var damagedTargets = new HashSet<Health>();
             var attackerHealth = GetComponentInParent<Health>();
-            foreach (var hit in Physics2D.OverlapBoxAll(queryCenter, querySize, queryAngle, targetLayers))
+            var effectiveTargetLayers = targetLayers;
+            if (effectiveTargetLayers.value == 0) effectiveTargetLayers = LayerMask.GetMask("Default");
+            if (effectiveTargetLayers.value == 0) effectiveTargetLayers = Physics2D.AllLayers;
+            foreach (var hit in Physics2D.OverlapBoxAll(queryCenter, querySize, queryAngle, effectiveTargetLayers))
             {
                 var toTarget = ((Vector2)hit.transform.position - center).normalized;
                 if (Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
@@ -107,12 +123,20 @@ namespace Nyangbingo.Combat
                 if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
                 var healthBeforeDamage = health.Current;
                 health.ApplyDamage(activeDamage, DamageTag.Melee);
-                if (health.Current < healthBeforeDamage) GameEvents.RaiseYokaiDamaged();
+                if (health.Current < healthBeforeDamage)
+                {
+                    GameEvents.RaiseYokaiDamaged();
+                    if (frostSlowFraction > 0f && frostSlowDuration > 0f)
+                        hit.GetComponentInParent<YokaiBrain>()?.ApplyFrostSlow(
+                            frostSlowFraction, frostSlowDuration);
+                }
                 health.TryApplyKnockback(toTarget * activeKnockback);
                 if (combatProfile != null && !combatProfile.MultiTarget) break;
             }
             LastHitCount = damagedTargets.Count;
         }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
     public sealed class WireSnareAbility

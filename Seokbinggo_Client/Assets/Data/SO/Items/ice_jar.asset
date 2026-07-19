@@ -15,6 +15,7 @@ MonoBehaviour:
   id: ice_jar
   displayName: "\uC5BC\uC74C \uD56D\uC544\uB9AC"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uC5F0\uB8CC\uD615 \uB0C9\uAE30\uC6D0 \u2014 \uC628\uB3C4 \uC0C1\uD55C 50%
+    (v20)"

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: wallpaper
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: wallpaper
+  displayName: "\uBCBD\uC9C0"
+  maxStack: 99
+  category: 7
+  mvpScope: 1
+  note: "\uD50C\uB808\uC774\uC5B4\uAC00 \uBC14\uB974\uB294 \uBC30\uACBD \uBCBD\uC9C0(v26)
+    \u2014 \uBC00\uD3D0 \uAD6C\uC5ED \uBE48 \uCE78\uC744 100% \uB36E\uC73C\uBA74
+    \uADF8 \uAD6C\uC5ED \uB0C9\uAE30\uC6D0 \uC9C0\uC18D\uC2DC\uAC04 +25%. 1\uD68C
+    \uC81C\uC791 16\uC7A5 \uC0B0\uCD9C(crafting-tree output_count). \uC9C0\uD558
+    \uC790\uC5F0 \uBC30\uACBD\uBCBD(t_bg_*)\uC740 \uC774\uBBF8 \uB36E\uC778 \uAC83\uC73C\uB85C
+    \uACC4\uC218\uD55C\uB2E4"

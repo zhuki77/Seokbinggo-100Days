@@ -15,6 +15,6 @@ MonoBehaviour:
   id: dokkaebi_fire_tower
   displayName: "\uB3C4\uAE68\uBE44\uBD88 \uB4F1\uD0D1"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uD130\uB81B DPS4 \uC720\uB3C4\xB7\uBC18\uACBD 8\uD0C0\uC77C"

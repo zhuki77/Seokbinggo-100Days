@@ -23,6 +23,6 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: 138bf890d39f9e34ebf81d3a674c6124, type: 2}
     amount: 1
   durationSeconds: 30
-  type: 0
-  mvpScope: 0
-  note: 
+  type: 1
+  mvpScope: 1
+  note: "\uBC29\uC5B4 2"

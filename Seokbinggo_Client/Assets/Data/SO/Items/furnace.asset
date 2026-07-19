@@ -15,6 +15,6 @@ MonoBehaviour:
   id: furnace
   displayName: "\uD654\uB85C"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 6
+  mvpScope: 1
+  note: "T2 \uC81C\uC791\uB300"

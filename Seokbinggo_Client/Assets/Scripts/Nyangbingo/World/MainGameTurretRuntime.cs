@@ -9,6 +9,7 @@ using Nyangbingo.Save;
 using Nyangbingo.UI;
 using Nyangbingo.Yokai;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Nyangbingo.World
@@ -26,6 +27,7 @@ namespace Nyangbingo.World
 
         private const string TurretItemId = "dokkaebi_fire_tower";
         private const string FuelItemId = "coal";
+        private const string IceFuelItemId = "ice_shard";
         private const float RetargetSeconds = .2f;
         private const float FireSeconds = 1f;
         private const float AttackRange = 8f;
@@ -34,6 +36,9 @@ namespace Nyangbingo.World
         private const float ProjectileSpeed = 6f;
         private const float ProjectileHitDistance = .1f;
         private const float InteractionRange = 2.5f;
+        private static bool anyPlacementPreviewActive;
+        private static int placementPointerConsumedFrame = -1;
+        private static int placementEscapeConsumedFrame = -1;
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
@@ -48,6 +53,7 @@ namespace Nyangbingo.World
         private readonly List<SpriteRenderer> projectileRenderers = new List<SpriteRenderer>();
         private HomingProjectilePool projectilePool;
         private MainGameBossSummonUiController craftingStationUi;
+        private MainGameCraftingUiController productCraftingUi;
         private GameObject placementPreview;
         private SpriteRenderer placementPreviewRenderer;
         private LineRenderer placementRangeRenderer;
@@ -55,6 +61,8 @@ namespace Nyangbingo.World
         private Vector2 placementPosition;
         private bool placementValid;
         private bool registered;
+        private Camera placementCamera;
+        private string placementDefinitionId;
 
         public bool HasSceneBindings => gameDataCatalog != null && runtimeServices != null &&
                                         environmentState != null && gameplayArtCatalog != null &&
@@ -63,6 +71,9 @@ namespace Nyangbingo.World
         public int ActiveTurretCount => turrets.Count;
         public bool IsPlacementPreviewActive => placementPreview != null;
         public bool IsPlacementPreviewValid => IsPlacementPreviewActive && placementValid;
+        public static bool BlocksCombatInput => anyPlacementPreviewActive ||
+                                                placementPointerConsumedFrame == Time.frameCount;
+        public static bool ConsumedEscapeThisFrame => placementEscapeConsumedFrame == Time.frameCount;
         public int TurretItemCount => runtimeServices?.PlayerInventory?.Count(TurretItemId) ?? 0;
         public int CoalCount => runtimeServices?.PlayerInventory?.Count(FuelItemId) ?? 0;
         public bool IsCrafting => runtimeServices?.CraftingProcess?.IsCrafting == true;
@@ -90,6 +101,7 @@ namespace Nyangbingo.World
         {
             projectilePool = new HomingProjectilePool(4);
             craftingStationUi = FindAnyObjectByType<MainGameBossSummonUiController>();
+            productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
             registered = runtimeServices != null && runtimeServices.Register(this);
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed += HandleInventoryChanged;
@@ -100,16 +112,35 @@ namespace Nyangbingo.World
         private void Update()
         {
             if (Time.timeScale <= 0f) return;
-            if (Input.GetKeyDown(KeyCode.T))
+            if (MainGameCraftingUiController.BlocksGameplayInput)
             {
-                if (IsPlacementPreviewActive) ConfirmPlacementPreview();
-                else if (TurretItemCount > 0) BeginPlacementPreview();
-                else TryStartCraftingFromUi();
+                RefreshInteractionStatus();
+                return;
             }
-            if (Input.GetKeyDown(KeyCode.F))
+            if (IsPlacementPreviewActive)
             {
-                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) TryRecoverNearestTurret();
-                else TryRefuelNearestTurret();
+                UpdatePlacementPreview();
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    placementEscapeConsumedFrame = Time.frameCount;
+                    CancelPlacementPreview();
+                    return;
+                }
+                var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                if (!pointerOverUi && Input.GetMouseButtonDown(0))
+                {
+                    placementPointerConsumedFrame = Time.frameCount;
+                    ConfirmPlacementPreview();
+                    return;
+                }
+                if (!pointerOverUi && Input.GetMouseButtonDown(1))
+                {
+                    placementPointerConsumedFrame = Time.frameCount;
+                    CancelPlacementPreview();
+                    return;
+                }
+                RefreshInteractionStatus();
+                return;
             }
 #if UNITY_EDITOR
             if (Input.GetKeyDown(KeyCode.F11))
@@ -121,7 +152,6 @@ namespace Nyangbingo.World
                 else GrantTurretItemForEditorTest();
             }
 #endif
-            UpdatePlacementPreview();
             RefreshInteractionStatus();
         }
 
@@ -137,6 +167,11 @@ namespace Nyangbingo.World
             if (!HasSceneBindings || !runtimeServices.Initialize() || !environmentState.Initialize())
             {
                 ShowMessage("등탑 시스템 배선이 준비되지 않았습니다.");
+                return false;
+            }
+            if (runtimeServices.NapService?.IsNapping == true)
+            {
+                ShowMessage("냥잠 중에는 제작할 수 없습니다.");
                 return false;
             }
             var recipe = TurretRecipe;
@@ -163,40 +198,49 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool BeginPlacementPreview()
+        public bool BeginPlacementPreview() => BeginPlacementPreview(TurretItemId);
+
+        public bool BeginPlacementPreview(string definitionId)
         {
             if (IsPlacementPreviewActive) return true;
-            if (TurretItemCount <= 0)
+            var item = gameDataCatalog?.FindItem(definitionId);
+            if (item == null || item.MvpScope == ItemMvpScope.B || GetInventoryCount(definitionId) <= 0)
             {
-                ShowMessage("설치할 도깨비불 등탑이 없습니다.");
+                ShowMessage("설치할 완성품이 없습니다.");
                 return false;
             }
 
-            placementPreview = new GameObject("DokkaebiFireTowerPlacementPreview");
+            placementDefinitionId = definitionId;
+            placementPreview = new GameObject($"{definitionId}PlacementPreview");
+            placementCamera = Camera.main;
+            anyPlacementPreviewActive = true;
             placementPreviewRenderer = placementPreview.AddComponent<SpriteRenderer>();
             placementPreviewRenderer.sortingOrder = 30;
-            placementPreviewRenderer.sprite = buildingArtCatalog?.Find(TurretItemId)?.Sprite;
+            placementPreviewRenderer.sprite = buildingArtCatalog?.Find(definitionId)?.Sprite;
             if (placementPreviewRenderer.sprite == null)
                 RuntimePlaceholderVisual.Configure(placementPreviewRenderer, Color.white, 1f, 30);
 
-            placementRangeRenderer = placementPreview.AddComponent<LineRenderer>();
-            placementRangeRenderer.useWorldSpace = false;
-            placementRangeRenderer.loop = true;
-            placementRangeRenderer.positionCount = 64;
-            placementRangeRenderer.startWidth = .08f;
-            placementRangeRenderer.endWidth = .08f;
-            placementRangeRenderer.sortingOrder = 29;
-            var shader = Shader.Find("Sprites/Default");
-            if (shader != null)
+            if (definitionId == TurretItemId)
             {
-                placementRangeMaterial = new Material(shader);
-                placementRangeRenderer.sharedMaterial = placementRangeMaterial;
-            }
-            for (var index = 0; index < placementRangeRenderer.positionCount; index++)
-            {
-                var angle = index * Mathf.PI * 2f / placementRangeRenderer.positionCount;
-                placementRangeRenderer.SetPosition(index,
-                    new Vector3(Mathf.Cos(angle) * AttackRange, Mathf.Sin(angle) * AttackRange, 0f));
+                placementRangeRenderer = placementPreview.AddComponent<LineRenderer>();
+                placementRangeRenderer.useWorldSpace = false;
+                placementRangeRenderer.loop = true;
+                placementRangeRenderer.positionCount = 64;
+                placementRangeRenderer.startWidth = .08f;
+                placementRangeRenderer.endWidth = .08f;
+                placementRangeRenderer.sortingOrder = 29;
+                var shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                {
+                    placementRangeMaterial = new Material(shader);
+                    placementRangeRenderer.sharedMaterial = placementRangeMaterial;
+                }
+                for (var index = 0; index < placementRangeRenderer.positionCount; index++)
+                {
+                    var angle = index * Mathf.PI * 2f / placementRangeRenderer.positionCount;
+                    placementRangeRenderer.SetPosition(index,
+                        new Vector3(Mathf.Cos(angle) * AttackRange, Mathf.Sin(angle) * AttackRange, 0f));
+                }
             }
             UpdatePlacementPreview();
             BuildStateChanged?.Invoke();
@@ -224,6 +268,9 @@ namespace Nyangbingo.World
             placementRangeRenderer = null;
             placementRangeMaterial = null;
             placementValid = false;
+            placementCamera = null;
+            placementDefinitionId = null;
+            anyPlacementPreviewActive = false;
             BuildStateChanged?.Invoke();
         }
 
@@ -263,12 +310,16 @@ namespace Nyangbingo.World
         private void UpdatePlacementPreview()
         {
             if (!IsPlacementPreviewActive || playerController == null) return;
-            var direction = playerController.HorizontalFacingDirection;
-            placementPosition = (Vector2)playerController.transform.position + direction * 2f;
+            if (placementCamera != null)
+                placementPosition = placementCamera.ScreenToWorldPoint(Input.mousePosition);
+            else
+                placementPosition = (Vector2)playerController.transform.position +
+                                    playerController.HorizontalFacingDirection * 2f;
             placementPosition = new Vector2(Mathf.Floor(placementPosition.x) + .5f,
                 Mathf.Floor(placementPosition.y) + .5f);
             placementPreview.transform.position = placementPosition;
-            placementValid = environmentState.CanPlaceAt(placementPosition) && TurretItemCount > 0;
+            placementValid = environmentState.CanPlaceAt(placementPosition) &&
+                             GetInventoryCount(placementDefinitionId) > 0;
             var color = placementValid ? new Color(.35f, 1f, .75f, .65f) : new Color(1f, .25f, .25f, .65f);
             if (placementPreviewRenderer != null) placementPreviewRenderer.color = color;
             if (placementRangeRenderer != null)
@@ -280,39 +331,81 @@ namespace Nyangbingo.World
 
         private bool TryPlaceTurretAt(Vector2 position)
         {
+            var definitionId = placementDefinitionId;
+            var item = gameDataCatalog?.FindItem(definitionId);
+            if (item == null || item.MvpScope == ItemMvpScope.B) return false;
             var record = new PlacedObjectRecord
             {
-                objectId = $"{TurretItemId}_{Guid.NewGuid():N}",
-                definitionId = TurretItemId,
+                objectId = $"{definitionId}_{Guid.NewGuid():N}",
+                definitionId = definitionId,
                 position = position,
                 rotationDegrees = 0f
             };
-            if (!runtimeServices.PlayerInventory.TryRemove(TurretItemId, 1)) return false;
-            if (!environmentState.TryPlace(record, barrierActive: false) ||
-                !TryRegisterPlacedTurret(record.objectId, 0, out _))
+            if (!runtimeServices.PlayerInventory.TryRemove(definitionId, 1)) return false;
+            var placed = environmentState.TryPlace(record, barrierActive: false);
+            var turretRegistered = definitionId != TurretItemId ||
+                                   placed && TryRegisterPlacedTurret(record.objectId, 0, out _);
+            if (!placed || !turretRegistered)
             {
                 environmentState.TryRemove(record.objectId);
-                runtimeServices.PlayerInventory.TryAdd(TurretItemId, 1);
-                ShowMessage("해당 위치에는 등탑을 설치할 수 없습니다.");
+                runtimeServices.PlayerInventory.TryAdd(definitionId, 1);
+                ShowMessage("해당 위치에는 설치할 수 없습니다.");
                 return false;
             }
-            ShowMessage("도깨비불 등탑 설치 완료 · 석탄을 넣어 가동하세요.");
-            Debug.Log($"[Nyangbingo] Turret placed: id={record.objectId}, position={record.position}, fuel=0.");
+            ShowMessage(CoolingSourceRuntime.IsCoolingDefinition(definitionId)
+                ? $"{item.DisplayName} 설치 완료 · 가까이에서 E로 상태를 확인하세요."
+                : $"{item.DisplayName} 설치 완료");
+            Debug.Log($"[Nyangbingo] Product placeable installed: id={record.objectId}, " +
+                      $"definition={definitionId}, position={record.position}.");
             BuildStateChanged?.Invoke();
             return true;
         }
 
-        private void TryRefuelNearestTurret()
+        public bool TryInteractNearestPlacedObject()
         {
-            var entry = FindNearestTurret();
-            if (entry == null)
+            if (!TryGetNearestPlacedObject(out var record)) return false;
+            var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
+            if (craftingStation != CraftingStation.None)
             {
-                ShowMessage("연료를 넣을 등탑 가까이에서 F를 누르세요.");
-                return;
+                if (productCraftingUi == null)
+                    productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
+                if (productCraftingUi != null && productCraftingUi.TryOpenForStation(craftingStation)) return true;
+                ShowMessage($"{ItemName(record.definitionId)} 제작 화면을 열 수 없습니다.");
+                return true;
             }
+            if (record.definitionId == "nest_bed")
+            {
+                playerController.TryToggleNapFromInteraction();
+                return true;
+            }
+            if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
+            {
+                TryRefuelTurret(turret);
+                return true;
+            }
+            if (record.definitionId == CoolingSourceRuntime.IceJarId)
+            {
+                TryRefuelIceJar(record);
+                return true;
+            }
+            if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
+                    out var capPercent, out var active))
+            {
+                var itemName = ItemName(record.definitionId);
+                var lifetime = float.IsPositiveInfinity(remaining) ? "영구" : $"{remaining:0}초";
+                ShowMessage($"{itemName} · 냉각 상한 {capPercent:0}% · " +
+                            $"{(active ? $"가동 중 ({lifetime})" : "정지")}");
+                return true;
+            }
+            ShowMessage($"{ItemName(record.definitionId)} · Shift+E로 회수");
+            return true;
+        }
+
+        private void TryRefuelTurret(TurretEntry entry)
+        {
             if (!runtimeServices.PlayerInventory.TryRemove(FuelItemId, 1))
             {
-                ShowMessage("등탑 연료로 사용할 석탄이 없습니다.");
+                ShowMessage($"도깨비불 등탑 · 연료 {entry.Controller.FuelRemaining:0}초 · 석탄 없음");
                 return;
             }
             if (!entry.Controller.AddFuel(1))
@@ -327,63 +420,96 @@ namespace Nyangbingo.World
             BuildStateChanged?.Invoke();
         }
 
-        private void TryRecoverNearestTurret()
+        private void TryRefuelIceJar(PlacedObjectRecord record)
         {
-            var entry = FindNearestTurret();
-            if (entry == null)
+            if (!environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
+                    out var capPercent, out var active)) return;
+            if (!runtimeServices.PlayerInventory.TryRemove(IceFuelItemId, 1))
             {
-                ShowMessage("회수할 등탑 가까이에서 Shift+F를 누르세요.");
+                ShowMessage($"얼음 항아리 · 냉각 상한 {capPercent:0}% · " +
+                            $"{(active ? $"연료 {remaining:0}초" : "연료 없음")} · 얼음 조각 없음");
                 return;
             }
-            if (!runtimeServices.PlayerInventory.TryAdd(TurretItemId, 1))
+            if (!environmentState.TryAddIceJarFuel(record.objectId))
             {
-                ShowMessage("인벤토리 공간이 없어 등탑을 회수할 수 없습니다.");
+                runtimeServices.PlayerInventory.TryAdd(IceFuelItemId, 1);
+                ShowMessage("얼음 항아리에 연료를 넣지 못했습니다.");
                 return;
             }
-            if (!environmentState.TryRemove(entry.ObjectId))
-            {
-                runtimeServices.PlayerInventory.TryRemove(TurretItemId, 1);
-                ShowMessage("등탑 회수에 실패했습니다.");
-                return;
-            }
-            entry.Controller.Fired -= entry.FireHandler;
-            turrets.Remove(entry.ObjectId);
-            ShowMessage("도깨비불 등탑 회수 완료 · 남은 연료는 반환되지 않습니다.");
-            Debug.Log($"[Nyangbingo] Turret recovered: id={entry.ObjectId}, " +
-                      $"discardedFuel={entry.Controller.FuelRemaining:0.0}.");
+            environmentState.TryGetCoolingStatus(record.objectId, out remaining, out capPercent, out _);
+            ShowMessage($"얼음 조각 1개 투입 · 냉각 상한 {capPercent:0}% · 연료 {remaining:0}초");
             BuildStateChanged?.Invoke();
         }
 
-        private TurretEntry FindNearestTurret()
+        public bool TryRecoverNearestPlacedObject()
         {
-            if (playerController == null) return null;
-            TurretEntry nearest = null;
-            var bestDistance = InteractionRange * InteractionRange;
-            foreach (var entry in turrets.Values)
+            if (!TryGetNearestPlacedObject(out var record)) return false;
+            var item = gameDataCatalog?.FindItem(record.definitionId);
+            if (item == null || !runtimeServices.PlayerInventory.TryAdd(record.definitionId, 1))
             {
-                if (entry.Origin == null) continue;
-                var distance = ((Vector2)entry.Origin.position - (Vector2)playerController.transform.position)
-                    .sqrMagnitude;
-                if (distance > bestDistance) continue;
-                bestDistance = distance;
-                nearest = entry;
+                ShowMessage("인벤토리 공간이 없어 설치물을 회수할 수 없습니다.");
+                return true;
             }
-            return nearest;
+            if (!environmentState.TryRemove(record.objectId))
+            {
+                runtimeServices.PlayerInventory.TryRemove(record.definitionId, 1);
+                ShowMessage("설치물 회수에 실패했습니다.");
+                return true;
+            }
+            if (turrets.TryGetValue(record.objectId, out var entry))
+            {
+                entry.Controller.Fired -= entry.FireHandler;
+                turrets.Remove(record.objectId);
+            }
+            ShowMessage($"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.");
+            Debug.Log($"[Nyangbingo] Product placeable recovered: id={record.objectId}, " +
+                      $"definition={record.definitionId}.");
+            BuildStateChanged?.Invoke();
+            return true;
         }
+
+        private bool TryGetNearestPlacedObject(out PlacedObjectRecord record)
+        {
+            record = default;
+            return playerController != null && environmentState != null &&
+                   environmentState.TryGetNearestPlacedObject(playerController.transform.position,
+                       InteractionRange, out record);
+        }
+
+        private string ItemName(string definitionId) =>
+            gameDataCatalog?.FindItem(definitionId)?.DisplayName ?? definitionId;
 
         private void RefreshInteractionStatus()
         {
             if (interactionStatusText == null) return;
-            var entry = FindNearestTurret();
-            if (entry != null)
+            if (TryGetNearestPlacedObject(out var record))
             {
-                interactionStatusText.text = $"도깨비불 등탑 · 연료 {entry.Controller.FuelRemaining:0}초" +
-                                             "  |  F 석탄 투입  |  Shift+F 회수";
+                var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
+                if (craftingStation != CraftingStation.None)
+                    interactionStatusText.text = $"{ItemName(record.definitionId)}  |  " +
+                                                 $"E {(MainGameCraftingUiController.IsSmeltingStation(craftingStation) ? "제련" : "제작")} 열기" +
+                                                 "  |  Shift+E 회수";
+                else if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
+                    interactionStatusText.text = $"도깨비불 등탑 · 연료 {turret.Controller.FuelRemaining:0}초" +
+                                                 "  |  E 석탄 투입  |  Shift+E 회수";
+                else if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
+                             out var capPercent, out var active))
+                {
+                    var lifetime = float.IsPositiveInfinity(remaining) ? "영구" : $"{remaining:0}초";
+                    var action = record.definitionId == CoolingSourceRuntime.IceJarId
+                        ? "E 얼음 투입"
+                        : "E 상태 확인";
+                    interactionStatusText.text = $"{ItemName(record.definitionId)} · {capPercent:0}% · " +
+                                                 $"{(active ? lifetime : "정지")}  |  {action}  |  Shift+E 회수";
+                }
+                else
+                    interactionStatusText.text = $"{ItemName(record.definitionId)}  |  E 상호작용  |  Shift+E 회수";
                 return;
             }
             interactionStatusText.text = IsPlacementPreviewActive
-                ? $"설치 미리보기 · {(placementValid ? "설치 가능" : "설치 불가")} · T로 확정"
-                : TurretItemCount > 0 ? "V · 건축 패널  |  T · 등탑 설치 미리보기" : string.Empty;
+                ? $"{ItemName(placementDefinitionId)} 설치 · " +
+                  $"{(placementValid ? "설치 가능" : "설치 불가")} · 좌클릭 설치 · ESC/우클릭 취소"
+                : string.Empty;
         }
 
         private bool TryRegisterPlacedTurret(string objectId, int initialFuelUnits, out TurretEntry entry)
@@ -505,6 +631,7 @@ namespace Nyangbingo.World
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed -= HandleInventoryChanged;
             CancelPlacementPreview();
+            anyPlacementPreviewActive = false;
             ClearTurrets();
             if (registered) runtimeServices?.Unregister(this);
             registered = false;

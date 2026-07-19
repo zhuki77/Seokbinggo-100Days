@@ -15,6 +15,6 @@ MonoBehaviour:
   id: ice_anvil
   displayName: "\uC5BC\uC74C \uBAA8\uB8E8"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 6
+  mvpScope: 1
+  note: "T3 \uC81C\uC791\uB300"

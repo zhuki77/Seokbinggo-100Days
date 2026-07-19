@@ -15,6 +15,7 @@ MonoBehaviour:
   id: frost_lantern
   displayName: "\uC11C\uB9AC \uB4F1\uBD88"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uB4F1\uBD88 \uC9C4\uD654 \u2014 \uC6D0\uBCF8 \uC18C\uBAA8. \uC5F0\uB8CC
+    \uC11D\uD0C4\u2192\uC11C\uB9AC\uC815\uC218 (v12)"

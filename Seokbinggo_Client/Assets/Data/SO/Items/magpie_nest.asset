@@ -15,6 +15,7 @@ MonoBehaviour:
   id: magpie_nest
   displayName: "\uAE4C\uCE58 \uB465\uC9C0"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uAE4C\uCE58 \uBC97 \uC785\uC8FC (v6) \u2014 \uB9F5\uB2F9 1\uAC1C \uC81C\uD55C(globals
+    magpie_nest_limit)"

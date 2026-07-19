@@ -15,6 +15,6 @@ MonoBehaviour:
   id: bokjumeoni
   displayName: "\uBCF5\uC8FC\uBA38\uB2C8"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uCC44\uAD74 \uD06C\uB9AC\uD2F0\uCEEC +10%p \u2014 \uC0C1\uC790 \uC804\uC6A9"

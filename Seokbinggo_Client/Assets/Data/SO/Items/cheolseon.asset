@@ -15,6 +15,7 @@ MonoBehaviour:
   id: cheolseon
   displayName: "\uCCA0\uC120"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 4
+  mvpScope: 1
+  note: "\uD569\uC8FD\uC120 \uC9C4\uD654 \u2014 \uC6D0\uBCF8 \uC18C\uBAA8. \uCC44\uAD74
+    \uBD88\uAC00"

@@ -37,6 +37,8 @@ namespace Nyangbingo.Yokai
         private Vector3 dawnFleeDirection;
         private bool hasFledOffscreen;
         private float contactAttackRemaining;
+        private float frostSlowFraction;
+        private float frostSlowRemaining;
         public YokaiDefinition Definition => definition;
         public YokaiSpawnTrack SpawnTrack => spawnTrack;
         public bool IsDawnFleeing => state == State.DawnFlee;
@@ -44,6 +46,8 @@ namespace Nyangbingo.Yokai
         public float SieveCooldownRemaining => sieveCooldownRemaining;
         public float LanternPauseRemaining => lanternPauseRemaining;
         public float BloomCooldownRemaining => bloomCooldownRemaining;
+        public float FrostSlowRemaining => frostSlowRemaining;
+        public float FrostSpeedMultiplier => CalculateFrostSpeedMultiplier(frostSlowFraction, frostSlowRemaining);
         public event System.Action Bloomed;
         public event System.Action Attacked;
         public event System.Action<YokaiDefinition> DawnFleeStarted;
@@ -90,6 +94,8 @@ namespace Nyangbingo.Yokai
             dawnFleeDirection = Vector3.zero;
             hasFledOffscreen = false;
             contactAttackRemaining = 0f;
+            frostSlowFraction = 0f;
+            frostSlowRemaining = 0f;
             health = GetComponent<Health>();
             if (health != null)
             {
@@ -135,6 +141,16 @@ namespace Nyangbingo.Yokai
             ResetGameSecondsSample();
         }
 
+        public bool ApplyFrostSlow(float slowFraction, float durationSeconds)
+        {
+            if (float.IsNaN(slowFraction) || float.IsInfinity(slowFraction) || slowFraction <= 0f ||
+                float.IsNaN(durationSeconds) || float.IsInfinity(durationSeconds) || durationSeconds <= 0f)
+                return false;
+            frostSlowFraction = Mathf.Max(frostSlowFraction, Mathf.Clamp01(slowFraction));
+            frostSlowRemaining = Mathf.Max(frostSlowRemaining, durationSeconds);
+            return true;
+        }
+
         private void Update()
         {
             TickFromGameClock();
@@ -166,9 +182,17 @@ namespace Nyangbingo.Yokai
                 definition == null) return;
             if (health == null) health = GetComponent<Health>();
             if (health != null && health.IsDead) return;
+            var actionSeconds = CalculateFrostAdjustedActionSeconds(
+                deltaSeconds, frostSlowFraction, frostSlowRemaining);
+            frostSlowRemaining = Mathf.Max(0f, frostSlowRemaining - deltaSeconds);
+            if (frostSlowRemaining <= .0001f)
+            {
+                frostSlowRemaining = 0f;
+                frostSlowFraction = 0f;
+            }
             if (state == State.DawnFlee)
             {
-                MoveRetreat(dawnFleeDirection, deltaSeconds);
+                MoveRetreat(dawnFleeDirection, actionSeconds);
                 return;
             }
             if (target == null || target.TargetTransform == null) return;
@@ -186,7 +210,6 @@ namespace Nyangbingo.Yokai
             if (health != null && (definition.Kind == Nyangbingo.Core.YokaiKind.Yagwanggwi ||
                                    definition.Kind == Nyangbingo.Core.YokaiKind.Eoduksini))
                 health.SetDamageTakenMultiplier(YokaiSpecialRules.DamageTakenMultiplier(definition, counters));
-            var actionSeconds = deltaSeconds;
             if (definition.Kind == Nyangbingo.Core.YokaiKind.Yagwanggwi)
             {
                 if (sieveStopRemaining > 0f)
@@ -340,6 +363,25 @@ namespace Nyangbingo.Yokai
 
         private static bool IsWithinAttackRange(float distance, float attackRange) =>
             distance <= attackRange + AttackRangeTolerance;
+
+        public static float CalculateFrostSpeedMultiplier(float slowFraction, float remainingSeconds)
+        {
+            if (float.IsNaN(slowFraction) || float.IsInfinity(slowFraction) ||
+                float.IsNaN(remainingSeconds) || float.IsInfinity(remainingSeconds) || remainingSeconds <= 0f)
+                return 1f;
+            return 1f - Mathf.Clamp01(slowFraction);
+        }
+
+        public static float CalculateFrostAdjustedActionSeconds(float deltaSeconds, float slowFraction,
+            float remainingSeconds)
+        {
+            if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) || deltaSeconds <= 0f) return 0f;
+            var slowedSeconds = float.IsNaN(remainingSeconds) || float.IsInfinity(remainingSeconds)
+                ? 0f
+                : Mathf.Min(deltaSeconds, Mathf.Max(0f, remainingSeconds));
+            var normalSeconds = deltaSeconds - slowedSeconds;
+            return slowedSeconds * CalculateFrostSpeedMultiplier(slowFraction, slowedSeconds) + normalSeconds;
+        }
 
         private static bool IsFinite(Vector3 value)
         {

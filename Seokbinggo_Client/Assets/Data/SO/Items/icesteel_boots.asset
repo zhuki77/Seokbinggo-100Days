@@ -15,6 +15,6 @@ MonoBehaviour:
   id: icesteel_boots
   displayName: "\uC5BC\uC74C\uAC15\uCCA0 \uC2E0\uBC1C"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uBC29\uC5B4 3 \u2014 \uC138\uD2B8: \uC124\uD55C\uD48D \uD55C\uBC8C\uC637"

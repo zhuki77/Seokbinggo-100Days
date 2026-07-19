@@ -15,6 +15,7 @@ MonoBehaviour:
   id: dokkaebi_gamtu
   displayName: "\uB3C4\uAE68\uBE44 \uAC10\uD22C"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uC57C\uAD11\uADC0 \uC778\uBCA4 \uC808\uB3C4 \uBB34\uD6A8 \u2014 \uC0C1\uC790
+    \uC804\uC6A9"

@@ -20,6 +20,8 @@ namespace Nyangbingo.Data
         public const string SealTargetCells = "seal_target_cells";
         public const string BossSavePolicy = "boss_save_policy";
         public const string BaekjungWaveOverflow = "baekjung_wave_overflow";
+        public const string BadgeWallCount = "badge_wall_count";
+        public const string BadgeWindowDays = "badge_window_days";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Global Value")]

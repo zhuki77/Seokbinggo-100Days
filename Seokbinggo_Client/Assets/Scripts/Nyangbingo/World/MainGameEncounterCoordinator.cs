@@ -68,6 +68,16 @@ namespace Nyangbingo.World
         public bool CanSerializeProgress => initialized && bossManager != null && !bossManager.IsBossActive;
         public event Action RaidSlotAvailable;
 
+        public bool HasActiveYokaiWithin(Vector2 position, float radius)
+        {
+            if (float.IsNaN(position.x) || float.IsInfinity(position.x) ||
+                float.IsNaN(position.y) || float.IsInfinity(position.y) ||
+                float.IsNaN(radius) || float.IsInfinity(radius) || radius < 0f) return false;
+            var radiusSquared = radius * radius;
+            return spawnedYokai.Any(entry => IsAlive(entry) && entry.health.gameObject.activeInHierarchy &&
+                ((Vector2)entry.health.transform.position - position).sqrMagnitude <= radiusSquared);
+        }
+
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, BossManager manager, MainGameRaidTarget target,
             CharacterArtCatalog artCatalog = null, GameplayArtCatalog gameplayArt = null)
@@ -539,6 +549,8 @@ namespace Nyangbingo.World
             var loot = yokaiObject.AddComponent<YokaiLoot>();
             loot.ConfigureForRuntime(definition);
             brain.ConfigureForRuntime(definition, raidTarget, instanceSpawnTrack: YokaiSpawnTrack.Raid);
+            var healthBar = yokaiObject.AddComponent<RuntimeWorldHealthBar>();
+            healthBar.ConfigureForRuntime(health, yokaiRenderer);
             health.Died += () => HandleYokaiEnded(health);
             brain.FledOffscreen += ignored => HandleYokaiEnded(health);
             spawnedYokai.Add(new SpawnedYokai { health = health, brain = brain, raid = raid });
@@ -637,5 +649,99 @@ namespace Nyangbingo.World
 
         private static bool IsAlive(SpawnedYokai entry) =>
             entry != null && entry.health != null && !entry.health.IsDead && entry.brain != null;
+    }
+
+    /// <summary>Runtime-spawned yokai health presentation kept separate from combat state.</summary>
+    public sealed class RuntimeWorldHealthBar : MonoBehaviour
+    {
+        private const float BarWidth = 1f;
+        private const float BarHeight = .11f;
+
+        private Health health;
+        private Transform barRoot;
+        private SpriteRenderer fillRenderer;
+        private TextMesh valueText;
+
+        public float FillRatio => health == null || health.MaxHealth <= 0
+            ? 0f
+            : Mathf.Clamp01((float)health.Current / health.MaxHealth);
+
+        public void ConfigureForRuntime(Health targetHealth, SpriteRenderer characterRenderer)
+        {
+            Unbind();
+            health = targetHealth;
+            if (health == null) return;
+
+            var offset = characterRenderer != null && characterRenderer.sprite != null
+                ? Mathf.Max(.72f, characterRenderer.sprite.bounds.max.y + .24f)
+                : .72f;
+            BuildPresentation(offset);
+            health.Damaged += HandleDamaged;
+            Refresh();
+        }
+
+        private void BuildPresentation(float verticalOffset)
+        {
+            var rootObject = new GameObject("HealthBar");
+            barRoot = rootObject.transform;
+            barRoot.SetParent(transform, false);
+            barRoot.localPosition = new Vector3(0f, verticalOffset, 0f);
+
+            var backgroundObject = new GameObject("Background");
+            backgroundObject.transform.SetParent(barRoot, false);
+            var background = backgroundObject.AddComponent<SpriteRenderer>();
+            RuntimePlaceholderVisual.Configure(background, new Color(.05f, .04f, .04f, .92f), 1f, 30);
+            background.transform.localScale = new Vector3(BarWidth + .08f, BarHeight + .06f, 1f);
+
+            var fillObject = new GameObject("Fill");
+            fillObject.transform.SetParent(barRoot, false);
+            fillRenderer = fillObject.AddComponent<SpriteRenderer>();
+            RuntimePlaceholderVisual.Configure(fillRenderer, new Color(.85f, .18f, .12f, 1f), 1f, 31);
+
+            var textObject = new GameObject("Value");
+            textObject.transform.SetParent(barRoot, false);
+            textObject.transform.localPosition = new Vector3(0f, .18f, 0f);
+            valueText = textObject.AddComponent<TextMesh>();
+            valueText.anchor = TextAnchor.LowerCenter;
+            valueText.alignment = TextAlignment.Center;
+            valueText.fontSize = 24;
+            valueText.characterSize = .035f;
+            valueText.color = Color.white;
+            var textRenderer = valueText.GetComponent<MeshRenderer>();
+            if (textRenderer != null) textRenderer.sortingOrder = 32;
+        }
+
+        private void HandleDamaged(DamageTag _, int __) => Refresh();
+
+        private void Refresh()
+        {
+            if (health == null) return;
+            var ratio = FillRatio;
+            if (fillRenderer != null)
+            {
+                fillRenderer.transform.localScale = new Vector3(BarWidth * ratio, BarHeight, 1f);
+                fillRenderer.transform.localPosition = new Vector3(-BarWidth * (1f - ratio) * .5f, 0f, 0f);
+                fillRenderer.color = ratio > .5f
+                    ? new Color(.2f, .8f, .3f, 1f)
+                    : ratio > .25f
+                        ? new Color(1f, .65f, .12f, 1f)
+                        : new Color(.9f, .16f, .12f, 1f);
+            }
+            if (valueText != null) valueText.text = $"{health.Current}/{health.MaxHealth}";
+        }
+
+        private void Unbind()
+        {
+            if (health != null) health.Damaged -= HandleDamaged;
+            if (barRoot != null) Destroy(barRoot.gameObject);
+            barRoot = null;
+            fillRenderer = null;
+            valueText = null;
+        }
+
+        private void OnDestroy()
+        {
+            if (health != null) health.Damaged -= HandleDamaged;
+        }
     }
 }

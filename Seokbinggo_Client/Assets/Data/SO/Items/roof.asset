@@ -15,6 +15,7 @@ MonoBehaviour:
   id: roof
   displayName: "\uCC28\uC5F4 \uC9C0\uBD95"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uBAA8\uB4C8 P0 \u2014 \uC0C1\uBD80 \uBC00\uD3D0. modules.csv \uAE30\uC874
+    id \uC2B9\uACC4"

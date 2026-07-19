@@ -9,7 +9,8 @@ public static class NyangbingoV24DataValidator
     {
         var itemsPath = Path.Combine(directory, "items.csv");
         var craftingPath = Path.Combine(directory, "crafting-tree.csv");
-        if (!File.Exists(itemsPath) || !File.Exists(craftingPath)) return false;
+        var accessoriesPath = Path.Combine(directory, "accessories.csv");
+        if (!File.Exists(itemsPath) || !File.Exists(craftingPath) || !File.Exists(accessoriesPath)) return false;
         var rows = NyangbingoCsvUtility.ReadRows(itemsPath);
         return rows.Count > 0 && rows[0].ContainsKey("name_ko") && rows[0].ContainsKey("category") &&
                rows[0].ContainsKey("max_stack") && rows[0].ContainsKey("mvp_scope");
@@ -45,16 +46,41 @@ public static class NyangbingoV24DataValidator
         var bossIds = BuildIdSet(bosses, "bosses.csv", "id");
         var yokaiIds = BuildIdSet(yokai, "yokai-stats.csv", "id");
         var craftingById = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        var hasOutputCount = crafting.Count > 0 && crafting[0].ContainsKey("output_count");
+        var totalOutputCount = 0;
         var referenceCount = 0;
         foreach (var row in crafting)
         {
             var id = Value(row, "id", "crafting-tree.csv");
             craftingById.Add(id, row);
+            var outputCount = hasOutputCount
+                ? PositiveInt(Value(row, "output_count", "crafting-tree.csv"), "crafting-tree.csv", "output_count")
+                : 1;
+            totalOutputCount += outputCount;
+            var type = Value(row, "type", "crafting-tree.csv");
+            if (!IsCraftingType(type))
+                throw new InvalidDataException($"crafting-tree.csv recipe '{id}' has unknown type '{type}'.");
+            var scope = Value(row, "mvp_scope", "crafting-tree.csv");
+            if (!string.Equals(scope, "A", StringComparison.Ordinal) &&
+                !string.Equals(scope, "B", StringComparison.Ordinal))
+                throw new InvalidDataException($"crafting-tree.csv recipe '{id}' has unknown mvp_scope '{scope}'.");
             RequireItem(itemIds, id, "crafting-tree.csv", "id");
             RequireOptionalItem(itemIds, Value(row, "station_id", "crafting-tree.csv"),
                 "crafting-tree.csv", "station_id");
             referenceCount += 2 + ValidateItemPairs(itemIds, Value(row, "materials", "crafting-tree.csv"),
                 "crafting-tree.csv", "materials").Count;
+        }
+
+        if (hasOutputCount && craftingById.TryGetValue("wallpaper", out var wallpaper))
+        {
+            if (PositiveInt(Value(wallpaper, "output_count", "crafting-tree.csv"),
+                    "crafting-tree.csv", "output_count") != 16 ||
+                !string.Equals(Value(wallpaper, "station_id", "crafting-tree.csv"), "workbench",
+                    StringComparison.Ordinal) ||
+                !PairsEqual(ParsePairs(Value(wallpaper, "materials", "crafting-tree.csv"),
+                        "crafting-tree.csv", "materials"),
+                    new Dictionary<string, int>(StringComparer.Ordinal) { { "clay", 3 }, { "wood", 5 } }))
+                throw new InvalidDataException("crafting-tree.csv wallpaper recipe does not match the v26 contract.");
         }
 
         foreach (var row in bosses)
@@ -206,7 +232,8 @@ public static class NyangbingoV24DataValidator
             ValidateMigrations(migrations, itemIds, yokaiIds, bossIds, smeltingIds);
         }
 
-        return $"{itemIds.Count} item IDs, {referenceCount} item references, " +
+        return $"{itemIds.Count} item IDs, {crafting.Count} recipes producing {totalOutputCount} items, " +
+               $"{referenceCount} item references, " +
                $"{bosses.Count} boss recipes, {days.Count} day compositions" +
                (isV241 ? $", and {migrations.Count} ID migrations validated" : " validated");
     }
@@ -376,6 +403,32 @@ public static class NyangbingoV24DataValidator
         var value = NonNegativeInt(text, file, column);
         if (value > 1) throw new InvalidDataException($"{file}.{column} must be 0 or 1.");
         return value;
+    }
+
+    private static bool IsCraftingType(string value)
+    {
+        switch (value)
+        {
+            case "armor":
+            case "claw":
+            case "coldsource":
+            case "cooling":
+            case "deco":
+            case "device":
+            case "evo":
+            case "insulation":
+            case "module":
+            case "placeable":
+            case "station":
+            case "summon":
+            case "turret":
+            case "util":
+            case "wall":
+            case "weapon":
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static int PositiveInt(string text, string file, string column)

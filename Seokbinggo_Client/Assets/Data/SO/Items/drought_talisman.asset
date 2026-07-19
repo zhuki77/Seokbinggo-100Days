@@ -15,6 +15,6 @@ MonoBehaviour:
   id: drought_talisman
   displayName: "\uAC00\uBB44 \uBD80\uC801"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 8
+  mvpScope: 1
+  note: "\uAC15\uCCA0\uC774 \uC7AC\uC18C\uD658(\uCD5C\uCD08 \uACA9\uD1F4 \uD6C4 \uD574\uAE08)"

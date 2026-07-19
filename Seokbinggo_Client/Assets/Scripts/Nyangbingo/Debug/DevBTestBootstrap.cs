@@ -56,6 +56,10 @@ namespace Nyangbingo.Debugging
             TestSmeltingSharedInputFuelTransaction();
             TestSmeltingRestoreValidation();
             TestGameDataCatalog();
+            TestImportedV26DataContract();
+            TestCoolingSourceRuntimeAndSaveContract();
+            TestNapRuntimeContract();
+            TestDeathTearPouchRuntimeContract();
             TestImportedModules();
             TestImportedMineralTiers();
             TestImportedSealWhitelist();
@@ -63,6 +67,10 @@ namespace Nyangbingo.Debugging
             TestImportedDayCurve();
             TestImportedGlobals();
             TestImportedCombatProfiles();
+            TestSideScrollerMovementContract();
+            TestTimedMiningPresentationContract();
+            TestIceSteelClawAbilitiesContract();
+            TestGoalBadgeProgressContract();
             TestGameDataCatalogInvalidEntryRejection();
             TestImportedBossDefinitions();
             TestBossCombatRuntime();
@@ -80,6 +88,7 @@ namespace Nyangbingo.Debugging
             TestImportedYokaiCodexPresentation();
             TestAudioEventRoutingAndRuntimePool();
             TestGameShellTitlePauseSettingsAndResult();
+            TestProductCraftingStationDefinitionContract();
             TestImportedAccessoryStatsAndTheftProtection();
             TestImportedArmorStatsRecipesAndSetBonus();
             TestEquipmentCollectionSaveRoundTrip();
@@ -270,14 +279,26 @@ namespace Nyangbingo.Debugging
             var sealChangedCount = 0;
             var placedPosition = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
             var brokenPosition = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+            var miningResultPosition = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+            string miningResultItem = null;
+            var miningResultAmount = 0;
+            var miningResultCritical = false;
             System.Action onDayStart = () => dayStartCount++;
             System.Action onNightStart = () => nightStartCount++;
             System.Action onDawnWarning = () => dawnWarningCount++;
             System.Action onSealChanged = () => sealChangedCount++;
             System.Action<Vector3Int> onTilePlaced = position => placedPosition = position;
             System.Action<Vector3Int> onTileBroken = position => brokenPosition = position;
+            System.Action<Vector3Int, string, int, bool> onMiningResult = (position, item, amount, critical) =>
+            {
+                miningResultPosition = position;
+                miningResultItem = item;
+                miningResultAmount = amount;
+                miningResultCritical = critical;
+            };
             var expectedPlaced = new Vector3Int(3, -4, 0);
             var expectedBroken = new Vector3Int(-7, 8, 1);
+            var expectedMining = new Vector3Int(5, 6, 0);
 
             GameEvents.OnDayStart += onDayStart;
             GameEvents.OnNightStart += onNightStart;
@@ -285,6 +306,7 @@ namespace Nyangbingo.Debugging
             GameEvents.OnSealChanged += onSealChanged;
             GameEvents.OnTilePlaced += onTilePlaced;
             GameEvents.OnTileBroken += onTileBroken;
+            GameEvents.OnMiningResult += onMiningResult;
             try
             {
                 GameEvents.RaiseDayStart();
@@ -293,6 +315,7 @@ namespace Nyangbingo.Debugging
                 GameEvents.RaiseSealChanged();
                 GameEvents.RaiseTilePlaced(expectedPlaced);
                 GameEvents.RaiseTileBroken(expectedBroken);
+                GameEvents.RaiseMiningResult(expectedMining, "돌", 2, true);
             }
             finally
             {
@@ -302,6 +325,7 @@ namespace Nyangbingo.Debugging
                 GameEvents.OnSealChanged -= onSealChanged;
                 GameEvents.OnTilePlaced -= onTilePlaced;
                 GameEvents.OnTileBroken -= onTileBroken;
+                GameEvents.OnMiningResult -= onMiningResult;
             }
 
             GameEvents.RaiseDayStart();
@@ -310,9 +334,12 @@ namespace Nyangbingo.Debugging
             GameEvents.RaiseSealChanged();
             GameEvents.RaiseTilePlaced(Vector3Int.zero);
             GameEvents.RaiseTileBroken(Vector3Int.zero);
+            GameEvents.RaiseMiningResult(Vector3Int.zero, "흙", 1, false);
 
             if (dayStartCount == 1 && nightStartCount == 1 && dawnWarningCount == 1 && sealChangedCount == 1 &&
-                placedPosition == expectedPlaced && brokenPosition == expectedBroken)
+                placedPosition == expectedPlaced && brokenPosition == expectedBroken &&
+                miningResultPosition == expectedMining && miningResultItem == "돌" && miningResultAmount == 2 &&
+                miningResultCritical)
                 Debug.Log("[Nyangbingo] Core GameEvents payload delivery and static unsubscription completed.");
             else Debug.LogError("[Nyangbingo] Core GameEvents hub test failed.");
         }
@@ -616,6 +643,257 @@ namespace Nyangbingo.Debugging
                 Debug.LogError("[Nyangbingo] Game data catalog ID lookup test failed.");
         }
 
+        private void TestImportedV26DataContract()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] v26 data contract catalog reference is missing.");
+                return;
+            }
+
+            var wallpaperItem = gameDataCatalog.FindItem("wallpaper");
+            var wallpaperRecipe = gameDataCatalog.FindRecipe("wallpaper");
+            var wallpaperRule = gameDataCatalog.FindSealRule("배경벽(벽지)");
+            var coverage = gameDataCatalog.FindGlobal("wallpaper_coverage");
+            var durationBonus = gameDataCatalog.FindGlobal("wallpaper_coldsource_bonus");
+            var removeRule = gameDataCatalog.FindGlobal("wallpaper_remove_rule");
+            var scopeACount = 0;
+            var scopeBCount = 0;
+            var productVisibleCount = 0;
+            var productScopeBLeak = false;
+            for (var index = 0; index < gameDataCatalog.Recipes.Count; index++)
+            {
+                var recipe = gameDataCatalog.Recipes[index];
+                if (recipe == null) continue;
+                if (recipe.MvpScope == ItemMvpScope.A) scopeACount++;
+                else if (recipe.MvpScope == ItemMvpScope.B) scopeBCount++;
+                if (MainGameCraftingUiController.ShouldShowRecipe(recipe, true))
+                {
+                    productVisibleCount++;
+                    productScopeBLeak |= recipe.MvpScope == ItemMvpScope.B;
+                }
+            }
+
+            var valid = gameDataCatalog.Items.Count == 86 && gameDataCatalog.Recipes.Count == 54 &&
+                        gameDataCatalog.Globals.Count == 83 && gameDataCatalog.SealWhitelist.Count == 23 &&
+                        scopeACount == 50 && scopeBCount == 4 && productVisibleCount == 50 &&
+                        !productScopeBLeak &&
+                        wallpaperItem != null && wallpaperItem.Category == ItemCategory.Placeable &&
+                        wallpaperItem.MvpScope == ItemMvpScope.A &&
+                        wallpaperRecipe != null && wallpaperRecipe.Station == CraftingStation.Workbench &&
+                        wallpaperRecipe.Output.item == wallpaperItem && wallpaperRecipe.Output.amount == 16 &&
+                        wallpaperRecipe.DurationSeconds == 5f && wallpaperRecipe.Type == RecipeType.Placeable &&
+                        wallpaperRecipe.MvpScope == ItemMvpScope.A &&
+                        RecipeHasIngredient(wallpaperRecipe, "clay", 3) &&
+                        RecipeHasIngredient(wallpaperRecipe, "wood", 5) &&
+                        wallpaperRule != null && !wallpaperRule.Seals &&
+                        coverage != null && coverage.Value == "100" &&
+                        durationBonus != null && durationBonus.Value == "25" &&
+                        removeRule != null && removeRule.Value == "restore_original" &&
+                        IsScopeBRecipe("iron_bait_pile") && IsScopeBRecipe("ice_altar_offering") &&
+                        IsScopeBRecipe("singijeon_cart") && IsScopeBRecipe("ice_crystal_cooler");
+
+            if (valid)
+                Debug.Log("[Nyangbingo] v26 data contract completed: 86 items, 54 recipes (A50/B4), " +
+                          "wallpaper output 16, 83 globals, and 23 seal rules.");
+            else
+                Debug.LogError("[Nyangbingo] v26 data contract test failed.");
+        }
+
+        private bool IsScopeBRecipe(string id)
+        {
+            var item = gameDataCatalog.FindItem(id);
+            var recipe = gameDataCatalog.FindRecipe(id);
+            return item != null && item.MvpScope == ItemMvpScope.B && recipe != null &&
+                   recipe.Output.item == item && recipe.Output.amount == 1 && recipe.MvpScope == ItemMvpScope.B;
+        }
+
+        private void TestCoolingSourceRuntimeAndSaveContract()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Cooling source runtime catalog reference is missing.");
+                return;
+            }
+
+            var runtime = new CoolingSourceRuntime(gameDataCatalog);
+            var expiredCount = 0;
+            runtime.ConsumableExpired += _ => expiredCount++;
+            var registered = runtime.TryRegister("water_1", CoolingSourceRuntime.WaterJarId) &&
+                             runtime.TryRegister("ice_jar_1", CoolingSourceRuntime.IceJarId, true);
+            var initial = registered && runtime.Count == 2 && runtime.ActiveCount == 2 &&
+                          Mathf.Approximately(runtime.CoolingCapPercent, 50f);
+            runtime.Tick(180f);
+            var waterExpired = expiredCount == 1 && runtime.Count == 1 && runtime.ActiveCount == 1 &&
+                               runtime.TryGetRemaining("ice_jar_1", out var iceRemaining) &&
+                               Mathf.Approximately(iceRemaining, 120f);
+            runtime.Tick(120f);
+            var fuelExhausted = runtime.Count == 1 && runtime.ActiveCount == 0 &&
+                                Mathf.Approximately(runtime.CoolingCapPercent, 0f);
+            var refueled = runtime.TryAddIceFuel("ice_jar_1", 2) &&
+                           runtime.TryGetRemaining("ice_jar_1", out iceRemaining) &&
+                           Mathf.Approximately(iceRemaining, 600f) && runtime.ActiveCount == 1 &&
+                           Mathf.Approximately(runtime.CoolingCapPercent, 50f);
+            var productStatus = runtime.TryGetStatus("ice_jar_1", out var statusRemaining,
+                                    out var statusCap, out var statusActive) && statusActive &&
+                                Mathf.Approximately(statusRemaining, 600f) &&
+                                Mathf.Approximately(statusCap, 50f);
+            var permanent = runtime.TryRegister("storage_1", CoolingSourceRuntime.IceStorageId) &&
+                            runtime.TryRegister("cooler_1", CoolingSourceRuntime.IceCrystalCoolerId) &&
+                            runtime.ActiveCount == 3 && Mathf.Approximately(runtime.CoolingCapPercent, 100f);
+
+            var save = new SaveGame();
+            var snapshots = runtime.ExportSnapshots();
+            for (var index = 0; index < snapshots.Count; index++)
+            {
+                var snapshot = snapshots[index];
+                save.coolingSources.Add(new CoolingSourceStateRecord
+                {
+                    objectId = snapshot.ObjectId,
+                    definitionId = snapshot.DefinitionId,
+                    remainingGameSeconds = snapshot.RemainingGameSeconds
+                });
+            }
+            var serialized = JsonUtility.ToJson(save);
+            var loaded = JsonUtility.FromJson<SaveGame>(serialized);
+            loaded.NormalizeAfterLoad();
+            var restored = new CoolingSourceRuntime(gameDataCatalog);
+            var restoredAll = loaded.schemaVersion == SaveGame.CurrentSchemaVersion &&
+                              loaded.coolingSources.Count == 3;
+            for (var index = 0; index < loaded.coolingSources.Count; index++)
+            {
+                var state = loaded.coolingSources[index];
+                restoredAll &= restored.TryRestore(
+                    state.objectId, state.definitionId, state.remainingGameSeconds);
+            }
+            restoredAll &= restored.Count == 3 && restored.ActiveCount == 3 &&
+                           Mathf.Approximately(restored.CoolingCapPercent, 100f) &&
+                           restored.TryGetRemaining("ice_jar_1", out var restoredFuel) &&
+                           Mathf.Approximately(restoredFuel, 600f);
+
+            var invalidGuard = !runtime.TryAddIceFuel("ice_jar_1", 0) &&
+                               !runtime.TryAddIceFuel("storage_1", 1) &&
+                               !runtime.TryRestore("bad", CoolingSourceRuntime.WaterJarId, float.NaN);
+
+            if (initial && waterExpired && fuelExhausted && refueled && productStatus && permanent &&
+                restoredAll && invalidGuard)
+                Debug.Log("[Nyangbingo] Cooling sources completed: water jar 180 seconds, ice jar 300-second fuel, " +
+                          "25/50/100% caps, permanent sources, and versioned save round-trip.");
+            else
+                Debug.LogError("[Nyangbingo] Cooling source lifetime, cap, or save contract test failed.");
+        }
+
+        private void TestNapRuntimeContract()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Nap runtime catalog reference is missing.");
+                return;
+            }
+
+            var timeObject = new GameObject("TemporaryNapTimeSource");
+            var time = timeObject.AddComponent<DayNightService>();
+            var originalUnityTimeScale = Time.timeScale;
+            var recoveryMultiplier = 1f;
+            var valid = time.ConfigureOfficialData(gameDataCatalog) &&
+                        time.RestoreTimeState(3, 0f, false);
+            time.TimeScale = 2f;
+            var nap = new NapService(gameDataCatalog, time, value => recoveryMultiplier = value);
+
+            valid &= !nap.CanStart(false, true) && !nap.CanStart(true, false);
+            valid &= time.RestoreTimeState(3, time.DayDurationSeconds - 59f, false) &&
+                     !nap.CanStart(true, true);
+            valid &= time.RestoreTimeState(3, 0f, false) &&
+                     nap.TryStart(true, true, true) && nap.IsNapping &&
+                     Mathf.Approximately(time.TimeScale, 4f) &&
+                     Mathf.Approximately(recoveryMultiplier, 4.5f) &&
+                     Mathf.Approximately(Time.timeScale, originalUnityTimeScale) &&
+                     nap.Wake(NapWakeReason.PlayerDamaged) && !nap.IsNapping &&
+                     nap.LastWakeReason == NapWakeReason.PlayerDamaged &&
+                     Mathf.Approximately(time.TimeScale, 2f) &&
+                     Mathf.Approximately(recoveryMultiplier, 1f);
+
+            valid &= nap.TryStart(true, true) && Mathf.Approximately(recoveryMultiplier, 3f);
+            time.Tick(time.SecondsUntilNextTransition);
+            valid &= !nap.IsNapping && time.IsNight && nap.LastWakeReason == NapWakeReason.NightStarted &&
+                     Mathf.Approximately(time.TimeScale, 2f) && Mathf.Approximately(recoveryMultiplier, 1f);
+
+            valid &= time.RestoreTimeState(4, 0f, false) && nap.TryStart(true, true) &&
+                     nap.Wake(NapWakeReason.WallDamaged) &&
+                     nap.LastWakeReason == NapWakeReason.WallDamaged;
+            nap.Dispose();
+            Destroy(timeObject);
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Nap completed: sealed nest/day-only gate, 60-second guard, " +
+                          "game-time x4, recovery x3, jukbuin x1.5 hook, and damage/night wake-up.");
+            else
+                Debug.LogError("[Nyangbingo] Nap gate, multiplier, or wake-up contract test failed.");
+        }
+
+        private void TestDeathTearPouchRuntimeContract()
+        {
+            if (gameDataCatalog == null)
+            {
+                Debug.LogError("[Nyangbingo] Death tear pouch runtime catalog reference is missing.");
+                return;
+            }
+
+            var tear = gameDataCatalog.FindItem(DeathTearPouchRuntime.TearItemId);
+            var timeObject = new GameObject("TemporaryDeathPouchTimeSource");
+            var time = timeObject.AddComponent<DayNightService>();
+            var valid = tear != null && time.ConfigureOfficialData(gameDataCatalog) &&
+                        time.RestoreTimeState(5, 0f, false);
+            var inventory = new Nyangbingo.Inventory.Inventory(
+                id => id == DeathTearPouchRuntime.TearItemId ? tear : null);
+            valid &= inventory.TryAdd(DeathTearPouchRuntime.TearItemId, 24);
+            var runtime = new DeathTearPouchRuntime(inventory, time);
+            var firstDrop = runtime.DropTwentyPercent(new Vector2(2f, 3f));
+            valid &= firstDrop == 4 && inventory.Count(DeathTearPouchRuntime.TearItemId) == 20 &&
+                     runtime.Active.Count == 1 && runtime.Active[0].expireOnDay == 7;
+            valid &= inventory.TryAdd(DeathTearPouchRuntime.TearItemId, 5);
+            var secondDrop = runtime.DropTwentyPercent(new Vector2(8f, 9f));
+            valid &= secondDrop == 5 && inventory.Count(DeathTearPouchRuntime.TearItemId) == 20 &&
+                     runtime.Active.Count == 2;
+
+            var save = new SaveGame { deathTearPouches = runtime.Export() };
+            var loaded = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
+            loaded?.NormalizeAfterLoad();
+            var restoredInventory = new Nyangbingo.Inventory.Inventory(
+                id => id == DeathTearPouchRuntime.TearItemId ? tear : null);
+            var restored = new DeathTearPouchRuntime(restoredInventory, time);
+            valid &= loaded != null && loaded.schemaVersion == SaveGame.CurrentSchemaVersion &&
+                     restored.Restore(loaded.deathTearPouches) && restored.Active.Count == 2 &&
+                     restored.TryCollectWithin(new Vector2(2f, 3f), .1f) &&
+                     restoredInventory.Count(DeathTearPouchRuntime.TearItemId) == 4 && restored.Active.Count == 1;
+
+            time.Tick(time.CycleLengthSeconds);
+            valid &= time.Day == 6 && restored.Active.Count == 1;
+            time.Tick(time.CycleLengthSeconds);
+            valid &= time.Day == 7 && restored.Active.Count == 0;
+
+            restored.Dispose();
+            runtime.Dispose();
+            Destroy(timeObject);
+            if (valid)
+                Debug.Log("[Nyangbingo] Death and respawn tear penalty completed: floor 20%, one pouch per death, " +
+                          "proximity recovery, D+1 night expiry, and schema v13 save round-trip.");
+            else
+                Debug.LogError("[Nyangbingo] Death tear drop, recovery, expiry, or save contract test failed.");
+        }
+
+        private static bool RecipeHasIngredient(RecipeDefinition recipe, string itemId, int amount)
+        {
+            if (recipe?.Ingredients == null) return false;
+            for (var index = 0; index < recipe.Ingredients.Length; index++)
+            {
+                var ingredient = recipe.Ingredients[index];
+                if (ingredient.item != null && ingredient.item.Id == itemId && ingredient.amount == amount)
+                    return true;
+            }
+            return false;
+        }
+
         private void TestImportedModules()
         {
             if (gameDataCatalog == null)
@@ -754,10 +1032,12 @@ namespace Nyangbingo.Debugging
             var insulWall = gameDataCatalog.FindSealRule("차열벽");
             var naturalTerrain = gameDataCatalog.FindSealRule(SealBoundaryPolicy.NaturalTerrainElement);
             var tunnelAir = gameDataCatalog.FindSealRule(SealBoundaryPolicy.AirElement);
+            var wallpaperBackground = gameDataCatalog.FindSealRule("배경벽(벽지)");
             var policy = new SealBoundaryPolicy(whitelist);
-            var rulesValid = whitelist.Count == 22 && sealingRuleCount == 7 && policy.IsValid &&
+            var rulesValid = whitelist.Count == 23 && sealingRuleCount == 7 && policy.IsValid &&
                              insulWall != null && insulWall.Seals && naturalTerrain != null && naturalTerrain.Seals &&
-                             tunnelAir != null && !tunnelAir.Seals;
+                             tunnelAir != null && !tunnelAir.Seals &&
+                             wallpaperBackground != null && !wallpaperBackground.Seals;
 
             var sealedTiles = CreateSealTestRoom("insul_wall");
             var sealedService = new TileService(sealedTiles, null, gameDataCatalog, 1);
@@ -781,7 +1061,7 @@ namespace Nyangbingo.Debugging
             var attachmentDoesNotSealAlone = !policy.Seals(attachmentTile);
 
             if (rulesValid && artificialRoomSealed && storageDoesNotSeal && attachmentDoesNotSealAlone)
-                Debug.Log("[Nyangbingo] Official 22 seal whitelist rules and artificial boundary policy completed.");
+                Debug.Log("[Nyangbingo] Official 23 seal whitelist rules, wallpaper background, and artificial boundary policy completed.");
             else Debug.LogError("[Nyangbingo] Imported seal whitelist or boundary policy test failed.");
         }
 
@@ -933,8 +1213,8 @@ namespace Nyangbingo.Debugging
                 if (definitions[i].TryGetBool(out _)) boolCount++;
             }
 
-            var valid = definitions.Count == 80 && settings.IsValid && settings.Count == 80 &&
-                        numericCount == 68 && boolCount == 2 &&
+            var valid = definitions.Count == 83 && settings.IsValid && settings.Count == 83 &&
+                        numericCount == 70 && boolCount == 2 &&
                         settings.TryGetFloat(GlobalKeys.DayLengthSeconds, out var dayLength) &&
                         settings.TryGetFloat(GlobalKeys.NightLengthSeconds, out var nightLength) &&
                         settings.TryGetFloat(GlobalKeys.DayTotalSeconds, out var totalLength) &&
@@ -950,7 +1230,12 @@ namespace Nyangbingo.Debugging
                         sealCap == (2 * radiusX + 1) * (2 * radiusY + 1) &&
                         settings.TryGetInt(GlobalKeys.SealTargetCells, out var targetCells) && targetCells == 240 &&
                         settings.GetString(GlobalKeys.BossSavePolicy) == "no_serialize" &&
-                        settings.GetString(GlobalKeys.BaekjungWaveOverflow) == "queue_until_dawn";
+                        settings.GetString(GlobalKeys.BaekjungWaveOverflow) == "queue_until_dawn" &&
+                        settings.TryGetFloat("wallpaper_coverage", out var wallpaperCoverage) &&
+                        Mathf.Approximately(wallpaperCoverage, 100f) &&
+                        settings.TryGetFloat("wallpaper_coldsource_bonus", out var wallpaperColdsourceBonus) &&
+                        Mathf.Approximately(wallpaperColdsourceBonus, 25f) &&
+                        settings.GetString("wallpaper_remove_rule") == "restore_original";
 
             var timeObject = new GameObject("TemporaryOfficialGlobalsTimeSource");
             var time = timeObject.AddComponent<DayNightService>();
@@ -970,7 +1255,7 @@ namespace Nyangbingo.Debugging
             Destroy(timeObject);
 
             if (valid)
-                Debug.Log("[Nyangbingo] Official 80 globals, D-100/MVP-30 separation, typed contracts, and 540-second first night completed.");
+                Debug.Log("[Nyangbingo] Official 83 globals, v26 wallpaper contracts, D-100/MVP-30 separation, and 540-second first night completed.");
             else Debug.LogError("[Nyangbingo] Imported globals or runtime binding test failed.");
         }
 
@@ -1033,14 +1318,236 @@ namespace Nyangbingo.Debugging
             attack.Strike(Vector2.right);
             var cheolseonSwing = firstHealth.Current == 4 && secondHealth.Current == 4 && !attack.HitsWalls;
 
-            if (profilesMatch && hapjukseonConfigured && noBasicAttack && cheolseonConfigured && cheolseonSwing)
-                Debug.Log("[Nyangbingo] Official seven weapon and claw combat profiles and fan attack contracts completed.");
+            firstHealth.RestoreCurrent(10);
+            secondHealth.RestoreCurrent(10);
+            var emptyMaskFallbackConfigured = attack.ConfigureForRuntime(attacker.transform, default,
+                gameDataCatalog.FindCombatProfile("bare_claw"));
+            attack.Strike(Vector2.right);
+            var emptyMaskFallbackDamaged = firstHealth.Current == 5 && secondHealth.Current == 5 &&
+                                           attack.LastHitCount == 2;
+            var healthBar = firstTarget.AddComponent<RuntimeWorldHealthBar>();
+            healthBar.ConfigureForRuntime(firstHealth, null);
+            var healthBarMatches = Mathf.Approximately(healthBar.FillRatio, .5f) &&
+                                   firstTarget.transform.Find("HealthBar") != null;
+            var bossHealthRatioMatches =
+                Mathf.Approximately(MainGameHudController.CalculateHealthRatio(450, 900), .5f) &&
+                Mathf.Approximately(MainGameHudController.CalculateHealthRatio(-1, 900), 0f) &&
+                Mathf.Approximately(MainGameHudController.CalculateHealthRatio(901, 900), 1f) &&
+                Mathf.Approximately(MainGameHudController.CalculateHealthRatio(10, 0), 0f);
+            var miningCriticalMatches =
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningCriticalChance(.15f, .1f), .25f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningCriticalChance(.15f, .2f), .25f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningCriticalChance(float.NaN, .1f), .1f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningCriticalChance(-1f, 0f), 0f);
+
+            if (profilesMatch && hapjukseonConfigured && noBasicAttack && cheolseonConfigured && cheolseonSwing &&
+                emptyMaskFallbackConfigured && emptyMaskFallbackDamaged && healthBarMatches && bossHealthRatioMatches &&
+                miningCriticalMatches)
+                Debug.Log("[Nyangbingo] Official combat, product mining, 25% critical cap, world HP, and boss HUD HP contracts completed.");
             else
                 Debug.LogError("[Nyangbingo] Imported weapon or claw combat profile test failed.");
 
             Destroy(attacker);
             Destroy(firstTarget);
             Destroy(secondTarget);
+        }
+
+        private static void TestSideScrollerMovementContract()
+        {
+            var horizontalOnly =
+                Mathf.Approximately(MainGamePlayerController.CalculateHorizontalVelocity(1f, 3f), 3f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateHorizontalVelocity(-2f, 3f), -3f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateHorizontalVelocity(float.NaN, 3f), 0f);
+            var gravityMatches =
+                Mathf.Approximately(MainGamePlayerController.ApplyGravity(0f, 20f, 14f, .5f), -10f) &&
+                Mathf.Approximately(MainGamePlayerController.ApplyGravity(-10f, 20f, 14f, .5f), -14f) &&
+                Mathf.Approximately(MainGamePlayerController.ApplyGravity(float.NaN, 20f, 14f, .5f), -10f);
+            var doubleJumpMatches = Mathf.Approximately(
+                MainGamePlayerController.CalculateJumpVelocityForHeightRatio(10f, .8f),
+                10f * Mathf.Sqrt(.8f));
+
+            if (horizontalOnly && gravityMatches && doubleJumpMatches)
+                Debug.Log("[Nyangbingo] Side-scroller horizontal movement, gravity, ground jump, and 80% double-jump contracts completed.");
+            else Debug.LogError("[Nyangbingo] Side-scroller movement contract failed.");
+        }
+
+        private void TestTimedMiningPresentationContract()
+        {
+            var mappingMatches =
+                MainGamePlayerController.ResolveMiningDefinitionId(WorldTileTypes.StoneMid) ==
+                WorldTileTypes.Stone &&
+                MainGamePlayerController.ResolveMiningDefinitionId(WorldTileTypes.StoneDeep) ==
+                WorldTileTypes.Stone &&
+                MainGamePlayerController.ResolveMiningDefinitionId(WorldTileTypes.RuinWall) ==
+                WorldTileTypes.Stone &&
+                MainGamePlayerController.ResolveMiningDefinitionId(WorldTileTypes.IceLake) ==
+                WorldTileTypes.IceShard &&
+                MainGamePlayerController.ResolveMiningDefinitionId(WorldTileTypes.IronOre) ==
+                WorldTileTypes.IronOre;
+            var progressMatches =
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningProgress(.25f, 1f), .25f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningProgress(2f, 1f), 1f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningProgress(-1f, 1f), 0f) &&
+                Mathf.Approximately(MainGamePlayerController.CalculateMiningProgress(1f, 0f), 0f);
+            var officialTimesMatch = gameDataCatalog != null &&
+                Mathf.Approximately(gameDataCatalog.FindMineralTier(WorldTileTypes.Dirt)?
+                    .MiningSecondsForClawTier(1) ?? -1f, 1f) &&
+                Mathf.Approximately(gameDataCatalog.FindMineralTier(WorldTileTypes.IronOre)?
+                    .MiningSecondsForClawTier(1) ?? -1f, 3f) &&
+                Mathf.Approximately(gameDataCatalog.FindMineralTier(WorldTileTypes.IceSteelOre)?
+                    .MiningSecondsForClawTier(1) ?? 0f, -1f) &&
+                Mathf.Approximately(gameDataCatalog.FindMineralTier(WorldTileTypes.IceSteelOre)?
+                    .MiningSecondsForClawTier(2) ?? -1f, 4f);
+
+            if (mappingMatches && progressMatches && officialTimesMatch)
+                Debug.Log("[Nyangbingo] Timed mining uses official claw seconds, hard gates, hold progress, and three-stage crack presentation.");
+            else Debug.LogError("[Nyangbingo] Timed mining presentation contract failed.");
+        }
+
+        private void TestIceSteelClawAbilitiesContract()
+        {
+            var slowDefinition = gameDataCatalog?.FindGlobal("claw_t3_slow");
+            var slowFraction = 0f;
+            var slowConfigured = slowDefinition != null && slowDefinition.TryGetFloat(out slowFraction) &&
+                                 Mathf.Approximately(slowFraction, .3f);
+            var frostMathMatches =
+                Mathf.Approximately(YokaiBrain.CalculateFrostSpeedMultiplier(.3f, 2f), .7f) &&
+                Mathf.Approximately(YokaiBrain.CalculateFrostAdjustedActionSeconds(1f, .3f, 2f), .7f) &&
+                Mathf.Approximately(YokaiBrain.CalculateFrostAdjustedActionSeconds(1f, .3f, .5f), .85f) &&
+                Mathf.Approximately(YokaiBrain.CalculateFrostSpeedMultiplier(.3f, 0f), 1f);
+            var primary = new Vector3Int(10, 20, 0);
+            var wideMiningMatches =
+                MainGamePlayerController.ResolveWideMiningCompanionCell(primary, 21f) == primary + Vector3Int.down &&
+                MainGamePlayerController.ResolveWideMiningCompanionCell(primary, 19f) == primary + Vector3Int.up &&
+                MainGamePlayerController.ResolveWideMiningCompanionCell(primary, float.NaN) == primary + Vector3Int.up;
+
+            var attacker = new GameObject("TemporaryIceSteelClawAttacker");
+            var attack = attacker.AddComponent<MeleeArcAttack>();
+            var target = new GameObject("TemporaryIceSteelClawTarget");
+            target.transform.position = Vector3.right;
+            target.AddComponent<BoxCollider2D>();
+            var health = target.AddComponent<Health>();
+            health.ConfigureForRuntime(50);
+            var brain = target.AddComponent<YokaiBrain>();
+            var definition = YokaiDefinition.CreateRuntime(
+                YokaiKind.ClubGoblin, 50, 2f, 5, 1f, System.Array.Empty<ItemAmount>());
+            brain.ConfigureForRuntime(definition, null);
+            var profileConfigured = attack.ConfigureForRuntime(
+                attacker.transform, Physics2D.AllLayers, gameDataCatalog?.FindCombatProfile("icesteel_claw"));
+            attack.ConfigureFrostSlow(slowConfigured ? slowFraction : 0f, 2f);
+            Physics2D.SyncTransforms();
+            attack.Strike(Vector2.right);
+            var frostApplied = profileConfigured && health.Current == 30 &&
+                               Mathf.Approximately(brain.FrostSlowRemaining, 2f) &&
+                               Mathf.Approximately(brain.FrostSpeedMultiplier, .7f);
+            brain.Tick(1f);
+            frostApplied &= Mathf.Approximately(brain.FrostSlowRemaining, 1f);
+
+            Destroy(attacker);
+            Destroy(target);
+            Destroy(definition);
+
+            if (slowConfigured && frostMathMatches && wideMiningMatches && frostApplied)
+                Debug.Log("[Nyangbingo] T3 ice-steel claw applies 30% frost slow for 2 seconds and mines two vertical tiles in one-tile time.");
+            else Debug.LogError("[Nyangbingo] T3 ice-steel claw ability contract failed.");
+        }
+
+        private void TestGoalBadgeProgressContract()
+        {
+            var timeObject = new GameObject("TemporaryGoalBadgeTime");
+            var time = timeObject.AddComponent<DevBTestTimeSource>();
+            time.Day = 1;
+            time.IsNight = true;
+            var wallCount = 0;
+            var visibleDays = 0;
+            var globalsMatch = gameDataCatalog?.FindGlobal(GlobalKeys.BadgeWallCount)?.TryGetInt(out wallCount) == true &&
+                               gameDataCatalog.FindGlobal(GlobalKeys.BadgeWindowDays)?.TryGetInt(out visibleDays) == true &&
+                               wallCount == 1 && visibleDays == 3;
+            var completionEvents = 0;
+            void CountCompletion() => completionEvents++;
+            GameEvents.OnGoalBadgeCompleted += CountCompletion;
+            var progress = new GoalBadgeProgress(time, wallCount, visibleDays);
+            var valid = false;
+            try
+            {
+                var workbench = gameDataCatalog?.FindRecipe(GoalBadgeProgress.WorkbenchId);
+                GameEvents.RaiseCraftingCompleted(workbench);
+                var firstBadgeMatches = progress.WorkbenchCrafted && !progress.InsulationWallPlaced &&
+                                        !progress.FurnaceBuilt && progress.IsVisible;
+                GameEvents.RaisePlacedObjectBuilt(GoalBadgeProgress.InsulationWallId);
+                GameEvents.RaisePlacedObjectBuilt(GoalBadgeProgress.FurnaceId);
+                var completedMatches = progress.AllCompleted && !progress.IsVisible && completionEvents == 3;
+                var captured = progress.Capture();
+                var save = new SaveGame { goalBadges = captured };
+                var loaded = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
+                loaded.NormalizeAfterLoad();
+
+                progress.Dispose();
+                time.Day = 2;
+                var restored = new GoalBadgeProgress(time, wallCount, visibleDays);
+                var restoredMatches = restored.Restore(loaded.goalBadges) && restored.AllCompleted &&
+                                      !restored.IsVisible && restored.Capture().dismissed;
+                restored.Dispose();
+
+                var expiryTimeObject = new GameObject("TemporaryGoalBadgeExpiryTime");
+                var expiryTime = expiryTimeObject.AddComponent<DevBTestTimeSource>();
+                expiryTime.Day = visibleDays;
+                expiryTime.IsNight = true;
+                var expiry = new GoalBadgeProgress(expiryTime, wallCount, visibleDays);
+                var visibleThroughThirdNight = expiry.IsVisible;
+                expiryTime.Day = visibleDays + 1;
+                expiryTime.IsNight = false;
+                expiryTime.RaiseDawn();
+                var expiresAtFourthDay = !expiry.IsVisible && expiry.Capture().dismissed;
+                expiry.Dispose();
+                Destroy(expiryTimeObject);
+
+                valid = globalsMatch && workbench != null && firstBadgeMatches && completedMatches && restoredMatches &&
+                        visibleThroughThirdNight && expiresAtFourthDay &&
+                        loaded.schemaVersion == SaveGame.CurrentSchemaVersion;
+            }
+            finally
+            {
+                progress.Dispose();
+                GameEvents.OnGoalBadgeCompleted -= CountCompletion;
+                Destroy(timeObject);
+            }
+
+            if (valid)
+                Debug.Log("[Nyangbingo] First-three-day workbench, insulation-wall, and furnace goal badges complete, persist, and dismiss by the official rule.");
+            else Debug.LogError("[Nyangbingo] Goal badge progress or save contract failed.");
+        }
+
+        private static void TestProductCraftingStationDefinitionContract()
+        {
+            var valid = MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.Workbench) ==
+                        "workbench" &&
+                        MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.Furnace) ==
+                        "furnace" &&
+                        MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.IceAnvil) ==
+                        "ice_anvil" &&
+                        MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.Foundry) ==
+                        "blast_furnace" &&
+                        string.IsNullOrEmpty(MainGameBossSummonUiController.DefinitionIdForStation(
+                            CraftingStation.None)) &&
+                        MainGameBossSummonUiController.StationForDefinitionId("workbench") ==
+                        CraftingStation.Workbench &&
+                        MainGameBossSummonUiController.StationForDefinitionId("furnace") ==
+                        CraftingStation.Furnace &&
+                        MainGameBossSummonUiController.StationForDefinitionId("ice_anvil") ==
+                        CraftingStation.IceAnvil &&
+                        MainGameBossSummonUiController.StationForDefinitionId("blast_furnace") ==
+                        CraftingStation.Foundry &&
+                        MainGameBossSummonUiController.StationForDefinitionId("unknown") ==
+                        CraftingStation.None &&
+                        !MainGameCraftingUiController.IsSmeltingStation(CraftingStation.Workbench) &&
+                        !MainGameCraftingUiController.IsSmeltingStation(CraftingStation.IceAnvil) &&
+                        MainGameCraftingUiController.IsSmeltingStation(CraftingStation.Furnace) &&
+                        MainGameCraftingUiController.IsSmeltingStation(CraftingStation.Foundry);
+
+            if (valid)
+                Debug.Log("[Nyangbingo] Product crafting uses placed station IDs and routes E interaction to crafting or smelting UI.");
+            else Debug.LogError("[Nyangbingo] Product crafting station definition contract failed.");
         }
 
         private void TestGameDataCatalogInvalidEntryRejection()
@@ -2076,7 +2583,7 @@ namespace Nyangbingo.Debugging
                                 DemoResultState.Teaser == "D-70 — 백일폭염까지" &&
                                 Mathf.Approximately(Time.timeScale, 0f);
             var resultSingleExit = shell.ReturnFromResultToTitle() && shell.Screen == GameShellScreen.Title &&
-                                   Mathf.Approximately(Time.timeScale, 1f);
+                                   Mathf.Approximately(Time.timeScale, 0f);
             var demoGuard = !shell.RequestDemoSave(14) && shell.RequestDemoSave(15) &&
                             shell.PendingConfirmation == GameShellConfirmation.LoadDemoSave &&
                             shell.CancelConfirmation() && shell.Screen == GameShellScreen.Title;

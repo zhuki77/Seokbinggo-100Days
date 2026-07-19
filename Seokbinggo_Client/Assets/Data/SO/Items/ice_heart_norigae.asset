@@ -15,6 +15,6 @@ MonoBehaviour:
   id: ice_heart_norigae
   displayName: "\uC5BC\uC74C \uC2EC\uC7A5 \uB178\uB9AC\uAC1C"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uB0AE \uCCB4\uC628 \uC0C1\uC2B9 -15% \u2014 \uC0C1\uC790 \uC804\uC6A9"

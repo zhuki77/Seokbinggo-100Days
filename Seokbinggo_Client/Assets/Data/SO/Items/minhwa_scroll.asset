@@ -15,6 +15,6 @@ MonoBehaviour:
   id: minhwa_scroll
   displayName: "\uBBFC\uD654 \uC871\uC790"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uC7A5\uC2DD \u2014 \uD6A8\uACFC 0"

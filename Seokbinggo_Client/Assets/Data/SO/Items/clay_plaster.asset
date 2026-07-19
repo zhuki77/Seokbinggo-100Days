@@ -15,6 +15,6 @@ MonoBehaviour:
   id: clay_plaster
   displayName: "\uC810\uD1A0 \uBBF8\uC7A5"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uCC28\uC5F4\uBCBD HP 600\u2192750"

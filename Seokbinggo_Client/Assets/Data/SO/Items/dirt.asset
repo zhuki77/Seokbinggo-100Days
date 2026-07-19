@@ -15,6 +15,6 @@ MonoBehaviour:
   id: dirt
   displayName: "\uD759"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC0C1\uCE35 T1"

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: saekdong_lantern
   displayName: "\uC0C9\uB3D9 \uB4F1\uB871"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uC7A5\uC2DD \u2014 \uD6A8\uACFC 0. \u26A0\uFE0F \uAD11\uC6D0 \uD0DC\uADF8
+    \uC544\uB2D8(\uB4F1\uBD88\uACFC \uBB34\uAD00)"

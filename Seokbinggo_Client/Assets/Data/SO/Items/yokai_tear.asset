@@ -15,6 +15,7 @@ MonoBehaviour:
   id: yokai_tear
   displayName: "\uC694\uAD34 \uB208\uBB3C"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 2
+  mvpScope: 1
+  note: "\uC804 \uC694\uAD34 \uB4DC\uB78D \u2014 6-8 \uACBD\uC81C \uC6D0\uC7A5\uC758
+    \uCD95"

@@ -15,6 +15,6 @@ MonoBehaviour:
   id: wind_daenggi
   displayName: "\uBC14\uB78C \uB315\uAE30"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uC774\uB3D9\uC18D\uB3C4 +15% \u2014 \uC0C1\uC790 \uC804\uC6A9"

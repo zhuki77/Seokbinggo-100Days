@@ -56,6 +56,32 @@ namespace Nyangbingo.Save
     }
 
     [Serializable]
+    public sealed class GoalBadgeRecord
+    {
+        public bool workbenchCrafted;
+        public int insulationWallsPlaced;
+        public bool furnaceBuilt;
+        public bool dismissed;
+    }
+
+    [Serializable]
+    public struct CoolingSourceStateRecord
+    {
+        public string objectId;
+        public string definitionId;
+        public float remainingGameSeconds;
+    }
+
+    [Serializable]
+    public struct DeathTearPouchRecord
+    {
+        public string pouchId;
+        public int amount;
+        public Vector2 position;
+        public int expireOnDay;
+    }
+
+    [Serializable]
     public struct ChestStateRecord
     {
         public string chestId;
@@ -137,7 +163,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 11;
+        public const int CurrentSchemaVersion = 14;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -147,6 +173,8 @@ namespace Nyangbingo.Save
         public List<string> placedObjects = new List<string>();
         public List<string> tilemapDiff = new List<string>();
         public List<PlacedObjectRecord> placedObjectRecords = new List<PlacedObjectRecord>();
+        public List<CoolingSourceStateRecord> coolingSources = new List<CoolingSourceStateRecord>();
+        public List<DeathTearPouchRecord> deathTearPouches = new List<DeathTearPouchRecord>();
         public List<TileChangeRecord> tileChanges = new List<TileChangeRecord>();
         public List<string> modulesDone = new List<string>();
         public float sealPct;
@@ -173,6 +201,7 @@ namespace Nyangbingo.Save
         public BaekjungSchedulerState baekjungProgress = new BaekjungSchedulerState();
         public float baekjungTearRemainder;
         public RunStatsRecord stats = new RunStatsRecord();
+        public GoalBadgeRecord goalBadges = new GoalBadgeRecord();
 
         public void NormalizeAfterLoad()
         {
@@ -183,6 +212,8 @@ namespace Nyangbingo.Save
             if (placedObjects == null) placedObjects = new List<string>();
             if (tilemapDiff == null) tilemapDiff = new List<string>();
             if (placedObjectRecords == null) placedObjectRecords = new List<PlacedObjectRecord>();
+            if (coolingSources == null) coolingSources = new List<CoolingSourceStateRecord>();
+            if (deathTearPouches == null) deathTearPouches = new List<DeathTearPouchRecord>();
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
             if (bossRecords == null) bossRecords = new List<BossRecord>();
@@ -208,6 +239,8 @@ namespace Nyangbingo.Save
             regularEncounter.remainingRegularYokaiIds.RemoveAll(string.IsNullOrWhiteSpace);
             if (baekjungProgress == null) baekjungProgress = new BaekjungSchedulerState();
             if (stats == null) stats = new RunStatsRecord();
+            if (goalBadges == null) goalBadges = new GoalBadgeRecord();
+            goalBadges.insulationWallsPlaced = Math.Max(0, goalBadges.insulationWallsPlaced);
             stats.minedTiles = Math.Max(0, stats.minedTiles);
             stats.deaths = Math.Max(0, stats.deaths);
             if (isLegacySchema)

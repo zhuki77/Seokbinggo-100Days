@@ -37,7 +37,7 @@ namespace Nyangbingo.Crafting
             foreach (var ingredient in recipe.Ingredients) inventory.TryRemove(ingredient.item.Id, ingredient.amount);
             if (inventory.TryAdd(recipe.Output.item.Id, recipe.Output.amount))
             {
-                GameEvents.RaiseCraftingCompleted();
+                GameEvents.RaiseCraftingCompleted(recipe);
                 return true;
             }
             foreach (var ingredient in recipe.Ingredients) inventory.TryAdd(ingredient.item.Id, ingredient.amount);

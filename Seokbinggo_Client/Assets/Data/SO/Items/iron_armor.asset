@@ -15,6 +15,6 @@ MonoBehaviour:
   id: iron_armor
   displayName: "\uBB34\uC1E0 \uAC11\uC637"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uBC29\uC5B4 3"

@@ -54,6 +54,7 @@ namespace Nyangbingo.UI
 
         public GameShellScreen Screen { get; private set; } = GameShellScreen.Title;
         public GameShellConfirmation PendingConfirmation { get; private set; }
+        public int PendingDemoDay => pendingDemoDay;
         public TitleShellState Title { get; } = new TitleShellState();
         public DemoResultState Result { get; private set; }
         public bool CanShowFullscreenToggle => !isMobile;
@@ -105,6 +106,8 @@ namespace Nyangbingo.UI
             activeSave = currentSave ?? activeSave ?? new SaveGame { day = 1 };
             ShowGameplay();
         }
+
+        public void EnterTitle() => ShowTitle();
 
         public void RefreshTitle()
         {
@@ -304,7 +307,7 @@ namespace Nyangbingo.UI
 
         private void ShowTitle()
         {
-            Time.timeScale = 1f;
+            Time.timeScale = 0f;
             SetScreen(GameShellScreen.Title);
             RefreshTitle();
         }

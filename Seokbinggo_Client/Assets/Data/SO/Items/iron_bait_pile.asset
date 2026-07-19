@@ -15,6 +15,7 @@ MonoBehaviour:
   id: iron_bait_pile
   displayName: "\uBB34\uC1E0 \uBBF8\uB07C \uB354\uBBF8"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 8
+  mvpScope: 2
+  note: "\uC5B4\uBBF8 \uBD88\uAC00\uC0AC\uB9AC \uC18C\uD658 \u2014 MVP \uC81C\uC791
+    UI \uBBF8\uB178\uCD9C"

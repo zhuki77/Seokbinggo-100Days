@@ -128,6 +128,8 @@ namespace Nyangbingo.Save
             if (!bootstrap.Session.CaptureSnapshot(save)) return null;
 
             save.placedObjectRecords = environmentState.ExportPlacedObjects();
+            save.coolingSources = environmentState.ExportCoolingSources();
+            save.deathTearPouches = runtimeServices.DeathTearPouches.Export();
             if (!turretRuntime.CaptureProgress(save)) return null;
             if (!PlayerTimeBossSaveAdapter.Capture(save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager))
@@ -198,8 +200,9 @@ namespace Nyangbingo.Save
                 progressTracker.RestoreFrom(save) &&
                 (!save.playerState.hasTemperature ||
                  runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
+                runtimeServices.DeathTearPouches.Restore(save.deathTearPouches) &&
                 encounterCoordinator.RestoreProgress(save) &&
-                environmentState.TryRestorePlacedObjects(save.placedObjectRecords) &&
+                environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources) &&
                 turretRuntime.RestoreProgress(save);
                 return succeeded;
             }

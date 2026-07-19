@@ -15,6 +15,7 @@ MonoBehaviour:
   id: dokkaebi_fire_essence
   displayName: "\uB3C4\uAE68\uBE44\uBD88 \uC815\uC218"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 2
+  mvpScope: 1
+  note: "\uB3C4\uAE68\uBE44 \uB300\uC7A5 \uD655\uC815 \u2014 \uB3C4\uAE68\uBE44\uBD88
+    \uB4F1\uD0D1 \uC720\uC77C \uC7AC\uB8CC"

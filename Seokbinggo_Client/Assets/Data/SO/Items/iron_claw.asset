@@ -15,6 +15,6 @@ MonoBehaviour:
   id: iron_claw
   displayName: "\uBB34\uC1E0 \uBC1C\uD1B1"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 3
+  mvpScope: 1
+  note: "T2 \u2014 \uCC44\uAD74 \uD06C\uB9AC\uD2F0\uCEEC 15%"

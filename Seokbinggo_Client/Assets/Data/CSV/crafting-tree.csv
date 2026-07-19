@@ -1,0 +1,55 @@
+id,type,item_ko,station_id,materials,output_count,craft_time_sec,mvp_scope,note
+workbench,station,작업대,none,"dirt:8,stone:12",1,0,A,1일차 밤 20초 온보딩
+furnace,station,화로,workbench,"stone:22,dirt:8,iron_ore:6,copper_ore:4",1,30,A,원석 그대로 — 주괴 순환 잠금 방지
+blast_furnace,station,용광로,furnace,"stone:20,clay:12,iron_ore:6",1,45,A,점토 내화벽돌 — T2 직후 8~9일차. v23: 철 주괴3→광석6(2:1 동일 환산) — 4-7 ② '화로·용광로 레시피 주괴 요구 금지' 준수(구 행이 규칙 위반이었다)
+ice_anvil,station,얼음 모루,blast_furnace,"iron_ingot:5,copper_ingot:2,icesteel_ingot:4",1,60,A,권장 15~16일차
+iron_claw,claw,무쇠 발톱 T2,furnace,"iron_ingot:4,copper_ingot:2,stone:5",1,60,A,능력: 채굴 크리티컬 15%(드랍 2배)
+icesteel_claw,claw,얼음강철 발톱 T3,ice_anvil,"icesteel_ingot:5,frost_essence:2",1,120,A,능력: 서리 서림(감속 30%/2초)+넓은 할퀴기(세로 2타일)
+lantern,placeable,등불,workbench,"wood:4,hemp_stalk:2,coal:2",1,10,A,반경 6타일·석탄 1=270초·어둑시니 카운터
+sieve,placeable,체,workbench,"hemp_stalk:6,wood:2",1,10,A,야광귀 12초 정지+피해 1.5배·쿨 30초
+haetae_statue,placeable,해태 석상,furnace,"stone:20,copper_ingot:3,yokai_tear:20",1,60,A,반경 8타일 화염 -50%
+nest_bed,placeable,보금자리,workbench,"wood:6,hemp_stalk:4",1,10,A,냥잠(v6)
+magpie_nest,placeable,까치 둥지,workbench,"wood:8,hemp_stalk:6",1,10,A,까치 벗 입주(v6)
+dokkaebi_club,weapon,도깨비 방망이,workbench,"club_shard:3,wood:4",1,30,A,넉백 2.0타일 특화
+frostclaw_gauntlet,weapon,서리발톱 장갑,ice_anvil,"gangcheol_scale:1,frost_essence:6,icesteel_ingot:4,yokai_tear:25,shadow_shard:5",1,120,A,엔드 무기 DPS 42
+iron_insul_wall,wall,무쇠 차열벽,furnace,"iron_scale:2,iron_ingot:2,stone:2",1,20,A,HP900·불가사리 면역
+cold_device,device,냉기 장치,ice_anvil,"yokai_tear:40,frost_essence:2,ice_shard:10,copper_ingot:2",1,60,A,눈물 주 소비처
+insul_wall,module,차열벽,workbench,"stone:2,dirt:1",1,5,A,HP600 기본 방벽
+door,module,단열 문,workbench,"wood:6,hemp_stalk:4,ice_shard:4",1,30,A,통행 가능+flood-fill 밀폐 인정
+roof,module,차열 지붕,furnace,"stone:6,rebar:3,hemp_stalk:2",1,20,A,상부 밀폐·철근 반복 소비처
+jangdok,module,장독 창고,workbench,"dirt:10,stone:8,wood:6",1,45,A,보관함 12슬롯
+ice_core,module,얼음 저장고,furnace,"ice_shard:20,stone:10,iron_ingot:2",1,60,A,체온 회복 거점 — 모듈 5종 화로 티어 이하
+ssireum_satba,summon,씨름 샅바,workbench,"club_shard:1,hemp_stalk:10,wood:5",1,30,A,도깨비 대장 소환
+iron_bait_pile,summon,무쇠 미끼 더미,furnace,"iron_ingot:10,iron_scale:3,coal:5",1,30,B,어미 불가사리 소환
+ice_altar_offering,summon,얼음 제단 봉헌,ice_anvil,"icesteel_ingot:2,frost_essence:2,ice_shard:10",1,30,B,이무기 소환(심층 제단 전용)
+drought_talisman,summon,가뭄 부적,ice_anvil,"yokai_tear:30,shadow_shard:2,hemp_stalk:5",1,30,A,강철이 재소환(최초 격퇴 후 해금)
+dokkaebi_fire_tower,turret,도깨비불 등탑,workbench,"dokkaebi_fire_essence:1,wood:10,stone:10,coal:5",1,60,A,DPS4 유도·반경 8타일
+singijeon_cart,turret,신기전 화차,furnace,"iron_forge_core:1,iron_ingot:7,wood:20,coal:5",1,60,B,DPS6 직선 관통·10타일
+ice_crystal_cooler,cooling,빙정 냉각로,ice_anvil,"yeouiju:1,icesteel_ingot:5,copper_ingot:3",1,60,B,내부 체온 회복x2+얼음 용해 방지
+cold_wave_core,cooling,한파 코어,ice_anvil,"drought_heart:1,icesteel_ingot:6,frost_essence:4",1,60,A,더위 단계 -1 상쇄(전역 1기)
+straw_insul,insulation,짚 단열재,workbench,"hemp_stalk:3,wood:1",1,5,A,벽 1장당 체온 하강 +5%·상한 6장
+clay_plaster,insulation,점토 미장,workbench,"clay:2,dirt:2",1,5,A,차열벽 HP 600→750
+munpungji,insulation,문풍지,workbench,"hemp_stalk:4,wood:2",1,10,A,단열 문 개방 중 체온 손실 0
+hapjukseon,util,합죽선,workbench,"hemp_stalk:6,wood:3",1,10,A,밀치기 2타일·뎀0·쿨3초 — 보스 무효
+cheolseon,evo,철선,furnace,"hapjukseon:1,iron_ingot:2,iron_scale:1",1,30,A,물리 부채 무기·원본 소모 — DPS9·기본넉백1.5·밀치기 뎀4/2타일/쿨3초·보스넉백무효·채굴불가(6-14)
+iron_bell_rope,evo,쇠 방울 금줄,furnace,"bell_rope:1,iron_ingot:1",1,20,A,경보(반경10 유지)+진입 요괴 감속 1회 — 원석 철2
+iron_sieve,evo,무쇠 체,furnace,"sieve:1,iron_ingot:1,iron_scale:1",1,20,A,야광귀 정지·피해배수·쿨 강화 — 원석 철2+무쇠 비늘1
+frost_lantern,evo,서리 등불,ice_anvil,"lantern:1,icesteel_ingot:1,frost_essence:1",1,30,A,연료 석탄→서리정수·장시간 점등·반경6 불변 — 후반 잉여 서리정수 소비처
+bell_rope,util,방울 금줄,workbench,"copper_ingot:1,wood:4",1,10,A,경보 반경 10타일·쿨4초
+minhwa_scroll,deco,민화 족자,workbench,"hemp_stalk:2,dirt:1",1,0,A,효과 0
+saekdong_lantern,deco,색동 등롱,workbench,"hemp_stalk:2,coal:1",1,0,A,효과 0 — 광원 태그 아님
+onggi_pot,deco,옹기 화분,workbench,clay:3,1,0,A,효과 0
+wind_chime,deco,풍경,furnace,copper_ingot:1,1,0,A,효과 0
+saekdong_cushion,deco,색동 방석,workbench,"hemp_stalk:3,wood:1",1,0,A,효과 0 — 보금자리 스킨
+straw_helm,armor,짚 투구,workbench,"hemp_stalk:4,wood:2",1,10,A,방어 1
+straw_armor,armor,짚 갑옷,workbench,"hemp_stalk:6,wood:4",1,10,A,방어 1
+straw_boots,armor,짚 신발,workbench,"hemp_stalk:3,wood:2",1,10,A,방어 1
+iron_helm,armor,무쇠 투구,furnace,"iron_ingot:1,copper_ingot:1",1,30,A,방어 2
+iron_armor,armor,무쇠 갑옷,furnace,"iron_ingot:3,copper_ingot:1",1,30,A,방어 3
+iron_boots,armor,무쇠 신발,furnace,"iron_ingot:1,copper_ingot:1",1,30,A,방어 1
+icesteel_helm,armor,얼음강철 투구,ice_anvil,icesteel_ingot:2,1,60,A,방어 3 — 세트: 설한풍 한벌옷
+icesteel_armor,armor,얼음강철 갑옷,ice_anvil,icesteel_ingot:4,1,60,A,방어 4 — 세트: 설한풍 한벌옷
+icesteel_boots,armor,얼음강철 신발,ice_anvil,icesteel_ingot:2,1,60,A,방어 3 — 세트: 설한풍 한벌옷
+water_jar,coldsource,물단지,workbench,"clay:2,stone:2",1,5,A,소모형 냉기원 180초·온도 상한 25% — 1일차 밤(작업대 직후)·전부 상층 T1. 젖은 옹기가 마르며 시원해지고 다 마르면 사라진다
+ice_jar,coldsource,얼음 항아리,workbench,"clay:3,ice_shard:2",1,10,A,연료형 냉기원 얼음1=300초·온도 상한 50% — 2일차 낮(중층 왕복 필요)
+wallpaper,placeable,벽지,workbench,"clay:3,wood:5",16,5,A,v26 신설 — 1회 16장 산출. 240칸 방 완전 도포 = 15회(점토45·나무75). 회의의 '점토2+나무3→8장' 감축안은 30회 필요(점토60·나무90)로 자원을 33% 더 먹어 기각

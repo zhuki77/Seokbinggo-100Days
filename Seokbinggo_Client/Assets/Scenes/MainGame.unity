@@ -9013,6 +9013,7 @@ MonoBehaviour:
   gameDataCatalog: {fileID: 11400000, guid: e667adc57c5f5a345871e23239f7483a, type: 2}
   bootstrap: {fileID: 1401646100}
   inventoryRuntime: {fileID: 1401646099}
+  environmentState: {fileID: 0}
 --- !u!114 &1401646099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12140,6 +12141,7 @@ MonoBehaviour:
   craftingProgressText: {fileID: 1770025376}
   craftingProgressFill: {fileID: 322789650}
   deathPanel: {fileID: 490742402}
+  playerController: {fileID: 0}
   inventorySlotTexts:
   - {fileID: 1696674365}
   - {fileID: 1175064337}
@@ -12202,6 +12204,7 @@ MonoBehaviour:
   gameDataCatalog: {fileID: 11400000, guid: e667adc57c5f5a345871e23239f7483a, type: 2}
   bootstrap: {fileID: 1401646100}
   runtimeServices: {fileID: 1401646098}
+  environmentState: {fileID: 1401646104}
   encounterCoordinator: {fileID: 1401646105}
   playerTarget: {fileID: 1914613485}
   statusText: {fileID: 166409922}

@@ -15,6 +15,6 @@ MonoBehaviour:
   id: gangcheol_scale
   displayName: "\uAC15\uCCA0\uC774 \uC5ED\uB9B0"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 2
+  mvpScope: 1
+  note: "\uAC15\uCCA0\uC774 100% \uD655\uC815"

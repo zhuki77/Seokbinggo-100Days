@@ -15,6 +15,6 @@ MonoBehaviour:
   id: coal
   displayName: "\uC11D\uD0C4"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC0C1\uCE35 T1 \u2014 \uB4F1\uBD88 \uC5F0\uB8CC\xB7\uC81C\uB828 \uC5F0\uB8CC"

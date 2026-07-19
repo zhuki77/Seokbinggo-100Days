@@ -15,6 +15,6 @@ MonoBehaviour:
   id: straw_helm
   displayName: "\uC9DA \uD22C\uAD6C"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uBC29\uC5B4 1"

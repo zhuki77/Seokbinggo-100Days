@@ -91,6 +91,34 @@ public static class NyangbingoDataMenu
                   $"{yokai.Length} yokai, {bosses.Length} bosses, {chests.Length} chests, {dayEvents.Length} day events.");
     }
 
+    [MenuItem("Nyangbingo/Reimport v26 Data Bundle")]
+    public static void ReimportV26DataBundle()
+    {
+        ReimportItems();
+        ReimportRecipes();
+        ReimportGlobals();
+        ReimportSealWhitelist();
+
+        const string rootDirectory = "Assets/Data/SO";
+        var items = LoadAssets<ItemDefinition>(rootDirectory + "/Items");
+        var recipes = LoadAssets<RecipeDefinition>(rootDirectory + "/Recipes");
+        var globals = LoadAssets<GlobalDefinition>(rootDirectory + "/Globals");
+        var sealRules = LoadAssets<SealWhitelistDefinition>(rootDirectory + "/SealWhitelist");
+        var wallpaper = AssetDatabase.LoadAssetAtPath<RecipeDefinition>(
+            rootDirectory + "/Recipes/wallpaper.asset");
+        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 83 || sealRules.Length != 23 ||
+            wallpaper == null || wallpaper.Output.item == null || wallpaper.Output.item.Id != "wallpaper" ||
+            wallpaper.Output.amount != 16)
+        {
+            Debug.LogError("[Nyangbingo] v26 data bundle reimport failed its 86/54/83/23 and wallpaper x16 check.");
+            return;
+        }
+
+        RebuildGameDataCatalog();
+        Debug.Log("[Nyangbingo] v26 data bundle reimport completed: 86 items, 54 recipes, " +
+                  "83 globals, 23 seal rules, wallpaper output 16.");
+    }
+
     [MenuItem("Nyangbingo/Validate CSV Data")]
     private static void ValidateCsvData()
     {
@@ -277,6 +305,7 @@ public static class NyangbingoDataMenu
 
         var v24Schema = HasColumns(rows[0], "id", "type", "item_ko", "station_id", "materials",
             "craft_time_sec", "mvp_scope", "note");
+        var hasOutputCount = v24Schema && rows[0].ContainsKey("output_count");
         var legacySchema = HasColumns(rows[0], "id", "station", "output", "amount", "ingredients",
             "durationSeconds");
         if (v24Schema == legacySchema)
@@ -310,11 +339,12 @@ public static class NyangbingoDataMenu
             }
 
             var outputId = v24Schema ? id : row["output"];
-            outputAmounts[rowIndex] = v24Schema ? 1 : 0;
+            outputAmounts[rowIndex] = v24Schema && !hasOutputCount ? 1 : 0;
             outputs[rowIndex] = FindItem(itemDirectory, outputId);
             if (outputs[rowIndex] == null || outputs[rowIndex].Id != outputId ||
-                (!v24Schema && (!int.TryParse(row["amount"], NumberStyles.Integer,
-                    CultureInfo.InvariantCulture, out outputAmounts[rowIndex]) || outputAmounts[rowIndex] <= 0)) ||
+                ((hasOutputCount || !v24Schema) &&
+                 (!int.TryParse(row[hasOutputCount ? "output_count" : "amount"], NumberStyles.Integer,
+                     CultureInfo.InvariantCulture, out outputAmounts[rowIndex]) || outputAmounts[rowIndex] <= 0)) ||
                 !float.TryParse(row[v24Schema ? "craft_time_sec" : "durationSeconds"], NumberStyles.Float,
                     CultureInfo.InvariantCulture, out durations[rowIndex]) || durations[rowIndex] < 0f ||
                 float.IsNaN(durations[rowIndex]) || float.IsInfinity(durations[rowIndex]))
@@ -373,7 +403,7 @@ public static class NyangbingoDataMenu
         }
 
         Debug.Log($"[Nyangbingo] Recipe CSV semantic validation completed: {rows.Count} rows " +
-                  $"({(v24Schema ? "v24" : "legacy")} schema).");
+                  $"({(v24Schema ? hasOutputCount ? "v26" : "v24" : "legacy")} schema).");
         EnsureFolder(targetDirectory);
         for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
@@ -1663,9 +1693,9 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 80 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count != 83 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain the official 80-row v24.1 schema.");
+            Debug.LogError("[Nyangbingo] globals.csv must contain the official 83-row v26 schema.");
             return;
         }
 
@@ -1675,6 +1705,7 @@ public static class NyangbingoDataMenu
             { "count", "day", "gauge", "hp", "person", "px", "tile" };
         var keys = new HashSet<string>(System.StringComparer.Ordinal);
         var numeric = new Dictionary<string, float>(System.StringComparer.Ordinal);
+        var values = new Dictionary<string, string>(System.StringComparer.Ordinal);
         for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
@@ -1700,6 +1731,7 @@ public static class NyangbingoDataMenu
                 Debug.LogError($"[Nyangbingo] Global row {i + 1} has an invalid key, value, unit, or note.");
                 return;
             }
+            values[key] = value;
         }
 
         var derivedValuesValid = numeric.TryGetValue("day_length_sec", out var dayLength) &&
@@ -1710,8 +1742,14 @@ public static class NyangbingoDataMenu
                                  numeric.TryGetValue("seal_window_ry", out var sealRadiusY) &&
                                  numeric.TryGetValue("seal_cap", out var sealCap) &&
                                  Mathf.Approximately((2f * sealRadiusX + 1f) * (2f * sealRadiusY + 1f), sealCap) &&
-                                 numeric.TryGetValue("mvp_days", out var mvpDays) &&
-                                 numeric.TryGetValue("total_days", out var totalDays) && mvpDays <= totalDays;
+                                  numeric.TryGetValue("mvp_days", out var mvpDays) &&
+                                  numeric.TryGetValue("total_days", out var totalDays) && mvpDays <= totalDays &&
+                                  numeric.TryGetValue("wallpaper_coverage", out var wallpaperCoverage) &&
+                                  Mathf.Approximately(wallpaperCoverage, 100f) &&
+                                  numeric.TryGetValue("wallpaper_coldsource_bonus", out var wallpaperBonus) &&
+                                  Mathf.Approximately(wallpaperBonus, 25f) &&
+                                  values.TryGetValue("wallpaper_remove_rule", out var wallpaperRemoveRule) &&
+                                  wallpaperRemoveRule == "restore_original";
         if (!derivedValuesValid)
         {
             Debug.LogError("[Nyangbingo] Globals derived day, seal-window, or survival values are inconsistent.");

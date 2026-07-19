@@ -79,3 +79,6 @@ baekjung_wave_times_sec,0/150/300,sec,백중 웨이브 시작 시각(일몰 기�
 invasion_boss_in_cap,1,rule,내습 보스(30일차 강철이 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 강철이 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 금지 — 내습은 일반 요괴와 공존하고, 소환은 일반 스폰을 정지시킨다
 crafting_material_format,item_id:count,rule,crafting-tree/bosses/chests의 재료 표기 규칙(v24) — 콤마 구분. id는 items.csv가 유일 정본
 item_id_rule,snake_case,rule,아이템 id 명명(v24) — 일반 명사는 의미 영어(iron_ore·stone·lantern) 한국 고유 문화어는 로마자 음차(hapjukseon·haetae_statue·yeouiju). 전부 snake_case. 한번 정한 id는 세이브 호환 때문에 변경 금지
+wallpaper_coverage,100,pct,벽지 효과 발동에 필요한 밀폐 구역 도포율(v26) — 100% = '전부 아니면 0'. 회의의 95% 안은 기각: 플레이어가 남은 칸을 세게 만들고 밀폐 판정(100% 폐쇄 요구)과도 어긋난다. 지하 자연 배경벽(t_bg_*)이 이미 있는 칸은 덮인 것으로 계수한다
+wallpaper_coldsource_bonus,25,pct,벽지 100% 도포 시 그 구역 냉기원 지속시간 증가(v26) — 물단지 180→225초·얼음 항아리 얼음1당 300→375초. 온도 상한(cold_cap_*)은 불변이라 냉기원 계단 25/50/100 유지. ⚠️ 얼음 저장고·빙정 냉각로는 연료 없는 영구 설치물이라 지속시간 개념이 없다 — 적용 대상 아님(회의의 '얼음 저장고 480초' 는 정본에 없는 창작 수치라 기각)
+wallpaper_remove_rule,restore_original,rule,벽지 제거 시 그 칸은 '원래 있던 것'으로 돌아간다(v26) — 지하(원래 자연 배경벽 자리)=자연 배경벽 복원 / 지상(원래 하늘)=빈 칸. 회의에서 '자연벽 복원'과 '빈 칸' 두 안이 충돌했으나 각각 다른 상황을 본 것이라 통합 규칙 하나로 해소

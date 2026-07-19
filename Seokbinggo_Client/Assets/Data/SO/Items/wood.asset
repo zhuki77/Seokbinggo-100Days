@@ -15,6 +15,6 @@ MonoBehaviour:
   id: wood
   displayName: "\uB098\uBB34"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC9C0\uC0C1(\uBC24) \uCC44\uC9D1"

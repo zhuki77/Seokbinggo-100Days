@@ -15,6 +15,6 @@ MonoBehaviour:
   id: straw_insul
   displayName: "\uC9DA \uB2E8\uC5F4\uC7AC"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uBCBD 1\uC7A5\uB2F9 \uCCB4\uC628 \uD558\uAC15 +5%\xB7\uC0C1\uD55C 6\uC7A5"
