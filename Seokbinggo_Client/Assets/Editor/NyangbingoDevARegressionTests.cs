@@ -80,6 +80,26 @@ public static class NyangbingoDevARegressionTests
     }
 
     /// <summary>
+    /// 일부 회귀 테스트는 "손상된 입력이 정상적으로 거부되는지"를 확인하기 위해 프로덕션 코드가 의도적으로
+    /// 남기는 Debug.LogError를 그대로 유발한다(예: WorldSessionController.LoadSnapshot의 검증 실패 경로).
+    /// 이런 로그는 실제 회귀가 아닌데도 콘솔에서 오류처럼 보여 매번 혼동을 준다 — action 실행 동안만 Unity
+    /// 로거를 잠시 꺼서 콘솔을 깨끗하게 유지한다(예외가 나도 finally에서 반드시 복구).
+    /// </summary>
+    private static T RunWithSuppressedLogs<T>(Func<T> action)
+    {
+        var wasEnabled = Debug.unityLogger.logEnabled;
+        Debug.unityLogger.logEnabled = false;
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            Debug.unityLogger.logEnabled = wasEnabled;
+        }
+    }
+
+    /// <summary>
     /// 이 회귀 테스트는 [MenuItem]으로 실행되는 Edit 모드 코드다. Unity는 [ExecuteInEditMode]/[ExecuteAlways]가
     /// 없는 일반 MonoBehaviour의 Awake()/OnEnable()을 Edit 모드에서 자동으로 호출하지 않으므로(Play 모드 전용),
     /// AddComponent&lt;DayNightService&gt;()만으로는 day/isNight/timeOfDayGameSeconds가 전부 C# 기본값(0/false/0f)에
@@ -827,7 +847,11 @@ public static class NyangbingoDevARegressionTests
             var tileServiceBeforeCorruptLoad = session.TileService;
             var sealSystemBeforeCorruptLoad = session.SealSystem;
 
-            Assert(!session.LoadSnapshot(corruptSave), "범위 밖 좌표를 담은 손상된 저장 데이터가 거부되지 않음");
+            // 이 손상된 로드는 WorldSessionController.LoadSnapshot이 의도적으로 Debug.LogError를 남기고
+            // false를 반환하는 "정상적으로 거부되는" 경로다(진짜 버그가 아님). 콘솔에 매번 오류처럼 보이는
+            // 로그가 남아 실제 회귀와 혼동되지 않도록, 이 한 호출 동안만 로그 출력을 잠시 꺼둔다.
+            var loadRejected = RunWithSuppressedLogs(() => !session.LoadSnapshot(corruptSave));
+            Assert(loadRejected, "범위 밖 좌표를 담은 손상된 저장 데이터가 거부되지 않음");
             Assert(session.Seed == seedBeforeCorruptLoad, "손상된 로드 시도 후 seed가 바뀜 — 트랜잭션 보장 위반");
             Assert(ReferenceEquals(session.TileService, tileServiceBeforeCorruptLoad), "손상된 로드 시도 후 TileService가 교체됨 — 트랜잭션 보장 위반");
             Assert(ReferenceEquals(session.SealSystem, sealSystemBeforeCorruptLoad), "손상된 로드 시도 후 SealSystem이 교체됨 — 트랜잭션 보장 위반");
