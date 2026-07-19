@@ -569,7 +569,7 @@ namespace Nyangbingo.World
                     var seedY = rng.Next(low, high + 1);
                     if (grid[x, seedY].IsAir) continue; // 이미 동굴로 뚫린 자리는 건너뛴다 — 소량 손실은 허용.
 
-                    GrowVeinCluster(grid, new Vector2Int(x, seedY), low, high, width, height, profile, rng);
+                    GrowVeinCluster(grid, new Vector2Int(x, seedY), width, height, profile, surfaceHeights, config, rng);
                 }
             }
         }
@@ -589,23 +589,38 @@ namespace Nyangbingo.World
             return total;
         }
 
-        private static void GrowVeinCluster(TileData[,] grid, Vector2Int seed, int layerLow, int layerHigh, int width, int height,
-            OreVeinProfile profile, System.Random rng)
+        /// <summary>
+        /// A-10 회귀 수정: 지표면 높이는 열(x)마다 펄린 변동(±6)으로 다르므로, 깊이 기반 y 범위(low/high)를
+        /// 씨드 열에서 딱 한 번만 계산해 클러스터 전체에 그대로 쓰면 안 된다 — 랜덤워크가 다른 열로 옮겨가면
+        /// 그 열의 실제 depth_min~depth_max 범위와 어긋나 광물이 자기 깊이 범위 밖에 배치될 수 있다(회귀
+        /// 테스트가 실제로 잡아낸 사례). 그래서 매 스텝마다 "현재 x 기준" 범위를 다시 계산해 y를 그 범위로
+        /// 즉시 clamp한 뒤에만 배치한다 — 통일 규칙(요구사항 5: 각 열의 지표로부터 내려간 깊이)을 그대로 지킨다.
+        /// </summary>
+        private static void GrowVeinCluster(TileData[,] grid, Vector2Int seed, int width, int height,
+            OreVeinProfile profile, int[] surfaceHeights, WorldGenerationConfig config, System.Random rng)
         {
+            var hasExplicitDepth = profile.depthMax > 0;
             var size = rng.Next(profile.minClusterSize, profile.maxClusterSize + 1);
             var current = seed;
 
             for (var i = 0; i < size; i++)
             {
-                if (InBounds(current, width, height) && !grid[current.x, current.y].IsAir)
+                var (low, high) = hasExplicitDepth
+                    ? GetDepthRange(current.x, profile.depthMin, profile.depthMax, surfaceHeights, config)
+                    : GetLayerRange(current.x, profile.layer, surfaceHeights, config);
+
+                if (high >= low)
                 {
-                    grid[current.x, current.y] = TileData.CreateNatural(profile.elementType, profile.hardness);
+                    current.y = Mathf.Clamp(current.y, low, high);
+                    if (InBounds(current, width, height) && !grid[current.x, current.y].IsAir)
+                    {
+                        grid[current.x, current.y] = TileData.CreateNatural(profile.elementType, profile.hardness);
+                    }
                 }
 
                 var direction = FourNeighbors[rng.Next(FourNeighbors.Length)];
                 current += direction;
                 current.x = Mathf.Clamp(current.x, 0, width - 1);
-                current.y = Mathf.Clamp(current.y, layerLow, layerHigh);
             }
         }
 
