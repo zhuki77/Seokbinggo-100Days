@@ -15,6 +15,8 @@ MonoBehaviour:
   id: bare_claw
   displayName: "\uB9E8\uBC1C\uD1B1"
   maxStack: 0
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 3
+  mvpScope: 1
+  note: "T1 \u2014 \uC2E0\uCCB4\uB2E4. \uC778\uBCA4\uD1A0\uB9AC \uBBF8\uB4F1\uC7AC\xB7\uC81C\uC791
+    \uBD88\uAC00\xB7\uBD84\uC2E4 \uBD88\uAC00(4-4). max_stack 0 = \uC544\uC774\uD15C\uD654\uD558\uC9C0
+    \uC54A\uB294\uB2E4\uB294 \uB73B"

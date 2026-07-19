@@ -15,6 +15,7 @@ MonoBehaviour:
   id: hapjukseon
   displayName: "\uD569\uC8FD\uC120"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 4
+  mvpScope: 1
+  note: "\uBC00\uCE58\uAE30 \uC804\uC6A9(\uAE30\uBCF8 \uACF5\uACA9 \uC5C6\uC74C)
+    \u2014 \uBB34\uAE30 \uC2AC\uB86F \uC810\uC720\uB77C weapon"

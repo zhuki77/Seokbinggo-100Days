@@ -15,6 +15,6 @@ MonoBehaviour:
   id: ice_shard
   displayName: "\uC5BC\uC74C \uC870\uAC01"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC911\uCE35 T2 \u2014 \uCCB4\uC628 \uD68C\uBCF5 \uACB8\uC6A9"

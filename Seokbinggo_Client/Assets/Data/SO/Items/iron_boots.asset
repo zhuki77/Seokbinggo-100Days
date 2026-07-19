@@ -15,6 +15,6 @@ MonoBehaviour:
   id: iron_boots
   displayName: "\uBB34\uC1E0 \uC2E0\uBC1C"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uBC29\uC5B4 1"

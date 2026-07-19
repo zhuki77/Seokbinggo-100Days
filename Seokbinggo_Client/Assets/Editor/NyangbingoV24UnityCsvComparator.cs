@@ -11,7 +11,7 @@ public static class NyangbingoV24UnityCsvComparator
 {
     private const string UnityCsvAssetDirectory = "Assets/Data/CSV";
 
-    private static readonly string[] OfficialV241Files =
+    private static readonly string[] OfficialKitFiles =
     {
         "accessories.csv",
         "bosses.csv",
@@ -73,13 +73,17 @@ public static class NyangbingoV24UnityCsvComparator
             Field("accessory_pool", "accessory_pool", ValueKind.ItemPairs),
             Field("bonus_items", "bonus_items", ValueKind.ItemPairs)
         }, "note"),
-        new CsvMapping("crafting-tree.csv", "recipes.csv", new[] { "id" }, new[] { "id" }, new[]
+        new CsvMapping("crafting-tree.csv", "crafting-tree.csv", new[] { "id" }, new[] { "id" }, new[]
         {
-            Field("id", "output", ValueKind.Text),
-            Field("station_id", "station", ValueKind.Station),
-            Field("materials", "ingredients", ValueKind.ItemPairs),
-            Field("craft_time_sec", "durationSeconds", ValueKind.Number)
-        }, "item_ko", "note"),
+            Field("type", "type", ValueKind.Text),
+            Field("item_ko", "item_ko", ValueKind.Text),
+            Field("station_id", "station_id", ValueKind.Text),
+            Field("materials", "materials", ValueKind.ItemPairs),
+            Field("output_count", "output_count", ValueKind.Number),
+            Field("craft_time_sec", "craft_time_sec", ValueKind.Number),
+            Field("mvp_scope", "mvp_scope", ValueKind.Text),
+            Field("note", "note", ValueKind.Text)
+        }),
         new CsvMapping("day-curve.csv", "day-curve.csv", new[] { "day" }, new[] { "day" }, new[]
         {
             Field("heat_stage", "heat_stage", ValueKind.Number),
@@ -113,9 +117,12 @@ public static class NyangbingoV24UnityCsvComparator
         }),
         new CsvMapping("items.csv", "items.csv", new[] { "id" }, new[] { "id" }, new[]
         {
-            Field("name_ko", "displayName", ValueKind.Text),
-            Field("max_stack", "maxStack", ValueKind.Number)
-        }, "note"),
+            Field("name_ko", "name_ko", ValueKind.Text),
+            Field("category", "category", ValueKind.Text),
+            Field("max_stack", "max_stack", ValueKind.Number),
+            Field("mvp_scope", "mvp_scope", ValueKind.Text),
+            Field("note", "note", ValueKind.Text)
+        }),
         new CsvMapping("id-migration.csv", "id-migration.csv", new[] { "legacy_id", "domain" },
             new[] { "legacy_id", "domain" }, new[]
             {
@@ -198,10 +205,10 @@ public static class NyangbingoV24UnityCsvComparator
         }, "name_ko", "appear_from", "note")
     };
 
-    [MenuItem("Nyangbingo/Compare Official v24.1 With Unity CSV")]
+    [MenuItem("Nyangbingo/Compare Official Kit Data With Unity CSV")]
     private static void CompareFromMenu()
     {
-        var officialDirectory = EditorUtility.OpenFolderPanel("Select official v24.1 CSV folder", string.Empty,
+        var officialDirectory = EditorUtility.OpenFolderPanel("Select official kit CSV folder", string.Empty,
             string.Empty);
         if (string.IsNullOrWhiteSpace(officialDirectory)) return;
 
@@ -219,7 +226,7 @@ public static class NyangbingoV24UnityCsvComparator
     public static string Compare(string officialDirectory, string unityDirectory)
     {
         if (string.IsNullOrWhiteSpace(officialDirectory) || !Directory.Exists(officialDirectory))
-            throw new DirectoryNotFoundException("The official v24.1 CSV directory does not exist.");
+            throw new DirectoryNotFoundException("The official kit CSV directory does not exist.");
         if (string.IsNullOrWhiteSpace(unityDirectory) || !Directory.Exists(unityDirectory))
             throw new DirectoryNotFoundException("The Unity CSV directory does not exist.");
 
@@ -232,7 +239,7 @@ public static class NyangbingoV24UnityCsvComparator
         RequireExactManifest(officialCsvFiles);
 
         var builder = new StringBuilder();
-        builder.AppendLine("[Nyangbingo] Official v24.1 -> Unity CSV comparison completed.");
+        builder.AppendLine("[Nyangbingo] Official kit -> Unity CSV comparison completed.");
         builder.AppendLine($"[Nyangbingo] Official validation: {validationSummary}.");
         builder.AppendLine($"[Nyangbingo] Inventory: official {officialCsvFiles.Length} CSV, Unity " +
                            $"{unityCsvFiles.Length} CSV, mapped {Mappings.Length} pairs.");
@@ -262,10 +269,10 @@ public static class NyangbingoV24UnityCsvComparator
 
     private static void RequireExactManifest(string[] actualFiles)
     {
-        var missing = OfficialV241Files.Except(actualFiles, StringComparer.Ordinal).ToArray();
-        var extra = actualFiles.Except(OfficialV241Files, StringComparer.Ordinal).ToArray();
+        var missing = OfficialKitFiles.Except(actualFiles, StringComparer.Ordinal).ToArray();
+        var extra = actualFiles.Except(OfficialKitFiles, StringComparer.Ordinal).ToArray();
         if (missing.Length > 0 || extra.Length > 0)
-            throw new InvalidDataException($"Official v24.1 manifest mismatch. Missing: {JoinOrNone(missing)}; " +
+            throw new InvalidDataException($"Official kit manifest mismatch. Missing: {JoinOrNone(missing)}; " +
                                            $"extra: {JoinOrNone(extra)}.");
     }
 

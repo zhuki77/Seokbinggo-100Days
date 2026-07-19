@@ -15,6 +15,6 @@ MonoBehaviour:
   id: bell_rope
   displayName: "\uBC29\uC6B8 \uAE08\uC904"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uACBD\uBCF4 \uBC18\uACBD 10\uD0C0\uC77C (v11)"

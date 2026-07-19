@@ -15,6 +15,6 @@ MonoBehaviour:
   id: blast_furnace
   displayName: "\uC6A9\uAD11\uB85C"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 6
+  mvpScope: 1
+  note: "\uC5BC\uC74C\uAC15\uCCA0 \uC81C\uB828 \uC804\uC6A9 (v7 \uC2E0\uC124)"

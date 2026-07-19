@@ -15,6 +15,8 @@ MonoBehaviour:
   id: ice_core
   displayName: "\uC5BC\uC74C \uC800\uC7A5\uACE0"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uBAA8\uB4C8 P0 \u2014 \uCCB4\uC628 \uD68C\uBCF5 \uAC70\uC810. modules.csv
+    \uAE30\uC874 id \uC2B9\uACC4. \u26A0\uFE0F \uD55C\uD30C \uCF54\uC5B4(cold_wave_core)\uC640
+    \uB2E4\uB978 \uBB3C\uAC74"

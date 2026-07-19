@@ -15,6 +15,6 @@ MonoBehaviour:
   id: bell_norigae
   displayName: "\uBC29\uC6B8 \uB178\uB9AC\uAC1C"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 5
+  mvpScope: 1
+  note: "\uC774\uC911 \uC810\uD504(\uB192\uC774 80%) \u2014 \uC0C1\uC790 \uC804\uC6A9"

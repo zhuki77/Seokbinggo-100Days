@@ -15,6 +15,7 @@ MonoBehaviour:
   id: cold_wave_core
   displayName: "\uD55C\uD30C \uCF54\uC5B4"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uB0C9\uAC01 \u2014 \uB354\uC704 \uB2E8\uACC4 -1(\uC804\uC5ED 1\uAE30).
+    \uC7AC\uB8CC\uAC00 \uAC15\uCCA0\uC774(A) \uB4DC\uB78D\uC774\uB77C A"

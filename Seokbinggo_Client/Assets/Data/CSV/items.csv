@@ -1,84 +1,87 @@
-id,displayName,maxStack
-bare_claw,맨발톱,0
-club_shard,도깨비 방망이 조각,99
-iron_scale,무쇠 비늘,99
-stolen_bundle,훔친 보따리,99
-shadow_shard,그림자 조각,99
-gangcheol_scale,강철이 역린,99
-wood,나무,99
-hemp_stalk,삼줄기,99
-rebar,철근,99
-dirt,흙,99
-stone,돌,99
-coal,석탄,99
-clay,점토,99
-iron_ore,철 광석,99
-copper_ore,구리 광석,99
-ice_shard,얼음 조각,99
-icesteel_ore,얼음강철 원석,99
-frost_essence,서리정수,99
-iron_ingot,철 주괴,99
-copper_ingot,구리 주괴,99
-icesteel_ingot,얼음강철 주괴,99
-yokai_tear,요괴 눈물,99
-workbench,작업대,99
-furnace,화로,99
-blast_furnace,용광로,99
-ice_anvil,얼음 모루,99
-iron_claw,무쇠 발톱,1
-icesteel_claw,얼음강철 발톱,1
-straw_helm,짚 투구,1
-straw_armor,짚 갑옷,1
-straw_boots,짚 신발,1
-iron_helm,무쇠 투구,1
-iron_armor,무쇠 갑옷,1
-iron_boots,무쇠 신발,1
-icesteel_helm,얼음강철 투구,1
-icesteel_armor,얼음강철 갑옷,1
-icesteel_boots,얼음강철 신발,1
-bell_norigae,방울 노리개,1
-wind_daenggi,바람 댕기,1
-tiger_eye_bead,호랑이 눈 구슬,1
-ice_heart_norigae,얼음 심장 노리개,1
-bokjumeoni,복주머니,1
-dokkaebi_gamtu,도깨비 감투,1
-lantern,등불,99
-sieve,체,99
-haetae_statue,해태 석상,99
-nest_bed,보금자리,99
-magpie_nest,까치 둥지,99
-ssireum_satba,씨름 샅바,99
-iron_bait_pile,무쇠 미끼 더미,99
-ice_altar_offering,얼음 제단 봉헌,99
-drought_talisman,가뭄 부적,99
-dokkaebi_fire_essence,도깨비불 정수,99
-iron_forge_core,무쇠 용광심,99
-yeouiju,여의주,99
-drought_heart,가뭄 심장,99
-hapjukseon,합죽선,1
-cheolseon,철선,1
-dokkaebi_club,도깨비 방망이,1
-frostclaw_gauntlet,서리발톱 장갑,1
-bell_rope,방울 금줄,99
-iron_bell_rope,쇠 방울 금줄,99
-iron_sieve,무쇠 체,99
-frost_lantern,서리 등불,99
-insul_wall,차열벽,99
-door,단열 문,99
-roof,차열 지붕,99
-jangdok,장독 창고,99
-ice_core,얼음 저장고,99
-iron_insul_wall,무쇠 차열벽,99
-cold_device,냉기 장치,99
-dokkaebi_fire_tower,도깨비불 등탑,99
-cold_wave_core,한파 코어,99
-water_jar,물단지,99
-ice_jar,얼음 항아리,99
-straw_insul,짚 단열재,99
-clay_plaster,점토 미장,99
-munpungji,문풍지,99
-minhwa_scroll,민화 족자,99
-saekdong_lantern,색동 등롱,99
-onggi_pot,옹기 화분,99
-wind_chime,풍경,99
-saekdong_cushion,색동 방석,99
+id,name_ko,category,max_stack,mvp_scope,note
+wood,나무,resource,99,A,지상(밤) 채집
+hemp_stalk,삼줄기,resource,99,A,지상(밤) 채집
+rebar,철근,resource,99,A,지상 폐허(밤) — 차열 지붕 반복 소비
+dirt,흙,resource,99,A,상층 T1
+stone,돌,resource,99,A,상층 T1
+coal,석탄,resource,99,A,상층 T1 — 등불 연료·제련 연료
+clay,점토,resource,99,A,상층 T1 (v7 신설)
+iron_ore,철 광석,resource,99,A,중층 T2 — 화로 제련 투입
+copper_ore,구리 광석,resource,99,A,중층 T2 — 화로 제련 투입
+ice_shard,얼음 조각,resource,99,A,중층 T2 — 체온 회복 겸용
+icesteel_ore,얼음강철 원석,resource,99,A,심층 T3 — 용광로 제련 투입. 무쇠 발톱 하드 게이트
+frost_essence,서리정수,resource,99,A,심층 T3 최희소 — 빈도 4/100타일
+iron_ingot,철 주괴,material,99,A,화로 — 철 광석x2 + 석탄1
+copper_ingot,구리 주괴,material,99,A,화로 — 구리 광석x2 + 석탄1
+icesteel_ingot,얼음강철 주괴,material,99,A,용광로 — 얼음강철 원석x2 + 석탄2
+yokai_tear,요괴 눈물,material,99,A,전 요괴 드랍 — 6-8 경제 원장의 축
+club_shard,도깨비 방망이 조각,material,99,A,방망이 도깨비 25%
+iron_scale,무쇠 비늘,material,99,A,불가사리 50%
+stolen_bundle,훔친 보따리,material,99,A,야광귀 — 절도 성공 개체 100%. 절도품 전액 반환+보너스
+shadow_shard,그림자 조각,material,99,A,어둑시니 40%
+gangcheol_scale,강철이 역린,material,99,A,강철이 100% 확정
+dokkaebi_fire_essence,도깨비불 정수,material,99,A,도깨비 대장 확정 — 도깨비불 등탑 유일 재료
+iron_forge_core,무쇠 용광심,material,99,B,어미 불가사리 확정 — 신기전 화차 유일 재료. 보스 B라 동반 B
+yeouiju,여의주,material,99,B,이무기 확정 — 빙정 냉각로 유일 재료. 보스 B라 동반 B
+drought_heart,가뭄 심장,material,99,A,강철이 확정 — 한파 코어 유일 재료
+bare_claw,맨발톱,tool,0,A,T1 — 신체다. 인벤토리 미등재·제작 불가·분실 불가(4-4). max_stack 0 = 아이템화하지 않는다는 뜻
+iron_claw,무쇠 발톱,tool,1,A,T2 — 채굴 크리티컬 15%
+icesteel_claw,얼음강철 발톱,tool,1,A,T3 — 서리 서림 + 넓은 할퀴기
+dokkaebi_club,도깨비 방망이,weapon,1,A,넉백 2.0타일 특화
+frostclaw_gauntlet,서리발톱 장갑,weapon,1,A,엔드 무기 DPS 42
+hapjukseon,합죽선,weapon,1,A,밀치기 전용(기본 공격 없음) — 무기 슬롯 점유라 weapon
+cheolseon,철선,weapon,1,A,합죽선 진화 — 원본 소모. 채굴 불가
+workbench,작업대,station,99,A,1일차 밤 20초 온보딩
+furnace,화로,station,99,A,T2 제작대
+blast_furnace,용광로,station,99,A,얼음강철 제련 전용 (v7 신설)
+ice_anvil,얼음 모루,station,99,A,T3 제작대
+lantern,등불,placeable,99,A,반경 6타일 — 어둑시니 카운터. 연료 석탄
+sieve,체,placeable,99,A,반경 4타일 — 야광귀 카운터
+haetae_statue,해태 석상,placeable,99,A,반경 8타일 화염 -50%
+nest_bed,보금자리,placeable,99,A,냥잠 (v6)
+magpie_nest,까치 둥지,placeable,99,A,까치 벗 입주 (v6) — 맵당 1개 제한(globals magpie_nest_limit)
+bell_rope,방울 금줄,placeable,99,A,경보 반경 10타일 (v11)
+iron_bell_rope,쇠 방울 금줄,placeable,99,A,방울 금줄 진화 — 원본 소모 (v12)
+iron_sieve,무쇠 체,placeable,99,A,체 진화 — 원본 소모 (v12). 정식 명칭 '얼레미'
+frost_lantern,서리 등불,placeable,99,A,등불 진화 — 원본 소모. 연료 석탄→서리정수 (v12)
+insul_wall,차열벽,placeable,99,A,모듈 P0 — HP600. modules.csv 기존 id 승계
+door,단열 문,placeable,99,A,모듈 P0 — 통행+밀폐 인정. modules.csv 기존 id 승계(범용 단어지만 개발 참조 보호 우선)
+roof,차열 지붕,placeable,99,A,모듈 P0 — 상부 밀폐. modules.csv 기존 id 승계
+jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 12슬롯. modules.csv 기존 id 승계
+ice_core,얼음 저장고,placeable,99,A,모듈 P0 — 체온 회복 거점. modules.csv 기존 id 승계. ⚠️ 한파 코어(cold_wave_core)와 다른 물건
+iron_insul_wall,무쇠 차열벽,placeable,99,A,HP900 — 불가사리 면역
+cold_device,냉기 장치,placeable,99,A,요괴 눈물 주 소비처(x40)
+dokkaebi_fire_tower,도깨비불 등탑,placeable,99,A,터렛 DPS4 유도·반경 8타일
+singijeon_cart,신기전 화차,placeable,99,B,터렛 DPS6 직선 관통 — 재료가 어미(B) 드랍이라 B
+ice_crystal_cooler,빙정 냉각로,placeable,99,B,냉각 — 재료가 이무기(B) 드랍이라 B
+cold_wave_core,한파 코어,placeable,99,A,냉각 — 더위 단계 -1(전역 1기). 재료가 강철이(A) 드랍이라 A
+water_jar,물단지,placeable,99,A,소모형 냉기원 180초 — 온도 상한 25% (v21)
+ice_jar,얼음 항아리,placeable,99,A,연료형 냉기원 — 온도 상한 50% (v20)
+straw_insul,짚 단열재,placeable,99,A,벽 1장당 체온 하강 +5%·상한 6장
+clay_plaster,점토 미장,placeable,99,A,차열벽 HP 600→750
+munpungji,문풍지,placeable,99,A,단열 문 개방 중 체온 손실 0
+minhwa_scroll,민화 족자,placeable,99,A,장식 — 효과 0
+saekdong_lantern,색동 등롱,placeable,99,A,장식 — 효과 0. ⚠️ 광원 태그 아님(등불과 무관)
+onggi_pot,옹기 화분,placeable,99,A,장식 — 효과 0
+wind_chime,풍경,placeable,99,A,장식 — 효과 0
+saekdong_cushion,색동 방석,placeable,99,A,장식 — 효과 0. 보금자리 스킨
+ssireum_satba,씨름 샅바,summon,99,A,도깨비 대장 소환
+iron_bait_pile,무쇠 미끼 더미,summon,99,B,어미 불가사리 소환 — MVP 제작 UI 미노출
+ice_altar_offering,얼음 제단 봉헌,summon,99,B,이무기 소환(심층 제단 전용) — MVP 제작 UI 미노출
+drought_talisman,가뭄 부적,summon,99,A,강철이 재소환(최초 격퇴 후 해금)
+straw_helm,짚 투구,equipment,1,A,방어 1
+straw_armor,짚 갑옷,equipment,1,A,방어 1
+straw_boots,짚 신발,equipment,1,A,방어 1
+iron_helm,무쇠 투구,equipment,1,A,방어 2
+iron_armor,무쇠 갑옷,equipment,1,A,방어 3
+iron_boots,무쇠 신발,equipment,1,A,방어 1
+icesteel_helm,얼음강철 투구,equipment,1,A,방어 3 — 세트: 설한풍 한벌옷
+icesteel_armor,얼음강철 갑옷,equipment,1,A,방어 4 — 세트: 설한풍 한벌옷
+icesteel_boots,얼음강철 신발,equipment,1,A,방어 3 — 세트: 설한풍 한벌옷
+bell_norigae,방울 노리개,equipment,1,A,이중 점프(높이 80%) — 상자 전용
+wind_daenggi,바람 댕기,equipment,1,A,이동속도 +15% — 상자 전용
+tiger_eye_bead,호랑이 눈 구슬,equipment,1,A,시야 반경 +3타일 — 상자 전용. 등불 태그 분리(어둑시니 판정 불참)
+ice_heart_norigae,얼음 심장 노리개,equipment,1,A,낮 체온 상승 -15% — 상자 전용
+bokjumeoni,복주머니,equipment,1,A,채굴 크리티컬 +10%p — 상자 전용
+dokkaebi_gamtu,도깨비 감투,equipment,1,A,야광귀 인벤 절도 무효 — 상자 전용
+wallpaper,벽지,placeable,99,A,플레이어가 바르는 배경 벽지(v26) — 밀폐 구역 빈 칸을 100% 덮으면 그 구역 냉기원 지속시간 +25%. 1회 제작 16장 산출(crafting-tree output_count). 지하 자연 배경벽(t_bg_*)은 이미 덮인 것으로 계수한다

@@ -15,6 +15,6 @@ MonoBehaviour:
   id: dokkaebi_club
   displayName: "\uB3C4\uAE68\uBE44 \uBC29\uB9DD\uC774"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 4
+  mvpScope: 1
+  note: "\uB109\uBC31 2.0\uD0C0\uC77C \uD2B9\uD654"

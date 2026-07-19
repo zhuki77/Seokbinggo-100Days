@@ -15,6 +15,6 @@ MonoBehaviour:
   id: frost_essence
   displayName: "\uC11C\uB9AC\uC815\uC218"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC2EC\uCE35 T3 \uCD5C\uD76C\uC18C \u2014 \uBE48\uB3C4 4/100\uD0C0\uC77C"

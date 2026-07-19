@@ -15,6 +15,6 @@ MonoBehaviour:
   id: iron_insul_wall
   displayName: "\uBB34\uC1E0 \uCC28\uC5F4\uBCBD"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "HP900 \u2014 \uBD88\uAC00\uC0AC\uB9AC \uBA74\uC5ED"

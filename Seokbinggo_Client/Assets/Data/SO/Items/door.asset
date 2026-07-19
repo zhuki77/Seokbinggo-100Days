@@ -15,6 +15,8 @@ MonoBehaviour:
   id: door
   displayName: "\uB2E8\uC5F4 \uBB38"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uBAA8\uB4C8 P0 \u2014 \uD1B5\uD589+\uBC00\uD3D0 \uC778\uC815. modules.csv
+    \uAE30\uC874 id \uC2B9\uACC4(\uBC94\uC6A9 \uB2E8\uC5B4\uC9C0\uB9CC \uAC1C\uBC1C
+    \uCC38\uC870 \uBCF4\uD638 \uC6B0\uC120)"

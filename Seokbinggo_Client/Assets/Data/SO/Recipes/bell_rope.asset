@@ -23,6 +23,6 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: a18f1a42fbec2664c9e10bad9487e162, type: 2}
     amount: 1
   durationSeconds: 10
-  type: 0
-  mvpScope: 0
-  note: 
+  type: 14
+  mvpScope: 1
+  note: "\uACBD\uBCF4 \uBC18\uACBD 10\uD0C0\uC77C\xB7\uCFE84\uCD08"

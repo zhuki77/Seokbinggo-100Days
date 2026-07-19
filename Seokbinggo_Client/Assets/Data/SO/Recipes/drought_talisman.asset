@@ -25,6 +25,6 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: f545925680a3c6b4caa7e63f8c46fe2b, type: 2}
     amount: 1
   durationSeconds: 30
-  type: 0
-  mvpScope: 0
-  note: 
+  type: 12
+  mvpScope: 1
+  note: "\uAC15\uCCA0\uC774 \uC7AC\uC18C\uD658(\uCD5C\uCD08 \uACA9\uD1F4 \uD6C4 \uD574\uAE08)"

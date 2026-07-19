@@ -15,6 +15,6 @@ MonoBehaviour:
   id: shadow_shard
   displayName: "\uADF8\uB9BC\uC790 \uC870\uAC01"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 2
+  mvpScope: 1
+  note: "\uC5B4\uB451\uC2DC\uB2C8 40%"

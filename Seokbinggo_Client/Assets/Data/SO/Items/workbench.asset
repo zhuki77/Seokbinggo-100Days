@@ -15,6 +15,6 @@ MonoBehaviour:
   id: workbench
   displayName: "\uC791\uC5C5\uB300"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 6
+  mvpScope: 1
+  note: "1\uC77C\uCC28 \uBC24 20\uCD08 \uC628\uBCF4\uB529"

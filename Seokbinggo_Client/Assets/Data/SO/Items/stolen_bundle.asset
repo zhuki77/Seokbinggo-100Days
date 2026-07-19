@@ -15,6 +15,7 @@ MonoBehaviour:
   id: stolen_bundle
   displayName: "\uD6D4\uCE5C \uBCF4\uB530\uB9AC"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 2
+  mvpScope: 1
+  note: "\uC57C\uAD11\uADC0 \u2014 \uC808\uB3C4 \uC131\uACF5 \uAC1C\uCCB4 100%. \uC808\uB3C4\uD488
+    \uC804\uC561 \uBC18\uD658+\uBCF4\uB108\uC2A4"

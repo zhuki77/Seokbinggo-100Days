@@ -15,6 +15,7 @@ MonoBehaviour:
   id: icesteel_ore
   displayName: "\uC5BC\uC74C\uAC15\uCCA0 \uC6D0\uC11D"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC2EC\uCE35 T3 \u2014 \uC6A9\uAD11\uB85C \uC81C\uB828 \uD22C\uC785. \uBB34\uC1E0
+    \uBC1C\uD1B1 \uD558\uB4DC \uAC8C\uC774\uD2B8"

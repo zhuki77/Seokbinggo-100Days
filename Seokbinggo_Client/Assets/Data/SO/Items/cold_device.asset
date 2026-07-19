@@ -15,6 +15,6 @@ MonoBehaviour:
   id: cold_device
   displayName: "\uB0C9\uAE30 \uC7A5\uCE58"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uC694\uAD34 \uB208\uBB3C \uC8FC \uC18C\uBE44\uCC98(x40)"

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: ice_altar_offering
   displayName: "\uC5BC\uC74C \uC81C\uB2E8 \uBD09\uD5CC"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 8
+  mvpScope: 2
+  note: "\uC774\uBB34\uAE30 \uC18C\uD658(\uC2EC\uCE35 \uC81C\uB2E8 \uC804\uC6A9)
+    \u2014 MVP \uC81C\uC791 UI \uBBF8\uB178\uCD9C"

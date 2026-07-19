@@ -15,6 +15,6 @@ MonoBehaviour:
   id: icesteel_claw
   displayName: "\uC5BC\uC74C\uAC15\uCCA0 \uBC1C\uD1B1"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 3
+  mvpScope: 1
+  note: "T3 \u2014 \uC11C\uB9AC \uC11C\uB9BC + \uB113\uC740 \uD560\uD034\uAE30"

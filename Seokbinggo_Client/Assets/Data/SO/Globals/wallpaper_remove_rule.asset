@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: wallpaper_remove_rule
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: wallpaper_remove_rule
+  value: restore_original
+  unit: rule
+  note: "\uBCBD\uC9C0 \uC81C\uAC70 \uC2DC \uADF8 \uCE78\uC740 '\uC6D0\uB798 \uC788\uB358
+    \uAC83'\uC73C\uB85C \uB3CC\uC544\uAC04\uB2E4(v26) \u2014 \uC9C0\uD558(\uC6D0\uB798
+    \uC790\uC5F0 \uBC30\uACBD\uBCBD \uC790\uB9AC)=\uC790\uC5F0 \uBC30\uACBD\uBCBD
+    \uBCF5\uC6D0 / \uC9C0\uC0C1(\uC6D0\uB798 \uD558\uB298)=\uBE48 \uCE78. \uD68C\uC758\uC5D0\uC11C
+    '\uC790\uC5F0\uBCBD \uBCF5\uC6D0'\uACFC '\uBE48 \uCE78' \uB450 \uC548\uC774 \uCDA9\uB3CC\uD588\uC73C\uB098
+    \uAC01\uAC01 \uB2E4\uB978 \uC0C1\uD669\uC744 \uBCF8 \uAC83\uC774\uB77C \uD1B5\uD569
+    \uADDC\uCE59 \uD558\uB098\uB85C \uD574\uC18C"

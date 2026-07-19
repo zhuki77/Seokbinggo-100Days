@@ -15,6 +15,6 @@ MonoBehaviour:
   id: club_shard
   displayName: "\uB3C4\uAE68\uBE44 \uBC29\uB9DD\uC774 \uC870\uAC01"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 2
+  mvpScope: 1
+  note: "\uBC29\uB9DD\uC774 \uB3C4\uAE68\uBE44 25%"

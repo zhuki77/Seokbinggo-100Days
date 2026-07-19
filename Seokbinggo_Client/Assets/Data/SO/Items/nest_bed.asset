@@ -15,6 +15,6 @@ MonoBehaviour:
   id: nest_bed
   displayName: "\uBCF4\uAE08\uC790\uB9AC"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uB0E5\uC7A0 (v6)"

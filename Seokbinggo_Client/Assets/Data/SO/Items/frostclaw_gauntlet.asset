@@ -15,6 +15,6 @@ MonoBehaviour:
   id: frostclaw_gauntlet
   displayName: "\uC11C\uB9AC\uBC1C\uD1B1 \uC7A5\uAC11"
   maxStack: 1
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 4
+  mvpScope: 1
+  note: "\uC5D4\uB4DC \uBB34\uAE30 DPS 42"

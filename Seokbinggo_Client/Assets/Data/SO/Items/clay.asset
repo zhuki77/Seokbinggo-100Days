@@ -15,6 +15,6 @@ MonoBehaviour:
   id: clay
   displayName: "\uC810\uD1A0"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 1
+  mvpScope: 1
+  note: "\uC0C1\uCE35 T1 (v7 \uC2E0\uC124)"

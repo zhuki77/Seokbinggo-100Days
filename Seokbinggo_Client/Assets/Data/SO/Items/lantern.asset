@@ -15,6 +15,7 @@ MonoBehaviour:
   id: lantern
   displayName: "\uB4F1\uBD88"
   maxStack: 99
-  category: 0
-  mvpScope: 0
-  note: 
+  category: 7
+  mvpScope: 1
+  note: "\uBC18\uACBD 6\uD0C0\uC77C \u2014 \uC5B4\uB451\uC2DC\uB2C8 \uCE74\uC6B4\uD130.
+    \uC5F0\uB8CC \uC11D\uD0C4"
