@@ -34,6 +34,13 @@ namespace Nyangbingo.World
         [Min(0.0001f)][SerializeField] private float caveNoiseFrequency = 0.08f;
         [Range(0f, 1f)][SerializeField] private float caveChanceUpper = 0.10f;
         [Range(0f, 1f)][SerializeField] private float caveChanceDeep = 0.25f;
+        // v27: 공동 하나(연결 성분)의 최대 세로 길이. globals.csv cave_max_height 정본(가안 12 —
+        // 화면 세로 34타일의 약 1/3). 지표 관통 거대 수직 구멍 방지. 시작 입구·좁은 연결 통로는 Pass 4 이후
+        // 별도 경로라 이 한도의 적용 대상이 아니다.
+        [Min(1)][SerializeField] private int caveMaxHeight = 12;
+        // v27 Top Safety Zone: 지표(surfaceY) 포함 직하단 몇 칸을 펄린 공동에서 제외(기본 2 = 지표+1칸).
+        // 기획 surface_y(맵 상단 하늘 두께)와 별개로, 열별 표면 껍질을 절대 안전지대로 둔다.
+        [Min(1)][SerializeField] private int caveSurfaceCrustThickness = 2;
 
         // A-10: depthMin/depthMax는 Assets/Data/CSV/mineral-tiers.csv의 depth_min/depth_max를 그대로 옮긴
         // 값이다(T1 1~45 · T2 46~90 · T3 91~135). CSV가 정본이므로 두 값이 어긋나면 이 배열을 CSV에 맞춰
@@ -96,6 +103,8 @@ namespace Nyangbingo.World
         public float CaveNoiseFrequency => caveNoiseFrequency;
         public float CaveChanceUpper => caveChanceUpper;
         public float CaveChanceDeep => caveChanceDeep;
+        public int CaveMaxHeight => caveMaxHeight;
+        public int CaveSurfaceCrustThickness => caveSurfaceCrustThickness;
 
         public OreVeinProfile[] OreVeins => oreVeins ?? Array.Empty<OreVeinProfile>();
 

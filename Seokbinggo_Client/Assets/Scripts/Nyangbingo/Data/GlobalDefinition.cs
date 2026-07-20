@@ -18,6 +18,7 @@ namespace Nyangbingo.Data
         public const string SealWindowRadiusY = "seal_window_ry";
         public const string SealCap = "seal_cap";
         public const string SealTargetCells = "seal_target_cells";
+        public const string CaveMaxHeight = "cave_max_height";
         public const string BossSavePolicy = "boss_save_policy";
         public const string BaekjungWaveOverflow = "baekjung_wave_overflow";
         public const string BadgeWallCount = "badge_wall_count";

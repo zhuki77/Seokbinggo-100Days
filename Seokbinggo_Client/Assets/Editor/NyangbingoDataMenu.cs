@@ -1693,9 +1693,9 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 83 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count != 84 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain the official 83-row v26 schema.");
+            Debug.LogError("[Nyangbingo] globals.csv must contain the official 84-row v27 schema (v26 83행 + cave_max_height).");
             return;
         }
 
