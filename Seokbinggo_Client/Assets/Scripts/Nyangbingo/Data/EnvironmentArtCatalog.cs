@@ -10,11 +10,13 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite distantView;
         [SerializeField] private Sprite clouds;
         [SerializeField] private Sprite underground;
+        [SerializeField] private Sprite titleBackground;
         [SerializeField] private Sprite[] titleFrames = Array.Empty<Sprite>();
 
         public Sprite DistantView => distantView;
         public Sprite Clouds => clouds;
         public Sprite Underground => underground;
+        public Sprite TitleBackground => titleBackground;
         public IReadOnlyList<Sprite> TitleFrames => titleFrames ?? Array.Empty<Sprite>();
     }
 }

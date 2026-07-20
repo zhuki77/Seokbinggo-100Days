@@ -80,7 +80,7 @@ namespace Nyangbingo.UI
         private void Update()
         {
             if (model == null || unifiedPanelMode) return;
-            if (Input.GetKeyDown(KeyCode.Tab) && (open || gameShell == null ||
+            if (Input.GetKeyDown(KeyCode.Alpha4) && (open || gameShell == null ||
                                                   gameShell.Screen == GameShellScreen.Gameplay)) SetOpen(!open);
             else if (open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
         }
@@ -225,7 +225,7 @@ namespace Nyangbingo.UI
             var title = window.Find("Title")?.GetComponent<Text>();
             if (title != null)
             {
-                title.text = "요괴 도감  ·  카드 클릭 확대  ·  Tab/Esc 닫기";
+                title.text = "요괴 도감  ·  카드 클릭 확대  ·  4/ESC 닫기";
                 title.fontSize = 14;
                 title.alignment = TextAnchor.MiddleCenter;
                 title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(.5f, 1f);

@@ -229,6 +229,11 @@ namespace Nyangbingo.Editor
             //         "18개가 디스크에 완전히 반영되기 전에 캐시가 먼저 굳어버리는" 시간차 문제 자체가 발생할
             //         여지가 없다.
             renderer.SetTileVisualsForEditorSetup(newVisuals.ToArray(), fallbackTile);
+            var altarQuadrants = new TileBase[4];
+            for (var index = 0; index < altarQuadrants.Length; index++)
+                altarQuadrants[index] = AssetDatabase.LoadAssetAtPath<TileBase>(
+                    $"{TilesFolder}/ice_altar_{index}.asset");
+            renderer.SetIceAltarQuadrantTilesForEditorSetup(altarQuadrants);
             EditorUtility.SetDirty(renderer);
 
             // 카메라 설정도 같은 트랜잭션 안에서 같이 더티 표시해둔다(월드 전체가 보이도록 조정).

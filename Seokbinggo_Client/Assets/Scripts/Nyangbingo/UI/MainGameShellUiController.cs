@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Nyangbingo.UI
@@ -39,6 +40,8 @@ namespace Nyangbingo.UI
         [SerializeField] private Button titleQuitButton;
         [SerializeField] private Button resultTitleButton;
         [SerializeField] private Text statusText;
+        [SerializeField] private EnvironmentArtCatalog environmentArtCatalog;
+        [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
 
         private readonly List<Button> demoSaveButtons = new List<Button>();
         private GameDataCatalog gameDataCatalog;
@@ -46,6 +49,8 @@ namespace Nyangbingo.UI
         private Text resultHeaderText;
         private Text resultSummaryText;
         private Text resultTeaserText;
+        private Image bgmSpeakerImage;
+        private Image sfxSpeakerImage;
         private bool demoLoadApplied;
         private static bool enterGameplayAfterReload;
 
@@ -57,7 +62,8 @@ namespace Nyangbingo.UI
             Button resume, Button[] saveSlotButtons, Button[] loadSlotButtons, Button settings, Button returnTitle,
             Button applySettings, Button backSettings, Slider bgm, Slider sfx, Toggle fullscreen,
             Button confirm, Button cancel, Text confirmationLabel, Button continueGame, Button newGame,
-            Button quit, Button resultTitle, Text status)
+            Button quit, Button resultTitle, Text status, EnvironmentArtCatalog environmentArt = null,
+            GameplayArtCatalog gameplayArt = null)
         {
             shell = shellController;
             saveCoordinator = coordinator;
@@ -83,6 +89,8 @@ namespace Nyangbingo.UI
             titleQuitButton = quit;
             resultTitleButton = resultTitle;
             statusText = status;
+            environmentArtCatalog = environmentArt;
+            gameplayArtCatalog = gameplayArt;
         }
 
         private void Start()
@@ -112,14 +120,202 @@ namespace Nyangbingo.UI
             bgmSlider.value = audioService.BgmVolume;
             sfxSlider.value = audioService.SfxVolume;
             fullscreenToggle.isOn = Screen.fullScreen;
+            ResolveShellArtCatalogs();
+            ApplyDeliveredShellArt();
             var shouldEnterGameplay = enterGameplayAfterReload;
             enterGameplayAfterReload = false;
             if (shouldEnterGameplay) shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
             else shell.EnterTitle();
             RefreshTitleControls();
-            SetStatus("Esc: 일시정지 · Tab: 도감");
+            SetStatus("Esc: 계속하기");
             IsInitialized = true;
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지·3슬롯 저장/로드·설정·타이틀 셸 연결 완료.");
+        }
+
+        private void ResolveShellArtCatalogs()
+        {
+            if (environmentArtCatalog == null)
+                environmentArtCatalog = Resources.FindObjectsOfTypeAll<EnvironmentArtCatalog>()
+                    .FirstOrDefault(catalog => catalog != null && catalog.name == "EnvironmentArtCatalog");
+            if (gameplayArtCatalog == null)
+                gameplayArtCatalog = Resources.FindObjectsOfTypeAll<GameplayArtCatalog>()
+                    .FirstOrDefault(catalog => catalog != null && catalog.name == "GameplayArtCatalog");
+        }
+
+        private void ApplyDeliveredShellArt()
+        {
+            EnsureTitleBackground();
+            EnsureTitleLogo();
+            if (gameplayArtCatalog == null) return;
+            ApplyButtonLabelArt(titleNewGameButton, gameplayArtCatalog.ShellStart);
+            ApplyButtonLabelArt(settingsButton, gameplayArtCatalog.ShellSettings);
+            ApplyButtonLabelArt(titleQuitButton, gameplayArtCatalog.ShellLeave);
+            bgmSpeakerImage = ApplyVolumeSliderArt(bgmSlider);
+            sfxSpeakerImage = ApplyVolumeSliderArt(sfxSlider);
+            RefreshSpeakerIcon(bgmSpeakerImage, bgmSlider != null ? bgmSlider.value : 0f);
+            RefreshSpeakerIcon(sfxSpeakerImage, sfxSlider != null ? sfxSlider.value : 0f);
+            if (bgmSlider != null)
+                bgmSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(bgmSpeakerImage, value));
+            if (sfxSlider != null)
+                sfxSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(sfxSpeakerImage, value));
+        }
+
+        private void EnsureTitleBackground()
+        {
+            if (titleNewGameButton == null) return;
+            var titlePanel = titleNewGameButton.transform.parent;
+            if (titlePanel == null) return;
+
+            var panelImage = titlePanel.GetComponent<Image>();
+            if (panelImage != null)
+                panelImage.color = new Color(.02f, .035f, .05f, 1f);
+
+            if (environmentArtCatalog == null || environmentArtCatalog.TitleBackground == null) return;
+            var backgroundTransform = titlePanel.Find("TitleBackground") as RectTransform;
+            if (backgroundTransform == null)
+            {
+                var backgroundObject = new GameObject("TitleBackground", typeof(RectTransform), typeof(Image),
+                    typeof(AspectRatioFitter));
+                backgroundObject.transform.SetParent(titlePanel, false);
+                backgroundTransform = (RectTransform)backgroundObject.transform;
+            }
+            backgroundTransform.anchorMin = Vector2.zero;
+            backgroundTransform.anchorMax = Vector2.one;
+            backgroundTransform.offsetMin = Vector2.zero;
+            backgroundTransform.offsetMax = Vector2.zero;
+            var image = backgroundTransform.GetComponent<Image>();
+            image.sprite = environmentArtCatalog.TitleBackground;
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            var fitter = backgroundTransform.GetComponent<AspectRatioFitter>() ??
+                         backgroundTransform.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fitter.aspectRatio = image.sprite.rect.width / image.sprite.rect.height;
+            backgroundTransform.SetAsFirstSibling();
+        }
+
+        private void EnsureTitleLogo()
+        {
+            if (environmentArtCatalog == null || environmentArtCatalog.TitleFrames.Count == 0 ||
+                titleNewGameButton == null) return;
+            var titlePanel = titleNewGameButton.transform.parent;
+            if (titlePanel == null) return;
+            var titleLabel = titlePanel.Find("Title")?.GetComponent<Text>();
+            if (titleLabel != null) titleLabel.gameObject.SetActive(false);
+            var titleArtTransform = titlePanel.Find("TitleArt") as RectTransform;
+            if (titleArtTransform == null)
+            {
+                var titleArtObject = new GameObject("TitleArt", typeof(RectTransform), typeof(Image));
+                titleArtObject.transform.SetParent(titlePanel, false);
+                titleArtTransform = (RectTransform)titleArtObject.transform;
+            }
+            titleArtTransform.anchorMin = titleArtTransform.anchorMax = titleArtTransform.pivot =
+                new Vector2(.5f, .5f);
+            titleArtTransform.anchoredPosition = new Vector2(0f, 52.5f);
+            titleArtTransform.sizeDelta = new Vector2(128f, 48f);
+            var image = titleArtTransform.GetComponent<Image>();
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            var animator = titleArtTransform.GetComponent<RuntimeUiSpriteAnimator>() ??
+                           titleArtTransform.gameObject.AddComponent<RuntimeUiSpriteAnimator>();
+            animator.ConfigureForScene(environmentArtCatalog.TitleFrames.ToArray(), .1f);
+            var titleBackground = titlePanel.Find("TitleBackground");
+            titleArtTransform.SetSiblingIndex(titleBackground != null ? 1 : 0);
+        }
+
+        private static void ApplyButtonLabelArt(Button button, Sprite sprite)
+        {
+            if (button == null || sprite == null) return;
+            var label = button.GetComponentInChildren<Text>(true);
+            if (label != null) label.gameObject.SetActive(false);
+            var artTransform = button.transform.Find("DeliveredArt") as RectTransform;
+            if (artTransform == null)
+            {
+                var artObject = new GameObject("DeliveredArt", typeof(RectTransform), typeof(Image));
+                artObject.transform.SetParent(button.transform, false);
+                artTransform = (RectTransform)artObject.transform;
+            }
+            artTransform.anchorMin = artTransform.anchorMax = artTransform.pivot = new Vector2(.5f, .5f);
+            artTransform.anchoredPosition = Vector2.zero;
+            artTransform.sizeDelta = sprite.rect.size;
+            var image = artTransform.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+
+        private Image ApplyVolumeSliderArt(Slider slider)
+        {
+            if (slider == null || gameplayArtCatalog.ShellVolumeBar == null ||
+                gameplayArtCatalog.ShellVolumeHandle == null) return null;
+            var sliderRect = slider.GetComponent<RectTransform>();
+            var barSize = gameplayArtCatalog.ShellVolumeBar.rect.size;
+            var handleSize = gameplayArtCatalog.ShellVolumeHandle.rect.size;
+            sliderRect.sizeDelta = new Vector2(barSize.x, Mathf.Max(16f, handleSize.y));
+            var background = slider.transform.Find("Background")?.GetComponent<Image>();
+            if (background != null)
+            {
+                background.sprite = gameplayArtCatalog.ShellVolumeBar;
+                background.color = Color.white;
+                background.preserveAspect = true;
+                var rect = background.rectTransform;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = barSize;
+            }
+            if (slider.fillRect != null)
+            {
+                slider.fillRect.gameObject.SetActive(false);
+                slider.fillRect = null;
+            }
+            var handle = slider.handleRect?.GetComponent<Image>();
+            if (handle != null)
+            {
+                var handleSlideArea = slider.transform.Find("Handle Slide Area") as RectTransform;
+                if (handleSlideArea == null)
+                {
+                    var areaObject = new GameObject("Handle Slide Area", typeof(RectTransform));
+                    areaObject.transform.SetParent(slider.transform, false);
+                    handleSlideArea = (RectTransform)areaObject.transform;
+                }
+                handleSlideArea.anchorMin = Vector2.zero;
+                handleSlideArea.anchorMax = Vector2.one;
+                handleSlideArea.offsetMin = new Vector2(handleSize.x * .5f, 0f);
+                handleSlideArea.offsetMax = new Vector2(handleSize.x * -.5f, 0f);
+                handle.rectTransform.SetParent(handleSlideArea, false);
+                handle.sprite = gameplayArtCatalog.ShellVolumeHandle;
+                handle.color = Color.white;
+                handle.preserveAspect = true;
+                handle.rectTransform.sizeDelta = handleSize;
+                slider.handleRect = handle.rectTransform;
+            }
+            var speakerTransform = slider.transform.Find("Speaker") as RectTransform;
+            if (speakerTransform == null)
+            {
+                var speakerObject = new GameObject("Speaker", typeof(RectTransform), typeof(Image));
+                speakerObject.transform.SetParent(slider.transform, false);
+                speakerTransform = (RectTransform)speakerObject.transform;
+            }
+            speakerTransform.anchorMin = speakerTransform.anchorMax = speakerTransform.pivot = new Vector2(.5f, .5f);
+            speakerTransform.anchoredPosition = new Vector2(-44f, 0f);
+            speakerTransform.sizeDelta = new Vector2(16f, 16f);
+            var speaker = speakerTransform.GetComponent<Image>();
+            speaker.preserveAspect = true;
+            speaker.raycastTarget = false;
+            return speaker;
+        }
+
+        private void RefreshSpeakerIcon(Image image, float value)
+        {
+            if (image == null || gameplayArtCatalog == null) return;
+            image.sprite = value <= .001f
+                ? gameplayArtCatalog.ShellSpeakerMuted
+                : value < .5f
+                    ? gameplayArtCatalog.ShellSpeakerLow
+                    : gameplayArtCatalog.ShellSpeakerHigh;
+            image.enabled = image.sprite != null;
         }
 
         private void Update()
@@ -128,6 +324,7 @@ namespace Nyangbingo.UI
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 !MainGameCraftingUiController.ConsumedEscapeThisFrame &&
                 !MainGameTurretRuntime.ConsumedEscapeThisFrame &&
+                !MainGameTilePaletteController.ConsumedEscapeThisFrame &&
                 (codex == null || !codex.IsOpen))
             {
                 switch (shell.Screen)

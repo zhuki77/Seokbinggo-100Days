@@ -4,9 +4,9 @@ ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
   serializedVersion: 2
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
   script: {fileID: 11500000, guid: 62a9f0aa5b59740cfbadc7e5f9823bb0, type: 3}
   importerVersion: 2
   textureImporterSettings:
@@ -103,34 +103,34 @@ ScriptedImporter:
     generateSpriteAtlas: 1
   platformSettingsDirtyTick: 0
   singleSpriteImportData:
-  - name:
-    originalName:
+  - name: 
+    originalName: 
     pivot: {x: 0, y: 0}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 0
       y: 0
       width: 0
       height: 0
-    spriteID:
+    spriteID: 
     spriteBone: []
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 0, y: 0}
   animatedSpriteImportData:
   - name: Frame_0
-    originalName:
+    originalName: 
     pivot: {x: 0.4375, y: -7.2000003}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -142,16 +142,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 471}
   - name: Frame_1
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -5.8333335}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 79
@@ -163,16 +163,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 79, y: 433}
   - name: Frame_2
-    originalName:
+    originalName: 
     pivot: {x: 0.4925373, y: -2.909091}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -184,16 +184,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 433}
   - name: Frame_3
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.71999997}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -205,16 +205,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 367}
   - name: Frame_4
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 128
@@ -226,16 +226,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 128, y: 4}
   - name: Frame_5
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -247,16 +247,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 97}
   - name: Frame_6
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -268,16 +268,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 142}
   - name: Frame_7
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -289,16 +289,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 187}
   - name: Frame_8
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.13157894}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -310,16 +310,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 51}
   - name: Frame_9
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.10256411}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -331,16 +331,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 4}
   - name: Frame_10
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -352,16 +352,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 232}
   - name: Frame_11
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -373,16 +373,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 277}
   - name: Frame_12
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -394,16 +394,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 322}
   - name: Frame_13
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.16216215}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 128
@@ -415,16 +415,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 128, y: 49}
   - name: Frame_14
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.71999997}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -436,16 +436,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 400}
   - name: Frame_15
-    originalName:
+    originalName: 
     pivot: {x: 0.4925373, y: -2.909091}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -457,16 +457,16 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 452}
   - name: Frame_16
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -5.8333335}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 79
@@ -478,7 +478,7 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 79, y: 452}

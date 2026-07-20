@@ -33,7 +33,7 @@
 2026-07-21 기준 확인 결과:
 
 - `Nyangbingo/Run Dev A Regression Tests`: 9/9 통과
-- `Nyangbingo/Run Dev B Integration Regression Tests`: 3/3 통과
+- `Nyangbingo/Run Dev B Integration Regression Tests`: 4/4 통과
 - MainGame 새 게임·UI·저장·이어하기 수동 회귀 통과
 - 런타임·에디터 C# 빌드 경고/오류 0
 
@@ -166,7 +166,7 @@ public interface IWorldSafeSpawnResolver
 
 개발 A PR에는 다음을 한글로 기록합니다.
 
-- A-21~A-23 각각의 완료 여부
+- A-21~A-26 각각의 완료 여부
 - 새로 추가·변경한 공용 인터페이스 전문
 - 전경 Collider의 컴포넌트·레이어·Material·좌표 설정값
 - 배경 데이터 구조와 `bg_*`/`t_bg_*` 호환 정책
@@ -182,7 +182,118 @@ public interface IWorldSafeSpawnResolver
 3. `TryFindTemporarySafeSurfaceSpawn`과 데모 생성기의 직접 타일 순회 제거
 4. Rigidbody2D/Collider 기반 플레이어·드랍 배선
 5. 벽지 도포율을 냉기원 지속시간 보너스에 연결
-6. Dev A 회귀 → Dev B 통합 회귀 → MainGame 새 게임·데모·저장·로드 → 제품 빌드 순서로 검증
+6. 하단 타일 팔레트의 벽지 항목을 개발 A 배경 배치 계약에 연결
+7. 반경·밀폐 창 오버레이를 팔레트 토글과 PC `R` 입력에 연결
+8. Dev A 회귀 → Dev B 통합 회귀 → MainGame 새 게임·데모·저장·로드 → 제품 빌드 순서로 검증
+
+---
+
+## A-25. v29 하단 타일 팔레트용 월드 배치 계약 보존
+
+### 현재 개발 B 구현 상태
+
+v29 정본의 구 12칸 핫바 대체 시스템으로 `MainGameTilePaletteController`가 추가되었습니다.
+
+- 플레이어가 현재 보유한 설치 가능 타일·설치물만 하단에 동적으로 표시
+- 제작대·화로 같은 제품 설치물은 기존 `MainGameTurretRuntime` 배치 경로 사용
+- 채굴한 흙·돌 등 전경 타일은 `TileService.TryPlaceForeground` 경로 사용
+- 인벤토리 채집 탭의 `E` 설치와 하단 팔레트 클릭이 동일한 배치 진입점 사용
+- 전경 타일 설치 가능 여부는 제작법 유무가 아니라 `TileService.SupportsForegroundPlacement`로 판정
+- `wallpaper`는 A-23 배경 배치 계약이 없으므로 현재 팔레트에서 의도적으로 제외
+
+`TileService.SupportsForegroundPlacement`는 개발 B가 현재 `PlacementHardness` 정본을 외부에서 안전하게 조회하기 위해 추가한 최소 계약입니다. 개발 A가 `TileService`를 수정·교체할 때 이 메서드를 누락시키거나, 채굴 타일을 “제작법이 없다”는 이유로 배치 불가 처리하면 안 됩니다.
+
+### 요구사항
+
+1. 다음 정보와 동작을 유지하는 공용 계약을 제공합니다. 실제 메서드명은 달라도 됩니다.
+   - 아이템 ID가 플레이어 재설치 가능한 전경 타일인지 판정
+   - 대상 셀이 설치 가능한지 사전 판정
+   - 전경 설치 실행과 성공/실패 결과 반환
+2. 전경 설치 허용 목록은 월드 타일 정본에서 관리합니다. UI의 제작법·아이템 카테고리를 월드 배치 가능 여부의 정본으로 사용하지 않습니다.
+3. 기반암, 얼음 제단, 자연 전용 타일, 배경 전용 ID는 전경 재설치 대상으로 노출하지 않습니다.
+4. 설치 실패 시 인벤토리를 소비하지 않고, 성공한 경우에만 정확히 1개를 소비하는 원자성을 유지합니다.
+5. 성공 프레임에 `TileData`, 전경 화면, A-21 Collider, 변경 이력과 저장 상태가 모두 일치해야 합니다.
+6. 개발 A가 메서드 시그니처를 변경해야 한다면 기존 메서드를 바로 삭제하지 말고 대체 인터페이스와 마이그레이션 예시를 먼저 전달합니다.
+7. 개발 A는 다음 개발 B 파일을 직접 수정하지 않습니다.
+   - `MainGameTilePaletteController.cs`
+   - `MainGameCraftingUiController.cs`
+8. A-23 완료 시 벽지에 대해 다음과 동등한 배경 전용 계약을 함께 제공합니다.
+
+```csharp
+public interface IBackgroundPlacementService
+{
+    bool CanPlaceWallpaper(Vector3Int cell);
+    bool TryPlaceWallpaper(Vector3Int cell);
+    bool TryRemoveWallpaper(Vector3Int cell);
+    BackgroundCellState GetBackgroundState(Vector3Int cell);
+}
+```
+
+벽지의 인벤토리 소비는 전경과 동일하게 성공 시 1개, 실패 시 0개여야 합니다. 개발 B가 이 계약을 받은 뒤 팔레트 우측 끝 벽지 항목과 설치·제거 입력을 연결합니다.
+
+### 회귀 테스트
+
+1. 흙·돌을 채굴해 소지품에 넣은 뒤 인벤토리와 하단 팔레트 양쪽에서 재설치 가능
+2. 점유 셀·월드 밖·금지 타일 설치 실패 시 수량 불변
+3. 설치 직후 화면과 Collider가 동시에 생성되고 다시 채굴 가능
+4. 저장·로드 뒤 재설치 타일과 인벤토리 수량 동일
+5. 기반암·얼음 제단·배경 ID가 전경 팔레트 대상으로 판정되지 않음
+6. 벽지 계약 완료 후 전경과 독립적으로 설치·제거·복원되고 Collider·밀폐율은 불변
+
+---
+
+## A-26. 반경 표시와 밀폐 창 월드 오버레이 인계
+
+최신 정본은 하단 팔레트에 반경 표시 토글을 두고 다음 월드 범위를 일괄 표시하도록 규정합니다.
+
+- 등불 반경 6타일
+- 체 반경 4타일
+- 해태 반경 8타일
+- 밀폐 창 사각형 `seal_window_rx` × `seal_window_ry`
+
+기획서의 아트 명세는 이 원·사각형을 고정 이미지가 아닌 **개발 A 런타임 코드**로 지정합니다. 반경과 밀폐 창 크기가 CSV/전역값에 따라 달라지므로 텍스처에 수치를 고정하면 안 됩니다.
+
+### 담당 분리
+
+- 개발 A: Grid/Tilemap 좌표에 정확히 맞는 원·사각형 월드 오버레이 렌더러와 공용 호출 계약 제공
+- 개발 B: 하단 팔레트 토글 UI, PC `R` 입력, 현재 설치물 목록과 표시 반경 전달
+- 아트: 신규 원형·사각형 텍스처 없음
+
+### 요구사항
+
+1. 입력을 직접 읽지 않는 표시 전용 컴포넌트/API를 제공합니다. 개발 A가 `R` 키나 팔레트 버튼을 직접 처리하지 않습니다.
+2. 개발 B가 전달한 중심 좌표·반경·형상 목록을 월드 Grid와 동일한 좌표 계약으로 그립니다.
+3. 원 반경과 밀폐 창 크기는 현재 CSV·전역값 또는 호출 인자에서 읽고 하드코딩하지 않습니다.
+4. 오버레이는 Collider, 밀폐 판정, 공격 범위, 저장 데이터에 영향을 주지 않는 순수 시각 요소여야 합니다.
+5. 카메라 이동·해상도 변경·픽셀 퍼펙트 설정에서도 타일 경계와 어긋나지 않아야 합니다.
+6. 표시 해제 시 생성한 선·메시·머티리얼을 누수 없이 정리합니다.
+7. 밀폐 창 사각형은 A-23의 실제 코어 및 `SealSystem` 좌표와 동일한 중심을 사용합니다.
+
+### 권장 계약 예시
+
+```csharp
+public readonly struct WorldRangeOverlay
+{
+    public Vector2 Center;
+    public float Radius;
+    public WorldRangeShape Shape;
+}
+
+public interface IWorldRangeOverlayRenderer
+{
+    void SetVisible(bool visible);
+    void Render(IReadOnlyList<WorldRangeOverlay> overlays);
+    void Clear();
+}
+```
+
+### 회귀 테스트
+
+1. 반경 4·6·8 원이 실제 타일 중심에서 정확한 셀 수만큼 표시
+2. 밀폐 창 사각형이 `SealSystem` 계산 창과 동일
+3. 토글 반복·씬 재로드 후 오버레이 중복 또는 머티리얼 누수 없음
+4. 설치물 추가·회수 후 다음 갱신에서 목록과 위치가 일치
+5. 해상도·카메라 위치 변경에도 월드 타일과 정렬 유지
 
 ---
 
@@ -195,6 +306,8 @@ public interface IWorldSafeSpawnResolver
 - 전경/배경 Tilemap과 Collider 구성
 - 배경·벽지 상태 및 월드 저장/복원
 - 안전 스폰 판정·해결 계약
+- 전경/배경 배치 가능 판정과 원자적 설치 계약
+- 반경·밀폐 창 월드 오버레이 렌더러
 - `NyangbingoDevARegressionTests`
 
 ### 개발 A가 직접 수정하지 않을 영역
@@ -205,6 +318,7 @@ public interface IWorldSafeSpawnResolver
 - `MainGameEnvironmentState`, `MainGameRuntimeServices`
 - 인벤토리·제작·제련·장비·도감 UI와 입력
 - HUD, 전투 피드백, 아이템 아트와 자석 습득
+- 하단 타일 팔레트 UI와 인벤토리 설치 입력
 - `NyangbingoMainGameSceneCreator`
 - `DevBTestBootstrap`, Dev B 통합 회귀 테스트
 - 현재 v29 CSV와 생성 SO

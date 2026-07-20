@@ -37,6 +37,11 @@ namespace Nyangbingo.Editor
         private const string DecorationArtCatalogPath =
             "Assets/Art/Decorations/WorldDecorationArtCatalog.asset";
 
+        private static readonly string[] IceAltarArtFiles =
+        {
+            "t_altar_0.aseprite", "t_altar_1.aseprite", "t_altar_2.aseprite", "t_altar_3.aseprite"
+        };
+
         private static readonly IReadOnlyDictionary<string, string> TileArtFiles =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
@@ -94,23 +99,50 @@ namespace Nyangbingo.Editor
                 ["ssireum_satba"] = "ssireum_satba.aseprite",
                 ["iron_bait_pile"] = "iron_bait_pile.aseprite",
                 ["ice_altar_offering"] = "ice_altar_offering.aseprite",
-                ["drought_talisman"] = "drought_talisman.aseprite"
+                ["drought_talisman"] = "drought_talisman.aseprite",
+                // v29: wallpaper has no dedicated icon art. Use the delivered upper-layer background tile.
+                ["wallpaper"] = "Assets/Art/Tiles/t_bg_dirt.aseprite"
             };
 
         private static readonly IReadOnlyDictionary<string, string> BuildingArtFiles =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["workbench"] = "workbench.aseprite",
+                ["furnace"] = "furnace.aseprite",
+                ["blast_furnace"] = "blast_furnace.aseprite",
+                ["ice_anvil"] = "ice_anvil.aseprite",
                 ["lantern"] = "lantern.aseprite",
-                ["frost_lantern"] = "lantern.aseprite",
-                ["saekdong_lantern"] = "lantern.aseprite",
+                ["frost_lantern"] = "frost_lantern.aseprite",
+                ["saekdong_lantern"] = "saekdong_lantern.aseprite",
                 ["sieve"] = "sieve.aseprite",
-                ["iron_sieve"] = "sieve.aseprite",
+                ["iron_sieve"] = "iron_sieve.aseprite",
                 ["haetae_statue"] = "haetae_statue.aseprite",
+                ["nest_bed"] = "nest_bed.aseprite",
+                ["magpie_nest"] = "magpie_nest.aseprite",
+                ["bell_rope"] = "bell_rope.aseprite",
+                ["iron_bell_rope"] = "iron_bell_rope.aseprite",
+                ["insul_wall"] = "insul_wall.aseprite",
+                ["door"] = "door.aseprite",
+                ["jangdok"] = "jangdok.aseprite",
                 ["ice_core"] = "ice_core.aseprite",
+                ["iron_insul_wall"] = "iron_insul_wall.aseprite",
+                ["cold_device"] = "cold_device.aseprite",
                 ["chest"] = "chest.aseprite",
                 ["dokkaebi_fire_tower"] = "dokkaebi_fire_tower.aseprite",
+                ["singijeon_cart"] = "singijeon_cart.aseprite",
+                ["ice_crystal_cooler"] = "ice_crystal_cooler.aseprite",
                 ["cold_wave_core"] = "cold_wave_core.aseprite",
-                ["roof"] = "roof.aseprite"
+                ["ice_jar"] = "ice_jar.aseprite",
+                ["straw_insul"] = "straw_insul.aseprite",
+                ["clay_plaster"] = "clay_plaster.aseprite",
+                ["munpungji"] = "munpungji.aseprite",
+                ["minhwa_scroll"] = "minhwa_scroll.aseprite",
+                ["onggi_pot"] = "onggi_pot.aseprite",
+                ["wind_chime"] = "wind_chime.aseprite",
+                ["saekdong_cushion"] = "saekdong_cushion.aseprite",
+                ["roof"] = "roof.aseprite",
+                // Placement preview and placed-object fallback reuse the same delivered background-wall tile.
+                ["wallpaper"] = "Assets/Art/Tiles/t_bg_dirt.aseprite"
             };
 
         private static readonly IReadOnlyDictionary<string, string> DecorationArtFiles =
@@ -168,20 +200,64 @@ namespace Nyangbingo.Editor
                 appliedCount++;
             }
 
+            appliedCount += ApplyIceAltarQuadrantArt(failures);
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             if (failures.Count > 0)
             {
                 Debug.LogError(
-                    $"[Nyangbingo] Tile art integration failed: {appliedCount}/{TileArtFiles.Count} applied.\n- " +
+                    $"[Nyangbingo] Tile art integration failed: {appliedCount}/{TileArtFiles.Count + 4} applied.\n- " +
                     string.Join("\n- ", failures));
                 return;
             }
 
             Debug.Log(
-                $"[Nyangbingo] Tile art integration completed: {appliedCount}/{TileArtFiles.Count}, " +
+                $"[Nyangbingo] Tile art integration completed: {appliedCount}/{TileArtFiles.Count + 4}, " +
                 $"PPU={PixelsPerUnit:0}, existing Tile asset GUIDs preserved.");
+        }
+
+        private static int ApplyIceAltarQuadrantArt(ICollection<string> failures)
+        {
+            var quadrantTiles = new TileBase[IceAltarArtFiles.Length];
+            var applied = 0;
+            for (var index = 0; index < IceAltarArtFiles.Length; index++)
+            {
+                var artPath = $"{ArtFolder}/{IceAltarArtFiles[index]}";
+                if (!ConfigureAsepriteImporter(artPath, failures)) continue;
+                var sprite = FindDefaultSprite(artPath);
+                if (sprite == null)
+                {
+                    failures.Add($"ice_altar quadrant {index}: Sprite missing ({artPath})");
+                    continue;
+                }
+
+                var tilePath = $"{TileFolder}/ice_altar_{index}.asset";
+                var tile = AssetDatabase.LoadAssetAtPath<Tile>(tilePath);
+                if (tile == null)
+                {
+                    tile = ScriptableObject.CreateInstance<Tile>();
+                    tile.name = $"ice_altar_{index}";
+                    AssetDatabase.CreateAsset(tile, tilePath);
+                }
+                tile.sprite = sprite;
+                tile.colliderType = Tile.ColliderType.Grid;
+                EditorUtility.SetDirty(tile);
+                quadrantTiles[index] = tile;
+                applied++;
+            }
+
+            var renderer = UnityEngine.Object.FindAnyObjectByType<Nyangbingo.World.TilemapRenderer>();
+            if (renderer != null && applied == IceAltarArtFiles.Length)
+            {
+                Undo.RecordObject(renderer, "Apply Ice Altar Quadrant Art");
+                renderer.SetIceAltarQuadrantTilesForEditorSetup(quadrantTiles);
+                EditorUtility.SetDirty(renderer);
+                if (renderer.gameObject.scene.IsValid())
+                    EditorSceneManager.MarkSceneDirty(renderer.gameObject.scene);
+            }
+            return applied;
         }
 
         [MenuItem("Nyangbingo/Art/Validate Tile Art")]
@@ -214,6 +290,20 @@ namespace Nyangbingo.Editor
                 }
             }
 
+
+            for (var index = 0; index < IceAltarArtFiles.Length; index++)
+            {
+                var tilePath = $"{TileFolder}/ice_altar_{index}.asset";
+                var expectedArtPath = $"{ArtFolder}/{IceAltarArtFiles[index]}";
+                var tile = AssetDatabase.LoadAssetAtPath<Tile>(tilePath);
+                if (tile?.sprite == null)
+                    failures.Add($"ice_altar quadrant {index}: Tile or Sprite missing ({tilePath})");
+                else if (!string.Equals(AssetDatabase.GetAssetPath(tile.sprite), expectedArtPath,
+                             StringComparison.Ordinal))
+                    failures.Add($"ice_altar quadrant {index}: expected '{expectedArtPath}', " +
+                                 $"actual '{AssetDatabase.GetAssetPath(tile.sprite)}'");
+            }
+
             if (failures.Count > 0)
             {
                 Debug.LogError(
@@ -222,7 +312,9 @@ namespace Nyangbingo.Editor
                 return;
             }
 
-            Debug.Log($"[Nyangbingo] Tile art validation passed: {TileArtFiles.Count}/{TileArtFiles.Count}.");
+            Debug.Log($"[Nyangbingo] Tile art validation passed: " +
+                      $"{TileArtFiles.Count + IceAltarArtFiles.Length}/" +
+                      $"{TileArtFiles.Count + IceAltarArtFiles.Length}.");
         }
 
         [MenuItem("Nyangbingo/Art/Apply Character Art")]
@@ -352,7 +444,7 @@ namespace Nyangbingo.Editor
             var sprites = new Dictionary<string, Sprite>(StringComparer.Ordinal);
             foreach (var pair in ItemArtFiles)
             {
-                var artPath = $"{ItemArtFolder}/{pair.Value}";
+                var artPath = ResolveArtPath(ItemArtFolder, pair.Value);
                 if (!ConfigureAsepriteImporter(artPath, failures)) continue;
                 var sprite = FindDefaultSprite(artPath);
                 if (sprite == null)
@@ -416,7 +508,7 @@ namespace Nyangbingo.Editor
                 foreach (var pair in ItemArtFiles)
                 {
                     var sprite = catalog.FindSprite(pair.Key);
-                    var expectedPath = $"{ItemArtFolder}/{pair.Value}";
+                    var expectedPath = ResolveArtPath(ItemArtFolder, pair.Value);
                     if (sprite == null)
                         failures.Add($"{pair.Key}: Sprite 참조 누락");
                     else if (!string.Equals(AssetDatabase.GetAssetPath(sprite), expectedPath,
@@ -444,19 +536,23 @@ namespace Nyangbingo.Editor
             var distantPath = $"{EnvironmentArtFolder}/distant_view.png";
             var cloudsPath = $"{EnvironmentArtFolder}/clouds.png";
             var undergroundPath = $"{EnvironmentArtFolder}/underground.png";
+            var titleBackgroundPath = $"{EnvironmentArtFolder}/keyvisual-day.png";
             var titlePath = $"{EnvironmentArtFolder}/title.aseprite";
             ConfigurePngImporter(distantPath, failures);
             ConfigurePngImporter(cloudsPath, failures);
             ConfigurePngImporter(undergroundPath, failures);
+            ConfigurePngImporter(titleBackgroundPath, failures);
             ConfigureAsepriteImporter(titlePath, failures);
 
             var distant = AssetDatabase.LoadAssetAtPath<Sprite>(distantPath);
             var clouds = AssetDatabase.LoadAssetAtPath<Sprite>(cloudsPath);
             var underground = AssetDatabase.LoadAssetAtPath<Sprite>(undergroundPath);
+            var titleBackground = AssetDatabase.LoadAssetAtPath<Sprite>(titleBackgroundPath);
             var titleFrames = FindAnimationFrames(titlePath, "title_on");
             if (distant == null) failures.Add("원경 Sprite 누락");
             if (clouds == null) failures.Add("구름 Sprite 누락");
             if (underground == null) failures.Add("지하 배경 Sprite 누락");
+            if (titleBackground == null) failures.Add("타이틀 키비주얼 Sprite 누락");
             if (titleFrames.Count < 10) failures.Add($"title_on 프레임 부족 ({titleFrames.Count}/10)");
             if (failures.Count > 0)
             {
@@ -475,12 +571,13 @@ namespace Nyangbingo.Editor
             serializedCatalog.FindProperty("distantView").objectReferenceValue = distant;
             serializedCatalog.FindProperty("clouds").objectReferenceValue = clouds;
             serializedCatalog.FindProperty("underground").objectReferenceValue = underground;
+            serializedCatalog.FindProperty("titleBackground").objectReferenceValue = titleBackground;
             SetSpriteArray(serializedCatalog.FindProperty("titleFrames"), titleFrames);
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
             NyangbingoMainGameSceneCreator.CreateOrUpdate(catalog);
             Debug.Log("[Nyangbingo] Environment art integration completed: sky 2/2, underground 1/1, " +
-                      "title 10/10. MainGame scene updated.");
+                      "title background 1/1, title 10/10. MainGame scene updated.");
         }
 
         [MenuItem("Nyangbingo/Art/Validate Environment Art")]
@@ -488,14 +585,16 @@ namespace Nyangbingo.Editor
         {
             var catalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentArtCatalogPath);
             var valid = catalog != null && catalog.DistantView != null && catalog.Clouds != null &&
-                        catalog.Underground != null && catalog.TitleFrames.Count >= 10;
+                        catalog.Underground != null && catalog.TitleBackground != null &&
+                        catalog.TitleFrames.Count >= 10;
             if (!valid)
             {
                 Debug.LogError("[Nyangbingo] Environment art validation failed: " +
-                               "sky, title, or preserved underground reference is missing.");
+                                "sky, title background, title logo, or preserved underground reference is missing.");
                 return;
             }
-            Debug.Log("[Nyangbingo] Environment art validation passed: sky 2/2, underground 1/1, title 10/10.");
+            Debug.Log("[Nyangbingo] Environment art validation passed: sky 2/2, underground 1/1, " +
+                      "title background 1/1, title 10/10.");
         }
 
         [MenuItem("Nyangbingo/Art/Apply Combat and Temperature Art")]
@@ -563,7 +662,7 @@ namespace Nyangbingo.Editor
             var framesByFile = new Dictionary<string, IReadOnlyList<Sprite>>(StringComparer.Ordinal);
             foreach (var file in BuildingArtFiles.Values.Distinct(StringComparer.Ordinal))
             {
-                var path = $"{BuildingArtFolder}/{file}";
+                var path = ResolveArtPath(BuildingArtFolder, file);
                 ConfigureAsepriteImporter(path, failures);
                 var frames = FindLongestAnimationFrames(path);
                 if (frames.Count == 0) failures.Add($"{file}: Sprite 프레임이 없습니다.");
@@ -665,14 +764,38 @@ namespace Nyangbingo.Editor
         {
             var catalog = AssetDatabase.LoadAssetAtPath<BuildingArtCatalog>(BuildingArtCatalogPath);
             var failures = new List<string>();
-            foreach (var id in BuildingArtFiles.Keys)
-                if (catalog?.Find(id)?.Sprite == null) failures.Add(id);
+            foreach (var pair in BuildingArtFiles)
+            {
+                var art = catalog?.Find(pair.Key);
+                var expectedPath = ResolveArtPath(BuildingArtFolder, pair.Value);
+                if (art?.Sprite == null)
+                    failures.Add($"{pair.Key}: Sprite reference missing");
+                else if (!string.Equals(AssetDatabase.GetAssetPath(art.Sprite), expectedPath,
+                             StringComparison.Ordinal))
+                    failures.Add(
+                        $"{pair.Key}: expected '{expectedPath}', actual '{AssetDatabase.GetAssetPath(art.Sprite)}'");
+            }
             if (failures.Count > 0)
             {
-                Debug.LogError("[Nyangbingo] Building art validation failed: " + string.Join(", ", failures));
+                Debug.LogError("[Nyangbingo] Building art validation failed:\n- " +
+                               string.Join("\n- ", failures));
                 return;
             }
             Debug.Log($"[Nyangbingo] Building art validation passed: {BuildingArtFiles.Count} IDs.");
+        }
+
+        public static bool IsBuildingArtCurrent(BuildingArtCatalog catalog)
+        {
+            if (catalog == null) return false;
+            foreach (var pair in BuildingArtFiles)
+            {
+                var sprite = catalog.Find(pair.Key)?.Sprite;
+                if (sprite == null ||
+                    !string.Equals(AssetDatabase.GetAssetPath(sprite),
+                        ResolveArtPath(BuildingArtFolder, pair.Value), StringComparison.Ordinal))
+                    return false;
+            }
+            return true;
         }
 
         [MenuItem("Nyangbingo/Art/Create Building Art Preview Scene")]
@@ -823,6 +946,11 @@ namespace Nyangbingo.Editor
                 .FirstOrDefault();
         }
 
+        private static string ResolveArtPath(string defaultFolder, string fileOrPath) =>
+            fileOrPath.StartsWith("Assets/", StringComparison.Ordinal)
+                ? fileOrPath
+                : $"{defaultFolder}/{fileOrPath}";
+
         private static IReadOnlyList<Sprite> FindAnimationFrames(string artPath, string tag)
         {
             var clip = AssetDatabase.LoadAllAssetsAtPath(artPath)
@@ -876,22 +1004,38 @@ namespace Nyangbingo.Editor
 
         private static bool ConfigureAsepriteImporter(string artPath, ICollection<string> failures)
         {
-            AssetDatabase.ImportAsset(
-                artPath,
-                ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            var importer = AssetImporter.GetAtPath(artPath) as AsepriteImporter;
+            if (importer == null)
+            {
+                // Newly copied art has no importer until its first import. Existing Aseprite
+                // assets must not be force-imported because the scripted importer can otherwise
+                // run twice during one integration pass and report an inconsistent result.
+                AssetDatabase.ImportAsset(
+                    artPath,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                importer = AssetImporter.GetAtPath(artPath) as AsepriteImporter;
+            }
 
-            if (!(AssetImporter.GetAtPath(artPath) is AsepriteImporter importer))
+            if (importer == null)
             {
                 failures.Add($"AsepriteImporter를 찾지 못했습니다. ({artPath})");
                 return false;
             }
 
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spritePixelsPerUnit = PixelsPerUnit;
-            importer.filterMode = FilterMode.Point;
-            importer.wrapMode = TextureWrapMode.Clamp;
-            importer.mipmapEnabled = false;
-            importer.SaveAndReimport();
+            var settingsChanged = importer.textureType != TextureImporterType.Sprite ||
+                                  !Mathf.Approximately(importer.spritePixelsPerUnit, PixelsPerUnit) ||
+                                  importer.filterMode != FilterMode.Point ||
+                                  importer.wrapMode != TextureWrapMode.Clamp ||
+                                  importer.mipmapEnabled;
+            if (settingsChanged)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spritePixelsPerUnit = PixelsPerUnit;
+                importer.filterMode = FilterMode.Point;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+            }
             return true;
         }
 

@@ -20,7 +20,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestIceStorageSealCoreLifecycle();
         TestV29InventoryLayoutContract();
         TestV29InventoryArtBindings();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (3/3).");
+        TestTilePaletteContract();
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (4/4).");
     }
 
     private static void TestV29InventoryLayoutContract()
@@ -64,6 +65,27 @@ public static class NyangbingoDevBIntegrationRegressionTests
         for (var index = 0; index < catalog.PlayerVitalsFrames.Count; index++)
             Require(catalog.PlayerVitalsFrames[index] != null,
                 $"v1 player vitals frame {index} is not bound.");
+    }
+
+    private static void TestTilePaletteContract()
+    {
+        Require(Mathf.Approximately(MainGameTilePaletteController.MaxScreenWidthRatio, .5f),
+            "The tile palette must stay within 50% of the screen width.");
+        Require(Mathf.Approximately(MainGameTilePaletteController.PaletteLogicalWidth, 240f),
+            "A 480 px logical canvas must use a 240 px tile palette.");
+        Require(Mathf.Approximately(MainGameTilePaletteController.SlotPixelSize, 27f),
+            "The tile palette must reuse the delivered 27 px inventory slot scale.");
+        Require(TileService.SupportsForegroundPlacement(WorldTileTypes.Dirt) &&
+                TileService.SupportsForegroundPlacement(WorldTileTypes.Stone) &&
+                !TileService.SupportsForegroundPlacement(WorldTileTypes.Bedrock),
+            "The tile palette foreground whitelist is not aligned with TileService placement policy.");
+        var runtimeDirt = ItemDefinition.CreateRuntime(WorldTileTypes.Dirt, "Dirt", 99,
+            ItemCategory.Material, ItemMvpScope.A);
+        Require(MainGameCraftingUiController.IsInventoryItemPlaceable(runtimeDirt, null),
+            "Mined foreground tiles must be placeable directly from the inventory without a recipe.");
+        Require(MainGameTilePaletteController.RequiresDevATileIntegration("wallpaper") &&
+                !MainGameTilePaletteController.RequiresDevATileIntegration("insul_wall"),
+            "Wallpaper must stay isolated until the Dev A background Tilemap contract is available.");
     }
 
     private static void TestIceStorageSealCoreLifecycle()
