@@ -47,7 +47,7 @@ frost_lantern,서리 등불,placeable,99,A,등불 진화 — 원본 소모. 연�
 insul_wall,차열벽,placeable,99,A,모듈 P0 — HP600. modules.csv 기존 id 승계
 door,단열 문,placeable,99,A,모듈 P0 — 통행+밀폐 인정. modules.csv 기존 id 승계(범용 단어지만 개발 참조 보호 우선)
 roof,차열 지붕,placeable,99,A,모듈 P0 — 상부 밀폐. modules.csv 기존 id 승계
-jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 12슬롯. modules.csv 기존 id 승계
+jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 40슬롯(v29 확정). modules.csv 기존 id 승계
 ice_core,얼음 저장고,placeable,99,A,모듈 P0 — 체온 회복 거점. modules.csv 기존 id 승계. ⚠️ 한파 코어(cold_wave_core)와 다른 물건
 iron_insul_wall,무쇠 차열벽,placeable,99,A,HP900 — 불가사리 면역
 cold_device,냉기 장치,placeable,99,A,요괴 눈물 주 소비처(x40)

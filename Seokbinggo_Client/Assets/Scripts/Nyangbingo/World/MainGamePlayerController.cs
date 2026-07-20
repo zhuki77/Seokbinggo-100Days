@@ -4,6 +4,7 @@ using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace Nyangbingo.World
@@ -17,6 +18,7 @@ namespace Nyangbingo.World
         private const string BareClawId = "bare_claw";
         private const string HapjukseonId = "hapjukseon";
         private const string CheolseonId = "cheolseon";
+        private const string LanternId = "lantern";
         private const string IronClawId = "iron_claw";
         private const string IceSteelClawId = "icesteel_claw";
         private const string IronClawMiningCriticalKey = "claw_t2_mine_crit";
@@ -67,6 +69,7 @@ namespace Nyangbingo.World
         private float currentMoveSpeed;
         private float attackCooldown;
         private CombatProfileDefinition activeProfile;
+        private CombatProfileDefinition lanternCarryProfile;
         private SpriteRenderer attackIndicator;
         private RuntimeCharacterSpriteAnimator characterAnimator;
         private float attackIndicatorRemaining;
@@ -83,6 +86,7 @@ namespace Nyangbingo.World
         private Quaternion aliveRotation;
         private Image deathFadeImage;
         private GameObject deathFadeCanvas;
+        private Light2D portableLanternLight;
         private readonly Dictionary<string, GameObject> tearPouchVisuals =
             new Dictionary<string, GameObject>();
         private bool initialized;
@@ -91,10 +95,12 @@ namespace Nyangbingo.World
         private MainGameWorldDecorationRenderer worldDecorationRenderer;
         private MainGameRaidTarget raidTarget;
         private MainGameEncounterCoordinator encounterCoordinator;
+        private MainGameWorldDropRuntime worldDropRuntime;
         private Nyangbingo.UI.MainGameBossSummonUiController interactionMessages;
 
         public bool IsInitialized => initialized;
         public string ActiveCombatProfileId => activeProfile != null ? activeProfile.Id : string.Empty;
+        public bool IsUsingActiveSlotItem => runtimeServices?.ActiveSlot?.IsUsingEquippedItem == true;
         public float CurrentMoveSpeed => currentMoveSpeed;
         public Vector2 FacingDirection => facing;
         public Vector2 HorizontalFacingDirection => horizontalFacing;
@@ -175,7 +181,30 @@ namespace Nyangbingo.World
                 RuntimePlaceholderVisual.Configure(attackIndicator, new Color(1f, .9f, .2f, .75f), .65f, 19);
             attackIndicator.enabled = false;
 
+            var lanternLightObject = new GameObject("PortableLanternLight");
+            lanternLightObject.transform.SetParent(transform, false);
+            portableLanternLight = lanternLightObject.AddComponent<Light2D>();
+            portableLanternLight.lightType = Light2D.LightType.Point;
+            portableLanternLight.pointLightInnerRadius = runtimeServices.PortableLantern.RadiusTiles * .45f;
+            portableLanternLight.pointLightOuterRadius = runtimeServices.PortableLantern.RadiusTiles;
+            portableLanternLight.intensity = .9f;
+            portableLanternLight.color = new Color(1f, .72f, .36f, 1f);
+            RefreshPortableLanternLight();
+
+            worldDropRuntime = GetComponentInParent<MainGameWorldDropRuntime>();
+            if (worldDropRuntime == null)
+            {
+                var dropObject = new GameObject("MainGameWorldDrops");
+                dropObject.transform.SetParent(bootstrap.transform, false);
+                worldDropRuntime = dropObject.AddComponent<MainGameWorldDropRuntime>();
+            }
+            var hud = FindAnyObjectByType<Nyangbingo.UI.MainGameHudController>();
+            worldDropRuntime.ConfigureForRuntime(transform, runtimeServices.PlayerInventory,
+                hud != null ? hud.BoundItemArtCatalog : null, bootstrap.TileService);
+
             runtimeServices.PlayerInventory.Changed += RefreshCombatProfile;
+            runtimeServices.ActiveSlot.Changed += RefreshCombatProfile;
+            runtimeServices.PortableLantern.Changed += RefreshPortableLanternLight;
             runtimeServices.EquipmentSystem.Changed += RefreshEquipmentStats;
             health.Died += HandleDied;
             health.Damaged += HandleDamaged;
@@ -197,6 +226,7 @@ namespace Nyangbingo.World
         private void Update()
         {
             if (!initialized) return;
+            RefreshPortableLanternLight();
             if (dead)
             {
                 movementInput = Vector2.zero;
@@ -210,6 +240,16 @@ namespace Nyangbingo.World
                 CancelMining();
                 characterAnimator?.SetMoving(false);
                 return;
+            }
+            if (Input.GetKeyDown(KeyCode.Q) && runtimeServices.ActiveSlot.Toggle())
+            {
+                var activeItemId = runtimeServices.ActiveSlot.EquippedItemId;
+                var statusMessage = !runtimeServices.ActiveSlot.IsUsingEquippedItem
+                    ? "맨 발톱 활성"
+                    : activeItemId == LanternId && !runtimeServices.PortableLantern.IsLit
+                        ? "휴대용 등불 활성 · 연료 없음 (장비 화면에서 석탄 투입)"
+                        : $"활성 장비: {catalog.FindItem(activeItemId)?.DisplayName}";
+                interactionMessages?.ShowExternalMessage(statusMessage);
             }
             UpdateAimDirection();
             runtimeServices.DeathTearPouches.TryCollectWithin(transform.position, TearPouchPickupRadius);
@@ -269,8 +309,8 @@ namespace Nyangbingo.World
             {
                 if (attackCooldown <= 0f)
                 {
-                    TryBasicAttack();
-                    miningAllowedByLastSwing = activeProfile?.HitsWalls == true && attack.LastHitCount == 0;
+                    var attacked = TryBasicAttack();
+                    miningAllowedByLastSwing = !attacked || attack.LastHitCount == 0;
                 }
                 if (miningAllowedByLastSwing) TickMining(CurrentGameDeltaSeconds());
                 else ResetMiningProgress();
@@ -296,7 +336,9 @@ namespace Nyangbingo.World
             var session = bootstrap?.Session;
             if (session?.HasWorld != true || !session.LastResult.passedValidation) return;
             var cell = session.LastResult.spawnPoint;
-            var spawn = TryFindSafeSurfaceSpawn(session.TileService, cell.x, out var surfaceSpawn)
+            var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
+            var spawn = TryFindTemporarySafeSurfaceSpawn(session.TileService, cell.x, halfExtent,
+                out var surfaceSpawn)
                 ? surfaceSpawn
                 : new Vector2(cell.x + .5f, cell.y + .5f);
             transform.position = spawn;
@@ -305,11 +347,12 @@ namespace Nyangbingo.World
                       $"(generated={cell}, player={spawn}).");
         }
 
-        private bool TryFindSafeSurfaceSpawn(TileService tileService, int centerX, out Vector2 spawn)
+        public static bool TryFindTemporarySafeSurfaceSpawn(TileService tileService, int centerX,
+            float halfExtent, out Vector2 spawn)
         {
             spawn = default;
             if (tileService == null || tileService.Width <= 0 || tileService.Height <= 2) return false;
-            var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
+            halfExtent = Mathf.Max(0f, halfExtent);
             centerX = Mathf.Clamp(centerX, 0, tileService.Width - 1);
             var minimumSurfaceY = EstimateSurfaceBandFloor(tileService);
 
@@ -523,9 +566,10 @@ namespace Nyangbingo.World
             followCamera.transform.position = Vector3.Lerp(current, target, factor);
         }
 
-        private void TryBasicAttack()
+        private bool TryBasicAttack()
         {
-            if (activeProfile == null || !activeProfile.HasBasicAttack || activeProfile.AttacksPerSecond <= 0f) return;
+            if (activeProfile == null || !activeProfile.HasBasicAttack || activeProfile.AttacksPerSecond <= 0f)
+                return false;
             attack.Strike(facing);
             characterAnimator?.PlayAttack();
             ShowAttackFeedback();
@@ -536,6 +580,7 @@ namespace Nyangbingo.World
                 loggedFirstAttackInput = true;
                 loggedFirstAttackHit |= attack.LastHitCount > 0;
             }
+            return true;
         }
 
         private void TickMining(float deltaGameSeconds)
@@ -605,8 +650,11 @@ namespace Nyangbingo.World
         private void CompleteMining(Vector3Int cell, int clawTier)
         {
             var tileService = bootstrap?.TileService;
-            if (tileService == null ||
-                !tileService.TryBreakForeground(cell, clawTier, out var itemId, out var amount)) return;
+            if (tileService == null) return;
+            string itemId;
+            int amount;
+            using (ItemAcquisition.CaptureRequests())
+                if (!tileService.TryBreakForeground(cell, clawTier, out itemId, out amount)) return;
 
             var totalAmount = amount;
             var item = string.IsNullOrEmpty(itemId) ? null : catalog?.FindItem(itemId);
@@ -619,13 +667,16 @@ namespace Nyangbingo.World
             var critical = item != null && amount > 0 && UnityEngine.Random.value < criticalChance;
             if (critical)
             {
-                ItemAcquisition.Request(item, amount);
                 totalAmount += amount;
                 Nyangbingo.Core.GameEvents.RaiseMiningCritical();
             }
 
             if (item != null && totalAmount > 0)
+            {
+                WorldItemDropRequest.Request(item, totalAmount,
+                    new Vector2(cell.x + .5f, cell.y + .5f));
                 Nyangbingo.Core.GameEvents.RaiseMiningResult(cell, item.DisplayName, totalAmount, critical);
+            }
         }
 
         private float CurrentGameDeltaSeconds()
@@ -736,16 +787,16 @@ namespace Nyangbingo.World
         private void RefreshCombatProfile()
         {
             var inventory = runtimeServices?.PlayerInventory;
-            var profileId = inventory != null && inventory.Count(CheolseonId) > 0
-                ? CheolseonId
-                : inventory != null && inventory.Count(HapjukseonId) > 0
-                    ? HapjukseonId
-                    : inventory != null && inventory.Count(IceSteelClawId) > 0
-                        ? IceSteelClawId
-                        : inventory != null && inventory.Count(IronClawId) > 0
-                            ? IronClawId
-                            : BareClawId;
-            var profile = catalog != null ? catalog.FindCombatProfile(profileId) : null;
+            var clawProfileId = inventory != null && inventory.Count(IceSteelClawId) > 0
+                ? IceSteelClawId
+                : inventory != null && inventory.Count(IronClawId) > 0
+                    ? IronClawId
+                    : BareClawId;
+            var profileId = runtimeServices?.ActiveSlot?.ResolveCombatProfileId(clawProfileId) ?? clawProfileId;
+            var profile = profileId == LanternId
+                ? lanternCarryProfile ??= CombatProfileDefinition.CreateRuntime(
+                    LanternId, "U0", false, 0, 0f, 0f, 0f, 1.5f, 90f, false, false)
+                : catalog != null ? catalog.FindCombatProfile(profileId) : null;
             if (profile == null || !attack.ConfigureForRuntime(transform, ~0, profile)) return;
             var slowFraction = 0f;
             var slowDefinition = profileId == IceSteelClawId ? catalog?.FindGlobal(IceSteelClawSlowKey) : null;
@@ -937,10 +988,20 @@ namespace Nyangbingo.World
             if (amount > 0f) runtimeServices?.NapService?.Wake(NapWakeReason.WallDamaged);
         }
 
+        private void RefreshPortableLanternLight()
+        {
+            if (portableLanternLight != null)
+                portableLanternLight.enabled = runtimeServices?.PortableLantern?.IsLit == true;
+        }
+
         private void OnDestroy()
         {
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed -= RefreshCombatProfile;
+            if (runtimeServices?.ActiveSlot != null)
+                runtimeServices.ActiveSlot.Changed -= RefreshCombatProfile;
+            if (runtimeServices?.PortableLantern != null)
+                runtimeServices.PortableLantern.Changed -= RefreshPortableLanternLight;
             if (runtimeServices?.EquipmentSystem != null)
                 runtimeServices.EquipmentSystem.Changed -= RefreshEquipmentStats;
             if (health != null) health.Died -= HandleDied;
@@ -954,6 +1015,7 @@ namespace Nyangbingo.World
                 if (visual != null) Destroy(visual);
             tearPouchVisuals.Clear();
             if (deathFadeCanvas != null) Destroy(deathFadeCanvas);
+            if (lanternCarryProfile != null) Destroy(lanternCarryProfile);
         }
     }
 
@@ -1026,11 +1088,18 @@ namespace Nyangbingo.World
             remaining = .1f;
         }
 
+        public void SetBaseColor(Color color)
+        {
+            baseColor = color;
+            if (remaining <= 0f && spriteRenderer != null) spriteRenderer.color = baseColor;
+        }
+
         private void Update()
         {
             if (remaining <= 0f) return;
             remaining = Mathf.Max(0f, remaining - Time.deltaTime);
-            if (remaining <= 0f && spriteRenderer != null) spriteRenderer.color = baseColor;
+            if (spriteRenderer == null) return;
+            spriteRenderer.color = remaining > 0f ? Color.white : baseColor;
         }
     }
 }

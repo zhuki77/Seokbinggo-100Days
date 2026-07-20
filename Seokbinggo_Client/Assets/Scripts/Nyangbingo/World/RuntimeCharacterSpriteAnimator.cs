@@ -173,4 +173,121 @@ namespace Nyangbingo.World
             }
         }
     }
+
+    /// <summary>
+    /// Eoduksini's lantern response is presentation-only. Scaling this child keeps the
+    /// yokai root, collider, AI position, and health bar independent from the effect.
+    /// </summary>
+    [DefaultExecutionOrder(-50)]
+    [RequireComponent(typeof(SpriteRenderer))]
+    public sealed class RuntimeEoduksiniVisual : MonoBehaviour
+    {
+        private const float InitialScale = 1f;
+        private const float DarkScale = 2f;
+        private const float LanternScale = .6f;
+        private const float DarkAlpha = .7f;
+        private const float ScaleUnitsPerSecond = 1.4f;
+        private const float ColorUnitsPerSecond = 2f;
+        private const float BloomUnitsPerSecond = 2.5f;
+
+        private static readonly Color DarkTint = new(.38f, .4f, .46f, DarkAlpha);
+        private static readonly Color LanternTint = new(.82f, 1f, .98f, 1f);
+        private static readonly Color CoreTint = new(95f / 255f, 224f / 255f, 208f / 255f, 0f);
+
+        private YokaiBrain brain;
+        private SpriteRenderer bodyRenderer;
+        private SpriteRenderer coreRenderer;
+        private RuntimeDamageFlash damageFlash;
+        private float currentScale = InitialScale;
+        private float bloomAmount;
+        private bool configured;
+
+        public float CurrentScale => currentScale;
+        public float CurrentBloom => bloomAmount;
+
+        public void ConfigureForRuntime(YokaiBrain targetBrain, SpriteRenderer targetRenderer)
+        {
+            Unbind();
+            brain = targetBrain;
+            bodyRenderer = targetRenderer != null ? targetRenderer : GetComponent<SpriteRenderer>();
+            damageFlash = GetComponentInParent<RuntimeDamageFlash>();
+            if (brain == null || bodyRenderer == null || brain.Definition == null ||
+                brain.Definition.Kind != Nyangbingo.Core.YokaiKind.Eoduksini) return;
+
+            BuildCore();
+            currentScale = InitialScale;
+            bloomAmount = 0f;
+            transform.localScale = Vector3.one * currentScale;
+            brain.Bloomed += HandleBloomed;
+            configured = true;
+            ApplyPresentation();
+        }
+
+        private void Update() => TickPresentation(Time.deltaTime);
+
+        public void TickPresentation(float deltaSeconds)
+        {
+            if (!configured || brain == null || bodyRenderer == null || brain.IsBossEncounterPaused ||
+                deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds)) return;
+
+            var inLanternRange = brain.IsInLanternRange;
+            var targetScale = inLanternRange ? LanternScale : DarkScale;
+            currentScale = Mathf.MoveTowards(currentScale, targetScale, ScaleUnitsPerSecond * deltaSeconds);
+            bloomAmount = Mathf.MoveTowards(bloomAmount, inLanternRange ? 1f : 0f,
+                BloomUnitsPerSecond * deltaSeconds);
+
+            var targetColor = inLanternRange ? LanternTint : DarkTint;
+            bodyRenderer.color = MoveColorTowards(bodyRenderer.color, targetColor, ColorUnitsPerSecond * deltaSeconds);
+            damageFlash?.SetBaseColor(bodyRenderer.color);
+            ApplyPresentation();
+        }
+
+        private void HandleBloomed()
+        {
+            // Restart the opening tween when the 12-second bloom cycle reactivates.
+            bloomAmount = 0f;
+        }
+
+        private void BuildCore()
+        {
+            if (coreRenderer != null) return;
+            var coreObject = new GameObject("LanternBloomCore");
+            coreObject.transform.SetParent(transform, false);
+            coreObject.transform.localPosition = new Vector3(0f, .02f, 0f);
+            coreRenderer = coreObject.AddComponent<SpriteRenderer>();
+            coreRenderer.sortingLayerID = bodyRenderer.sortingLayerID;
+            coreRenderer.sortingOrder = bodyRenderer.sortingOrder + 1;
+            coreRenderer.color = CoreTint;
+        }
+
+        private void ApplyPresentation()
+        {
+            transform.localScale = new Vector3(currentScale, currentScale, 1f);
+            if (coreRenderer == null || bodyRenderer == null) return;
+            coreRenderer.sprite = bodyRenderer.sprite;
+            coreRenderer.flipX = bodyRenderer.flipX;
+            var color = CoreTint;
+            color.a = .85f * bloomAmount;
+            coreRenderer.color = color;
+            var coreScale = Mathf.Lerp(.18f, .5f, bloomAmount);
+            coreRenderer.transform.localScale = new Vector3(coreScale, coreScale, 1f);
+        }
+
+        private static Color MoveColorTowards(Color current, Color target, float maxDelta)
+        {
+            return new Color(
+                Mathf.MoveTowards(current.r, target.r, maxDelta),
+                Mathf.MoveTowards(current.g, target.g, maxDelta),
+                Mathf.MoveTowards(current.b, target.b, maxDelta),
+                Mathf.MoveTowards(current.a, target.a, maxDelta));
+        }
+
+        private void Unbind()
+        {
+            if (brain != null) brain.Bloomed -= HandleBloomed;
+            configured = false;
+        }
+
+        private void OnDestroy() => Unbind();
+    }
 }

@@ -75,6 +75,12 @@ namespace Nyangbingo.Editor
         private static SaveGame BuildSave(GameDataCatalog catalog, WorldGenerationResult world,
             DemoProfile profile, List<TileChangeRecord> changes, Vector2Int roomCenter)
         {
+            var generatedSpawn = world.spawnPoint;
+            var spawnTileService = new TileService(world.tiles, null, catalog, world.acceptedSeed);
+            var playerSpawn = MainGamePlayerController.TryFindTemporarySafeSurfaceSpawn(
+                spawnTileService, generatedSpawn.x, .38f, out var safeSurfaceSpawn)
+                ? safeSurfaceSpawn
+                : new Vector2(generatedSpawn.x + .5f, generatedSpawn.y + .5f);
             var save = new SaveGame
             {
                 seed = world.acceptedSeed,
@@ -85,7 +91,7 @@ namespace Nyangbingo.Editor
                 playerState = new PlayerStateRecord
                 {
                     hasValue = true,
-                    position = new Vector3(world.spawnPoint.x + .5f, world.spawnPoint.y + .5f, 0f),
+                    position = new Vector3(playerSpawn.x, playerSpawn.y, 0f),
                     currentHealth = 100,
                     maxHealth = 100,
                     hasTemperature = true,
@@ -140,7 +146,8 @@ namespace Nyangbingo.Editor
                 AddInventory(save, catalog, "dokkaebi_club", 1);
                 AddInventory(save, catalog, FanItemIds.Hapjukseon, 1);
                 AddConfirmedDayFifteenEquipment(save, catalog);
-                save.modulesDone.AddRange(new[] { "insul_wall", "door", "roof" });
+                AddPlacedModule(save, "insul_wall", roomCenter + new Vector2Int(-2, 0));
+                AddPlacedModule(save, "door", roomCenter + new Vector2Int(-1, 0));
                 save.placedObjectRecords.Add(new PlacedObjectRecord
                 {
                     objectId = $"demo_{profile.Day}_sieve",
@@ -153,12 +160,31 @@ namespace Nyangbingo.Editor
             if (profile.Day == 30)
             {
                 AddInventory(save, catalog, "ssireum_satba", 1);
-                save.modulesDone.Clear();
-                save.modulesDone.AddRange(new[] { "insul_wall", "door", "roof", "jangdok", "ice_core" });
+                AddPlacedModule(save, "roof", roomCenter + new Vector2Int(1, 0));
+                AddPlacedModule(save, "jangdok", roomCenter + new Vector2Int(2, 0));
             }
+
+            save.modulesDone = catalog.Modules
+                .Where(module => module != null && module.Item != null &&
+                                 save.placedObjectRecords.Any(record => record.definitionId == module.Item.Id))
+                .Select(module => module.Id)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .ToList();
 
             save.NormalizeAfterLoad();
             return save;
+        }
+
+        private static void AddPlacedModule(SaveGame save, string definitionId, Vector2Int cell)
+        {
+            save.placedObjectRecords.Add(new PlacedObjectRecord
+            {
+                objectId = $"demo_{save.day}_{definitionId}",
+                definitionId = definitionId,
+                position = new Vector2(cell.x + .5f, cell.y + .5f),
+                rotationDegrees = 0f
+            });
         }
 
         private static void AddConfirmedDayFifteenEquipment(SaveGame save, GameDataCatalog catalog)
@@ -264,6 +290,18 @@ namespace Nyangbingo.Editor
                 throw new InvalidOperationException($"Demo day {profile.Day}: tile changes cannot be replayed.");
             if (!WorldSaveAdapter.RestoreChests(save, validationGenerator, new ChestProgress()))
                 throw new InvalidOperationException($"Demo day {profile.Day}: chest state cannot be replayed.");
+
+            if (!MainGamePlayerController.TryFindTemporarySafeSurfaceSpawn(tileService,
+                    validationWorld.spawnPoint.x, .38f, out var expectedPlayerSpawn) ||
+                Vector2.Distance(save.playerState.position, expectedPlayerSpawn) > .001f)
+                throw new InvalidOperationException(
+                    $"Demo day {profile.Day}: player is not saved at the temporary safe surface spawn.");
+
+            var expectedModules = profile.Day >= 30 ? 5 : profile.Day >= 15 ? 3 : 1;
+            if (save.modulesDone.Count != expectedModules || save.modulesDone.Any(moduleId =>
+                    !save.placedObjectRecords.Any(record => record.definitionId == moduleId)))
+                throw new InvalidOperationException(
+                    $"Demo day {profile.Day}: installed module state is inconsistent.");
 
             using (var seals = new SealSystem(tileService, catalog.SealWhitelist))
             {

@@ -29,10 +29,17 @@ namespace Nyangbingo.UI
         private Button expandedBackdropButton;
         private float resumeTimeScale = 1f;
         private bool open;
+        private bool unifiedPanelMode;
 
         public int BoundCardCount => cardButtons?.Length ?? 0;
         public bool IsOpen => open;
         public void ConfigureGameShell(GameShellController value) => gameShell = value;
+        public void UseUnifiedPanel()
+        {
+            unifiedPanelMode = true;
+            if (open) SetOpen(false);
+            else if (panel != null) panel.SetActive(false);
+        }
 
         public void ConfigureForScene(MainGameSaveCoordinator coordinator, GameObject codexPanel,
             Button[] buttons, Text[] labels, Text details)
@@ -72,7 +79,7 @@ namespace Nyangbingo.UI
 
         private void Update()
         {
-            if (model == null) return;
+            if (model == null || unifiedPanelMode) return;
             if (Input.GetKeyDown(KeyCode.Tab) && (open || gameShell == null ||
                                                   gameShell.Screen == GameShellScreen.Gameplay)) SetOpen(!open);
             else if (open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);

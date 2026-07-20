@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: bg_stone
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: -8512792205025288650, guid: 89a94538cb486944ba162159b9c56e94, type: 3}
+  m_Sprite: {fileID: 6209709086919276629, guid: ef907455b807cc9429f1ff7ff4cdb5ea, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

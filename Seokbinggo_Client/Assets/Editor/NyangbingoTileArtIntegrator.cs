@@ -41,6 +41,9 @@ namespace Nyangbingo.Editor
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["bedrock"] = "bedrock.aseprite",
+                ["bg_dirt"] = "t_bg_dirt.aseprite",
+                ["bg_stone"] = "t_bg_stone.aseprite",
+                ["bg_deep"] = "t_bg_deep.aseprite",
                 ["coal"] = "coal.aseprite",
                 ["copper_ore"] = "copper_ore.aseprite",
                 ["dirt"] = "dirt.aseprite",
@@ -49,6 +52,7 @@ namespace Nyangbingo.Editor
                 ["ice_shard"] = "ice_shard.aseprite",
                 ["icesteel_ore"] = "icesteel_ore.aseprite",
                 ["iron_ore"] = "iron_ore.aseprite",
+                ["ruin_wall"] = "ruin_wall.aseprite",
                 ["stone"] = "stone.aseprite",
                 ["stone_deep"] = "stone_deep.aseprite"
             };
@@ -105,7 +109,8 @@ namespace Nyangbingo.Editor
                 ["ice_core"] = "ice_core.aseprite",
                 ["chest"] = "chest.aseprite",
                 ["dokkaebi_fire_tower"] = "dokkaebi_fire_tower.aseprite",
-                ["cold_wave_core"] = "cold_wave_core.aseprite"
+                ["cold_wave_core"] = "cold_wave_core.aseprite",
+                ["roof"] = "roof.aseprite"
             };
 
         private static readonly IReadOnlyDictionary<string, string> DecorationArtFiles =
@@ -373,11 +378,9 @@ namespace Nyangbingo.Editor
 
             var serializedCatalog = new SerializedObject(catalog);
             var entries = serializedCatalog.FindProperty("entries");
-            entries.arraySize = ItemArtFiles.Count;
-            var index = 0;
             foreach (var pair in ItemArtFiles)
             {
-                var entry = entries.GetArrayElementAtIndex(index++);
+                var entry = FindOrAddItemEntry(entries, pair.Key);
                 entry.FindPropertyRelative("id").stringValue = pair.Key;
                 entry.FindPropertyRelative("sprite").objectReferenceValue = sprites[pair.Key];
             }
@@ -385,6 +388,18 @@ namespace Nyangbingo.Editor
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Nyangbingo] Item art integration completed: {sprites.Count}/{ItemArtFiles.Count}.");
+        }
+
+        private static SerializedProperty FindOrAddItemEntry(SerializedProperty entries, string id)
+        {
+            for (var index = 0; index < entries.arraySize; index++)
+            {
+                var entry = entries.GetArrayElementAtIndex(index);
+                if (entry.FindPropertyRelative("id").stringValue == id) return entry;
+            }
+
+            entries.InsertArrayElementAtIndex(entries.arraySize);
+            return entries.GetArrayElementAtIndex(entries.arraySize - 1);
         }
 
         [MenuItem("Nyangbingo/Art/Validate Item Art")]

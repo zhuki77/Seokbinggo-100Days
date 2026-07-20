@@ -67,6 +67,11 @@ namespace Nyangbingo.UI
                 return;
             }
             runtimeServices.PlayerInventory.Changed += RefreshStatus;
+            if (encounterCoordinator.BossManager != null)
+            {
+                encounterCoordinator.BossManager.BossStarted += HandleBossStateChanged;
+                encounterCoordinator.BossManager.BossEnded += HandleBossStateChanged;
+            }
             initialized = true;
             RefreshStatus();
             Debug.Log("[Nyangbingo] MainGame boss summon item, placed crafting station, nighttime, and deep altar interaction ready.");
@@ -289,9 +294,9 @@ namespace Nyangbingo.UI
             switch (station)
             {
                 case CraftingStation.Workbench: return "작업대";
-                case CraftingStation.Furnace: return "용광로";
+                case CraftingStation.Furnace: return "화로";
                 case CraftingStation.IceAnvil: return "얼음 모루";
-                case CraftingStation.Foundry: return "무쇠 용광로";
+                case CraftingStation.Foundry: return "용광로";
                 default: return station.ToString();
             }
         }
@@ -306,6 +311,11 @@ namespace Nyangbingo.UI
         private void RefreshStatus()
         {
             if (statusText == null) return;
+            if (encounterCoordinator?.BossManager?.IsBossActive == true)
+            {
+                statusText.text = string.Empty;
+                return;
+            }
             if (!string.IsNullOrEmpty(transientMessage)) { statusText.text = transientMessage; return; }
             var definition = SelectedBoss;
             if (definition?.SummonItem == null) { statusText.text = "B 보스 선택  ·  소환 데이터 없음"; return; }
@@ -318,6 +328,10 @@ namespace Nyangbingo.UI
             statusText.text += "  ·  F6 재료 / Shift+F6 제작대  ·  F7 아이템 / Shift+F7 제단  ·  J 요괴 정리";
 #endif
         }
+
+        private void HandleBossStateChanged(BossDefinition _) => RefreshStatus();
+
+        private void HandleBossStateChanged(BossDefinition _, bool __) => RefreshStatus();
 
         private string BuildMaterialStatus(BossDefinition definition)
         {
@@ -337,6 +351,11 @@ namespace Nyangbingo.UI
         {
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed -= RefreshStatus;
+            if (encounterCoordinator?.BossManager != null)
+            {
+                encounterCoordinator.BossManager.BossStarted -= HandleBossStateChanged;
+                encounterCoordinator.BossManager.BossEnded -= HandleBossStateChanged;
+            }
         }
     }
 }

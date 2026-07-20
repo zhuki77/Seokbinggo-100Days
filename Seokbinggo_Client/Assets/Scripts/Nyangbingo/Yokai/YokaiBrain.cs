@@ -39,6 +39,9 @@ namespace Nyangbingo.Yokai
         private float contactAttackRemaining;
         private float frostSlowFraction;
         private float frostSlowRemaining;
+        private bool bossEncounterPaused;
+        private SpriteRenderer[] pausedRenderers = System.Array.Empty<SpriteRenderer>();
+        private Color[] pausedRendererColors = System.Array.Empty<Color>();
         public YokaiDefinition Definition => definition;
         public YokaiSpawnTrack SpawnTrack => spawnTrack;
         public bool IsDawnFleeing => state == State.DawnFlee;
@@ -46,8 +49,10 @@ namespace Nyangbingo.Yokai
         public float SieveCooldownRemaining => sieveCooldownRemaining;
         public float LanternPauseRemaining => lanternPauseRemaining;
         public float BloomCooldownRemaining => bloomCooldownRemaining;
+        public bool IsInLanternRange => (counterSource ?? target as IYokaiCounterSource)?.IsInLanternRange == true;
         public float FrostSlowRemaining => frostSlowRemaining;
         public float FrostSpeedMultiplier => CalculateFrostSpeedMultiplier(frostSlowFraction, frostSlowRemaining);
+        public bool IsBossEncounterPaused => bossEncounterPaused;
         public event System.Action Bloomed;
         public event System.Action Attacked;
         public event System.Action<YokaiDefinition> DawnFleeStarted;
@@ -96,6 +101,7 @@ namespace Nyangbingo.Yokai
             contactAttackRemaining = 0f;
             frostSlowFraction = 0f;
             frostSlowRemaining = 0f;
+            SetBossEncounterPaused(false);
             health = GetComponent<Health>();
             if (health != null)
             {
@@ -141,6 +147,35 @@ namespace Nyangbingo.Yokai
             ResetGameSecondsSample();
         }
 
+        public bool SetBossEncounterPaused(bool paused)
+        {
+            if (bossEncounterPaused == paused) return true;
+            if (paused)
+            {
+                pausedRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+                pausedRendererColors = new Color[pausedRenderers.Length];
+                for (var index = 0; index < pausedRenderers.Length; index++)
+                {
+                    var renderer = pausedRenderers[index];
+                    if (renderer == null) continue;
+                    pausedRendererColors[index] = renderer.color;
+                    var color = renderer.color;
+                    color.a *= .45f;
+                    renderer.color = color;
+                }
+            }
+            else
+            {
+                for (var index = 0; index < pausedRenderers.Length && index < pausedRendererColors.Length; index++)
+                    if (pausedRenderers[index] != null) pausedRenderers[index].color = pausedRendererColors[index];
+                pausedRenderers = System.Array.Empty<SpriteRenderer>();
+                pausedRendererColors = System.Array.Empty<Color>();
+            }
+            bossEncounterPaused = paused;
+            ResetGameSecondsSample();
+            return true;
+        }
+
         public bool ApplyFrostSlow(float slowFraction, float durationSeconds)
         {
             if (float.IsNaN(slowFraction) || float.IsInfinity(slowFraction) || slowFraction <= 0f ||
@@ -178,7 +213,7 @@ namespace Nyangbingo.Yokai
 
         public void Tick(float deltaSeconds)
         {
-            if (deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) ||
+            if (bossEncounterPaused || deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) ||
                 definition == null) return;
             if (health == null) health = GetComponent<Health>();
             if (health != null && health.IsDead) return;

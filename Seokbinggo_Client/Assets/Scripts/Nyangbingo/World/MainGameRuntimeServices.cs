@@ -32,12 +32,15 @@ namespace Nyangbingo.World
         public UtilityService UtilityService { get; private set; }
         public EquipmentSystem EquipmentSystem { get; private set; }
         public EquipmentCollection EquipmentCollection { get; private set; }
+        public ActiveSlotSystem ActiveSlot { get; private set; }
+        public PortableLanternRuntime PortableLantern { get; private set; }
         public RecipeBook RecipeBook { get; private set; }
         public SmeltingStation Furnace { get; private set; }
         public SmeltingStation Foundry { get; private set; }
         public PlayerTemperatureState PlayerTemperature { get; private set; }
         public NapService NapService { get; private set; }
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
+        public JangdokStorageRuntime JangdokStorage { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
@@ -83,7 +86,16 @@ namespace Nyangbingo.World
                 return false;
             }
 
-            PlayerInventory = new Inventory.Inventory(gameDataCatalog.FindItem);
+            var inventoryDefinition = gameDataCatalog.FindGlobal(GlobalKeys.InventorySlots);
+            if (inventoryDefinition == null || !inventoryDefinition.TryGetInt(out var inventorySlots) ||
+                inventorySlots != Inventory.Inventory.SlotCount)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: inventory_slots는 " +
+                               $"{Inventory.Inventory.SlotCount}이어야 합니다.");
+                return false;
+            }
+
+            PlayerInventory = new Inventory.Inventory(gameDataCatalog.FindItem, inventorySlots);
             if (!inventoryRuntime.ConfigureForRuntime(PlayerInventory))
             {
                 Debug.LogError("[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 연결에 실패했습니다.");
@@ -95,6 +107,15 @@ namespace Nyangbingo.World
             UtilityService = new UtilityService(PlayerInventory);
             EquipmentSystem = new EquipmentSystem();
             EquipmentCollection = new EquipmentCollection(gameDataCatalog.FindEquipment);
+            ActiveSlot = new ActiveSlotSystem(PlayerInventory, gameDataCatalog.FindItem);
+            var lanternRadiusDefinition = gameDataCatalog.FindGlobal(GlobalKeys.PortableLanternRadius);
+            if (lanternRadiusDefinition == null || !lanternRadiusDefinition.TryGetFloat(out var lanternRadius) ||
+                lanternRadius <= 0f)
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: portable_lantern_radius가 올바르지 않습니다.");
+                return false;
+            }
+            PortableLantern = new PortableLanternRuntime(PlayerInventory, ActiveSlot, lanternRadius);
             RecipeBook = new RecipeBook();
             equipmentAcquisitionBinding = new EquipmentAcquisitionBinding(EquipmentCollection);
             Furnace = new SmeltingStation(PlayerInventory, SmeltingStationKind.Furnace, furnaceCapacity);
@@ -104,21 +125,32 @@ namespace Nyangbingo.World
             NapService = new NapService(gameDataCatalog, bootstrap.TimeService,
                 multiplier => PlayerTemperature.SetRecoveryMultiplier(multiplier));
             DeathTearPouches = new DeathTearPouchRuntime(PlayerInventory, bootstrap.TimeService);
+            var jangdokDefinition = gameDataCatalog.FindGlobal(GlobalKeys.JangdokStorageSlots);
+            if (jangdokDefinition == null || !jangdokDefinition.TryGetInt(out var jangdokSlots) ||
+                jangdokSlots != JangdokStorageRuntime.SlotCount)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: jangdok_storage_slots는 " +
+                               $"{JangdokStorageRuntime.SlotCount}이어야 합니다.");
+                return false;
+            }
+            JangdokStorage = new JangdokStorageRuntime(gameDataCatalog.FindItem, jangdokSlots);
 
             Register(CraftingProcess);
             Register(UtilityService);
             Register(Furnace);
             Register(Foundry);
             Register(PlayerTemperature);
-            IsInitialized = registered.Count == 5;
+            Register(PortableLantern);
+            IsInitialized = registered.Count == 6;
 
             if (IsInitialized)
             {
-                Debug.Log($"[Nyangbingo] MainGameRuntimeServices: 12슬롯 인벤토리와 제작·유틸리티·" +
-                          $"용광로({furnaceCapacity})·용해로({foundryCapacity})·체온 Tick 소비자 5개 등록 완료.");
+                Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
+                          $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·휴대용 등불 Tick 소비자 6개 등록 완료.");
             }
             if (IsInitialized)
-                Debug.Log("[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 1개가 12칸 인벤토리에 연결되었습니다.");
+                Debug.Log($"[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 1개가 " +
+                          $"{PlayerInventory.Capacity}칸 인벤토리에 연결되었습니다.");
             return IsInitialized;
         }
 
@@ -139,10 +171,14 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            IsInitialized = false;
+            PortableLantern?.Dispose();
+            PortableLantern = null;
             NapService?.Dispose();
             NapService = null;
             DeathTearPouches?.Dispose();
             DeathTearPouches = null;
+            JangdokStorage = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
             if (bootstrap?.TickDriver != null)
@@ -151,7 +187,6 @@ namespace Nyangbingo.World
                     bootstrap.TickDriver.Unregister(consumer);
             }
             registered.Clear();
-            IsInitialized = false;
         }
 
         private static bool TryGetSharedCapacity(IReadOnlyList<SmeltingDefinition> definitions, out int capacity)

@@ -1,10 +1,14 @@
+using System;
 using Nyangbingo.Audio;
+using Nyangbingo.Bosses;
+using Nyangbingo.Data;
 using Nyangbingo.Save;
 using Nyangbingo.World;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Nyangbingo.UI
 {
@@ -37,6 +41,12 @@ namespace Nyangbingo.UI
         [SerializeField] private Text statusText;
 
         private readonly List<Button> demoSaveButtons = new List<Button>();
+        private GameDataCatalog gameDataCatalog;
+        private BossManager bossManager;
+        private Text resultHeaderText;
+        private Text resultSummaryText;
+        private Text resultTeaserText;
+        private bool demoLoadApplied;
         private static bool enterGameplayAfterReload;
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
@@ -93,7 +103,11 @@ namespace Nyangbingo.UI
             shell.ContinueRequested += HandleContinueRequested;
             shell.DemoSaveRequested += HandleDemoSaveRequested;
             shell.TitleRequested += HandleTitleRequested;
+            gameDataCatalog = FindAnyObjectByType<MainGameBootstrap>()?.GameDataCatalog;
+            bossManager = FindAnyObjectByType<BossManager>();
+            if (bossManager != null) bossManager.BossEnded += HandleBossEnded;
             BindButtons();
+            BuildResultView();
             CreateDemoSaveButtons();
             bgmSlider.value = audioService.BgmVolume;
             sfxSlider.value = audioService.SfxVolume;
@@ -202,10 +216,18 @@ namespace Nyangbingo.UI
         {
             var confirmation = shell.PendingConfirmation;
             var demoDay = shell.PendingDemoDay;
+            if (confirmation == GameShellConfirmation.LoadDemoSave) demoLoadApplied = false;
             if (shell.Confirm())
             {
                 if (confirmation == GameShellConfirmation.LoadDemoSave)
-                    SetStatus($"{demoDay}일차 데모 불러오기 완료");
+                {
+                    if (demoLoadApplied) SetStatus($"{demoDay}일차 데모 불러오기 완료");
+                    else
+                    {
+                        shell.EnterTitle();
+                        SetStatus($"{demoDay}일차 데모 월드 복원 실패 · 데모 세이브를 다시 생성하세요.");
+                    }
+                }
                 return;
             }
             if (confirmation == GameShellConfirmation.LoadDemoSave)
@@ -267,7 +289,109 @@ namespace Nyangbingo.UI
         }
 
         private void HandleContinueRequested(int slot, SaveGame _) => saveCoordinator.TryLoad(slot);
-        private void HandleDemoSaveRequested(SaveGame _) => saveCoordinator.TryLoad(GameShellController.AutoSaveSlot);
+        private void HandleDemoSaveRequested(SaveGame demo) =>
+            demoLoadApplied = saveCoordinator.TryApplySnapshot(demo);
+
+        private void HandleBossEnded(BossDefinition definition, bool defeated)
+        {
+            if (definition == null || !GameShellController.ShouldEndDemo(timeService.Day,
+                    timeService.MvpContentDayLimit, definition.Id, defeated)) return;
+            var snapshot = saveCoordinator.CaptureSnapshot();
+            if (snapshot == null)
+            {
+                Debug.LogError("[Nyangbingo] 30일차 결과 스냅샷 생성에 실패했습니다.");
+                return;
+            }
+            shell.ShowResult(snapshot);
+            RefreshResultView();
+            Debug.Log("[Nyangbingo] 30일차 강철이 격퇴 후 MVP 결과 화면을 표시했습니다.");
+        }
+
+        private void BuildResultView()
+        {
+            if (resultTitleButton == null || resultSummaryText != null) return;
+            var panel = resultTitleButton.transform.parent as RectTransform;
+            if (panel == null) return;
+            resultHeaderText = panel.Find("Result")?.GetComponent<Text>();
+            var buttonLabel = resultTitleButton.GetComponentInChildren<Text>(true);
+            var font = buttonLabel != null ? buttonLabel.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            if (resultHeaderText != null)
+            {
+                resultHeaderText.text = "30일차 데모 종료";
+                resultHeaderText.fontSize = 18;
+                resultHeaderText.fontStyle = FontStyle.Bold;
+                var headerRect = resultHeaderText.rectTransform;
+                headerRect.anchoredPosition = new Vector2(0f, 98f);
+                headerRect.sizeDelta = new Vector2(340f, 30f);
+            }
+
+            resultSummaryText = CreateResultText(panel, "Summary", font, 9, TextAnchor.UpperLeft,
+                new Vector2(0f, 18f), new Vector2(340f, 126f));
+            resultTeaserText = CreateResultText(panel, "Teaser", font, 15, TextAnchor.MiddleCenter,
+                new Vector2(0f, -68f), new Vector2(240f, 26f));
+            resultTeaserText.fontStyle = FontStyle.Bold;
+
+            var buttonRect = resultTitleButton.GetComponent<RectTransform>();
+            buttonRect.anchoredPosition = new Vector2(0f, -106f);
+            buttonRect.sizeDelta = new Vector2(110f, 22f);
+            if (buttonLabel != null)
+            {
+                buttonLabel.text = "타이틀로";
+                buttonLabel.fontSize = 9;
+            }
+        }
+
+        private static Text CreateResultText(Transform parent, string name, Font font, int fontSize,
+            TextAnchor alignment, Vector2 position, Vector2 size)
+        {
+            var textObject = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)textObject.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            var text = textObject.AddComponent<Text>();
+            text.font = font;
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.color = new Color(.94f, .96f, 1f, 1f);
+            text.raycastTarget = false;
+            return text;
+        }
+
+        private void RefreshResultView()
+        {
+            var result = shell.Result;
+            if (result == null || resultSummaryText == null || resultTeaserText == null) return;
+            var completed = new HashSet<string>(result.CompletedModuleIds ?? Array.Empty<string>(),
+                StringComparer.Ordinal);
+            var modules = gameDataCatalog?.Modules;
+            var totalModules = modules?.Count ?? 0;
+            var installedModules = 0;
+            if (modules != null)
+                for (var index = 0; index < modules.Count; index++)
+                    if (modules[index] != null && completed.Contains(modules[index].Id)) installedModules++;
+
+            var builder = new StringBuilder();
+            builder.AppendLine(result.SealPercentage >= 100f
+                ? $"✓ 석빙고 온도 {result.SealPercentage:0.#}%"
+                : $"□ 석빙고 온도 {result.SealPercentage:0.#}% / 100%");
+            builder.AppendLine($"핵심 모듈 {installedModules}/{totalModules}");
+            if (modules != null)
+            {
+                for (var index = 0; index < modules.Count; index++)
+                {
+                    var module = modules[index];
+                    if (module == null) continue;
+                    builder.Append(completed.Contains(module.Id) ? "✓ " : "□ ")
+                        .AppendLine(module.DisplayName);
+                }
+            }
+            resultSummaryText.text = builder.ToString().TrimEnd();
+            resultTeaserText.text = DemoResultState.Teaser;
+        }
+
         private void HandleTitleRequested()
         {
             Time.timeScale = 0f;
@@ -285,6 +409,7 @@ namespace Nyangbingo.UI
                 shell.DemoSaveRequested -= HandleDemoSaveRequested;
                 shell.TitleRequested -= HandleTitleRequested;
             }
+            if (bossManager != null) bossManager.BossEnded -= HandleBossEnded;
             Time.timeScale = 1f;
         }
     }

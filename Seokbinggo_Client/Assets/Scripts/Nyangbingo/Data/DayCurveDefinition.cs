@@ -8,7 +8,7 @@ namespace Nyangbingo.Data
     public struct DayCurveSpawnAmount
     {
         public YokaiKind kind;
-        [Min(0)] public int amount;
+        [Min(1)] public int amount;
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Day Curve")]

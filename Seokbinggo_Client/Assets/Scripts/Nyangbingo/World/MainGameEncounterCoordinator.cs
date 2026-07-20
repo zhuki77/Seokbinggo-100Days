@@ -42,12 +42,14 @@ namespace Nyangbingo.World
         private bool regularSpawningEnabled = true;
         private bool discardRegularForCurrentNight;
         private bool forcedBossSpawnPending;
+        private bool activeBossIsForcedInvasion;
         private bool initialized;
         private bool restoringSnapshot;
         private RegularEncounterStateRecord restoredRegularEncounter;
         private int spawnSequence;
         private int debugBossIndex;
         private BossCombatController activeBossCombat;
+        private MainGameTurretRuntime placedObjectRuntime;
         private readonly List<SpawnedYokai> bossPausedYokai = new List<SpawnedYokai>();
 
         private sealed class SpawnedYokai
@@ -66,6 +68,7 @@ namespace Nyangbingo.World
         public Transform PlayerTransform => raidTarget != null ? raidTarget.transform : null;
         public Health PlayerHealth => raidTarget != null ? raidTarget.GetComponent<Health>() : null;
         public bool CanSerializeProgress => initialized && bossManager != null && !bossManager.IsBossActive;
+        public static bool ShouldPauseFieldYokaiForBoss(bool forcedInvasion) => !forcedInvasion;
         public event Action RaidSlotAvailable;
 
         public bool HasActiveYokaiWithin(Vector2 position, float radius)
@@ -76,6 +79,18 @@ namespace Nyangbingo.World
             var radiusSquared = radius * radius;
             return spawnedYokai.Any(entry => IsAlive(entry) && entry.health.gameObject.activeInHierarchy &&
                 ((Vector2)entry.health.transform.position - position).sqrMagnitude <= radiusSquared);
+        }
+
+        public void CopyActiveThreatTransforms(List<Transform> results)
+        {
+            if (results == null) return;
+            results.Clear();
+            foreach (var entry in spawnedYokai)
+                if (IsAlive(entry) && entry.health.gameObject.activeInHierarchy)
+                    results.Add(entry.health.transform);
+            var bossHealth = bossManager != null ? bossManager.ActiveHealth : null;
+            if (bossHealth != null && !bossHealth.IsDead && bossHealth.gameObject.activeInHierarchy)
+                results.Add(bossHealth.transform);
         }
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
@@ -109,6 +124,42 @@ namespace Nyangbingo.World
             }
             if (Input.GetKeyDown(KeyCode.J)) DefeatAllYokaiForEditorTest();
             if (Input.GetKeyDown(KeyCode.K)) DefeatActiveBossForEditorTest();
+            if (Input.GetKeyDown(KeyCode.F12))
+            {
+                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    GrantEoduksiniVisualTestKit();
+                else if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+                    GrantRoofVisualTestKit();
+                else
+                    SpawnEoduksiniForEditorTest();
+            }
+        }
+
+        private void SpawnEoduksiniForEditorTest()
+        {
+            var spawned = TrySpawn(YokaiKind.Eoduksini, 0);
+            Debug.Log(spawned
+                ? "[Nyangbingo] F12 Eoduksini visual test spawn completed."
+                : "[Nyangbingo] F12 Eoduksini visual test spawn failed: MainGame initialization or spawn terrain required.");
+        }
+
+        private void GrantEoduksiniVisualTestKit()
+        {
+            var inventory = runtimeServices?.PlayerInventory;
+            var lanternGranted = inventory != null && inventory.TryAdd("lantern", 1);
+            var coalGranted = inventory != null && inventory.TryAdd("coal", 3);
+            Debug.Log(lanternGranted && coalGranted
+                ? "[Nyangbingo] Shift+F12 Eoduksini visual test kit granted: lantern x1, coal x3."
+                : "[Nyangbingo] Shift+F12 test kit grant was incomplete: check inventory capacity.");
+        }
+
+        private void GrantRoofVisualTestKit()
+        {
+            var inventory = runtimeServices?.PlayerInventory;
+            var granted = inventory != null && inventory.TryAdd("roof", 8);
+            Debug.Log(granted
+                ? "[Nyangbingo] Ctrl+F12 roof visual test kit granted: roof x8."
+                : "[Nyangbingo] Ctrl+F12 roof test kit grant failed: check inventory capacity.");
         }
 
         private void DefeatAllYokaiForEditorTest()
@@ -142,6 +193,7 @@ namespace Nyangbingo.World
             bootstrap ??= GetComponent<MainGameBootstrap>();
             runtimeServices ??= GetComponent<MainGameRuntimeServices>();
             bossManager ??= GetComponent<BossManager>();
+            placedObjectRuntime ??= GetComponent<MainGameTurretRuntime>();
             if (gameDataCatalog == null) gameDataCatalog = bootstrap?.GameDataCatalog;
             if (bootstrap == null || runtimeServices == null || bossManager == null || raidTarget == null ||
                 gameDataCatalog == null || !bootstrap.InitializeServices() || !runtimeServices.Initialize())
@@ -191,7 +243,9 @@ namespace Nyangbingo.World
             if (IsRegularSpawningEnabled) TryFillRegularSlots();
         }
 
-        public Health SpawnBoss(BossDefinition definition)
+        public Health SpawnBoss(BossDefinition definition) => CreateBoss(definition, true);
+
+        private Health CreateBoss(BossDefinition definition, bool forcedInvasion)
         {
             if (definition == null || !TryGetSpawnPosition(out var position)) return null;
             var bossObject = new GameObject($"Boss_{definition.Id}");
@@ -208,6 +262,7 @@ namespace Nyangbingo.World
             if (bossArt?.Sprite == null)
                 RuntimePlaceholderVisual.Configure(bossRenderer, new Color(1f, .25f, .2f), 1.3f, 15);
             bossObject.AddComponent<RuntimeDamageFlash>();
+            bossObject.AddComponent<RuntimeWorldDamagePopup>();
             health.ConfigureForRuntime(definition.HitPoints);
             var combat = bossObject.AddComponent<BossCombatController>();
             if (!combat.ConfigureForRuntime(definition, raidTarget) || !runtimeServices.Register(combat))
@@ -229,8 +284,8 @@ namespace Nyangbingo.World
                     bossObject.AddComponent<RuntimeImugiBodyVisual>().Configure(bodySprite, 14);
             }
             activeBossCombat = combat;
-            forcedBossSpawnPending = definition.ForcedDay > 0 &&
-                                     definition.ForcedDay == bootstrap.TimeService.Day;
+            activeBossIsForcedInvasion = forcedInvasion;
+            forcedBossSpawnPending = forcedInvasion;
             return health;
         }
 
@@ -238,7 +293,7 @@ namespace Nyangbingo.World
         {
             if (!initialized || definition == null || bossManager == null || bossManager.IsBossActive ||
                 runtimeServices?.PlayerInventory == null || bootstrap?.TimeService?.IsNight != true) return false;
-            var health = SpawnBoss(definition);
+            var health = CreateBoss(definition, false);
             if (health == null) return false;
             var service = new BossSummonService(runtimeServices.PlayerInventory, bossManager, summonSite);
             if (service.TryConsumeAndStart(definition, health, bootstrap.TimeService.GameSeconds)) return true;
@@ -253,6 +308,8 @@ namespace Nyangbingo.World
                 runtimeServices?.Unregister(activeBossCombat);
                 activeBossCombat = null;
             }
+            activeBossIsForcedInvasion = false;
+            forcedBossSpawnPending = false;
             if (health != null) Destroy(health.gameObject);
         }
 
@@ -276,8 +333,7 @@ namespace Nyangbingo.World
             }
             if (definition == null) return false;
 
-            PauseYokaiForBossEncounter();
-            var health = SpawnBoss(definition);
+            var health = CreateBoss(definition, false);
             if (health != null && bossManager.TryStart(definition, health, bootstrap.TimeService.GameSeconds))
             {
                 Debug.Log($"[Nyangbingo] F8 boss test started: {definition.Id} ({definition.DisplayName}).");
@@ -450,17 +506,21 @@ namespace Nyangbingo.World
 
         private void HandleBossStarted(BossDefinition definition)
         {
+            if (!ShouldPauseFieldYokaiForBoss(activeBossIsForcedInvasion))
+            {
+                forcedBossSpawnPending = false;
+                return;
+            }
             PauseYokaiForBossEncounter();
             discardRegularForCurrentNight = true;
             regularSpawningEnabled = false;
             pendingRegular.Clear();
-            if (definition != null && definition.ForcedDay > 0 &&
-                definition.ForcedDay == bootstrap.TimeService.Day)
-                forcedBossSpawnPending = false;
         }
 
         private void HandleBossEnded(BossDefinition definition, bool defeated)
         {
+            var wasForcedInvasion = activeBossIsForcedInvasion;
+            activeBossIsForcedInvasion = false;
             if (activeBossCombat != null)
             {
                 runtimeServices?.Unregister(activeBossCombat);
@@ -468,7 +528,8 @@ namespace Nyangbingo.World
                 activeBossCombat = null;
                 if (bossObject != null) Destroy(bossObject);
             }
-            RestoreYokaiAfterBossEncounter(bootstrap?.TimeService?.IsNight == true);
+            if (!wasForcedInvasion)
+                RestoreYokaiAfterBossEncounter(bootstrap?.TimeService?.IsNight == true);
         }
 
         private void PauseYokaiForBossEncounter()
@@ -479,7 +540,7 @@ namespace Nyangbingo.World
                 var entry = spawnedYokai[index];
                 if (!IsAlive(entry) || !entry.health.gameObject.activeSelf) continue;
                 runtimeServices?.Unregister(entry.brain);
-                entry.health.gameObject.SetActive(false);
+                entry.brain.SetBossEncounterPaused(true);
                 bossPausedYokai.Add(entry);
             }
             if (bossPausedYokai.Count > 0)
@@ -494,7 +555,7 @@ namespace Nyangbingo.World
                 if (entry?.health == null || entry.health.IsDead) continue;
                 if (resume)
                 {
-                    entry.health.gameObject.SetActive(true);
+                    entry.brain.SetBossEncounterPaused(false);
                     runtimeServices?.Register(entry.brain);
                 }
                 else
@@ -531,7 +592,10 @@ namespace Nyangbingo.World
             var collider = yokaiObject.AddComponent<CircleCollider2D>();
             collider.radius = .42f;
             collider.isTrigger = true;
-            var yokaiRenderer = yokaiObject.AddComponent<SpriteRenderer>();
+            var usesEoduksiniPresentation = definition.Kind == YokaiKind.Eoduksini;
+            var visualObject = usesEoduksiniPresentation ? new GameObject("Visual") : yokaiObject;
+            if (usesEoduksiniPresentation) visualObject.transform.SetParent(yokaiObject.transform, false);
+            var yokaiRenderer = visualObject.AddComponent<SpriteRenderer>();
             var yokaiArt = characterArtCatalog != null
                 ? characterArtCatalog.Find(definition.Id)
                 : null;
@@ -539,18 +603,27 @@ namespace Nyangbingo.World
                 RuntimePlaceholderVisual.Configure(yokaiRenderer,
                     raid ? new Color(1f, .45f, .8f) : new Color(.8f, .35f, 1f), .8f, 10);
             yokaiObject.AddComponent<RuntimeDamageFlash>();
+            yokaiObject.AddComponent<RuntimeWorldDamagePopup>();
             var brain = yokaiObject.AddComponent<YokaiBrain>();
             if (yokaiArt?.Sprite != null)
             {
-                var characterAnimator = yokaiObject.AddComponent<RuntimeCharacterSpriteAnimator>();
+                var characterAnimator = visualObject.AddComponent<RuntimeCharacterSpriteAnimator>();
                 characterAnimator.Configure(yokaiArt, 10);
                 characterAnimator.Bind(brain);
             }
             var loot = yokaiObject.AddComponent<YokaiLoot>();
             loot.ConfigureForRuntime(definition);
-            brain.ConfigureForRuntime(definition, raidTarget, instanceSpawnTrack: YokaiSpawnTrack.Raid);
+            var counters = placedObjectRuntime != null
+                ? new CounterAuraSensor(yokaiObject.transform, placedObjectRuntime.ActiveCounterAuras)
+                : null;
+            brain.ConfigureForRuntime(definition, raidTarget, counters, YokaiSpawnTrack.Raid);
+            if (usesEoduksiniPresentation)
+            {
+                var presentation = visualObject.AddComponent<RuntimeEoduksiniVisual>();
+                presentation.ConfigureForRuntime(brain, yokaiRenderer);
+            }
             var healthBar = yokaiObject.AddComponent<RuntimeWorldHealthBar>();
-            healthBar.ConfigureForRuntime(health, yokaiRenderer);
+            healthBar.ConfigureForRuntime(health, yokaiRenderer, usesEoduksiniPresentation ? 2f : 1f);
             health.Died += () => HandleYokaiEnded(health);
             brain.FledOffscreen += ignored => HandleYokaiEnded(health);
             spawnedYokai.Add(new SpawnedYokai { health = health, brain = brain, raid = raid });
@@ -661,19 +734,21 @@ namespace Nyangbingo.World
         private Transform barRoot;
         private SpriteRenderer fillRenderer;
         private TextMesh valueText;
+        private TextMesh valueShadow;
 
         public float FillRatio => health == null || health.MaxHealth <= 0
             ? 0f
             : Mathf.Clamp01((float)health.Current / health.MaxHealth);
 
-        public void ConfigureForRuntime(Health targetHealth, SpriteRenderer characterRenderer)
+        public void ConfigureForRuntime(Health targetHealth, SpriteRenderer characterRenderer,
+            float maximumVisualScale = 1f)
         {
             Unbind();
             health = targetHealth;
             if (health == null) return;
 
             var offset = characterRenderer != null && characterRenderer.sprite != null
-                ? Mathf.Max(.72f, characterRenderer.sprite.bounds.max.y + .24f)
+                ? Mathf.Max(.72f, characterRenderer.sprite.bounds.max.y * Mathf.Max(1f, maximumVisualScale) + .24f)
                 : .72f;
             BuildPresentation(offset);
             health.Damaged += HandleDamaged;
@@ -700,15 +775,29 @@ namespace Nyangbingo.World
 
             var textObject = new GameObject("Value");
             textObject.transform.SetParent(barRoot, false);
-            textObject.transform.localPosition = new Vector3(0f, .18f, 0f);
+            textObject.transform.localPosition = new Vector3(0f, .2f, 0f);
             valueText = textObject.AddComponent<TextMesh>();
             valueText.anchor = TextAnchor.LowerCenter;
             valueText.alignment = TextAlignment.Center;
-            valueText.fontSize = 24;
-            valueText.characterSize = .035f;
+            valueText.fontSize = MainGameEffectPresenter.WorldPopupFontSize;
+            valueText.characterSize = MainGameEffectPresenter.WorldPopupCharacterSize;
+            valueText.fontStyle = FontStyle.Bold;
             valueText.color = Color.white;
             var textRenderer = valueText.GetComponent<MeshRenderer>();
-            if (textRenderer != null) textRenderer.sortingOrder = 32;
+            if (textRenderer != null) textRenderer.sortingOrder = 33;
+
+            var shadowObject = new GameObject("Shadow");
+            shadowObject.transform.SetParent(textObject.transform, false);
+            shadowObject.transform.localPosition = new Vector3(.018f, -.018f, .01f);
+            valueShadow = shadowObject.AddComponent<TextMesh>();
+            valueShadow.anchor = valueText.anchor;
+            valueShadow.alignment = valueText.alignment;
+            valueShadow.fontSize = valueText.fontSize;
+            valueShadow.characterSize = valueText.characterSize;
+            valueShadow.fontStyle = valueText.fontStyle;
+            valueShadow.color = new Color(0f, 0f, 0f, .9f);
+            var shadowRenderer = valueShadow.GetComponent<MeshRenderer>();
+            if (shadowRenderer != null) shadowRenderer.sortingOrder = 32;
         }
 
         private void HandleDamaged(DamageTag _, int __) => Refresh();
@@ -727,7 +816,9 @@ namespace Nyangbingo.World
                         ? new Color(1f, .65f, .12f, 1f)
                         : new Color(.9f, .16f, .12f, 1f);
             }
-            if (valueText != null) valueText.text = $"{health.Current}/{health.MaxHealth}";
+            var value = health.Current.ToString();
+            if (valueText != null) valueText.text = value;
+            if (valueShadow != null) valueShadow.text = value;
         }
 
         private void Unbind()
@@ -737,6 +828,7 @@ namespace Nyangbingo.World
             barRoot = null;
             fillRenderer = null;
             valueText = null;
+            valueShadow = null;
         }
 
         private void OnDestroy()

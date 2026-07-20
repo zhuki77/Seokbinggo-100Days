@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: boss_field_yokai
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: boss_field_yokai
+  value: freeze_resume
+  unit: rule
+  note: "\uC18C\uD658 \uBCF4\uC2A4 \uB4F1\uC7A5 \uC2DC \uC774\uBBF8 \uD544\uB4DC\uC5D0
+    \uC788\uB358 \uC77C\uBC18 \uC694\uAD34 \uCC98\uB9AC(v27) \u2014 \uD589\uB3D9
+    \uC815\uC9C0+\uBC18\uD22C\uBA85 \uD45C\uC2DC \uD6C4 \uBCF4\uC2A4\uC804 \uC885\uB8CC
+    \uC2DC \uC774\uB3D9 \uBC29\uD5A5\xB7\uC18D\uB3C4 \uC720\uC9C0\uD55C \uCC44 \uC7AC\uAC1C.
+    \uC0C8 \uC2A4\uD3F0\uC740 \uADF8 \uBC24 \uC5C6\uC74C(boss_night_spawn=discard
+    \uC720\uC9C0). \uB0B4\uC2B5 \uBCF4\uC2A4(30\uC77C\uCC28 \uAC15\uCCA0\uC774)\uB294
+    invasion_boss_in_cap=1\uB85C \uACF5\uC874\uC774\uB77C \uC774 \uADDC\uCE59 \uB300\uC0C1\uC774
+    \uC544\uB2C8\uB2E4"

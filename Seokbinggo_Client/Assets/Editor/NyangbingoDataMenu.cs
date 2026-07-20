@@ -91,11 +91,12 @@ public static class NyangbingoDataMenu
                   $"{yokai.Length} yokai, {bosses.Length} bosses, {chests.Length} chests, {dayEvents.Length} day events.");
     }
 
-    [MenuItem("Nyangbingo/Reimport v26 Data Bundle")]
-    public static void ReimportV26DataBundle()
+    [MenuItem("Nyangbingo/Reimport v29 Data Bundle")]
+    public static void ReimportV29DataBundle()
     {
         ReimportItems();
         ReimportRecipes();
+        ReimportModules();
         ReimportGlobals();
         ReimportSealWhitelist();
 
@@ -106,17 +107,20 @@ public static class NyangbingoDataMenu
         var sealRules = LoadAssets<SealWhitelistDefinition>(rootDirectory + "/SealWhitelist");
         var wallpaper = AssetDatabase.LoadAssetAtPath<RecipeDefinition>(
             rootDirectory + "/Recipes/wallpaper.asset");
-        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 83 || sealRules.Length != 23 ||
+        var jangdok = AssetDatabase.LoadAssetAtPath<ModuleDefinition>(
+            rootDirectory + "/Modules/jangdok.asset");
+        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 89 || sealRules.Length != 23 ||
             wallpaper == null || wallpaper.Output.item == null || wallpaper.Output.item.Id != "wallpaper" ||
-            wallpaper.Output.amount != 16)
+            wallpaper.Output.amount != 16 || jangdok == null || jangdok.Role != "보관함 40슬롯(v29 확정)")
         {
-            Debug.LogError("[Nyangbingo] v26 data bundle reimport failed its 86/54/83/23 and wallpaper x16 check.");
+            Debug.LogError("[Nyangbingo] v29 data bundle reimport failed its 86/54/89/23, wallpaper x16, " +
+                           "or jangdok 40-slot check.");
             return;
         }
 
         RebuildGameDataCatalog();
-        Debug.Log("[Nyangbingo] v26 data bundle reimport completed: 86 items, 54 recipes, " +
-                  "83 globals, 23 seal rules, wallpaper output 16.");
+        Debug.Log("[Nyangbingo] v29 data bundle reimport completed: 86 items, 54 recipes, " +
+                  "89 globals, 23 seal rules, wallpaper output 16, jangdok storage 40.");
     }
 
     [MenuItem("Nyangbingo/Validate CSV Data")]
@@ -1693,14 +1697,14 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 83 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count != 89 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain the official 83-row v26 schema.");
+            Debug.LogError("[Nyangbingo] globals.csv must contain the v27 official rows and v28/v29 manual overlay (89 rows).");
             return;
         }
 
         var textUnits = new HashSet<string>(System.StringComparer.Ordinal)
-            { "ore:ingot", "recipe", "rule" };
+            { "ore:ingot", "recipe", "rule", "scope" };
         var integerUnits = new HashSet<string>(System.StringComparer.Ordinal)
             { "count", "day", "gauge", "hp", "person", "px", "tile" };
         var keys = new HashSet<string>(System.StringComparer.Ordinal);
@@ -1749,7 +1753,19 @@ public static class NyangbingoDataMenu
                                   numeric.TryGetValue("wallpaper_coldsource_bonus", out var wallpaperBonus) &&
                                   Mathf.Approximately(wallpaperBonus, 25f) &&
                                   values.TryGetValue("wallpaper_remove_rule", out var wallpaperRemoveRule) &&
-                                  wallpaperRemoveRule == "restore_original";
+                                  wallpaperRemoveRule == "restore_original" &&
+                                  values.TryGetValue(GlobalKeys.BossFieldYokai, out var bossFieldYokai) &&
+                                  bossFieldYokai == "freeze_resume" &&
+                                  numeric.TryGetValue(GlobalKeys.CaveMaxHeight, out var caveMaxHeight) &&
+                                  Mathf.Approximately(caveMaxHeight, 12f) &&
+                                  values.TryGetValue(GlobalKeys.FurnitureMvpScope, out var furnitureScope) &&
+                                  furnitureScope == "B" &&
+                                  numeric.TryGetValue(GlobalKeys.InventorySlots, out var inventorySlots) &&
+                                  Mathf.Approximately(inventorySlots, 50f) &&
+                                  values.TryGetValue(GlobalKeys.ActiveSlotRule, out var activeSlotRule) &&
+                                  activeSlotRule == "weapon_or_tool_1" &&
+                                  numeric.TryGetValue(GlobalKeys.JangdokStorageSlots, out var jangdokSlots) &&
+                                  Mathf.Approximately(jangdokSlots, 40f);
         if (!derivedValuesValid)
         {
             Debug.LogError("[Nyangbingo] Globals derived day, seal-window, or survival values are inconsistent.");
@@ -1862,7 +1878,7 @@ public static class NyangbingoDataMenu
                 var parts = encodedComposition[compositionIndex].Split(':');
                 if (parts.Length != 2 || !TryParseYokaiKind(parts[0], out var kind) || !uniqueKinds.Add(kind) ||
                     !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var amount) ||
-                    amount < 0)
+                    amount <= 0)
                 {
                     Debug.LogError($"[Nyangbingo] Day curve day {expectedDay} has invalid spawn composition.");
                     return;

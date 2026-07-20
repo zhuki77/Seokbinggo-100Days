@@ -3,6 +3,7 @@ using Nyangbingo.Combat;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.Core;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.Yokai
@@ -81,7 +82,7 @@ namespace Nyangbingo.Yokai
         {
             if (item == null || amount <= 0) return;
             Dropped?.Invoke(item, amount);
-            ItemAcquisition.Request(item, amount);
+            WorldItemDropRequest.Request(item, amount, transform.position);
         }
     }
 }

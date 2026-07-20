@@ -197,6 +197,15 @@ namespace Nyangbingo.World
             .OrderBy(record => record.objectId, StringComparer.Ordinal)
             .ToList();
 
+        public void CopyPlacedObjectPositions(string definitionId, List<Vector2> results, bool append = false)
+        {
+            if (results == null) return;
+            if (!append) results.Clear();
+            if (string.IsNullOrWhiteSpace(definitionId)) return;
+            foreach (var entry in byObjectId.Values)
+                if (entry.Record.definitionId == definitionId) results.Add(entry.Record.position);
+        }
+
         public List<CoolingSourceStateRecord> ExportCoolingSources() => coolingSources?.ExportSnapshots()
             .Select(snapshot => new CoolingSourceStateRecord
             {

@@ -21,14 +21,14 @@ MonoBehaviour:
   paceMineralTier: 3
   maxActive: 7
   spawnComposition:
-  - kind: 0
-    amount: 2
-  - kind: 1
-    amount: 1
+  - kind: 3
+    amount: 3
   - kind: 2
     amount: 2
-  - kind: 3
-    amount: 2
+  - kind: 0
+    amount: 1
+  - kind: 1
+    amount: 1
   spawnMultiplier: 1
   dropMultiplier: 1
   eventId: 

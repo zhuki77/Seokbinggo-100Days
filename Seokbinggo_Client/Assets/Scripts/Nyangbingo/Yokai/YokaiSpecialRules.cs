@@ -111,7 +111,8 @@ namespace Nyangbingo.Yokai
         {
             if (observedTransform == null || auras == null) return null;
             foreach (var aura in auras)
-                if (aura != null && aura.Kind == kind && aura.Contains(observedTransform.position)) return aura;
+                if (aura != null && aura.isActiveAndEnabled && aura.Kind == kind &&
+                    aura.Contains(observedTransform.position)) return aura;
             return null;
         }
 

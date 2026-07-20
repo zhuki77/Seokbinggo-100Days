@@ -156,10 +156,10 @@ public static class NyangbingoMainGameSceneCreator
         Require(hud != null && hud.HasCraftingProgressBindings, "HUD crafting progress bindings");
         Require(codex != null && codex.BoundCardCount == YokaiCodexPresentationModel.ExpectedCardCount,
             "Codex cards");
-        Require(hud != null && hud.BoundSlotCount == Nyangbingo.Inventory.Inventory.SlotCount,
-            "HUD inventory slots");
-        Require(hud != null && hud.BoundIconCount == Nyangbingo.Inventory.Inventory.SlotCount,
-            "HUD inventory icons");
+        Require(hud != null && hud.BoundSlotCount == MainGameHudController.LegacyInventoryBarSlotCount,
+            "HUD legacy inventory-bar slots");
+        Require(hud != null && hud.BoundIconCount == MainGameHudController.LegacyInventoryBarSlotCount,
+            "HUD legacy inventory-bar icons");
         Require(camera != null, "Main Camera");
         Require(parallaxBackground != null, "MainGameParallaxBackground");
         Require(parallaxBackground != null && parallaxBackground.HasConfiguredArt,
@@ -447,8 +447,8 @@ public static class NyangbingoMainGameSceneCreator
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = 6;
 
-        var slots = new Text[Nyangbingo.Inventory.Inventory.SlotCount];
-        var slotIcons = new Image[Nyangbingo.Inventory.Inventory.SlotCount];
+        var slots = new Text[MainGameHudController.LegacyInventoryBarSlotCount];
+        var slotIcons = new Image[MainGameHudController.LegacyInventoryBarSlotCount];
         for (var index = 0; index < slots.Length; index++)
         {
             var slotObject = new GameObject($"Slot_{index + 1:00}", typeof(RectTransform));
