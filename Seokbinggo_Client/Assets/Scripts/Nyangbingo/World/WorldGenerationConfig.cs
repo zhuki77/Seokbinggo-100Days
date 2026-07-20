@@ -15,12 +15,19 @@ namespace Nyangbingo.World
         [Min(16)][SerializeField] private int mapHeight = 160;
 
         [Header("지형 — Pass 1 (1D 펄린)")]
-        [Range(0f, 1f)][SerializeField] private float surfaceBaseHeightRatio = 0.82f;
+        // A-10(v26 정본 교정): globals.csv surface_y=20(맵 상단 기준 하늘 두께), 맵 높이 160 →
+        // 지표(최상단 고체 행) = 160 - 1 - 20 = 139 → 139/160 = 0.86875. 절대 임의 조정 금지(변경 금지 값).
+        [Range(0f, 1f)][SerializeField] private float surfaceBaseHeightRatio = 0.86875f;
+        // globals.csv: "1D 펄린 진폭 +-6" — surface_y=20과 함께 정본 확정값.
         [Min(0f)][SerializeField] private float surfaceNoiseAmplitude = 6f;
         [Min(0.0001f)][SerializeField] private float surfaceNoiseFrequency = 0.02f;
-        [Min(1)][SerializeField] private int upperLayerThickness = 40;
-        [Min(1)][SerializeField] private int middleLayerThickness = 55;
-        [Min(1)][SerializeField] private int bedrockThickness = 4;
+        // A-10: globals.csv layer_t1_depth=45(변경 금지) / layer_t2_depth=90 / layer_t3_depth=135 /
+        // bedrock_depth=140 → 두께로 환산하면 45 / (90-45)=45 / (140-135)=5. 예전 40/55/4(v17)를
+        // "45 / 45 / 45 / 5" 정본으로 교정한다. mineral-tiers.csv의 depth_min/depth_max(1~45/46~90/91~135)와
+        // 반드시 같은 기준(지표에서 내려간 깊이)을 쓴다 — PlaceOreVeins가 이 값들과 별도 산식을 쓰면 안 된다.
+        [Min(1)][SerializeField] private int upperLayerThickness = 45;
+        [Min(1)][SerializeField] private int middleLayerThickness = 45;
+        [Min(1)][SerializeField] private int bedrockThickness = 5;
         [Range(0f, 1f)][SerializeField] private float upperDirtRatio = 0.64f; // 흙45:돌25 ≈ 64:36 (6-4 표)
 
         [Header("동굴 — Pass 2 (2D 펄린 임계값, 상층10%→심층25%)")]
@@ -28,17 +35,20 @@ namespace Nyangbingo.World
         [Range(0f, 1f)][SerializeField] private float caveChanceUpper = 0.10f;
         [Range(0f, 1f)][SerializeField] private float caveChanceDeep = 0.25f;
 
-        [Header("자원 — Pass 3 (클러스터 광맥, 6-4 빈도표 정본)")]
+        // A-10: depthMin/depthMax는 Assets/Data/CSV/mineral-tiers.csv의 depth_min/depth_max를 그대로 옮긴
+        // 값이다(T1 1~45 · T2 46~90 · T3 91~135). CSV가 정본이므로 두 값이 어긋나면 이 배열을 CSV에 맞춰
+        // 고친다(회귀 테스트가 CSV와의 불일치를 감지한다) — 반대로 CSV를 여기 맞춰 고치지 않는다.
+        [Header("자원 — Pass 3 (클러스터 광맥, mineral-tiers.csv 빈도/깊이 정본)")]
         [SerializeField]
         private OreVeinProfile[] oreVeins =
         {
-            new OreVeinProfile { elementType = WorldTileTypes.Coal, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 8f, minClusterSize = 3, maxClusterSize = 6 },
-            new OreVeinProfile { elementType = WorldTileTypes.Clay, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6 },
-            new OreVeinProfile { elementType = WorldTileTypes.IronOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 18f, minClusterSize = 3, maxClusterSize = 6 },
-            new OreVeinProfile { elementType = WorldTileTypes.CopperOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6 },
-            new OreVeinProfile { elementType = WorldTileTypes.IceShard, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6 },
-            new OreVeinProfile { elementType = WorldTileTypes.IceSteelOre, layer = WorldLayer.Deep, hardness = 3, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6 },
-            new OreVeinProfile { elementType = WorldTileTypes.FrostEssence, layer = WorldLayer.Deep, hardness = 3, frequencyPer100Tiles = 4f, minClusterSize = 3, maxClusterSize = 6 }
+            new OreVeinProfile { elementType = WorldTileTypes.Coal, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 8f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
+            new OreVeinProfile { elementType = WorldTileTypes.Clay, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
+            new OreVeinProfile { elementType = WorldTileTypes.IronOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 18f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.CopperOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.IceShard, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.IceSteelOre, layer = WorldLayer.Deep, hardness = 3, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 },
+            new OreVeinProfile { elementType = WorldTileTypes.FrostEssence, layer = WorldLayer.Deep, hardness = 3, frequencyPer100Tiles = 4f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 }
         };
 
         [Header("구조물 — Pass 4 : 반지하 알코브(스폰)")]

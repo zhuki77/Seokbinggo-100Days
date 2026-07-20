@@ -341,6 +341,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.TilemapRenderer
   foregroundTilemap: {fileID: 202981692}
   backgroundTilemap: {fileID: 1519643774}
+  edgeOverlayTilemap: {fileID: 0}
+  edgeShapeTiles:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   tileVisuals:
   - elementType: dirt
     tile: {fileID: 11400000, guid: cd072d0f4b4211044b52711b7663b3b5, type: 2}
@@ -705,6 +712,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Debugging.SealSystemDebugView
   harness: {fileID: 916007805}
   debugDrawEnabled: 1
+  setCoreKey: 289
+  clearCoreKey: 290
   useRuntimeOverlay: 1
   maxOverlayCells: 1200
   outOfBoundsMarkerScale: 3

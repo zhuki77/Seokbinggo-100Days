@@ -129,11 +129,23 @@ namespace Nyangbingo.World
     public struct OreVeinProfile
     {
         public string elementType;
+
+        /// <summary>배경벽 색상 선택 등 보조 분류용(레거시). 실제 배치 범위는 depthMin/depthMax를 우선한다.</summary>
         public WorldLayer layer;
+
         [Range(1, 3)] public int hardness;
         [Min(0f)] public float frequencyPer100Tiles;
         [Min(1)] public int minClusterSize;
         [Min(1)] public int maxClusterSize;
+
+        /// <summary>
+        /// A-10: mineral-tiers.csv의 depth_min/depth_max(지표에서 내려간 깊이, 1부터 시작)를 그대로 옮긴다.
+        /// 0(둘 다 0)이면 <see cref="layer"/> 기반 레이어 두께 범위로 폴백한다(레거시 프로파일 호환).
+        /// 좌표 변환: 각 열의 실제 지표(surfaceHeights[x])를 기준으로 depth 1 = surfaceHeights[x],
+        /// depth d = surfaceHeights[x] - d + 1 — MapGenerator.GetDepthRange가 이 규칙을 그대로 구현한다.
+        /// </summary>
+        [Min(0)] public int depthMin;
+        [Min(0)] public int depthMax;
     }
 
     /// <summary>Pass 4가 결정하는 상자 1개의 위치·식별 정보. 내용물은 ChestGen/GameDataCatalog에 위임한다.</summary>
@@ -157,6 +169,12 @@ namespace Nyangbingo.World
         public Vector2Int altarPosition;
         public List<ChestSpawnPoint> chests;
         public bool passedValidation;
+
+        /// <summary>
+        /// A-10: 각 열(x)의 지표 y좌표(Pass 1 결과 그대로). 회귀 테스트가 "각 열의 지표로부터 내려간 깊이"
+        /// 계약(지층 경계·광물 depth_min/depth_max)을 광물 CSV와 직접 대조 검증할 때 쓴다.
+        /// </summary>
+        public int[] surfaceHeights;
     }
 
     // WorldGenerationConfig ScriptableObject는 별도 파일 WorldGenerationConfig.cs (같은 Nyangbingo.World
@@ -322,7 +340,8 @@ namespace Nyangbingo.World
                 tiles = grid,
                 spawnPoint = structures.spawnPoint,
                 altarPosition = structures.altarPosition,
-                chests = structures.chests
+                chests = structures.chests,
+                surfaceHeights = surfaceHeights
             };
         }
 
@@ -385,6 +404,20 @@ namespace Nyangbingo.World
             if (y >= middleBottom) return WorldLayer.Middle;
 
             return WorldLayer.Deep;
+        }
+
+        /// <summary>
+        /// A-10: mineral-tiers.csv의 depth_min/depth_max를 실제 좌표로 변환한다("각 열의 지표로부터
+        /// 내려간 깊이" 기준 — depth 1은 그 열의 지표 타일(surfaceHeights[x]) 자신). depthMax가 0이면
+        /// (프로파일에 depth가 없는 레거시 데이터) 호출자가 <see cref="GetLayerRange"/>로 폴백해야 한다.
+        /// </summary>
+        private static (int low, int high) GetDepthRange(int x, int depthMin, int depthMax, int[] surfaceHeights, WorldGenerationConfig config)
+        {
+            var surfaceY = surfaceHeights[Mathf.Clamp(x, 0, surfaceHeights.Length - 1)];
+            var deepFloor = config.BedrockThickness; // 경계암 바로 위부터가 채굴 가능한 최심층.
+            var high = Mathf.Clamp(surfaceY - Mathf.Max(1, depthMin) + 1, deepFloor, surfaceY);
+            var low = Mathf.Clamp(surfaceY - depthMax + 1, deepFloor, surfaceY);
+            return low <= high ? (low, high) : (high, low);
         }
 
         /// <summary>해당 column에서 특정 레이어가 차지하는 y 범위(포함) — Pass3/Pass4가 좌표를 뽑을 때 사용.</summary>
@@ -520,53 +553,74 @@ namespace Nyangbingo.World
 
             foreach (var profile in config.OreVeins)
             {
+                var hasExplicitDepth = profile.depthMax > 0;
                 var averageClusterSize = Mathf.Max(1f, (profile.minClusterSize + profile.maxClusterSize) * 0.5f);
-                var layerAreaTiles = EstimateLayerArea(profile.layer, surfaceHeights, config);
+                var layerAreaTiles = EstimateArea(profile, surfaceHeights, config);
                 var veinCount = Mathf.Max(0, Mathf.RoundToInt(layerAreaTiles * profile.frequencyPer100Tiles / 100f / averageClusterSize));
 
                 for (var i = 0; i < veinCount; i++)
                 {
                     var x = rng.Next(0, width);
-                    var (low, high) = GetLayerRange(x, profile.layer, surfaceHeights, config);
+                    var (low, high) = hasExplicitDepth
+                        ? GetDepthRange(x, profile.depthMin, profile.depthMax, surfaceHeights, config)
+                        : GetLayerRange(x, profile.layer, surfaceHeights, config);
                     if (high < low) continue;
 
                     var seedY = rng.Next(low, high + 1);
                     if (grid[x, seedY].IsAir) continue; // 이미 동굴로 뚫린 자리는 건너뛴다 — 소량 손실은 허용.
 
-                    GrowVeinCluster(grid, new Vector2Int(x, seedY), low, high, width, height, profile, rng);
+                    GrowVeinCluster(grid, new Vector2Int(x, seedY), width, height, profile, surfaceHeights, config, rng);
                 }
             }
         }
 
-        private static int EstimateLayerArea(WorldLayer layer, int[] surfaceHeights, WorldGenerationConfig config)
+        private static int EstimateArea(OreVeinProfile profile, int[] surfaceHeights, WorldGenerationConfig config)
         {
             var width = config.MapWidth;
+            var hasExplicitDepth = profile.depthMax > 0;
             var total = 0;
             for (var x = 0; x < width; x++)
             {
-                var (low, high) = GetLayerRange(x, layer, surfaceHeights, config);
+                var (low, high) = hasExplicitDepth
+                    ? GetDepthRange(x, profile.depthMin, profile.depthMax, surfaceHeights, config)
+                    : GetLayerRange(x, profile.layer, surfaceHeights, config);
                 if (high >= low) total += high - low + 1;
             }
             return total;
         }
 
-        private static void GrowVeinCluster(TileData[,] grid, Vector2Int seed, int layerLow, int layerHigh, int width, int height,
-            OreVeinProfile profile, System.Random rng)
+        /// <summary>
+        /// A-10 회귀 수정: 지표면 높이는 열(x)마다 펄린 변동(±6)으로 다르므로, 깊이 기반 y 범위(low/high)를
+        /// 씨드 열에서 딱 한 번만 계산해 클러스터 전체에 그대로 쓰면 안 된다 — 랜덤워크가 다른 열로 옮겨가면
+        /// 그 열의 실제 depth_min~depth_max 범위와 어긋나 광물이 자기 깊이 범위 밖에 배치될 수 있다(회귀
+        /// 테스트가 실제로 잡아낸 사례). 그래서 매 스텝마다 "현재 x 기준" 범위를 다시 계산해 y를 그 범위로
+        /// 즉시 clamp한 뒤에만 배치한다 — 통일 규칙(요구사항 5: 각 열의 지표로부터 내려간 깊이)을 그대로 지킨다.
+        /// </summary>
+        private static void GrowVeinCluster(TileData[,] grid, Vector2Int seed, int width, int height,
+            OreVeinProfile profile, int[] surfaceHeights, WorldGenerationConfig config, System.Random rng)
         {
+            var hasExplicitDepth = profile.depthMax > 0;
             var size = rng.Next(profile.minClusterSize, profile.maxClusterSize + 1);
             var current = seed;
 
             for (var i = 0; i < size; i++)
             {
-                if (InBounds(current, width, height) && !grid[current.x, current.y].IsAir)
+                var (low, high) = hasExplicitDepth
+                    ? GetDepthRange(current.x, profile.depthMin, profile.depthMax, surfaceHeights, config)
+                    : GetLayerRange(current.x, profile.layer, surfaceHeights, config);
+
+                if (high >= low)
                 {
-                    grid[current.x, current.y] = TileData.CreateNatural(profile.elementType, profile.hardness);
+                    current.y = Mathf.Clamp(current.y, low, high);
+                    if (InBounds(current, width, height) && !grid[current.x, current.y].IsAir)
+                    {
+                        grid[current.x, current.y] = TileData.CreateNatural(profile.elementType, profile.hardness);
+                    }
                 }
 
                 var direction = FourNeighbors[rng.Next(FourNeighbors.Length)];
                 current += direction;
                 current.x = Mathf.Clamp(current.x, 0, width - 1);
-                current.y = Mathf.Clamp(current.y, layerLow, layerHigh);
             }
         }
 

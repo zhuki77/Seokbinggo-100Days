@@ -8,20 +8,27 @@ using UnityEditor;
 namespace Nyangbingo.Debugging
 {
     /// <summary>
-    /// SealSystem 시각화 전용 디버그 컴포넌트. 마우스 아래 칸을 SealSystem의 "주 관찰 지점"으로 실시간
-    /// 추적하면서, 밀폐 여부에 따라 다른 색의 반투명 오버레이로 내부 공기 칸/경계벽 칸을 그려준다.
+    /// SealSystem 시각화 전용 디버그 컴포넌트. 마우스 아래 칸의 밀폐 상태를 <see cref="SealSystem.TryGetDebugRegion"/>
+    /// (순수 인스펙션, 부작용 없음)으로 조회해 반투명 오버레이로 내부 공기 칸/경계벽 칸을 그려준다.
+    ///
+    /// A-11 주의: 예전에는 이 컴포넌트가 매 프레임 <c>SetPrimaryWatchPoint(hoverCell)</c>를 호출해 마우스가
+    /// 움직일 때마다 "주 관찰 지점"을 덮어썼다. 지금은 SetPrimaryWatchPoint == SetSealCoreCell(석빙고 코어)이므로
+    /// 그렇게 하면 마우스를 움직이기만 해도 실제 코어 위치가 계속 바뀌어 버린다 — 그래서 마우스 호버는 순수
+    /// 인스펙션에만 쓰고, 실제 코어는 <see cref="setCoreKey"/>/<see cref="clearCoreKey"/> 단축키로만 바뀐다.
     ///
     /// 시각화는 두 경로를 동시에 사용한다:
     ///  - OnDrawGizmos(): Scene 뷰에서 즉시 확인 가능하고 밀폐율 텍스트 라벨까지 보여준다.
     ///  - 런타임 스프라이트 오버레이(Update에서 갱신): Scene 뷰 Gizmos 토글이나 Game 뷰 Gizmos 버튼 상태와
     ///    무관하게 Play 중 Game 뷰에서도 항상 보이도록 보장한다(Gizmos는 Game 뷰에서 기본적으로 꺼져 있음).
-    ///
-    /// 실제 플레이어 위치 추적이 준비되면 WorldCellUnderMouse() 대신 플레이어 셀을 넘기면 된다.
     /// </summary>
     public sealed class SealSystemDebugView : MonoBehaviour
     {
         [SerializeField] private MapGeneratorTestHarness harness;
         [SerializeField] private bool debugDrawEnabled = true;
+
+        [Header("코어 셀 단축키 (개발 B 연결 전 수동 테스트용)")]
+        [SerializeField] private KeyCode setCoreKey = KeyCode.F8; // 호버 중인 칸을 석빙고 코어로 지정.
+        [SerializeField] private KeyCode clearCoreKey = KeyCode.F9; // 코어 해제(온도/밀폐율 0%로 안전 복귀).
 
         [Header("Game 뷰 보장 오버레이 (Scene 뷰 Gizmos 설정과 무관하게 항상 표시됨)")]
         [SerializeField] private bool useRuntimeOverlay = true;
@@ -62,7 +69,9 @@ namespace Nyangbingo.Debugging
             var worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             lastHoverCell = new Vector3Int(Mathf.FloorToInt(worldPoint.x), Mathf.FloorToInt(worldPoint.y), 0);
             hasHoverCell = true;
-            sealSystem.SetPrimaryWatchPoint(lastHoverCell);
+
+            if (Input.GetKeyDown(setCoreKey)) sealSystem.SetSealCoreCell(lastHoverCell);
+            else if (Input.GetKeyDown(clearCoreKey)) sealSystem.ClearSealCoreCell();
 
             RefreshRuntimeOverlay();
         }
@@ -182,7 +191,17 @@ namespace Nyangbingo.Debugging
 
 #if UNITY_EDITOR
             Handles.Label(new Vector3(lastHoverCell.x + 0.5f, lastHoverCell.y + 1.5f, 0f),
-                $"{(isSealed ? "밀폐됨" : "미밀폐")} {sealPercent * 100f:0}%");
+                $"{(isSealed ? "밀폐됨" : "미밀폐")} {sealPercent * 100f:0}% ({setCoreKey}=코어 지정, {clearCoreKey}=해제)");
+
+            // 실제 석빙고 코어(요구사항 2: 플레이어/호버 위치가 아니라 명시적으로 지정된 좌표) 상태를 별도로 보여준다.
+            if (sealSystem.HasSealCoreCell && sealSystem.SealCoreCell.HasValue)
+            {
+                var core = sealSystem.SealCoreCell.Value;
+                Gizmos.color = new Color(1f, 0.85f, 0.1f, 0.9f);
+                Gizmos.DrawWireSphere(new Vector3(core.x + 0.5f, core.y + 0.5f, 0f), 0.6f);
+                Handles.Label(new Vector3(core.x + 0.5f, core.y - 0.8f, 0f),
+                    $"코어: 밀폐 {sealSystem.SealPercent * 100f:0}% / 온도 상한 반영 {sealSystem.TemperaturePercent:0}% (창 {sealSystem.WindowCellCap}칸)");
+            }
 #endif
         }
     }

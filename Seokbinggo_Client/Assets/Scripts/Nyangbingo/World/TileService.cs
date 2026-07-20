@@ -129,6 +129,7 @@ namespace Nyangbingo.World
             tiles[cell.x, cell.y] = TileData.CreateCaveAir(backgroundElementType);
             ApplyForegroundVisual(cell, null);
             ApplyBackgroundVisual(cell, backgroundElementType);
+            RefreshEdgeOverlayAround(cell); // A-14: 이 칸이 사라지며 이웃들의 노출면이 바뀔 수 있다.
 
             if (TryResolveDrop(minedElementType, out var item, out var amount))
             {
@@ -166,6 +167,7 @@ namespace Nyangbingo.World
             };
 
             ApplyForegroundVisual(cell, elementType);
+            RefreshEdgeOverlayAround(cell); // A-14: 새로 막힌 칸 때문에 이웃의 노출면이 줄어들 수 있다.
 
             RecordChange(cell, elementType, placed: true);
             GameEvents.RaiseTilePlaced(cell);
@@ -224,6 +226,7 @@ namespace Nyangbingo.World
                         isUndergroundDecor = false
                     };
                     ApplyForegroundVisual(cell, record.tileId);
+                    RefreshEdgeOverlayAround(cell);
                 }
                 else
                 {
@@ -238,6 +241,7 @@ namespace Nyangbingo.World
                     tiles[cell.x, cell.y] = TileData.CreateCaveAir(background);
                     ApplyForegroundVisual(cell, null);
                     ApplyBackgroundVisual(cell, background);
+                    RefreshEdgeOverlayAround(cell);
                 }
 
                 RecordChange(cell, record.tileId, record.placed);
@@ -344,6 +348,30 @@ namespace Nyangbingo.World
             TileBase tileBase = null;
             if (!string.IsNullOrEmpty(elementType)) renderer.TryGetTileBase(elementType, out tileBase);
             renderer.Background.SetTile(cell, tileBase);
+        }
+
+        /// <summary>
+        /// A-14: 셀 하나가 바뀌면 그 칸 자신과 상·하·좌·우 이웃, 딱 5칸의 노출면만 다시 계산해
+        /// TilemapRenderer에 갱신을 요청한다. 월드 전체를 순회하지 않으므로 채굴/설치가 아무리 자주
+        /// 일어나도 프레임당 비용은 항상 O(1)이다. renderer가 아직 연결되지 않은 로드 검증 단계
+        /// (BindRenderer 이전)에서는 조용히 아무 것도 하지 않는다 — ApplyForegroundVisual과 동일한 규칙.
+        /// </summary>
+        private void RefreshEdgeOverlayAround(Vector3Int cell)
+        {
+            if (renderer == null) return;
+
+            RefreshEdgeOverlayAt(cell);
+            RefreshEdgeOverlayAt(new Vector3Int(cell.x, cell.y + 1, cell.z));
+            RefreshEdgeOverlayAt(new Vector3Int(cell.x, cell.y - 1, cell.z));
+            RefreshEdgeOverlayAt(new Vector3Int(cell.x - 1, cell.y, cell.z));
+            RefreshEdgeOverlayAt(new Vector3Int(cell.x + 1, cell.y, cell.z));
+        }
+
+        private void RefreshEdgeOverlayAt(Vector3Int cell)
+        {
+            if (!InBounds(cell)) return;
+            var mask = TileEdgeOverlayResolver.ComputeExposureMask(tiles, cell.x, cell.y, Width, Height);
+            renderer.RefreshEdgeOverlay(cell, mask);
         }
 
         /// <summary>
