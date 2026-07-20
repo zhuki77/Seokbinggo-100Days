@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: furniture_mvp_scope
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: furniture_mvp_scope
+  value: B
+  unit: scope
+  note: "\uAE30\uB2A5 \uAC00\uAD6C 2\uC885(\uC8FD\uBD80\uC778\xB7\uB300\uBC1C)\uC758
+    MVP \uBC94\uC704(v27 \uD655\uC815) \u2014 B\uB294 \uC81C\uC791 UI \uBBF8\uB178\uCD9C\xB7\uB370\uC774\uD130\uB9CC
+    \uC720\uC9C0. \uD655\uC7A5 \uC2B9\uACA9 \uC2DC id\xB7\uB808\uC2DC\uD53C\xB7\uC544\uD2B8\uB97C
+    \uD568\uAED8 \uC2E0\uC124\uD55C\uB2E4"

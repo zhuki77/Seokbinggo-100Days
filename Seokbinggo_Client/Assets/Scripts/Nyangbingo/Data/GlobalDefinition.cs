@@ -22,6 +22,13 @@ namespace Nyangbingo.Data
         public const string BaekjungWaveOverflow = "baekjung_wave_overflow";
         public const string BadgeWallCount = "badge_wall_count";
         public const string BadgeWindowDays = "badge_window_days";
+        public const string BossFieldYokai = "boss_field_yokai";
+        public const string CaveMaxHeight = "cave_max_height";
+        public const string FurnitureMvpScope = "furniture_mvp_scope";
+        public const string InventorySlots = "inventory_slots";
+        public const string ActiveSlotRule = "active_slot_rule";
+        public const string PortableLanternRadius = "portable_lantern_radius";
+        public const string JangdokStorageSlots = "jangdok_storage_slots";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Global Value")]

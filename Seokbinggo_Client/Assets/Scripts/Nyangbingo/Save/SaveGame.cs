@@ -163,7 +163,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 14;
+        public const int CurrentSchemaVersion = 16;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -173,6 +173,7 @@ namespace Nyangbingo.Save
         public List<string> placedObjects = new List<string>();
         public List<string> tilemapDiff = new List<string>();
         public List<PlacedObjectRecord> placedObjectRecords = new List<PlacedObjectRecord>();
+        public List<JangdokStorageRecord> jangdokStorages = new List<JangdokStorageRecord>();
         public List<CoolingSourceStateRecord> coolingSources = new List<CoolingSourceStateRecord>();
         public List<DeathTearPouchRecord> deathTearPouches = new List<DeathTearPouchRecord>();
         public List<TileChangeRecord> tileChanges = new List<TileChangeRecord>();
@@ -187,6 +188,9 @@ namespace Nyangbingo.Save
         public List<TurretFuelRecord> turretFuel = new List<TurretFuelRecord>();
         public List<EquipmentRecord> equipment = new List<EquipmentRecord>();
         public List<string> ownedEquipmentIds = new List<string>();
+        public string activeSlotItemId = string.Empty;
+        public bool activeSlotUsingItem;
+        public float portableLanternFuelSeconds;
         public List<UtilityCooldownRecord> utilityCooldowns = new List<UtilityCooldownRecord>();
         public List<PendingItemRecord> pendingItemAcquisitions = new List<PendingItemRecord>();
         public CraftingProcessRecord activeCrafting = new CraftingProcessRecord();
@@ -202,16 +206,26 @@ namespace Nyangbingo.Save
         public float baekjungTearRemainder;
         public RunStatsRecord stats = new RunStatsRecord();
         public GoalBadgeRecord goalBadges = new GoalBadgeRecord();
+        [NonSerialized] private bool sourceSchemaCaptured;
+        [NonSerialized] private int sourceSchemaVersion;
+
+        public int SourceSchemaVersion => sourceSchemaCaptured ? sourceSchemaVersion : schemaVersion;
 
         public void NormalizeAfterLoad()
         {
             var loadedSchemaVersion = schemaVersion;
+            if (!sourceSchemaCaptured)
+            {
+                sourceSchemaVersion = loadedSchemaVersion;
+                sourceSchemaCaptured = true;
+            }
             var isLegacySchema = schemaVersion <= 0;
             if (inventory == null) inventory = new List<InventorySlot>();
             if (unlockedRecipes == null) unlockedRecipes = new List<string>();
             if (placedObjects == null) placedObjects = new List<string>();
             if (tilemapDiff == null) tilemapDiff = new List<string>();
             if (placedObjectRecords == null) placedObjectRecords = new List<PlacedObjectRecord>();
+            if (jangdokStorages == null) jangdokStorages = new List<JangdokStorageRecord>();
             if (coolingSources == null) coolingSources = new List<CoolingSourceStateRecord>();
             if (deathTearPouches == null) deathTearPouches = new List<DeathTearPouchRecord>();
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
@@ -222,6 +236,7 @@ namespace Nyangbingo.Save
             if (turretFuel == null) turretFuel = new List<TurretFuelRecord>();
             if (equipment == null) equipment = new List<EquipmentRecord>();
             if (ownedEquipmentIds == null) ownedEquipmentIds = new List<string>();
+            if (activeSlotItemId == null) activeSlotItemId = string.Empty;
             if (utilityCooldowns == null) utilityCooldowns = new List<UtilityCooldownRecord>();
             if (pendingItemAcquisitions == null) pendingItemAcquisitions = new List<PendingItemRecord>();
             if (activeCrafting == null) activeCrafting = new CraftingProcessRecord();
@@ -885,6 +900,43 @@ namespace Nyangbingo.Save
         }
     }
 
+    public static class ActiveSlotSaveAdapter
+    {
+        public static bool Capture(SaveGame save, ActiveSlotSystem activeSlot)
+        {
+            if (save == null || activeSlot == null) return false;
+            save.NormalizeAfterLoad();
+            save.activeSlotItemId = activeSlot.EquippedItemId;
+            save.activeSlotUsingItem = activeSlot.IsUsingEquippedItem;
+            return true;
+        }
+
+        public static bool Restore(SaveGame save, ActiveSlotSystem activeSlot)
+        {
+            if (save == null || activeSlot == null) return false;
+            save.NormalizeAfterLoad();
+            return activeSlot.TryRestore(save.activeSlotItemId, save.activeSlotUsingItem);
+        }
+    }
+
+    public static class PortableLanternSaveAdapter
+    {
+        public static bool Capture(SaveGame save, PortableLanternRuntime lantern)
+        {
+            if (save == null || lantern == null) return false;
+            save.NormalizeAfterLoad();
+            save.portableLanternFuelSeconds = lantern.FuelRemainingSeconds;
+            return true;
+        }
+
+        public static bool Restore(SaveGame save, PortableLanternRuntime lantern)
+        {
+            if (save == null || lantern == null) return false;
+            save.NormalizeAfterLoad();
+            return lantern.TryRestore(save.portableLanternFuelSeconds);
+        }
+    }
+
     public static class UtilityCooldownSaveAdapter
     {
         public static bool Capture(SaveGame save, UtilityService service)
@@ -1400,13 +1452,24 @@ namespace Nyangbingo.Save
             if (generatedIds.Count != save.chests.Count) return false;
             var openedIds = new List<string>();
             var savedIds = new HashSet<string>(StringComparer.Ordinal);
+            var migratedLegacyCoordinates = false;
             for (var i = 0; i < save.chests.Count; i++)
             {
                 var record = save.chests[i];
                 if (!savedIds.Add(record.chestId) || !generatedIds.Contains(record.chestId)) return false;
-                if ((chestSource.GetChestPosition(record.chestId) - record.position).sqrMagnitude > .0001f) return false;
+                var generatedPosition = chestSource.GetChestPosition(record.chestId);
+                if ((generatedPosition - record.position).sqrMagnitude > .0001f)
+                {
+                    if (save.SourceSchemaVersion >= SaveGame.CurrentSchemaVersion) return false;
+                    record.position = generatedPosition;
+                    save.chests[i] = record;
+                    migratedLegacyCoordinates = true;
+                }
                 if (record.opened) openedIds.Add(record.chestId);
             }
+            if (migratedLegacyCoordinates)
+                Debug.LogWarning($"[Nyangbingo] 구버전 저장(schema {save.SourceSchemaVersion})의 상자 좌표를 " +
+                                 "현재 seed 생성 결과로 이관했습니다. 상자 ID와 개봉 상태는 유지됩니다.");
             chestProgress.Import(openedIds);
             return true;
         }

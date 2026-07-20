@@ -74,9 +74,6 @@ namespace Nyangbingo.UI
             ApplyViewState();
         }
 
-        private void OnEnable() => GameEvents.OnDayStart += HandleDayStart;
-        private void OnDisable() => GameEvents.OnDayStart -= HandleDayStart;
-
         public void ConfigureForRuntime(SaveManager saves, NyangbingoAudioService audio, ITimeSource time,
             SaveGame currentSave, bool mobile, bool showDevelopmentMenu)
         {
@@ -286,11 +283,8 @@ namespace Nyangbingo.UI
             };
         }
 
-        private void HandleDayStart()
-        {
-            if (Screen == GameShellScreen.Gameplay && timeSource != null && timeSource.Day == DemoEndDay + 1)
-                ShowResult(activeSave);
-        }
+        public static bool ShouldEndDemo(int currentDay, int mvpDayLimit, string bossId, bool defeated) =>
+            defeated && currentDay == mvpDayLimit && bossId == "gangcheol_boss";
 
         private void BeginNewGame()
         {

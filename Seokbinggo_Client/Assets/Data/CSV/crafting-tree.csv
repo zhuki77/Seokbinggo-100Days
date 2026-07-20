@@ -17,7 +17,7 @@ cold_device,device,냉기 장치,ice_anvil,"yokai_tear:40,frost_essence:2,ice_sh
 insul_wall,module,차열벽,workbench,"stone:2,dirt:1",1,5,A,HP600 기본 방벽
 door,module,단열 문,workbench,"wood:6,hemp_stalk:4,ice_shard:4",1,30,A,통행 가능+flood-fill 밀폐 인정
 roof,module,차열 지붕,furnace,"stone:6,rebar:3,hemp_stalk:2",1,20,A,상부 밀폐·철근 반복 소비처
-jangdok,module,장독 창고,workbench,"dirt:10,stone:8,wood:6",1,45,A,보관함 12슬롯
+jangdok,module,장독 창고,workbench,"dirt:10,stone:8,wood:6",1,45,A,보관함 40슬롯(v29 확정)
 ice_core,module,얼음 저장고,furnace,"ice_shard:20,stone:10,iron_ingot:2",1,60,A,체온 회복 거점 — 모듈 5종 화로 티어 이하
 ssireum_satba,summon,씨름 샅바,workbench,"club_shard:1,hemp_stalk:10,wood:5",1,30,A,도깨비 대장 소환
 iron_bait_pile,summon,무쇠 미끼 더미,furnace,"iron_ingot:10,iron_scale:3,coal:5",1,30,B,어미 불가사리 소환

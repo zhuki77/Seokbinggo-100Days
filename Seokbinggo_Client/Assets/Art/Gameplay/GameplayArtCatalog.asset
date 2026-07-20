@@ -49,3 +49,80 @@ MonoBehaviour:
   - {fileID: 4082674624207476099, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
   - {fileID: -245658596771386416, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
   - {fileID: 1429566124144128816, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
+  dayCounterFrames:
+  - {fileID: 2759150640618883846, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: -2270208391086379297, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 7942244525608707753, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 4113509065974859411, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 8987491756940428159, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 5149063789629927667, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 9009324400018027639, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 1746853391283557663, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 8181863280111402199, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: -1444481502979237865, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 4785095722882752901, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: -556144420868404898, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: -4408201853669813790, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: -5878157974717592284, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: -6979744029584150243, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 4963147354975596779, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  - {fileID: 1767424533654740984, guid: ec77d20585e461c4d92a9e6baa060851, type: 3}
+  dayNightClockFrames:
+  - {fileID: 1926289702687612170, guid: 72cbdcca2029282408d802ac4152c274, type: 3}
+  - {fileID: 1258840213966633901, guid: 72cbdcca2029282408d802ac4152c274, type: 3}
+  - {fileID: -6775753686359087666, guid: 72cbdcca2029282408d802ac4152c274, type: 3}
+  - {fileID: -8637072509311305196, guid: 72cbdcca2029282408d802ac4152c274, type: 3}
+  - {fileID: 6553835936288049259, guid: 72cbdcca2029282408d802ac4152c274, type: 3}
+  - {fileID: -2884042661848894173, guid: 72cbdcca2029282408d802ac4152c274, type: 3}
+  yokaiTearBalanceFrames:
+  - {fileID: 7363672659234892920, guid: 3ddfc5c1c8fa6104d9822194b2cd48c8, type: 3}
+  - {fileID: -8466360577588887671, guid: 3ddfc5c1c8fa6104d9822194b2cd48c8, type: 3}
+  - {fileID: -8518175936193647723, guid: 3ddfc5c1c8fa6104d9822194b2cd48c8, type: 3}
+  - {fileID: 7774465262516587146, guid: 3ddfc5c1c8fa6104d9822194b2cd48c8, type: 3}
+  fuelGaugeFrames:
+  - {fileID: -2839089033132281682, guid: 0ceedabbe7d46e44f940015abbe87c21, type: 3}
+  - {fileID: -7226524498318632938, guid: 0ceedabbe7d46e44f940015abbe87c21, type: 3}
+  - {fileID: -7363979564028118233, guid: 0ceedabbe7d46e44f940015abbe87c21, type: 3}
+  - {fileID: -3785380547957142430, guid: 0ceedabbe7d46e44f940015abbe87c21, type: 3}
+  saveIndicatorFrames:
+  - {fileID: 242791995527380913, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
+  - {fileID: 7046784823468973970, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
+  - {fileID: -6913831555317667176, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
+  - {fileID: -2162730950302605176, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
+  - {fileID: 2551867120231468295, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
+  - {fileID: -5935160030333331820, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
+  playerVitalsFrames:
+  - {fileID: 342472981728555708, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 4628786815080422358, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -2159810619888014206, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 1714869698881532054, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -5488785843092371762, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -8092784084236439385, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 9096039661358621114, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 248457074356266389, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -5363100182959096825, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 1451380000352412553, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 2450228824927592135, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -1222377997886849009, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  dangerIcon: {fileID: 1821668838913166679, guid: 5b4488cd45c23944e8c314bfa7e70b4b, type: 3}
+  bossWarningLarge: {fileID: -5218591732139051355, guid: be5c714da4f8b324e932ba1c069c442c, type: 3}
+  bossWarningSmall: {fileID: 5143714742549247459, guid: b646ba39a938a2e4f99d6ea9d8e39782, type: 3}
+  bossHealthFrame: {fileID: -3631641534334911012, guid: 48fda1d1e3264834393466dbbd900ba6, type: 3}
+  bossHealthGangcheol: {fileID: -3907475943721765262, guid: ba3a20869887ab8419188f03b16729e6, type: 3}
+  bossHealthKingDokkaebi: {fileID: -4723297385178878477, guid: 739aefd932324ae4c996b9e63d3da8e8, type: 3}
+  bossHealthMotherBulgasari: {fileID: -5371275645215204617, guid: 82cda2fde5eb4294db37b388610ce3d7, type: 3}
+  bossHealthImugi: {fileID: -359693147665470345, guid: be3a88708c613f945beee1eb2b99044c, type: 3}
+  inventoryPanel: {fileID: -2544469814559852700, guid: 235023076a28db24aa73a46eb802f818, type: 3}
+  inventorySlot: {fileID: -3752397668083198803, guid: 3f1fe5744399f2043b051c6ddce23656, type: 3}
+  inventorySlotSelected: {fileID: 6765153390900021199, guid: 8832bb43055e25249b581d0d8e68b01a, type: 3}
+  inventorySlotTopSelected: {fileID: -7167540399092338382, guid: ad73587d4dd8f7d41bb902e8c83c5223, type: 3}
+  equipmentCharacter: {fileID: 9106190380705548200, guid: 1c308343531639d4491fd6e667d4f608, type: 3}
+  equipmentHeadSlot: {fileID: -3398976084798905247, guid: ec8f58aeaf88e02489eb2570806cbe57, type: 3}
+  equipmentBodySlot: {fileID: 5252287133239624101, guid: 4e68432100db14849bb937fed309f57b, type: 3}
+  equipmentBodySlotSelected: {fileID: 582638777608344396, guid: 685a1fef6849e1e44afc9e15701e07d9, type: 3}
+  equipmentFeetSlot: {fileID: -4010199133860001978, guid: d433a4aec2b73f2429daaa98376371dd, type: 3}
+  equipmentFeetSlotSelected: {fileID: 8947015802075656145, guid: 61acf76d59aa3434f8a22cfcd74d92b8, type: 3}
+  equipmentAccessorySlot: {fileID: -3857766111723279099, guid: c9a596a397cfc7d4ca4475fa981c9fc0, type: 3}
+  equipmentAccessorySlotSelected: {fileID: -1074637335440080146, guid: 03f6ef49353a4854c9d3d50bee714d36, type: 3}
+  activeItemSlot: {fileID: 6599963918097900599, guid: b0c8436da772e1b47aa44878a9d00a05, type: 3}
+  activeItemSlotSelected: {fileID: 9117833818891896295, guid: ba613282e41558e44ae7fe07e13153d7, type: 3}

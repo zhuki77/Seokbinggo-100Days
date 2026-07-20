@@ -15,7 +15,7 @@ MonoBehaviour:
   id: jangdok
   displayName: "\uC7A5\uB3C5 \uCC3D\uACE0"
   item: {fileID: 11400000, guid: cf59e4d93ad658d4eaef80e3a3709aad, type: 2}
-  role: "\uBCF4\uAD00\uD568 12\uC2AC\uB86F"
+  role: "\uBCF4\uAD00\uD568 40\uC2AC\uB86F(v29 \uD655\uC815)"
   materials:
   - item: {fileID: 11400000, guid: 65533567964e04d4c8a6095f57bb3ec4, type: 2}
     amount: 10

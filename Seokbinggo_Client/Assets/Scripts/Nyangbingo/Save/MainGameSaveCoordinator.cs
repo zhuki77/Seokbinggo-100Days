@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using Nyangbingo.World;
 using UnityEngine;
 
@@ -128,7 +130,17 @@ namespace Nyangbingo.Save
             if (!bootstrap.Session.CaptureSnapshot(save)) return null;
 
             save.placedObjectRecords = environmentState.ExportPlacedObjects();
+            var catalog = GetCatalog();
+            save.modulesDone = catalog.Modules
+                .Where(module => module != null && module.Item != null &&
+                                 save.placedObjectRecords.Any(record =>
+                                     record.definitionId == module.Item.Id))
+                .Select(module => module.Id)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .ToList();
             save.coolingSources = environmentState.ExportCoolingSources();
+            save.jangdokStorages = runtimeServices.JangdokStorage.Export();
             save.deathTearPouches = runtimeServices.DeathTearPouches.Export();
             if (!turretRuntime.CaptureProgress(save)) return null;
             if (!PlayerTimeBossSaveAdapter.Capture(save, encounterCoordinator.PlayerTransform,
@@ -143,6 +155,8 @@ namespace Nyangbingo.Save
                 runtimeServices.EquipmentSystem, FoundryStationId, runtimeServices.Foundry);
 
             if (!EquipmentCollectionSaveAdapter.Capture(save, runtimeServices.EquipmentCollection) ||
+                !ActiveSlotSaveAdapter.Capture(save, runtimeServices.ActiveSlot) ||
+                !PortableLanternSaveAdapter.Capture(save, runtimeServices.PortableLantern) ||
                 !RecipeBookSaveAdapter.Capture(save, runtimeServices.RecipeBook) ||
                 !CraftingProcessSaveAdapter.Capture(save, runtimeServices.CraftingProcess) ||
                 !UtilityCooldownSaveAdapter.Capture(save, runtimeServices.UtilityService) ||
@@ -168,6 +182,12 @@ namespace Nyangbingo.Save
         {
             if (!IsInitialized && !Initialize()) return false;
             if (slot < 0 || slot >= SaveManager.SlotCount || !saveManager.TryLoad(slot, out var save)) return false;
+            return TryApplySnapshot(save);
+        }
+
+        public bool TryApplySnapshot(SaveGame save)
+        {
+            if (save == null || (!IsInitialized && !Initialize())) return false;
             var rollback = CaptureSnapshot();
             if (rollback == null) return false;
             if (ApplySnapshot(save)) return true;
@@ -193,6 +213,8 @@ namespace Nyangbingo.Save
                     runtimeServices.EquipmentSystem, FindEquipment,
                     FoundryStationId, runtimeServices.Foundry, FindSmelting, FindItem) &&
                 EquipmentCollectionSaveAdapter.Restore(save, runtimeServices.EquipmentCollection) &&
+                ActiveSlotSaveAdapter.Restore(save, runtimeServices.ActiveSlot) &&
+                PortableLanternSaveAdapter.Restore(save, runtimeServices.PortableLantern) &&
                 RecipeBookSaveAdapter.Restore(save, runtimeServices.RecipeBook, FindRecipe) &&
                 CraftingProcessSaveAdapter.Restore(save, runtimeServices.CraftingProcess, FindRecipe) &&
                 UtilityCooldownSaveAdapter.Restore(save, runtimeServices.UtilityService) &&
@@ -202,8 +224,12 @@ namespace Nyangbingo.Save
                  runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
                 runtimeServices.DeathTearPouches.Restore(save.deathTearPouches) &&
                 encounterCoordinator.RestoreProgress(save) &&
-                environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources) &&
-                turretRuntime.RestoreProgress(save);
+                 environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources) &&
+                 runtimeServices.JangdokStorage.TryRestore(save.jangdokStorages,
+                     save.placedObjectRecords
+                         .Where(record => record.definitionId == Nyangbingo.Inventory.JangdokStorageRuntime.DefinitionId)
+                         .Select(record => record.objectId)) &&
+                 turretRuntime.RestoreProgress(save);
                 return succeeded;
             }
             finally

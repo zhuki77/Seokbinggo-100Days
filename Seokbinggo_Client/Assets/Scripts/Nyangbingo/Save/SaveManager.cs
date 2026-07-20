@@ -9,6 +9,7 @@ namespace Nyangbingo.Save
     {
         public const int SlotCount = 3;
         private static readonly int[] DemoDays = { 1, 15, 30 };
+        public event Action<int> Saved;
 
         public void Save(int slot, SaveGame data)
         {
@@ -18,6 +19,7 @@ namespace Nyangbingo.Save
                 throw new ArgumentException("Cannot save data from a newer schema version.", nameof(data));
             data.NormalizeAfterLoad();
             WriteAtomically(PathFor(slot), JsonUtility.ToJson(data, true));
+            Saved?.Invoke(slot);
         }
 
         public bool TrySaveManual(int slot, SaveGame data, BossManager bossManager)

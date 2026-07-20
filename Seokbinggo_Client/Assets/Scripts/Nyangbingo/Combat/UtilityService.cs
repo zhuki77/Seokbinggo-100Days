@@ -18,15 +18,25 @@ namespace Nyangbingo.Combat
         }
 
         public bool TryUse(UtilityDefinition utility)
+            => TryActivate(utility, requireInventoryOwnership: true);
+
+        /// <summary>설치된 방울 금줄이 침입을 감지했을 때 인벤토리 소유 여부와 무관하게 공용 쿨다운을 발동한다.</summary>
+        public bool TryTriggerInstalledBellRope(UtilityDefinition utility)
+        {
+            if (utility == null || utility.Kind != UtilityKind.BellRope) return false;
+            return TryActivate(utility, requireInventoryOwnership: false);
+        }
+
+        private bool TryActivate(UtilityDefinition utility, bool requireInventoryOwnership)
         {
             if (utility == null || !IsSupported(utility.Kind)) return false;
             if (GetCooldownRemaining(utility.Kind) > 0f) return false;
-            if (inventory != null)
+            if (requireInventoryOwnership && inventory != null)
             {
                 if (string.IsNullOrWhiteSpace(utility.Id) || !inventory.Has(utility.Id, 1)) return false;
                 if (utility.Consumable && !inventory.TryRemove(utility.Id, 1)) return false;
             }
-            else if (utility.Consumable) return false;
+            else if (requireInventoryOwnership && utility.Consumable) return false;
 
             var used = false;
             switch (utility.Kind)

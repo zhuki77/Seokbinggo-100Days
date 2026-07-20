@@ -1,7 +1,10 @@
 using System;
 using System.Collections;
 using System.Reflection;
+using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.Save;
+using Nyangbingo.UI;
 using Nyangbingo.World;
 using UnityEditor;
 using UnityEngine;
@@ -15,7 +18,52 @@ public static class NyangbingoDevBIntegrationRegressionTests
     public static void RunAll()
     {
         TestIceStorageSealCoreLifecycle();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (1/1).");
+        TestV29InventoryLayoutContract();
+        TestV29InventoryArtBindings();
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (3/3).");
+    }
+
+    private static void TestV29InventoryLayoutContract()
+    {
+        Require(Inventory.SlotCount == 50,
+            $"v29 inventory capacity must be 50 slots (actual {Inventory.SlotCount}).");
+        Require(MainGameCraftingUiController.InventoryGridColumns == 10,
+            $"v29 inventory grid must have 10 columns (actual {MainGameCraftingUiController.InventoryGridColumns}).");
+        Require(MainGameCraftingUiController.InventoryGridRows == 5,
+            $"v29 inventory grid must have 5 rows (actual {MainGameCraftingUiController.InventoryGridRows}).");
+        Require(Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f),
+            $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
+
+        var inventory = new Inventory(_ => null);
+        Require(inventory.Capacity == 50 && inventory.Slots.Count == 50,
+            $"A default runtime inventory must allocate 50 slots (actual {inventory.Capacity}).");
+    }
+
+    private static void TestV29InventoryArtBindings()
+    {
+        const string catalogPath = "Assets/Art/Gameplay/GameplayArtCatalog.asset";
+        var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(catalogPath);
+        Require(catalog != null, $"Gameplay art catalog not found: {catalogPath}");
+
+        Require(catalog.InventoryPanel != null, "v29 inventory panel art is not bound.");
+        Require(catalog.InventorySlot != null, "v29 inventory slot art is not bound.");
+        Require(catalog.InventorySlotSelected != null, "v29 selected inventory slot art is not bound.");
+        Require(catalog.InventorySlotTopSelected != null, "v29 top selected inventory slot art is not bound.");
+        Require(catalog.EquipmentCharacter != null, "v29 equipment character art is not bound.");
+        Require(catalog.EquipmentHeadSlot != null, "v29 equipment head slot art is not bound.");
+        Require(catalog.EquipmentBodySlot != null && catalog.EquipmentBodySlotSelected != null,
+            "v29 equipment body slot art is incomplete.");
+        Require(catalog.EquipmentFeetSlot != null && catalog.EquipmentFeetSlotSelected != null,
+            "v29 equipment feet slot art is incomplete.");
+        Require(catalog.EquipmentAccessorySlot != null && catalog.EquipmentAccessorySlotSelected != null,
+            "v29 equipment accessory slot art is incomplete.");
+        Require(catalog.ActiveItemSlot != null && catalog.ActiveItemSlotSelected != null,
+            "v29 active item slot art is incomplete.");
+        Require(catalog.PlayerVitalsFrames.Count == 12,
+            $"v1 player vitals art must expose 12 frames (actual {catalog.PlayerVitalsFrames.Count}).");
+        for (var index = 0; index < catalog.PlayerVitalsFrames.Count; index++)
+            Require(catalog.PlayerVitalsFrames[index] != null,
+                $"v1 player vitals frame {index} is not bound.");
     }
 
     private static void TestIceStorageSealCoreLifecycle()

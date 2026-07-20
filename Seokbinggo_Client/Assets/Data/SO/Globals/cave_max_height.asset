@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: cave_max_height
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: cave_max_height
+  value: 12
+  unit: tile
+  note: "\uB3D9\uAD74 \uACF5\uB3D9 \uD558\uB098\uC758 \uCD5C\uB300 \uC138\uB85C \uAE38\uC774
+    [\uAC00\uC548] \u2014 \uC9C0\uD45C(surface_y=20) \uAD00\uD1B5 \uAE08\uC9C0\uC6A9.
+    \uAC1C\uBC1C A\uAC00 \uC2E4\uCE21\uC73C\uB85C \uD29C\uB2DD\uD55C \uB4A4 \uD655\uC815\uAC12\uC744
+    globals\uC5D0 \uBC18\uC601\uD55C\uB2E4"

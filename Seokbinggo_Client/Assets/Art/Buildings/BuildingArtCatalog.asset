@@ -53,3 +53,6 @@ MonoBehaviour:
   - id: cold_wave_core
     frames:
     - {fileID: -1163610750929880464, guid: de4a809f2d358584898d4cc33bcf57b6, type: 3}
+  - id: roof
+    frames:
+    - {fileID: 7487074851105840937, guid: 32260bd7de0e2694fa413d5c58fd098d, type: 3}
