@@ -26,7 +26,9 @@ namespace Nyangbingo.World
         private const float NestInteractionRadius = 1.25f;
         private const float NapYokaiWakeRadius = 12f;
         private const float TearPouchPickupRadius = .75f;
-        private const float MiningReach = 1.1f;
+        // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
+        // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
+        private const float MiningReach = 1.5f;
         private const float CollisionSkin = .001f;
         private const float CollapseSeconds = 1.5f;
         private const float FadeOutSeconds = 1.75f;
@@ -272,7 +274,7 @@ namespace Nyangbingo.World
                     TryBasicAttack();
                     miningAllowedByLastSwing = activeProfile?.HitsWalls == true && attack.LastHitCount == 0;
                 }
-                if (miningAllowedByLastSwing) TickMining(CurrentGameDeltaSeconds());
+                if (miningAllowedByLastSwing) TickMining();
                 else ResetMiningProgress();
             }
             else CancelMining();
@@ -538,17 +540,22 @@ namespace Nyangbingo.World
             }
         }
 
-        private void TickMining(float deltaGameSeconds)
+        private void TickMining()
         {
             var tileService = bootstrap?.TileService;
-            if (tileService == null || deltaGameSeconds <= 0f)
+            // 채굴은 플레이어 입력 진행이라 DayNight TimeScale이 아니라 Unity deltaTime을 쓴다.
+            // (공격 쿨다운과 동일 — 시계 정지/배속과 채굴 가능 여부가 어긋나지 않게)
+            var miningDelta = Time.deltaTime;
+            if (tileService == null || miningDelta <= 0f)
             {
                 ResetMiningProgress();
                 return;
             }
-            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            var target = (Vector2)transform.position + direction * MiningReach;
-            var cell = new Vector3Int(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 0);
+            if (!TryResolveMiningCell(tileService, out var cell))
+            {
+                ResetMiningProgress();
+                return;
+            }
             var clawTier = ResolveMiningClawTier();
             var tile = tileService.GetTile(cell);
             var definitionId = ResolveMiningDefinitionId(tile.elementType);
@@ -581,13 +588,40 @@ namespace Nyangbingo.World
             }
 
             miningElapsedSeconds = Mathf.Min(miningRequiredSeconds,
-                miningElapsedSeconds + deltaGameSeconds);
+                miningElapsedSeconds + miningDelta);
             Nyangbingo.Core.GameEvents.RaiseMiningProgress(miningCell, MiningProgress);
             if (miningElapsedSeconds < miningRequiredSeconds) return;
 
             CompleteMining(miningCell, clawTier);
             if (miningHasCompanion) CompleteMining(miningCompanionCell, clawTier);
             ResetMiningProgress();
+        }
+
+        /// <summary>
+        /// 마우스 아래 칸이 사거리 안이면 그 칸을 우선하고, 아니면 조준 방향 × 사거리 칸을 쓴다.
+        /// (조준만으로 짧은 레이를 쓰면 벽 앞 공기만 계속 선택되는 경우가 있다.)
+        /// </summary>
+        private bool TryResolveMiningCell(TileService tileService, out Vector3Int cell)
+        {
+            cell = default;
+            var origin = (Vector2)transform.position;
+            if (followCamera != null)
+            {
+                var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
+                var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                var mouseCenter = new Vector2(mouseCell.x + .5f, mouseCell.y + .5f);
+                if (tileService.InBounds(mouseCell) &&
+                    (mouseCenter - origin).sqrMagnitude <= MiningReach * MiningReach)
+                {
+                    cell = mouseCell;
+                    return true;
+                }
+            }
+
+            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
+            var target = origin + direction * MiningReach;
+            cell = new Vector3Int(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 0);
+            return tileService.InBounds(cell);
         }
 
         private bool TryGetMiningSeconds(Vector3Int cell, int clawTier, out float requiredSeconds)
@@ -626,12 +660,6 @@ namespace Nyangbingo.World
 
             if (item != null && totalAmount > 0)
                 Nyangbingo.Core.GameEvents.RaiseMiningResult(cell, item.DisplayName, totalAmount, critical);
-        }
-
-        private float CurrentGameDeltaSeconds()
-        {
-            var scale = bootstrap?.TimeService != null ? bootstrap.TimeService.TimeScale : 1f;
-            return Time.deltaTime * Mathf.Max(0f, scale);
         }
 
         private void CancelMining()
