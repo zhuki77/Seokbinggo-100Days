@@ -47,6 +47,11 @@ namespace Nyangbingo.World
         [Header("elementType ↔ TileBase 매핑 (드래그앤드롭) — 1순위: 인스펙터 명시 매핑")]
         [SerializeField] private TileVisual[] tileVisuals = Array.Empty<TileVisual>();
 
+        [Header("Ice altar 2x2 art (TL, TR, BL, BR)")]
+        [Tooltip("t_altar_0~3 order. The map stores one ice_altar element type, so the renderer " +
+                 "selects the correct quadrant from its 2x2 neighbours.")]
+        [SerializeField] private TileBase[] iceAltarQuadrantTiles = new TileBase[4];
+
         [Tooltip("1순위(인스펙터 매핑)에 없는 elementType을 만나면 이 폴더 아래에서 " +
                  "Resources.Load<TileBase>(\"{이 값}/{elementType}\")로 한 번 더 찾아본다(2순위, 선택 사항). " +
                  "예: 값이 'Tiles'이고 elementType이 'dirt'면 'Assets/Resources/Tiles/dirt.asset'을 찾는다. " +
@@ -92,6 +97,17 @@ namespace Nyangbingo.World
             tileVisuals = visuals ?? Array.Empty<TileVisual>();
             fallbackTile = newFallbackTile;
         }
+
+        public void SetIceAltarQuadrantTilesForEditorSetup(TileBase[] tiles)
+        {
+            iceAltarQuadrantTiles = tiles != null && tiles.Length == 4
+                ? tiles
+                : new TileBase[4];
+        }
+
+        public bool HasIceAltarQuadrantArt => iceAltarQuadrantTiles != null &&
+                                             iceAltarQuadrantTiles.Length == 4 &&
+                                             Array.TrueForAll(iceAltarQuadrantTiles, tile => tile != null);
 
         /// <summary>
         /// tileVisuals(인스펙터 매핑)를 기준으로 조회용 딕셔너리를 처음부터 다시 만든다. 런타임에는
@@ -162,7 +178,7 @@ namespace Nyangbingo.World
                     var index = rowOffset + x;
 
                     foregroundBlock[index] = tile.hardness > 0
-                        ? ResolveTile(tile.elementType, ref missing)
+                        ? ResolveForegroundTile(tiles, x, y, tile.elementType, ref missing)
                         : null;
 
                     backgroundBlock[index] = tile.isUndergroundDecor
@@ -191,6 +207,31 @@ namespace Nyangbingo.World
             // 그 4방향 이웃만 RefreshEdgeOverlay로 갱신하므로, 이 전체 순회는 월드 생성/로드당 딱 한 번뿐이다.
             RebuildEdgeOverlayForWorld(tiles);
         }
+
+        private TileBase ResolveForegroundTile(TileData[,] tiles, int x, int y, string elementType,
+            ref HashSet<string> missing)
+        {
+            if (!string.Equals(elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal) ||
+                !HasIceAltarQuadrantArt)
+                return ResolveTile(elementType, ref missing);
+
+            var width = tiles.GetLength(0);
+            var height = tiles.GetLength(1);
+            var hasLeft = IsIceAltar(tiles, x - 1, y, width, height);
+            var hasRight = IsIceAltar(tiles, x + 1, y, width, height);
+            var hasDown = IsIceAltar(tiles, x, y - 1, width, height);
+            var hasUp = IsIceAltar(tiles, x, y + 1, width, height);
+
+            // Art order is 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right.
+            var isRight = hasLeft && !hasRight;
+            var isTop = hasDown && !hasUp;
+            var quadrant = (isTop ? 0 : 2) + (isRight ? 1 : 0);
+            return iceAltarQuadrantTiles[quadrant];
+        }
+
+        private static bool IsIceAltar(TileData[,] tiles, int x, int y, int width, int height) =>
+            x >= 0 && x < width && y >= 0 && y < height &&
+            string.Equals(tiles[x, y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal);
 
         /// <summary>
         /// A-14: 월드 전체에 대해 먹선 오버레이를 처음부터 다시 계산한다. RenderWorld(최초 생성/로드 복원 후

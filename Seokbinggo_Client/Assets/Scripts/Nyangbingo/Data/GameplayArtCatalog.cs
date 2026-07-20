@@ -41,6 +41,14 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite equipmentAccessorySlotSelected;
         [SerializeField] private Sprite activeItemSlot;
         [SerializeField] private Sprite activeItemSlotSelected;
+        [SerializeField] private Sprite shellStart;
+        [SerializeField] private Sprite shellSettings;
+        [SerializeField] private Sprite shellLeave;
+        [SerializeField] private Sprite shellSpeakerHigh;
+        [SerializeField] private Sprite shellSpeakerLow;
+        [SerializeField] private Sprite shellSpeakerMuted;
+        [SerializeField] private Sprite shellVolumeBar;
+        [SerializeField] private Sprite shellVolumeHandle;
 
         public IReadOnlyList<Sprite> TemperatureFrames => temperatureFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerAttackFrames => playerAttackFrames ?? Array.Empty<Sprite>();
@@ -76,5 +84,13 @@ namespace Nyangbingo.Data
         public Sprite EquipmentAccessorySlotSelected => equipmentAccessorySlotSelected;
         public Sprite ActiveItemSlot => activeItemSlot;
         public Sprite ActiveItemSlotSelected => activeItemSlotSelected;
+        public Sprite ShellStart => shellStart;
+        public Sprite ShellSettings => shellSettings;
+        public Sprite ShellLeave => shellLeave;
+        public Sprite ShellSpeakerHigh => shellSpeakerHigh;
+        public Sprite ShellSpeakerLow => shellSpeakerLow;
+        public Sprite ShellSpeakerMuted => shellSpeakerMuted;
+        public Sprite ShellVolumeBar => shellVolumeBar;
+        public Sprite ShellVolumeHandle => shellVolumeHandle;
     }
 }

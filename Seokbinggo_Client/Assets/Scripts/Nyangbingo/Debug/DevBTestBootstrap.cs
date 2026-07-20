@@ -433,6 +433,7 @@ namespace Nyangbingo.Debugging
             var roof = gameDataCatalog?.FindItem("roof");
             var roofRecipe = gameDataCatalog?.FindRecipe("roof");
             var wood = gameDataCatalog?.FindItem("wood");
+            var dirt = gameDataCatalog?.FindItem(WorldTileTypes.Dirt);
             var scopeBProduct = gameDataCatalog?.FindItem("singijeon_cart");
             var orphanPlaceable = ItemDefinition.CreateRuntime("orphan_placeable", "레시피 없는 설치물", 1,
                 ItemCategory.Placeable, ItemMvpScope.A);
@@ -444,14 +445,17 @@ namespace Nyangbingo.Debugging
                                              roofRecipe.Station, CraftingStation.None);
             var ownedProductCanBePlacedAwayFromStation =
                 MainGameCraftingUiController.IsInventoryItemPlaceable(roof, recipes);
+            var minedTerrainCanBeReplaced =
+                MainGameCraftingUiController.IsInventoryItemPlaceable(dirt, recipes);
             var invalidProductsRejected =
                 !MainGameCraftingUiController.IsInventoryItemPlaceable(wood, recipes) &&
                 !MainGameCraftingUiController.IsInventoryItemPlaceable(scopeBProduct, recipes) &&
                 !MainGameCraftingUiController.IsInventoryItemPlaceable(orphanPlaceable, recipes) &&
                 !MainGameCraftingUiController.IsInventoryItemPlaceable(roof, null);
 
-            if (stationRequiredToCraft && ownedProductCanBePlacedAwayFromStation && invalidProductsRejected)
-                Debug.Log("[Nyangbingo] v29 inventory-owned products enter placement without a nearby station, while resources, scope-B products, and unknown placeables stay blocked.");
+            if (stationRequiredToCraft && ownedProductCanBePlacedAwayFromStation && minedTerrainCanBeReplaced &&
+                invalidProductsRejected)
+                Debug.Log("[Nyangbingo] v29 inventory-owned products and mined foreground tiles enter placement without a nearby station, while non-placeable resources, scope-B products, and unknown placeables stay blocked.");
             else Debug.LogError("[Nyangbingo] v29 inventory-owned placeable policy test failed.");
         }
 

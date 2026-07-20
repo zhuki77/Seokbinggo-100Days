@@ -2020,6 +2020,11 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 2178abaf8f5ac9b47820ca38f64ae6f7, type: 2}
   - elementType: bg_deep
     tile: {fileID: 11400000, guid: 26980fc3e58a59a4cba0577293a53927, type: 2}
+  iceAltarQuadrantTiles:
+  - {fileID: 11400000, guid: c751d131fa93ebd4292a61f9ca2f164c, type: 2}
+  - {fileID: 11400000, guid: 178d779bcbd0b8e4982d70fc2ab373cc, type: 2}
+  - {fileID: 11400000, guid: cba67bbb4ee8dfe46bfa81eeab3262c3, type: 2}
+  - {fileID: 11400000, guid: 71cf73920c0acb34f8e0498d125a8b6f, type: 2}
   resourcesFallbackFolder: Tiles
   fallbackTile: {fileID: 11400000, guid: d110b510a41ecbc4db89aec3f0bf0be5, type: 2}
   suppressMissingTileWarning: 0
@@ -12259,6 +12264,8 @@ MonoBehaviour:
   titleQuitButton: {fileID: 1573767328}
   resultTitleButton: {fileID: 1933417251}
   statusText: {fileID: 1756495031}
+  environmentArtCatalog: {fileID: 0}
+  gameplayArtCatalog: {fileID: 0}
 --- !u!114 &1841315027
 MonoBehaviour:
   m_ObjectHideFlags: 0

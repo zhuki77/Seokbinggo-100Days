@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
+using Nyangbingo.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
@@ -303,7 +304,8 @@ namespace Nyangbingo.World
                 if (attackIndicatorRemaining <= 0f) attackIndicator.enabled = false;
             }
             var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-            var buildingPlacementActive = MainGameTurretRuntime.BlocksCombatInput;
+            var buildingPlacementActive = MainGameTurretRuntime.BlocksCombatInput ||
+                                          MainGameTilePaletteController.BlocksGameplayInput;
             var primaryHeld = Input.GetMouseButton(0);
             if (!buildingPlacementActive && !pointerOverUi && primaryHeld)
             {

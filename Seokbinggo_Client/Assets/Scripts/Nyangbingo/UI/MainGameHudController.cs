@@ -159,9 +159,13 @@ namespace Nyangbingo.UI
                     mainCamera.GetComponent<MainGameParallaxBackground>());
             }
             var craftingUi = GetComponent<MainGameCraftingUiController>() ??
-                             gameObject.AddComponent<MainGameCraftingUiController>();
+                              gameObject.AddComponent<MainGameCraftingUiController>();
             craftingUi.ConfigureForScene(gameDataCatalog, runtimeServices,
                 FindAnyObjectByType<MainGameBossSummonUiController>(), itemArtCatalog, gameplayArtCatalog);
+            var tilePalette = GetComponent<MainGameTilePaletteController>() ??
+                              gameObject.AddComponent<MainGameTilePaletteController>();
+            tilePalette.ConfigureForScene(gameDataCatalog, bootstrap, runtimeServices,
+                FindAnyObjectByType<MainGameTurretRuntime>(), itemArtCatalog, gameplayArtCatalog);
             inventory.Changed += RefreshInventory;
             if (playerHealth != null)
             {

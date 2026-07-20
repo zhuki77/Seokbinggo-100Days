@@ -4,9 +4,9 @@ ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
   serializedVersion: 2
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
   script: {fileID: 11500000, guid: 62a9f0aa5b59740cfbadc7e5f9823bb0, type: 3}
   importerVersion: 2
   textureImporterSettings:
@@ -36,7 +36,7 @@ ScriptedImporter:
     spriteMeshType: 1
     alignment: 0
     spritePivot: {x: 0.5, y: 0.5}
-    spritePixelsToUnits: 100
+    spritePixelsToUnits: 16
     spriteBorder: {x: 0, y: 0, z: 0, w: 0}
     spriteGenerateFallbackPhysicsShape: 0
     generateCubemap: 6
@@ -103,34 +103,34 @@ ScriptedImporter:
     generateSpriteAtlas: 1
   platformSettingsDirtyTick: 0
   singleSpriteImportData:
-  - name:
-    originalName:
+  - name: 
+    originalName: 
     pivot: {x: 0, y: 0}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 0
       y: 0
       width: 0
       height: 0
-    spriteID:
+    spriteID: 
     spriteBone: []
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 0, y: 0}
   animatedSpriteImportData:
   - name: iron_bell_rope
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: -0.33333334}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -142,7 +142,7 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 4}

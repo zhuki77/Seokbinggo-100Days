@@ -13,6 +13,18 @@ MonoBehaviour:
   m_Name: BuildingArtCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BuildingArtCatalog
   entries:
+  - id: workbench
+    frames:
+    - {fileID: -7467623030795044663, guid: ca659e2a6c3fb164790018a66ded22a7, type: 3}
+  - id: furnace
+    frames:
+    - {fileID: -3070139604129024509, guid: f22b55a0f9d083844a671b97f4f7e479, type: 3}
+  - id: blast_furnace
+    frames:
+    - {fileID: -9000969400661289842, guid: 633afdaabd9ae4d4389cebf73c97f5ae, type: 3}
+  - id: ice_anvil
+    frames:
+    - {fileID: 3033603758420936681, guid: 1356ce829439149498adce8c699dcff4, type: 3}
   - id: lantern
     frames:
     - {fileID: 3697682232989579909, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
@@ -20,27 +32,54 @@ MonoBehaviour:
     - {fileID: -2348773844321905749, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
   - id: frost_lantern
     frames:
-    - {fileID: 3697682232989579909, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
-    - {fileID: 7810959824578027923, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
-    - {fileID: -2348773844321905749, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
+    - {fileID: -6074175474712243036, guid: e735ea31bcd18a04f8a32debdeae6bf3, type: 3}
+    - {fileID: 7998927127887265537, guid: e735ea31bcd18a04f8a32debdeae6bf3, type: 3}
+    - {fileID: -2163570863829353838, guid: e735ea31bcd18a04f8a32debdeae6bf3, type: 3}
   - id: saekdong_lantern
     frames:
-    - {fileID: 3697682232989579909, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
-    - {fileID: 7810959824578027923, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
-    - {fileID: -2348773844321905749, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
+    - {fileID: 8812100240244598461, guid: a90fa51c1dca85041b26080ed2d164ce, type: 3}
   - id: sieve
     frames:
     - {fileID: 5337172156447446269, guid: f4c53e1b911cc944b87fc50b4f4e659f, type: 3}
   - id: iron_sieve
     frames:
-    - {fileID: 5337172156447446269, guid: f4c53e1b911cc944b87fc50b4f4e659f, type: 3}
+    - {fileID: 4075615615783965428, guid: 5b1682ee3b25b2c4888e8f9711cd9a7e, type: 3}
   - id: haetae_statue
     frames:
     - {fileID: -2793458600998904553, guid: 20642c64c855912468a2a083c73274f9, type: 3}
     - {fileID: -4156846078950972819, guid: 20642c64c855912468a2a083c73274f9, type: 3}
+  - id: nest_bed
+    frames:
+    - {fileID: -478405983634418135, guid: 88c5050e992d6c542a4a08e513251694, type: 3}
+  - id: magpie_nest
+    frames:
+    - {fileID: 5350913893628844027, guid: fa9f2a09e1bca374493351585711b9db, type: 3}
+  - id: bell_rope
+    frames:
+    - {fileID: 838726891366919000, guid: 779eb720205e1d642981353b078193cf, type: 3}
+  - id: iron_bell_rope
+    frames:
+    - {fileID: -7820175085589706095, guid: 1deee14991627f944adfd15ee995c4d0, type: 3}
+  - id: insul_wall
+    frames:
+    - {fileID: -763224725659438747, guid: 39f5fdcf377562042aeb8006d00ff413, type: 3}
+  - id: door
+    frames:
+    - {fileID: -5507390125393122560, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
+    - {fileID: 136116307881855951, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
+    - {fileID: -6588802959034415043, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
+  - id: jangdok
+    frames:
+    - {fileID: -52303854080169221, guid: f0ff94d9e2aff4940be25ce3c694fb74, type: 3}
   - id: ice_core
     frames:
     - {fileID: -2300316391141292056, guid: d545cc52e1d47154cb1354eef5796384, type: 3}
+  - id: iron_insul_wall
+    frames:
+    - {fileID: 7301040045939486608, guid: a376c63ed63b0d14e9e8c5ba2038b916, type: 3}
+  - id: cold_device
+    frames:
+    - {fileID: 919377384590954209, guid: cd51c23c96c7fc44e9b8eff13d8f3ebd, type: 3}
   - id: chest
     frames:
     - {fileID: 1247225791634500916, guid: 47a265d46e2abaa4291d830b6c5dee74, type: 3}
@@ -50,9 +89,44 @@ MonoBehaviour:
     - {fileID: -4454016649895686910, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
     - {fileID: 5723570758100185672, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
     - {fileID: 768278795270256770, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
+  - id: singijeon_cart
+    frames:
+    - {fileID: -7113672782228819212, guid: 88d37f4d342467445b30c1f7391c201d, type: 3}
+    - {fileID: -689375047282125710, guid: 88d37f4d342467445b30c1f7391c201d, type: 3}
+    - {fileID: 6720558279731549723, guid: 88d37f4d342467445b30c1f7391c201d, type: 3}
+  - id: ice_crystal_cooler
+    frames:
+    - {fileID: -2820593926446459367, guid: d626475221934ac4d81f9153675698ec, type: 3}
   - id: cold_wave_core
     frames:
     - {fileID: -1163610750929880464, guid: de4a809f2d358584898d4cc33bcf57b6, type: 3}
+  - id: ice_jar
+    frames:
+    - {fileID: -925931431505757242, guid: 985c539f9f8891a44bb29d5072532220, type: 3}
+  - id: straw_insul
+    frames:
+    - {fileID: 6020582326159984030, guid: 0c55bd0476722104fb924670ca4d0603, type: 3}
+  - id: clay_plaster
+    frames:
+    - {fileID: -6499391243808680092, guid: d245b2f48ef1f1240bd105d77cae1a1b, type: 3}
+  - id: munpungji
+    frames:
+    - {fileID: -612776767698426218, guid: 146967aeda3cd2844855482056a6fb5e, type: 3}
+  - id: minhwa_scroll
+    frames:
+    - {fileID: 2812874859036319154, guid: a6b6d5da2bc6ffe45b2c906ef174b823, type: 3}
+  - id: onggi_pot
+    frames:
+    - {fileID: -6187193738523344316, guid: e54e495560f8c1843839a49426cfbf79, type: 3}
+  - id: wind_chime
+    frames:
+    - {fileID: -909864607289354647, guid: b8efe37d28b1af4429c79d072f9a9480, type: 3}
+  - id: saekdong_cushion
+    frames:
+    - {fileID: 3345930521662676172, guid: af5a1d04c82f0fd47bba9f62011c3dc2, type: 3}
   - id: roof
     frames:
     - {fileID: 7487074851105840937, guid: 32260bd7de0e2694fa413d5c58fd098d, type: 3}
+  - id: wallpaper
+    frames:
+    - {fileID: -2333506232851026980, guid: 6ec5fd712b9870446be7fca4ea022e7c, type: 3}

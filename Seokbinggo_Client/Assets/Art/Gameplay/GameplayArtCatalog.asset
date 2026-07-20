@@ -126,3 +126,11 @@ MonoBehaviour:
   equipmentAccessorySlotSelected: {fileID: -1074637335440080146, guid: 03f6ef49353a4854c9d3d50bee714d36, type: 3}
   activeItemSlot: {fileID: 6599963918097900599, guid: b0c8436da772e1b47aa44878a9d00a05, type: 3}
   activeItemSlotSelected: {fileID: 9117833818891896295, guid: ba613282e41558e44ae7fe07e13153d7, type: 3}
+  shellStart: {fileID: 2239346518032559643, guid: 7e92f1a6372ca054b9581f94f7c7f471, type: 3}
+  shellSettings: {fileID: -8730528316343547412, guid: 590c1b8a7a4d90946a0930a2aac32051, type: 3}
+  shellLeave: {fileID: 4653755586049538878, guid: 3c14f4b52aa727745bd50cdf67377ef0, type: 3}
+  shellSpeakerHigh: {fileID: -7906507130060699669, guid: e2d3a60605ed63a4bbb40f0587429d2c, type: 3}
+  shellSpeakerLow: {fileID: 4616436955447740113, guid: 3f7ef16381c99684e9c129fce4a0b41d, type: 3}
+  shellSpeakerMuted: {fileID: -8755674810949524588, guid: 86da2f495768235458975a3f8c5eab28, type: 3}
+  shellVolumeBar: {fileID: -660143756152508030, guid: 4c6020117435dd44f8538d9390e5d094, type: 3}
+  shellVolumeHandle: {fileID: -1994049694246509457, guid: e2539f35a13707c4a91cf1cc8eb94e9e, type: 3}

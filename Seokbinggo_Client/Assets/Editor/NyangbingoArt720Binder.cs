@@ -110,7 +110,15 @@ public static class NyangbingoArt720Binder
         ("equipmentAccessorySlot", "Assets/Art/UI/Inventory/equipment_accessory_slot.aseprite"),
         ("equipmentAccessorySlotSelected", "Assets/Art/UI/Inventory/equipment_accessory_slot_selected.aseprite"),
         ("activeItemSlot", "Assets/Art/UI/Inventory/active_item_slot.aseprite"),
-        ("activeItemSlotSelected", "Assets/Art/UI/Inventory/active_item_slot_selected.aseprite")
+        ("activeItemSlotSelected", "Assets/Art/UI/Inventory/active_item_slot_selected.aseprite"),
+        ("shellStart", "Assets/Art/UI/Shell/start.aseprite"),
+        ("shellSettings", "Assets/Art/UI/Shell/setting.aseprite"),
+        ("shellLeave", "Assets/Art/UI/Shell/leave.aseprite"),
+        ("shellSpeakerHigh", "Assets/Art/UI/Shell/sp1.aseprite"),
+        ("shellSpeakerLow", "Assets/Art/UI/Shell/sp2.aseprite"),
+        ("shellSpeakerMuted", "Assets/Art/UI/Shell/sp3.aseprite"),
+        ("shellVolumeBar", "Assets/Art/UI/Shell/spbar.aseprite"),
+        ("shellVolumeHandle", "Assets/Art/UI/Shell/spbar2.aseprite")
     };
 
     static NyangbingoArt720Binder()
@@ -136,6 +144,46 @@ public static class NyangbingoArt720Binder
                   $"HUD/보스/인벤토리 단일 스프라이트 {SpriteBindings.Length}).");
     }
 
+    [MenuItem("Nyangbingo/Art/Validate Shell UI Art")]
+    public static void ValidateShellUiArt()
+    {
+        var gameplayCatalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayCatalogPath);
+        var environmentCatalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(
+            "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset");
+        var failures = new List<string>();
+        if (gameplayCatalog == null)
+        {
+            failures.Add($"Gameplay art catalog missing: {GameplayCatalogPath}");
+        }
+        else
+        {
+            var serialized = new SerializedObject(gameplayCatalog);
+            foreach (var binding in SpriteBindings.Where(binding =>
+                         binding.path.StartsWith("Assets/Art/UI/Shell/", StringComparison.Ordinal)))
+            {
+                var sprite = serialized.FindProperty(binding.property)?.objectReferenceValue as Sprite;
+                if (sprite == null)
+                    failures.Add($"{binding.property}: Sprite reference missing");
+                else if (!string.Equals(AssetDatabase.GetAssetPath(sprite), binding.path,
+                             StringComparison.Ordinal))
+                    failures.Add(
+                        $"{binding.property}: expected '{binding.path}', actual '{AssetDatabase.GetAssetPath(sprite)}'");
+            }
+        }
+        if (environmentCatalog == null || environmentCatalog.TitleFrames.Count != 10)
+            failures.Add($"title_on: expected 10 frames, actual {environmentCatalog?.TitleFrames.Count ?? 0}");
+        if (environmentCatalog == null || environmentCatalog.TitleBackground == null)
+            failures.Add("title background: keyvisual-day Sprite reference missing");
+        if (failures.Count > 0)
+        {
+            Debug.LogError("[Nyangbingo] Shell UI art validation failed:\n- " +
+                           string.Join("\n- ", failures));
+            return;
+        }
+        Debug.Log("[Nyangbingo] Shell UI art validation passed: title background 1/1, " +
+                  "title 10/10, shell icons 8/8.");
+    }
+
     private static void BindOnFirstImport()
     {
         var itemCatalog = AssetDatabase.LoadAssetAtPath<ItemArtCatalog>(ItemCatalogPath);
@@ -152,13 +200,29 @@ public static class NyangbingoArt720Binder
         var ruinWallBound = ruinWallTile != null && ruinWallTile.sprite != null &&
                             string.Equals(AssetDatabase.GetAssetPath(ruinWallTile.sprite),
                                 RuinWallArtPath, StringComparison.Ordinal);
-        if (ContainsItem(itemSerialized.FindProperty("entries"), "gangcheol_scale") &&
+        var otherCatalogsCurrent =
+            ContainsItem(itemSerialized.FindProperty("entries"), "gangcheol_scale") &&
             ContainsItem(itemSerialized.FindProperty("entries"), "workbench") &&
             ContainsItem(itemSerialized.FindProperty("entries"), "coal") &&
             ContainsItem(itemSerialized.FindProperty("entries"), "yokai_tear") &&
             gameplaySerialized.FindProperty("dayCounterFrames")?.arraySize == 17 &&
             gameplaySerialized.FindProperty("inventorySlot")?.objectReferenceValue != null &&
-            buildingCatalog.Find("roof")?.Sprite != null && deepBackgroundBound && ruinWallBound) return;
+            gameplaySerialized.FindProperty("shellStart")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellSettings")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellLeave")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellSpeakerHigh")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellSpeakerLow")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellSpeakerMuted")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellVolumeBar")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellVolumeHandle")?.objectReferenceValue != null &&
+            deepBackgroundBound && ruinWallBound;
+        if (otherCatalogsCurrent &&
+            Nyangbingo.Editor.NyangbingoTileArtIntegrator.IsBuildingArtCurrent(buildingCatalog)) return;
+        if (otherCatalogsCurrent)
+        {
+            Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyBuildingArt();
+            return;
+        }
         BindDeliveredArt();
     }
 

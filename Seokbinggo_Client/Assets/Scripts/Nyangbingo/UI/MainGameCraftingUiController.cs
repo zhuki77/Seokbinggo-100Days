@@ -27,6 +27,7 @@ namespace Nyangbingo.UI
         [SerializeField] private MainGameBossSummonUiController stationSource;
         [SerializeField] private GameShellController shell;
         [SerializeField] private MainGameTurretRuntime turretRuntime;
+        [SerializeField] private MainGameTilePaletteController tilePalette;
         [SerializeField] private ItemArtCatalog itemArtCatalog;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
 
@@ -128,6 +129,7 @@ namespace Nyangbingo.UI
         {
             if (shell == null) shell = FindAnyObjectByType<GameShellController>();
             if (turretRuntime == null) turretRuntime = FindAnyObjectByType<MainGameTurretRuntime>();
+            if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             if (gameDataCatalog == null || runtimeServices == null || !runtimeServices.Initialize())
             {
                 Debug.LogError("[Nyangbingo] MainGameCraftingUiController: 제작 UI 데이터 배선이 준비되지 않았습니다.");
@@ -824,7 +826,11 @@ namespace Nyangbingo.UI
         {
             var item = CurrentInventoryItem();
             if (item == null || !IsInventoryPlaceable(item)) return;
-            if (turretRuntime != null && turretRuntime.BeginPlacementPreview(item.Id))
+            if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
+            if (tilePalette != null && tilePalette.TryBeginPlacement(item.Id))
+                SetOpen(false);
+            else if (!TileService.SupportsForegroundPlacement(item.Id) && turretRuntime != null &&
+                     turretRuntime.BeginPlacementPreview(item.Id))
                 SetOpen(false);
             else
                 ShowMessage("설치 미리보기를 시작할 수 없습니다.");
@@ -1175,7 +1181,9 @@ namespace Nyangbingo.UI
         public static bool IsInventoryItemPlaceable(ItemDefinition item,
             IEnumerable<RecipeDefinition> recipes)
         {
-            if (item == null || item.MvpScope == ItemMvpScope.B || recipes == null) return false;
+            if (item == null || item.MvpScope == ItemMvpScope.B) return false;
+            if (TileService.SupportsForegroundPlacement(item.Id)) return true;
+            if (recipes == null) return false;
             return recipes.Any(recipe => recipe?.Output.item != null &&
                                          recipe.Output.item.Id == item.Id &&
                                          IsProductPlaceableRecipe(recipe));
@@ -1191,10 +1199,14 @@ namespace Nyangbingo.UI
             primaryButton.interactable = false;
             collectButton.gameObject.SetActive(false);
             var inventory = runtimeServices.PlayerInventory;
+            if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             selectedIndex = Mathf.Clamp(selectedIndex, 0, Mathf.Max(0, inventory.Slots.Count - 1));
             var selectedItem = CurrentInventoryItem();
             var canPlace = selectedItem != null && IsInventoryPlaceable(selectedItem) &&
-                           turretRuntime != null && turretRuntime.GetInventoryCount(selectedItem.Id) > 0;
+                           inventory.Count(selectedItem.Id) > 0 &&
+                           (TileService.SupportsForegroundPlacement(selectedItem.Id)
+                               ? tilePalette != null
+                               : turretRuntime != null);
             primaryButton.GetComponentInChildren<Text>().text = canPlace
                 ? $"E · {selectedItem.DisplayName} 설치 미리보기"
                 : "설치 가능한 소지품을 선택하세요";

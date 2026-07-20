@@ -161,3 +161,5 @@ MonoBehaviour:
     sprite: {fileID: -909864607289354647, guid: b8efe37d28b1af4429c79d072f9a9480, type: 3}
   - id: saekdong_cushion
     sprite: {fileID: 3345930521662676172, guid: af5a1d04c82f0fd47bba9f62011c3dc2, type: 3}
+  - id: wallpaper
+    sprite: {fileID: -2333506232851026980, guid: 6ec5fd712b9870446be7fca4ea022e7c, type: 3}

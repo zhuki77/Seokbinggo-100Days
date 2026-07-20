@@ -124,6 +124,8 @@ public static class NyangbingoMainGameSceneCreator
         Require(worldRenderer != null, "TilemapRenderer");
         Require(worldRenderer?.Foreground != null, "TilemapRenderer.Foreground");
         Require(worldRenderer?.Background != null, "TilemapRenderer.Background");
+        Require(worldRenderer != null && worldRenderer.HasIceAltarQuadrantArt,
+            "TilemapRenderer ice altar 2x2 art");
         Require(dayNight != null, "DayNightService");
         Require(tickDriver != null, "CentralTickDriver");
         Require(runtimeServices != null, "MainGameRuntimeServices");
@@ -238,6 +240,11 @@ public static class NyangbingoMainGameSceneCreator
 
         var fallback = AssetDatabase.LoadAssetAtPath<TileBase>($"{TempTileFolder}/_unknown_fallback.asset");
         worldRenderer.SetTileVisualsForEditorSetup(visuals.ToArray(), fallback);
+        var altarQuadrants = Enumerable.Range(0, 4)
+            .Select(index => AssetDatabase.LoadAssetAtPath<TileBase>(
+                $"{TempTileFolder}/ice_altar_{index}.asset"))
+            .ToArray();
+        worldRenderer.SetIceAltarQuadrantTilesForEditorSetup(altarQuadrants);
 
         var serializedRenderer = new SerializedObject(worldRenderer);
         serializedRenderer.FindProperty("foregroundTilemap").objectReferenceValue = foreground;
@@ -518,7 +525,7 @@ public static class NyangbingoMainGameSceneCreator
 
         var codexTitle = CreateHudText(codexWindow.transform, "Title", TextAnchor.UpperCenter,
             new Vector2(0f, -24f), new Vector2(500f, 52f), 34);
-        codexTitle.text = "요괴 도감  ·  Tab/Esc 닫기";
+        codexTitle.text = "요괴 도감  ·  4/ESC 닫기";
 
         var gridObject = new GameObject("CardGrid", typeof(RectTransform));
         gridObject.transform.SetParent(codexWindow.transform, false);
@@ -561,7 +568,7 @@ public static class NyangbingoMainGameSceneCreator
         codexController.ConfigureForScene(saveCoordinator, codexPanel, cardButtons, cardTexts, detailText);
         codexPanel.SetActive(false);
 
-        var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel", new Color(.02f, .035f, .05f, .97f));
+        var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel", new Color(.02f, .035f, .05f, 1f));
         var titleLabel = CreateMenuText(titlePanel.transform, "Title", "석빙고 100일", new Vector2(0f, 180f),
             new Vector2(620f, 80f), 48);
         if (environmentArtCatalog != null && environmentArtCatalog.TitleFrames.Count > 0)
@@ -645,7 +652,7 @@ public static class NyangbingoMainGameSceneCreator
         shellUi.ConfigureForScene(shell, saveCoordinator, saveManager, audioService, dayNight, codexController,
             resumeButton, saveButtons, loadButtons, settingsButton, returnTitleButton, applySettings, backSettings,
             bgmSlider, sfxSlider, fullscreenToggle, confirmButton, cancelButton, confirmationText, titleContinue,
-            titleNew, titleQuit, resultTitle, statusText);
+            titleNew, titleQuit, resultTitle, statusText, environmentArtCatalog, gameplayArtCatalog);
 
         var bossSummonUi = canvasObject.AddComponent<MainGameBossSummonUiController>();
         bossSummonUi.ConfigureForScene(catalog, bootstrap, runtimeServices,
@@ -659,6 +666,9 @@ public static class NyangbingoMainGameSceneCreator
             turretCancelButton);
 
         var hud = canvasObject.AddComponent<MainGameHudController>();
+        var tilePalette = canvasObject.AddComponent<MainGameTilePaletteController>();
+        tilePalette.ConfigureForScene(catalog, bootstrap, runtimeServices,
+            Object.FindAnyObjectByType<MainGameTurretRuntime>(), itemArtCatalog, gameplayArtCatalog);
         hud.ConfigureForScene(catalog, bootstrap, runtimeServices, temperature, seal, day, claw, playerHealth,
             playerController.GetComponent<Health>(), Object.FindAnyObjectByType<BossManager>(), bossStatus,
             deathPanel, slots, slotIcons, itemArtCatalog, temperatureArt, gameplayArtCatalog,
@@ -668,6 +678,7 @@ public static class NyangbingoMainGameSceneCreator
         EditorUtility.SetDirty(shellUi);
         EditorUtility.SetDirty(bossSummonUi);
         EditorUtility.SetDirty(turretBuildUi);
+        EditorUtility.SetDirty(tilePalette);
         return hud;
     }
 
@@ -766,8 +777,16 @@ public static class NyangbingoMainGameSceneCreator
         fillRect.offsetMax = Vector2.zero;
         fillObject.AddComponent<Image>().color = new Color(.25f, .75f, .95f, 1f);
 
+        var handleAreaObject = new GameObject("Handle Slide Area", typeof(RectTransform));
+        handleAreaObject.transform.SetParent(sliderObject.transform, false);
+        var handleAreaRect = handleAreaObject.GetComponent<RectTransform>();
+        handleAreaRect.anchorMin = Vector2.zero;
+        handleAreaRect.anchorMax = Vector2.one;
+        handleAreaRect.offsetMin = new Vector2(13f, 0f);
+        handleAreaRect.offsetMax = new Vector2(-13f, 0f);
+
         var handleObject = new GameObject("Handle", typeof(RectTransform));
-        handleObject.transform.SetParent(sliderObject.transform, false);
+        handleObject.transform.SetParent(handleAreaObject.transform, false);
         var handleRect = handleObject.GetComponent<RectTransform>();
         handleRect.sizeDelta = new Vector2(26f, 34f);
         var handleImage = handleObject.AddComponent<Image>();

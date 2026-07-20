@@ -76,6 +76,9 @@ namespace Nyangbingo.World
         public int Width { get; }
         public int Height { get; }
 
+        public static bool SupportsForegroundPlacement(string elementType) =>
+            !string.IsNullOrEmpty(elementType) && PlacementHardness.ContainsKey(elementType);
+
         /// <param name="tiles">MapGenerator.GenerateDetailed(seed).tiles — 이 서비스가 이후 소유·변경하는 살아있는 배열.</param>
         /// <param name="renderer">실제 화면 갱신에 쓸 Tilemap 컴포넌트. null이면 데이터만 바꾸고 화면은 갱신하지 않는다(테스트용).</param>
         /// <param name="catalog">아이템 드랍 조회용. null이면 드랍 없이 파괴/설치만 수행한다(카탈로그 연결 전 임시 테스트용).</param>
