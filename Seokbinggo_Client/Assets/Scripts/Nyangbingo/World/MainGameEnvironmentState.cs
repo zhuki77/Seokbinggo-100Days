@@ -327,8 +327,11 @@ namespace Nyangbingo.World
                 .Where(entry => entry.Record.definitionId == CoolingSourceRuntime.IceStorageId)
                 .OrderBy(entry => entry.Record.objectId, StringComparer.Ordinal)
                 .FirstOrDefault();
+            var sealSystem = bootstrap?.SealSystem;
             if (iceStorage != null)
-                bootstrap?.SealSystem?.SetPrimaryWatchPoint(iceStorage.Cell);
+                sealSystem?.SetSealCoreCell(iceStorage.Cell);
+            else
+                sealSystem?.ClearSealCoreCell();
             InvalidateSeal();
         }
 
