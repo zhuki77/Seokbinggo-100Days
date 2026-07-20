@@ -690,11 +690,11 @@ PlayerSettings:
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: 363eeb55-5fba-48b7-a4cb-136b68f46dd9
+  cloudProjectId: 
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Seokbinggo_Client 2026-07-13_18-59-22
-  organizationId: zhukik740
+  projectName: Seokbinggo_Client
+  organizationId: 
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}

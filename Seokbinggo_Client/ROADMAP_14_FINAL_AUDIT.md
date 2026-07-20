@@ -1,7 +1,7 @@
 # v24.1 로드맵 1–14 최종 감사
 
 - 감사일: 2026-07-18
-- 작업 경로: `D:\workspace\GitHub\Seokbinggo-100Days\Seokbinggo_Client`
+- 작업 경로: `Seokbinggo_Client/` (저장소 상대)
 - 브랜치: `feat/taeyo-v23-data-alignment`
 - 공식 데이터: `planner_v24_1_2230`
 - Unity: `6000.5.3f1`

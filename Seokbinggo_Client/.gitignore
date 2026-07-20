@@ -83,3 +83,19 @@ crashlytics-build.properties
 .vscode/
 *.slnx
 
+# --- secrets / local overrides (Public 전환 방어) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.keystore
+credentials.json
+**/credentials.json
+**/local.settings.json
+**/secrets.json
+**/google-services.json
+**/GoogleService-Info.plist
+
