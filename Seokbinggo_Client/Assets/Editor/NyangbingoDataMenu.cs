@@ -106,17 +106,17 @@ public static class NyangbingoDataMenu
         var sealRules = LoadAssets<SealWhitelistDefinition>(rootDirectory + "/SealWhitelist");
         var wallpaper = AssetDatabase.LoadAssetAtPath<RecipeDefinition>(
             rootDirectory + "/Recipes/wallpaper.asset");
-        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 83 || sealRules.Length != 23 ||
+        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 88 || sealRules.Length != 23 ||
             wallpaper == null || wallpaper.Output.item == null || wallpaper.Output.item.Id != "wallpaper" ||
             wallpaper.Output.amount != 16)
         {
-            Debug.LogError("[Nyangbingo] v26 data bundle reimport failed its 86/54/83/23 and wallpaper x16 check.");
+            Debug.LogError("[Nyangbingo] v26 data bundle reimport failed its 86/54/88/23 and wallpaper x16 check.");
             return;
         }
 
         RebuildGameDataCatalog();
         Debug.Log("[Nyangbingo] v26 data bundle reimport completed: 86 items, 54 recipes, " +
-                  "83 globals, 23 seal rules, wallpaper output 16.");
+                  "88 globals, 23 seal rules, wallpaper output 16.");
     }
 
     [MenuItem("Nyangbingo/Validate CSV Data")]
@@ -1693,9 +1693,9 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 84 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count != 88 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain the official 84-row v27 schema (v26 83행 + cave_max_height).");
+            Debug.LogError("[Nyangbingo] globals.csv must contain the official 88-row v28 schema (v27 84행 + player physics 4행).");
             return;
         }
 

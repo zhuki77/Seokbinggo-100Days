@@ -278,13 +278,29 @@ namespace Nyangbingo.World
         {
             chestId = null;
             definition = null;
-            if (!HasWorld || catalog == null) return false;
+            if (!TryResolveUnopenedChestAt(cell, out var foundChestId, out var found)) return false;
+            if (!chestProgress.TryOpen(foundChestId, found, seed)) return false;
+
+            chestId = foundChestId;
+            definition = found;
+            return true;
+        }
+
+        /// <summary>개봉하지 않고 해당 칸에 미개봉 상자가 있는지 확인(타깃 선정용).</summary>
+        public bool TryPeekUnopenedChestAt(Vector3Int cell) =>
+            TryResolveUnopenedChestAt(cell, out _, out _);
+
+        private bool TryResolveUnopenedChestAt(Vector3Int cell, out string chestId, out ChestDefinition definition)
+        {
+            chestId = null;
+            definition = null;
+            if (!HasWorld || catalog == null || generator == null) return false;
             if (!generator.TryGetChestIdAt(new Vector2Int(cell.x, cell.y), out var foundChestId)) return false;
             if (chestProgress.IsOpened(foundChestId)) return false;
 
             var region = generator.GetChestRegion(foundChestId);
             var found = catalog.FindChest(RegionCatalogId(region));
-            if (found == null || !chestProgress.TryOpen(foundChestId, found, seed)) return false;
+            if (found == null) return false;
 
             chestId = foundChestId;
             definition = found;

@@ -29,6 +29,8 @@ namespace Nyangbingo.World
         // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
         // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
         private const float MiningReach = 1.5f;
+        // DevA 테스트 하니스와 동일: 마우스 칸 우선 + 플레이어 인접 미개봉 상자.
+        private const float ChestInteractReach = 1.75f;
         private const float CollisionSkin = .001f;
         private const float CollapseSeconds = 1.5f;
         private const float FadeOutSeconds = 1.75f;
@@ -41,10 +43,11 @@ namespace Nyangbingo.World
         [SerializeField] private CharacterArtCatalog characterArtCatalog;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
         [Min(0f)][SerializeField] private float cameraFollowSharpness = 12f;
-        [Header("Side-scroller movement")]
-        [Min(.1f)][SerializeField] private float jumpVelocity = 7f;
-        [Min(.1f)][SerializeField] private float gravityAcceleration = 20f;
-        [Min(.1f)][SerializeField] private float maximumFallSpeed = 14f;
+
+        private float jumpVelocity;
+        private float gravityAcceleration;
+        private float maximumFallSpeed;
+        private float jumpCutMultiplier;
 
         private readonly StatSheet statSheet = new StatSheet();
         private Rigidbody2D body;
@@ -147,6 +150,17 @@ namespace Nyangbingo.World
                 Debug.LogError("[Nyangbingo] MainGamePlayerController: 플레이어 이동·전투 필수 데이터가 준비되지 않았습니다.");
                 return false;
             }
+
+            if (!PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var physics))
+            {
+                physics = PlayerMovementPhysics.CreateDefault();
+                Debug.LogWarning("[Nyangbingo] MainGamePlayerController: player physics globals missing; " +
+                                 "using Terraria-like defaults.");
+            }
+            jumpVelocity = physics.JumpVelocity;
+            gravityAcceleration = physics.Gravity;
+            maximumFallSpeed = physics.MaxFallSpeed;
+            jumpCutMultiplier = physics.JumpCutMultiplier;
 
             body.bodyType = RigidbodyType2D.Kinematic;
             body.gravityScale = 0f;
@@ -278,7 +292,9 @@ namespace Nyangbingo.World
                 else ResetMiningProgress();
             }
             else CancelMining();
-            if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1))
+            // 우클릭: 미개봉 상자 우선(테스트 하니스와 동일) → 없으면 부채 액티브.
+            if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
+                !TryOpenNearbyChest())
                 TryFanAbility();
         }
 
@@ -286,6 +302,9 @@ namespace Nyangbingo.World
         {
             if (!initialized || dead || body == null) return;
             var deltaSeconds = Time.fixedDeltaTime;
+            var jumpHeld = IsJumpPressed();
+            verticalVelocity = PlayerMovementPhysics.ApplyJumpCutWhileAscending(
+                verticalVelocity, jumpHeld, jumpCutMultiplier);
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
             var displacement = new Vector2(
                 CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed) * deltaSeconds,
@@ -381,6 +400,9 @@ namespace Nyangbingo.World
             var aim = (Vector2)mouse - body.position;
             if (aim.sqrMagnitude > Mathf.Epsilon) facing = aim.normalized;
         }
+
+        private static bool IsJumpPressed() =>
+            Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.Space);
 
         private void TryJump()
         {
@@ -497,22 +519,11 @@ namespace Nyangbingo.World
         }
 
         public static float ApplyGravity(float currentVelocity, float gravity, float maxFallSpeed,
-            float deltaSeconds)
-        {
-            if (float.IsNaN(currentVelocity) || float.IsInfinity(currentVelocity)) currentVelocity = 0f;
-            if (float.IsNaN(gravity) || float.IsInfinity(gravity)) gravity = 0f;
-            if (float.IsNaN(maxFallSpeed) || float.IsInfinity(maxFallSpeed)) maxFallSpeed = 0f;
-            if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds)) deltaSeconds = 0f;
-            return Mathf.Max(-Mathf.Max(0f, maxFallSpeed),
-                currentVelocity - Mathf.Max(0f, gravity) * Mathf.Max(0f, deltaSeconds));
-        }
+            float deltaSeconds) =>
+            PlayerMovementPhysics.ApplyGravity(currentVelocity, gravity, maxFallSpeed, deltaSeconds);
 
-        public static float CalculateJumpVelocityForHeightRatio(float baseJumpVelocity, float heightRatio)
-        {
-            if (float.IsNaN(baseJumpVelocity) || float.IsInfinity(baseJumpVelocity) ||
-                float.IsNaN(heightRatio) || float.IsInfinity(heightRatio)) return 0f;
-            return Mathf.Max(0f, baseJumpVelocity) * Mathf.Sqrt(Mathf.Max(0f, heightRatio));
-        }
+        public static float CalculateJumpVelocityForHeightRatio(float baseJumpVelocity, float heightRatio) =>
+            PlayerMovementPhysics.CalculateJumpVelocityForHeightRatio(baseJumpVelocity, heightRatio);
 
         private void LateUpdate()
         {
@@ -532,6 +543,7 @@ namespace Nyangbingo.World
             characterAnimator?.PlayAttack();
             ShowAttackFeedback();
             attackCooldown = 1f / activeProfile.AttacksPerSecond;
+            // 첫 스윙은 항상, 이후에는 실제 명중(hits>0)일 때만 로그 — hits는 "데미지 수치"가 아니라 맞은 대상 수.
             if (!loggedFirstAttackInput || attack.LastHitCount > 0 && !loggedFirstAttackHit)
             {
                 Debug.Log($"[Nyangbingo] Player attack accepted (profile={activeProfile.Id}, hits={attack.LastHitCount}).");
@@ -598,31 +610,91 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 마우스 아래 칸이 사거리 안이면 그 칸을 우선하고, 아니면 조준 방향 × 사거리 칸을 쓴다.
-        /// (조준만으로 짧은 레이를 쓰면 벽 앞 공기만 계속 선택되는 경우가 있다.)
+        /// 마우스 아래 칸이 사거리 안이면 그 칸(공기면 발밑·인접 고체)을 우선하고,
+        /// 아니면 조준 방향 × 사거리 칸을 같은 규칙으로 쓴다.
         /// </summary>
         private bool TryResolveMiningCell(TileService tileService, out Vector3Int cell)
         {
             cell = default;
+            if (tileService == null) return false;
             var origin = (Vector2)transform.position;
-            if (followCamera != null)
+            Vector2? mouseWorld = followCamera != null
+                ? followCamera.ScreenToWorldPoint(Input.mousePosition)
+                : null;
+            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
+            return TryPickMiningCell(tileService, origin, mouseWorld, direction, MiningReach, out cell);
+        }
+
+        /// <summary>
+        /// 지표 채굴 UX — 마우스가 공기 칸(플레이어 발 높이)을 가리키면 바로 아래·인접 전경 고체로 보정한다.
+        /// </summary>
+        public static bool TryPickMiningCell(TileService tileService, Vector2 playerOrigin,
+            Vector2? mouseWorld, Vector2 facing, float miningReach, out Vector3Int cell)
+        {
+            cell = default;
+            if (tileService == null || miningReach <= 0f ||
+                float.IsNaN(playerOrigin.x) || float.IsInfinity(playerOrigin.x) ||
+                float.IsNaN(playerOrigin.y) || float.IsInfinity(playerOrigin.y))
+                return false;
+
+            var reachSq = miningReach * miningReach;
+            if (mouseWorld.HasValue)
             {
-                var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
-                var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
-                var mouseCenter = new Vector2(mouseCell.x + .5f, mouseCell.y + .5f);
-                if (tileService.InBounds(mouseCell) &&
-                    (mouseCenter - origin).sqrMagnitude <= MiningReach * MiningReach)
+                var mouse = mouseWorld.Value;
+                if (!float.IsNaN(mouse.x) && !float.IsInfinity(mouse.x) &&
+                    !float.IsNaN(mouse.y) && !float.IsInfinity(mouse.y))
                 {
-                    cell = mouseCell;
-                    return true;
+                    var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                    if (TryPickSolidMiningCell(tileService, playerOrigin, mouseCell, reachSq, out cell))
+                        return true;
                 }
             }
 
             var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            var target = origin + direction * MiningReach;
-            cell = new Vector3Int(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 0);
-            return tileService.InBounds(cell);
+            var aim = playerOrigin + direction * miningReach;
+            var aimCell = new Vector3Int(Mathf.FloorToInt(aim.x), Mathf.FloorToInt(aim.y), 0);
+            return TryPickSolidMiningCell(tileService, playerOrigin, aimCell, reachSq, out cell);
         }
+
+        private static bool TryPickSolidMiningCell(TileService tileService, Vector2 playerOrigin,
+            Vector3Int primaryCell, float reachSq, out Vector3Int cell)
+        {
+            cell = default;
+            foreach (var offset in MiningCellPickOffsets)
+            {
+                var candidate = primaryCell + offset;
+                if (!IsMineableForegroundCell(tileService, candidate)) continue;
+                if (!IsWithinMiningReach(playerOrigin, candidate, reachSq)) continue;
+                cell = candidate;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool IsMineableForegroundCell(TileService tileService, Vector3Int cell)
+        {
+            if (!tileService.InBounds(cell)) return false;
+            return !tileService.GetTile(cell).IsAir;
+        }
+
+        private static bool IsWithinMiningReach(Vector2 playerOrigin, Vector3Int cell, float reachSq)
+        {
+            var center = new Vector2(cell.x + .5f, cell.y + .5f);
+            return (center - playerOrigin).sqrMagnitude <= reachSq;
+        }
+
+        private static readonly Vector3Int[] MiningCellPickOffsets =
+        {
+            Vector3Int.zero,
+            Vector3Int.down,
+            Vector3Int.left,
+            Vector3Int.right,
+            new Vector3Int(-1, -1, 0),
+            new Vector3Int(1, -1, 0),
+            Vector3Int.up,
+            new Vector3Int(-1, 1, 0),
+            new Vector3Int(1, 1, 0),
+        };
 
         private bool TryGetMiningSeconds(Vector3Int cell, int clawTier, out float requiredSeconds)
         {
@@ -943,16 +1015,101 @@ namespace Nyangbingo.World
         private bool TryOpenNearbyChest()
         {
             var session = bootstrap?.Session;
-            if (session == null) return false;
-            var currentCell = Vector3Int.FloorToInt(transform.position);
-            var targetCell = Vector3Int.FloorToInt((Vector2)transform.position + facing.normalized);
-            if (!session.TryOpenChestAt(targetCell, out var chestId, out var definition) &&
-                (targetCell == currentCell || !session.TryOpenChestAt(currentCell, out chestId, out definition)))
-                return false;
-            interactionMessages?.ShowExternalMessage($"상자 개봉: {definition.Id}");
+            if (session == null || !session.HasWorld) return false;
+            if (!TryResolveNearbyChestCell(session, out var cell)) return false;
+            if (!session.TryOpenChestAt(cell, out var chestId, out var definition)) return false;
+
+            var rewardSummary = FormatChestRewardSummary(definition, session.Seed, chestId);
+            interactionMessages?.ShowExternalMessage($"상자 개봉: {rewardSummary}");
             worldDecorationRenderer?.MarkChestOpened(chestId);
-            Debug.Log($"[Nyangbingo] Product chest interaction completed: {chestId}, region={definition.Id}.");
+            Debug.Log($"[Nyangbingo] Product chest interaction completed: {chestId}, region={definition.Id}, rewards={rewardSummary}.");
             return true;
+        }
+
+        /// <summary>
+        /// 마우스 아래 칸(사거리 안) → 조준 칸 → 발 칸 → 사거리 안 최근접 미개봉 상자.
+        /// </summary>
+        private bool TryResolveNearbyChestCell(WorldSessionController session, out Vector3Int cell)
+        {
+            cell = default;
+            var origin = (Vector2)transform.position;
+            var reachSq = ChestInteractReach * ChestInteractReach;
+
+            if (followCamera != null)
+            {
+                var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
+                var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                if (IsChestCellInReach(origin, mouseCell, reachSq) &&
+                    session.TryPeekUnopenedChestAt(mouseCell))
+                {
+                    cell = mouseCell;
+                    return true;
+                }
+            }
+
+            var facingCell = Vector3Int.FloorToInt(origin +
+                (facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.right));
+            var currentCell = Vector3Int.FloorToInt(origin);
+            if (IsChestCellInReach(origin, facingCell, reachSq) &&
+                session.TryPeekUnopenedChestAt(facingCell))
+            {
+                cell = facingCell;
+                return true;
+            }
+            if (IsChestCellInReach(origin, currentCell, reachSq) &&
+                session.TryPeekUnopenedChestAt(currentCell))
+            {
+                cell = currentCell;
+                return true;
+            }
+
+            return TryFindNearestUnopenedChestCell(session, origin, reachSq, out cell);
+        }
+
+        private static bool TryFindNearestUnopenedChestCell(WorldSessionController session, Vector2 origin,
+            float reachSq, out Vector3Int cell)
+        {
+            cell = default;
+            var chests = session.LastResult.chests;
+            if (chests == null || chests.Count == 0) return false;
+
+            var bestDist = float.PositiveInfinity;
+            var found = false;
+            for (var i = 0; i < chests.Count; i++)
+            {
+                var chest = chests[i];
+                if (session.ChestProgress != null && session.ChestProgress.IsOpened(chest.id)) continue;
+                var chestCell = new Vector3Int(chest.position.x, chest.position.y, 0);
+                var center = new Vector2(chestCell.x + .5f, chestCell.y + .5f);
+                var distSq = (center - origin).sqrMagnitude;
+                if (distSq > reachSq || distSq >= bestDist) continue;
+                bestDist = distSq;
+                cell = chestCell;
+                found = true;
+            }
+            return found;
+        }
+
+        private static bool IsChestCellInReach(Vector2 origin, Vector3Int cell, float reachSq)
+        {
+            var center = new Vector2(cell.x + .5f, cell.y + .5f);
+            return (center - origin).sqrMagnitude <= reachSq;
+        }
+
+        private static string FormatChestRewardSummary(ChestDefinition definition, int worldSeed, string chestId)
+        {
+            if (definition == null) return "보상 없음";
+            var parts = new List<string>();
+            foreach (var reward in definition.Rewards)
+            {
+                if (reward.item == null || reward.amount <= 0) continue;
+                var name = string.IsNullOrEmpty(reward.item.DisplayName) ? reward.item.Id : reward.item.DisplayName;
+                parts.Add($"{name}×{reward.amount}");
+            }
+            var equipment = ChestRewardSelector.SelectEquipment(worldSeed, chestId, definition);
+            if (equipment != null)
+                parts.Add(equipment.Id);
+            return parts.Count == 0 ? definition.Id : string.Join(", ", parts);
         }
 
         private void HandleDamaged(Nyangbingo.Core.DamageTag tag, int amount)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.Save;
 using Nyangbingo.World;
@@ -56,6 +57,10 @@ public static class NyangbingoDevARegressionTests
             ("반경·밀폐 창 오버레이", TestWorldRangeOverlayRenderer),
             // v27: 펄린 동굴 지표 관통 금지 + cave_max_height.
             ("동굴 지표 관통 금지", () => TestCaveSurfaceProtection(config)),
+            // v7/v28: 테라리아급 점프·중력 globals 정본.
+            ("플레이어 점프·중력", TestPlayerJumpPhysics),
+            // v28: 지표 채굴 — 마우스 공기 칸 → 발밑 고체 보정.
+            ("지표 채굴 타깃 보정", TestMiningCellSurfaceFallback),
         };
 
         var passed = 0;
@@ -1555,8 +1560,101 @@ public static class NyangbingoDevARegressionTests
     }
 
     /// <summary>
+    /// v7/v28: globals.csv 플레이어 점프·중력 — 테라리아급 약 3.5타일·가변 점프 컷.
+    /// </summary>
+    private static void TestPlayerJumpPhysics()
+    {
+        const string catalogPath = "Assets/Data/SO/GameDataCatalog.asset";
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(catalogPath);
+        Assert(catalog != null, "GameDataCatalog.asset 로드 실패");
+        Assert(PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var config),
+            "player physics globals(player_jump_height_tiles 등 4키) 로드 실패");
+
+        Assert(Mathf.Abs(config.JumpHeightTiles - 3.5f) < 0.01f,
+            $"player_jump_height_tiles 기대 3.5, 실제 {config.JumpHeightTiles}");
+        Assert(Mathf.Abs(config.Gravity - 32f) < 0.01f,
+            $"player_gravity 기대 32, 실제 {config.Gravity}");
+        Assert(Mathf.Abs(config.MaxFallSpeed - 12f) < 0.01f,
+            $"player_max_fall_speed 기대 12, 실제 {config.MaxFallSpeed}");
+        Assert(Mathf.Abs(config.JumpCutMultiplier - 0.5f) < 0.01f,
+            $"player_jump_cut 기대 0.5, 실제 {config.JumpCutMultiplier}");
+
+        var expectedV0 = Mathf.Sqrt(2f * config.Gravity * config.JumpHeightTiles);
+        Assert(Mathf.Abs(config.JumpVelocity - expectedV0) < 0.05f,
+            $"JumpVelocity 기대 {expectedV0}, 실제 {config.JumpVelocity}");
+
+        const float fixedDt = 0.02f;
+        var fullPeak = PlayerMovementPhysics.SimulatePeakJumpHeightTiles(config, fixedDt);
+        Assert(fullPeak >= 3.1f && fullPeak <= 3.9f,
+            $"풀 점프 최고 높이 기대 ~3.5타일, 실제 {fullPeak:F2}");
+
+        var shortPeak = PlayerMovementPhysics.SimulatePeakJumpHeightTiles(config, fixedDt, holdFrames: 3);
+        Assert(shortPeak < fullPeak * 0.65f,
+            $"가변 점프(짧게 누름)가 너무 높음: short={shortPeak:F2}, full={fullPeak:F2}");
+
+        var afterGravity = MainGamePlayerController.ApplyGravity(10f, config.Gravity, config.MaxFallSpeed, fixedDt);
+        var expectedGravity = PlayerMovementPhysics.ApplyGravity(10f, config.Gravity, config.MaxFallSpeed, fixedDt);
+        Assert(Mathf.Abs(afterGravity - expectedGravity) < 0.0001f,
+            "MainGamePlayerController.ApplyGravity 위임 불일치");
+
+        var worldConfig = WorldGenerationConfig.CreateDefault();
+        try
+        {
+            Assert(worldConfig.SpawnEntranceDepthTiles < config.JumpHeightTiles,
+                $"입구 깊이 {worldConfig.SpawnEntranceDepthTiles} >= 점프 {config.JumpHeightTiles} — 낙하 후 탈출 불가");
+        }
+        finally
+        {
+            Object.DestroyImmediate(worldConfig);
+        }
+
+        Debug.Log("[Nyangbingo] Dev A player jump physics test completed.");
+    }
+
+    /// <summary>지표에서 마우스가 공기 칸을 가리킬 때 발밑 전경 고체로 채굴 칸을 보정한다.</summary>
+    private static void TestMiningCellSurfaceFallback()
+    {
+        var tiles = new TileData[8, 8];
+        for (var x = 0; x < 8; x++)
+        for (var y = 0; y < 8; y++)
+            tiles[x, y] = TileData.CreateAir();
+
+        const int groundX = 5;
+        const int groundY = 5;
+        const int airY = 6;
+        tiles[groundX, groundY] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+        tiles[groundX + 1, groundY] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
+
+        var tileService = new TileService(tiles, renderer: null, catalog: null, seed: 42);
+        var playerOrigin = new Vector2(groundX + .5f, airY + .5f);
+        const float reach = 1.5f;
+
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
+                new Vector2(groundX + .2f, airY + .3f), Vector2.right, reach, out var surfaceCell) &&
+            surfaceCell.x == groundX && surfaceCell.y == groundY,
+            $"지표 공기 클릭 보정 실패 — 기대 ({groundX},{groundY}), 실제 {surfaceCell}");
+
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
+                new Vector2(groundX + .5f, groundY + .5f), Vector2.right, reach, out var directCell) &&
+            directCell.x == groundX && directCell.y == groundY,
+            "지표 고체 직접 클릭이 바뀌면 안 됨");
+
+        var undergroundOrigin = new Vector2(3.5f, 3.5f);
+        tiles[3, 3] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, undergroundOrigin,
+                new Vector2(3.6f, 3.4f), Vector2.down, reach, out var wallCell) &&
+            wallCell.x == 3 && wallCell.y == 3,
+            "지하 벽 직접 클릭이 바뀌면 안 됨");
+
+        Debug.Log("[Nyangbingo] Dev A mining cell surface fallback test completed.");
+    }
+
+    /// <summary>
     /// Pass 4b 연결 통로가 입구/스폰 열에서 지표 안전지대(crust / surface_y=20 밴드)까지
-    /// 수직 관통하지 않는지 검증. 공식 얕은 입구(CarveSpawnEntrance, 최대 6칸)만 허용.
+    /// 수직 관통하지 않는지 검증. 공식 얕은 입구(CarveSpawnEntrance, SpawnEntranceDepthTiles)만 허용.
     /// </summary>
     private static void AssertNoConnectivityShaftInSurfaceBand(WorldGenerationResult result, WorldGenerationConfig config)
     {
@@ -1572,12 +1670,15 @@ public static class NyangbingoDevARegressionTests
         foreach (var columnX in new[] { entranceX, spawnX })
         {
             var colSurfaceY = result.surfaceHeights[columnX];
-            var colOfficialBottom = Mathf.Max(config.BedrockThickness, colSurfaceY - 5);
+            var colOfficialBottom = config.GetSpawnEntranceOfficialBottom(colSurfaceY);
+            var colEntranceDepth = colSurfaceY - colOfficialBottom + 1;
+            Assert(colEntranceDepth <= config.SpawnEntranceDepthTiles,
+                $"seed {seed}: 열 {columnX} 공식 입구 깊이 {colEntranceDepth} > SpawnEntranceDepthTiles {config.SpawnEntranceDepthTiles}");
             var colBandFloor = Mathf.Min(
                 colSurfaceY - crust + 1,
                 Mathf.Max(config.BedrockThickness, result.height - 20));
 
-            // 지표 안전지대 안 공기는 공식 입구(최대 6칸) 구간만 허용.
+            // 지표 안전지대 안 공기는 공식 입구(SpawnEntranceDepthTiles) 구간만 허용.
             for (var y = colBandFloor; y <= colSurfaceY; y++)
             {
                 if (!result.tiles[columnX, y].IsAir) continue;

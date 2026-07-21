@@ -198,9 +198,7 @@ namespace Nyangbingo.World
             bossObject.transform.SetParent(transform, false);
             bossObject.transform.position = position;
             var health = bossObject.AddComponent<Health>();
-            var collider = bossObject.AddComponent<CircleCollider2D>();
-            collider.radius = .65f;
-            collider.isTrigger = true;
+            EnsureCombatHurtbox(bossObject, .65f);
             var visualObject = new GameObject("Visual");
             visualObject.transform.SetParent(bossObject.transform, false);
             var bossRenderer = visualObject.AddComponent<SpriteRenderer>();
@@ -528,9 +526,7 @@ namespace Nyangbingo.World
             yokaiObject.transform.SetParent(transform, false);
             yokaiObject.transform.position = position;
             var health = yokaiObject.AddComponent<Health>();
-            var collider = yokaiObject.AddComponent<CircleCollider2D>();
-            collider.radius = .42f;
-            collider.isTrigger = true;
+            EnsureCombatHurtbox(yokaiObject, .42f);
             var yokaiRenderer = yokaiObject.AddComponent<SpriteRenderer>();
             var yokaiArt = characterArtCatalog != null
                 ? characterArtCatalog.Find(definition.Id)
@@ -556,6 +552,28 @@ namespace Nyangbingo.World
             spawnedYokai.Add(new SpawnedYokai { health = health, brain = brain, raid = raid });
             runtimeServices.Register(brain);
             return brain;
+        }
+
+        /// <summary>
+        /// Dev B OverlapBox 계약용 허트박스.
+        /// 테스트와 같이 비트리거 CircleCollider만 둔다(정적 콜라이더는 쿼리에 잡힘).
+        /// Kinematic 플레이어와는 물리 밀림이 없고, Rigidbody 강제 추가 실패도 피한다.
+        /// </summary>
+        private static void EnsureCombatHurtbox(GameObject host, float radius)
+        {
+            if (host == null) return;
+
+            var collider = host.GetComponent<CircleCollider2D>();
+            if (collider == null) collider = host.AddComponent<CircleCollider2D>();
+            if (collider == null)
+            {
+                Debug.LogError($"[Nyangbingo] EnsureCombatHurtbox: CircleCollider2D add failed on '{host.name}'.");
+                return;
+            }
+
+            collider.radius = Mathf.Max(.05f, radius);
+            collider.isTrigger = false;
+            Physics2D.SyncTransforms();
         }
 
         private void HandleYokaiEnded(Health health)

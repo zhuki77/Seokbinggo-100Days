@@ -60,6 +60,8 @@ namespace Nyangbingo.World
 
         [Header("구조물 — Pass 4 : 반지하 알코브(스폰)")]
         [Range(0f, 1f)][SerializeField] private float spawnColumnRatio = 0.5f;
+        // v28: player_jump_height_tiles(3.5)보다 얕게 — 입구 낙하 후 점프 탈출 가능. 공기 칸 수(지표 포함).
+        [Min(1)][SerializeField] private int spawnEntranceDepthTiles = 3;
         [Min(3)][SerializeField] private int alcoveWidth = 5;
         [Min(3)][SerializeField] private int alcoveHeight = 4;
 
@@ -109,6 +111,12 @@ namespace Nyangbingo.World
         public OreVeinProfile[] OreVeins => oreVeins ?? Array.Empty<OreVeinProfile>();
 
         public float SpawnColumnRatio => spawnColumnRatio;
+        public int SpawnEntranceDepthTiles => Mathf.Max(1, spawnEntranceDepthTiles);
+
+        /// <summary>공식 스폰 입구/스폰 열 하단 y(포함). 깊이는 <see cref="SpawnEntranceDepthTiles"/>칸.</summary>
+        public int GetSpawnEntranceOfficialBottom(int surfaceY) =>
+            Mathf.Max(BedrockThickness, surfaceY - (SpawnEntranceDepthTiles - 1));
+
         public int AlcoveWidth => alcoveWidth;
         public int AlcoveHeight => alcoveHeight;
 

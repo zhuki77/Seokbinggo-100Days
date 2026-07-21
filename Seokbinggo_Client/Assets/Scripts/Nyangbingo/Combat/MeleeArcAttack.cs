@@ -115,9 +115,24 @@ namespace Nyangbingo.Combat
             var effectiveTargetLayers = targetLayers;
             if (effectiveTargetLayers.value == 0) effectiveTargetLayers = LayerMask.GetMask("Default");
             if (effectiveTargetLayers.value == 0) effectiveTargetLayers = Physics2D.AllLayers;
-            foreach (var hit in Physics2D.OverlapBoxAll(queryCenter, querySize, queryAngle, effectiveTargetLayers))
+
+            // 스폰 직후·transform 이동만 한 요괴 트리거가 물리 월드에 안 잡히는 경우를 막는다.
+            Physics2D.SyncTransforms();
+            var filter = new ContactFilter2D
             {
-                var toTarget = ((Vector2)hit.transform.position - center).normalized;
+                useLayerMask = true,
+                useTriggers = true,
+                useDepth = false
+            };
+            filter.SetLayerMask(effectiveTargetLayers);
+            var overlapHits = new List<Collider2D>(16);
+            Physics2D.OverlapBox(queryCenter, querySize, queryAngle, filter, overlapHits);
+
+            foreach (var hit in overlapHits)
+            {
+                if (hit == null) continue;
+                var toTarget = (Vector2)hit.transform.position - center;
+                if (toTarget.sqrMagnitude <= Mathf.Epsilon) continue;
                 if (Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
                 var health = hit.GetComponentInParent<Health>();
                 if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
@@ -130,7 +145,7 @@ namespace Nyangbingo.Combat
                         hit.GetComponentInParent<YokaiBrain>()?.ApplyFrostSlow(
                             frostSlowFraction, frostSlowDuration);
                 }
-                health.TryApplyKnockback(toTarget * activeKnockback);
+                health.TryApplyKnockback(toTarget.normalized * activeKnockback);
                 if (combatProfile != null && !combatProfile.MultiTarget) break;
             }
             LastHitCount = damagedTargets.Count;
