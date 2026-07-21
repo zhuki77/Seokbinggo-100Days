@@ -55,6 +55,7 @@ namespace Nyangbingo.UI
         public GameShellScreen Screen { get; private set; } = GameShellScreen.Title;
         public GameShellConfirmation PendingConfirmation { get; private set; }
         public int PendingDemoDay => pendingDemoDay;
+        public int ActiveSaveSlot { get; private set; } = AutoSaveSlot;
         public TitleShellState Title { get; } = new TitleShellState();
         public DemoResultState Result { get; private set; }
         public bool CanShowFullscreenToggle => !isMobile;
@@ -117,9 +118,13 @@ namespace Nyangbingo.UI
             Title.DaysUntilBaegilHeat = Title.CanContinue ? Mathf.Max(0, 101 - latest.day) : 100;
         }
 
+        public static string FormatTitleCountdown(int daysUntilBaegilHeat) =>
+            $"D-{Mathf.Max(0, daysUntilBaegilHeat)}";
+
         public bool TryContinue()
         {
             if (saveManager == null || !saveManager.TryLoadLatest(out var slot, out var loaded)) return false;
+            ActiveSaveSlot = slot;
             activeSave = loaded;
             ShowGameplay();
             ContinueRequested?.Invoke(slot, loaded);
@@ -212,6 +217,7 @@ namespace Nyangbingo.UI
                         ShowTitle();
                         return false;
                     }
+                    ActiveSaveSlot = AutoSaveSlot;
                     activeSave = demo;
                     ShowGameplay();
                     DemoSaveRequested?.Invoke(demo);
@@ -283,11 +289,16 @@ namespace Nyangbingo.UI
             };
         }
 
-        public static bool ShouldEndDemo(int currentDay, int mvpDayLimit, string bossId, bool defeated) =>
-            defeated && currentDay == mvpDayLimit && bossId == "gangcheol_boss";
+        /// <summary>
+        /// v14.1/v27 정본: 데모는 30일차 강철이의 격퇴 여부가 아니라 30일차 밤이 끝난 새벽에 종료한다.
+        /// DayNightService.Dawn은 날짜를 먼저 증가시킨 뒤 발행되므로 새 날짜가 MVP 제한일+1인지 검사한다.
+        /// </summary>
+        public static bool ShouldEndDemoAtDawn(int newDay, int mvpDayLimit) =>
+            mvpDayLimit > 0 && newDay == mvpDayLimit + 1;
 
         private void BeginNewGame()
         {
+            ActiveSaveSlot = AutoSaveSlot;
             activeSave = new SaveGame { day = 1 };
             ShowGameplay();
             NewGameRequested?.Invoke(AutoSaveSlot);

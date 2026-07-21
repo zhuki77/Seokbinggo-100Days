@@ -17,6 +17,8 @@ namespace Nyangbingo.UI
     [DefaultExecutionOrder(-50)]
     public sealed class MainGameTilePaletteController : MonoBehaviour
     {
+        public const bool ProductHudNarrativeTextEnabled = false;
+
         private sealed class SlotView
         {
             public string ItemId;
@@ -511,10 +513,10 @@ namespace Nyangbingo.UI
         {
             if (rangeToggleStatusText == null) return;
             rangeToggleStatusText.text = !rangeOverlaysVisible
-                ? "R · 반경 표시 OFF"
+                ? "R  ·  ○"
                 : visibleRangeCount > 0
-                    ? $"R · 반경 표시 ON · 범위 {visibleRangeCount}개"
-                    : "R · 반경 표시 ON · 표시할 설치물 없음";
+                    ? $"R  ·  ●  ·  {visibleRangeCount}"
+                    : "R  ·  ●  ·  0";
             rangeToggleStatusText.gameObject.SetActive(true);
             rangeToggleStatusUntil = Time.unscaledTime + 2f;
         }

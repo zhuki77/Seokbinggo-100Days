@@ -35,6 +35,7 @@ namespace Nyangbingo.World
         public WorldSessionController Session => session;
         public TileService TileService => session?.TileService;
         public SealSystem SealSystem => session?.SealSystem;
+        public TilemapRenderer WorldRenderer => tilemapRenderer;
         public DayNightService TimeService => dayNightService;
         public GameDataCatalog GameDataCatalog => gameDataCatalog;
         public IGameSecondsTickDriver TickDriver => tickDriver;

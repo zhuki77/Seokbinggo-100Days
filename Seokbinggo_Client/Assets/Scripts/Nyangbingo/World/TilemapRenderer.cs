@@ -71,14 +71,68 @@ namespace Nyangbingo.World
         public Tilemap Foreground => foregroundTilemap;
         public Tilemap Background => backgroundTilemap;
 
+        /// <summary>
+        /// Gameplay/world-visual coordinate contract. Callers must use the rendered foreground
+        /// Tilemap instead of duplicating FloorToInt and x+0.5 assumptions. This keeps mining,
+        /// placement, seal diagnostics and Tilemap art aligned if the Grid origin, scale or cell
+        /// anchor changes later.
+        /// </summary>
+        public Vector3Int WorldToCell(Vector3 worldPosition) => foregroundTilemap != null
+            ? foregroundTilemap.WorldToCell(worldPosition)
+            : Vector3Int.FloorToInt(worldPosition);
+
+        public Vector3 GetCellCenterWorld(Vector3Int cell) => foregroundTilemap != null
+            ? foregroundTilemap.GetCellCenterWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
+
+        public bool HasForegroundTile(Vector3Int cell) => foregroundTilemap != null &&
+                                                          foregroundTilemap.HasTile(cell);
+
+        public bool HasForegroundCollision(Vector3Int cell)
+        {
+            if (foregroundComposite == null && foregroundTilemap != null)
+                foregroundComposite = foregroundTilemap.GetComponent<CompositeCollider2D>();
+            return foregroundComposite != null && foregroundComposite.enabled &&
+                   foregroundComposite.OverlapPoint(GetCellCenterWorld(cell));
+        }
+
+        public void GetCellWorldCorners(Vector3Int cell, Vector3[] corners, float inset = 0f)
+        {
+            if (corners == null || corners.Length < 4)
+                throw new ArgumentException("Four corner slots are required.", nameof(corners));
+
+            if (foregroundTilemap != null)
+            {
+                corners[0] = foregroundTilemap.CellToWorld(cell);
+                corners[1] = foregroundTilemap.CellToWorld(cell + Vector3Int.right);
+                corners[2] = foregroundTilemap.CellToWorld(cell + Vector3Int.right + Vector3Int.up);
+                corners[3] = foregroundTilemap.CellToWorld(cell + Vector3Int.up);
+            }
+            else
+            {
+                corners[0] = new Vector3(cell.x, cell.y, cell.z);
+                corners[1] = new Vector3(cell.x + 1f, cell.y, cell.z);
+                corners[2] = new Vector3(cell.x + 1f, cell.y + 1f, cell.z);
+                corners[3] = new Vector3(cell.x, cell.y + 1f, cell.z);
+            }
+
+            if (inset <= 0f) return;
+            var center = GetCellCenterWorld(cell);
+            var factor = Mathf.Clamp01(1f - inset * 2f);
+            for (var index = 0; index < 4; index++)
+                corners[index] = Vector3.Lerp(center, corners[index], factor);
+        }
+
         // 초기값을 빈 딕셔너리로 잡아둔다 — RebuildLookupTable()이 "성급한 0개 갱신"을 막느라 조기
         // 반환하는 경로를 타더라도 _lookup 자체는 항상 non-null이라, ResolveTile/TryGetTileBase가
         // NullReferenceException 없이 안전하게 동작한다.
         private Dictionary<string, TileBase> _lookup = new Dictionary<string, TileBase>();
         private readonly Dictionary<int, TileBase> _wallpaperTileByRow = new Dictionary<int, TileBase>();
+        private readonly Dictionary<string, Tile> _runtimeTiles = new Dictionary<string, Tile>(StringComparer.Ordinal);
         private readonly HashSet<string> _resourceLoadWarnings = new HashSet<string>();
 
         private CompositeCollider2D foregroundComposite;
+        private TilemapCollider2D foregroundTilemapCollider;
 
         private void Awake()
         {
@@ -254,9 +308,10 @@ namespace Nyangbingo.World
             if (foregroundTilemap == null) return;
 
             var fgGo = foregroundTilemap.gameObject;
-            var tilemapCollider = fgGo.GetComponent<TilemapCollider2D>();
-            if (tilemapCollider == null) tilemapCollider = fgGo.AddComponent<TilemapCollider2D>();
-            tilemapCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
+            foregroundTilemapCollider = fgGo.GetComponent<TilemapCollider2D>();
+            if (foregroundTilemapCollider == null)
+                foregroundTilemapCollider = fgGo.AddComponent<TilemapCollider2D>();
+            foregroundTilemapCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
 
             var body = fgGo.GetComponent<Rigidbody2D>();
             if (body == null) body = fgGo.AddComponent<Rigidbody2D>();
@@ -283,12 +338,22 @@ namespace Nyangbingo.World
         public void NotifyForegroundCollisionDirty()
         {
             if (foregroundTilemap == null) return;
+            if (foregroundTilemapCollider == null)
+                foregroundTilemapCollider = foregroundTilemap.GetComponent<TilemapCollider2D>();
             if (foregroundComposite == null) foregroundComposite = foregroundTilemap.GetComponent<CompositeCollider2D>();
-            // TilemapCollider2D(compositeOperation=Merge)는 SetTile/RefreshTile 후 Composite가 자동 갱신된다.
-            // 대량 변경(RenderWorld) 뒤에는 컴포넌트를 한번 껐다 켜 합성 메시를 확정한다.
-            if (foregroundComposite == null) return;
-            foregroundComposite.enabled = false;
-            foregroundComposite.enabled = true;
+            // SetTile is visual/data-immediate, but TilemapCollider2D otherwise batches its shape
+            // changes until LateUpdate. Mining and movement happen in the same frame, so explicitly
+            // process the Tilemap change before regenerating the Composite geometry. Toggling only
+            // the Composite component rebuilds from stale TilemapCollider shapes and leaves an
+            // invisible solid block behind.
+            // UnityEngine.Object uses a custom null state for destroyed or missing components.
+            // The C# null-conditional operator bypasses that check and can still invoke a native
+            // property on a missing TilemapCollider2D, so use Unity's explicit null comparison.
+            if (foregroundTilemapCollider != null && foregroundTilemapCollider.hasTilemapChanges)
+                foregroundTilemapCollider.ProcessTilemapChanges();
+            if (foregroundComposite != null)
+                foregroundComposite.GenerateGeometry();
+            Physics2D.SyncTransforms();
         }
 
         private static void DestroyComponentSafe(Component component)
@@ -371,6 +436,39 @@ namespace Nyangbingo.World
 
             tile = null;
             return false;
+        }
+
+        /// <summary>
+        /// Registers delivered building art for product boundary tiles without requiring a duplicate Tile asset.
+        /// The runtime Tile uses grid collision and participates in the same foreground Tilemap as terrain.
+        /// </summary>
+        public void RegisterRuntimeForegroundTile(string elementType, Sprite sprite)
+        {
+            if (string.IsNullOrWhiteSpace(elementType) || sprite == null) return;
+            if (_runtimeTiles.TryGetValue(elementType, out var existing) && existing != null)
+            {
+                existing.sprite = sprite;
+                _lookup[elementType] = existing;
+                return;
+            }
+
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            tile.name = $"Runtime_{elementType}";
+            tile.sprite = sprite;
+            tile.colliderType = Tile.ColliderType.Grid;
+            _runtimeTiles[elementType] = tile;
+            _lookup[elementType] = tile;
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var tile in _runtimeTiles.Values)
+            {
+                if (tile == null) continue;
+                if (Application.isPlaying) Destroy(tile);
+                else DestroyImmediate(tile);
+            }
+            _runtimeTiles.Clear();
         }
 
         /// <summary>벽지는 전용 아트 없이 해당 깊이의 t_bg_dirt/stone/deep를 재사용한다.</summary>

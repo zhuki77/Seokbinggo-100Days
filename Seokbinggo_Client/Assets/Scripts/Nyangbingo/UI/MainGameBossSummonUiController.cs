@@ -24,6 +24,24 @@ namespace Nyangbingo.UI
             "frostclaw_gauntlet", "iron_forge_core", "hapjukseon", "copper_ingot", "icesteel_ingot",
             "iron_ingot", "water_jar"
         };
+
+        private const string DebugShortcutHelpText =
+            "보스·소환\n" +
+            "B  보스 선택  ·  C  선택 보스 소환 아이템 제작\n" +
+            "F6  소환 재료 지급  ·  Shift+F6  제작대로 이동\n" +
+            "Ctrl+F6  신규 아이템 아트 검증 지급\n" +
+            "F7  소환 아이템 지급  ·  Shift+F7  깊은 제단 이동\n" +
+            "F8  도깨비 대장  ·  Shift+F8  강철이\n" +
+            "Ctrl+F8  어미 불가사리  ·  Alt+F8  이무기\n" +
+            "J  일반 요괴 정리  ·  K  활성 보스 처치\n\n" +
+            "제작·설치·연출\n" +
+            "F4  선택 항목 재료 지급  ·  Shift+F4  필요 제작대로 이동\n" +
+            "F10  냥잠 연출  ·  Shift+F10  채굴 파괴 연출\n" +
+            "Ctrl+F10  채굴 치명타 연출\n" +
+            "F11  등탑 지급  ·  Shift+F11  등탑 재료 지급\n" +
+            "Ctrl+F11  등탑 연료 지급\n" +
+            "F12  어둑시니 소환  ·  Shift+F12  어둑시니 테스트 키트\n" +
+            "Ctrl+F12  차열 지붕 테스트 키트";
 #endif
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
@@ -40,6 +58,37 @@ namespace Nyangbingo.UI
         private string transientMessage;
         private float transientMessageUntil;
         private bool initialized;
+        private GameShellController gameShell;
+#if UNITY_EDITOR
+        private GameObject debugShortcutHelpRoot;
+        private float debugShortcutHelpPreviousTimeScale = 1f;
+        private static bool debugShortcutHelpOpen;
+        private static int debugShortcutHelpEscapeConsumedFrame = -1;
+        private static MainGameBossSummonUiController debugShortcutHelpInstance;
+#endif
+
+        public const KeyCode DebugShortcutHelpKey = KeyCode.F1;
+        public static readonly Vector2 DebugShortcutHelpPanelSize = new Vector2(230f, 190f);
+        public const int DebugShortcutHelpBodyFontSize = 6;
+#if UNITY_EDITOR
+        public static bool IsDebugShortcutHelpOpen => debugShortcutHelpOpen;
+#else
+        public static bool IsDebugShortcutHelpOpen => false;
+#endif
+
+        public static bool ConsumeEscapeIfDebugHelpOpen()
+        {
+#if UNITY_EDITOR
+            if (debugShortcutHelpEscapeConsumedFrame == Time.frameCount) return true;
+            if (!debugShortcutHelpOpen || !Input.GetKeyDown(KeyCode.Escape) ||
+                debugShortcutHelpInstance == null) return false;
+            debugShortcutHelpEscapeConsumedFrame = Time.frameCount;
+            debugShortcutHelpInstance.SetDebugShortcutHelpOpen(false);
+            return true;
+#else
+            return false;
+#endif
+        }
 
         public BossDefinition SelectedBoss => gameDataCatalog != null
             ? gameDataCatalog.FindBoss(BossIds[selectedIndex])
@@ -47,6 +96,7 @@ namespace Nyangbingo.UI
         public CraftingStation NearbyCraftingStation => initialized
             ? ResolveNearbyCraftingStation()
             : CraftingStation.None;
+        public bool IsNight => bootstrap?.TimeService?.IsNight == true;
         public bool HasSceneBindings => gameDataCatalog != null && bootstrap != null && runtimeServices != null &&
                                         environmentState != null && encounterCoordinator != null &&
                                         playerTarget != null && statusText != null;
@@ -66,6 +116,7 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
+            gameShell = FindAnyObjectByType<GameShellController>();
             if (environmentState == null) environmentState = FindAnyObjectByType<MainGameEnvironmentState>();
             if (gameDataCatalog == null || bootstrap == null || runtimeServices == null ||
                 environmentState == null || encounterCoordinator == null || playerTarget == null || statusText == null ||
@@ -81,6 +132,10 @@ namespace Nyangbingo.UI
                 encounterCoordinator.BossManager.BossStarted += HandleBossStateChanged;
                 encounterCoordinator.BossManager.BossEnded += HandleBossStateChanged;
             }
+#if UNITY_EDITOR
+            debugShortcutHelpInstance = this;
+            BuildDebugShortcutHelp();
+#endif
             initialized = true;
             RefreshStatus();
             Debug.Log("[Nyangbingo] MainGame boss summon item, placed crafting station, nighttime, and deep altar interaction ready.");
@@ -88,8 +143,20 @@ namespace Nyangbingo.UI
 
         private void Update()
         {
-            if (!initialized || Time.timeScale <= 0f) return;
+            if (!initialized) return;
+#if UNITY_EDITOR
+            if (ConsumeEscapeIfDebugHelpOpen()) return;
+            if (Input.GetKeyDown(DebugShortcutHelpKey))
+            {
+                if (debugShortcutHelpOpen || gameShell?.Screen == GameShellScreen.Gameplay)
+                    SetDebugShortcutHelpOpen(!debugShortcutHelpOpen);
+                return;
+            }
+            if (debugShortcutHelpOpen) return;
+#endif
+            if (Time.timeScale <= 0f) return;
             if (MainGameCraftingUiController.BlocksGameplayInput) return;
+#if UNITY_EDITOR
             if (Input.GetKeyDown(KeyCode.B))
             {
                 selectedIndex = (selectedIndex + 1) % BossIds.Length;
@@ -97,8 +164,6 @@ namespace Nyangbingo.UI
                 RefreshStatus();
             }
             if (Input.GetKeyDown(KeyCode.C)) TryCraftSelectedSummonItem();
-            if (Input.GetKeyDown(KeyCode.G)) TrySummonSelectedBoss();
-#if UNITY_EDITOR
             if (Input.GetKeyDown(KeyCode.F6))
             {
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
@@ -138,6 +203,74 @@ namespace Nyangbingo.UI
 
         public void ShowExternalMessage(string message) => ShowMessage(message);
 
+        public BossDefinition FindBossForSummonItem(string itemId)
+        {
+            if (gameDataCatalog == null || string.IsNullOrWhiteSpace(itemId)) return null;
+            var bosses = gameDataCatalog.Bosses;
+            for (var index = 0; index < bosses.Count; index++)
+            {
+                var definition = bosses[index];
+                if (definition?.SummonItem != null && definition.SummonItem.Id == itemId) return definition;
+            }
+            return null;
+        }
+
+        public bool CanUseSummonItem(string itemId, out BossDefinition definition, out string reason)
+        {
+            definition = FindBossForSummonItem(itemId);
+            if (definition == null)
+            {
+                reason = "소환 아이템이 아닙니다.";
+                return false;
+            }
+            if (runtimeServices?.NapService?.IsNapping == true)
+            {
+                reason = "냥잠 중에는 소환할 수 없습니다.";
+                return false;
+            }
+            if (encounterCoordinator?.BossManager?.IsBossActive == true)
+            {
+                reason = "이미 보스전이 진행 중입니다.";
+                return false;
+            }
+            if (!IsNight)
+            {
+                reason = "밤에만 소환 가능";
+                return false;
+            }
+            if (runtimeServices?.PlayerInventory == null ||
+                !runtimeServices.PlayerInventory.Has(definition.SummonItem.Id, 1))
+            {
+                reason = $"{definition.SummonItem.DisplayName}이 필요합니다.";
+                return false;
+            }
+            if (!IsAtDeepAltar(definition))
+            {
+                reason = "깊은 얼음 제단 근처에서만 소환 가능";
+                return false;
+            }
+            reason = string.Empty;
+            return true;
+        }
+
+        public bool TryUseSummonItem(string itemId)
+        {
+            if (!CanUseSummonItem(itemId, out var definition, out var reason))
+            {
+                ShowMessage(reason);
+                return false;
+            }
+            if (encounterCoordinator.TryStartPlayerSummonedBoss(definition, this))
+            {
+                ShowMessage($"{definition.DisplayName} 소환 성공. 소환 아이템 1개를 소비했습니다.");
+                Debug.Log($"[Nyangbingo] Inventory summon confirmed: {definition.Id}, " +
+                          $"item={definition.SummonItem.Id}.");
+                return true;
+            }
+            ShowMessage($"{definition.DisplayName} 소환에 실패했습니다. 아이템은 보존됩니다.");
+            return false;
+        }
+
         private void TryCraftSelectedSummonItem()
         {
             if (runtimeServices?.NapService?.IsNapping == true)
@@ -162,28 +295,6 @@ namespace Nyangbingo.UI
                           $"station={nearbyStation}.");
             }
             else ShowMessage("재료 또는 인벤토리 공간이 부족합니다.");
-        }
-
-        private void TrySummonSelectedBoss()
-        {
-            var definition = SelectedBoss;
-            if (definition == null) { ShowMessage("선택한 보스 데이터가 없습니다."); return; }
-            if (encounterCoordinator.BossManager?.IsBossActive == true)
-            { ShowMessage("이미 보스전이 진행 중입니다."); return; }
-            if (bootstrap.TimeService?.IsNight != true)
-            { ShowMessage("보스는 밤에만 소환할 수 있습니다."); return; }
-            if (definition.SummonItem == null ||
-                !runtimeServices.PlayerInventory.Has(definition.SummonItem.Id, 1))
-            { ShowMessage($"소환 아이템이 필요합니다: {definition.SummonItem?.DisplayName ?? definition.Id}"); return; }
-            if (!IsAtDeepAltar(definition))
-            { ShowMessage("이무기는 깊은 얼음 제단 근처에서만 소환할 수 있습니다."); return; }
-
-            if (encounterCoordinator.TryStartPlayerSummonedBoss(definition, this))
-            {
-                ShowMessage($"{definition.DisplayName} 소환 성공. 소환 아이템 1개를 소비했습니다.");
-                Debug.Log($"[Nyangbingo] Player summon started: {definition.Id}, item={definition.SummonItem.Id}.");
-            }
-            else ShowMessage($"{definition.DisplayName} 소환에 실패했습니다. 아이템은 보존됩니다.");
         }
 
 #if UNITY_EDITOR
@@ -335,8 +446,9 @@ namespace Nyangbingo.UI
 
         private void ShowMessage(string value)
         {
-            transientMessage = value;
-            transientMessageUntil = Time.unscaledTime + 3f;
+            if (!string.IsNullOrEmpty(value)) Debug.Log($"[Nyangbingo] {value}");
+            transientMessage = string.Empty;
+            transientMessageUntil = 0f;
             RefreshStatus();
         }
 
@@ -349,38 +461,111 @@ namespace Nyangbingo.UI
                 return;
             }
             if (!string.IsNullOrEmpty(transientMessage)) { statusText.text = transientMessage; return; }
-            var definition = SelectedBoss;
-            if (definition?.SummonItem == null) { statusText.text = "B 보스 선택  ·  소환 데이터 없음"; return; }
-            var count = runtimeServices?.PlayerInventory?.Count(definition.SummonItem.Id) ?? 0;
-            var altar = definition.RequiresDeepAltar ? "  ·  깊은 제단 필요" : string.Empty;
-            var materials = BuildMaterialStatus(definition);
-            statusText.text = $"B 선택  ·  C 제작  ·  G 소환  ·  {definition.DisplayName}  ·  " +
-                              $"{definition.SummonItem.DisplayName} x{count}  ·  {materials}{altar}";
 #if UNITY_EDITOR
-            statusText.text += "  ·  F6 재료 / Shift+F6 제작대  ·  F7 아이템 / Shift+F7 제단  ·  J 요괴 정리";
+            statusText.text = string.Empty;
+#else
+            statusText.text = string.Empty;
 #endif
         }
+
+#if UNITY_EDITOR
+        private void BuildDebugShortcutHelp()
+        {
+            var canvas = statusText != null ? statusText.GetComponentInParent<Canvas>() : null;
+            if (canvas == null) return;
+
+            debugShortcutHelpRoot = new GameObject("DebugShortcutHelp", typeof(RectTransform), typeof(Image));
+            debugShortcutHelpRoot.transform.SetParent(canvas.transform, false);
+            var rootRect = (RectTransform)debugShortcutHelpRoot.transform;
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = rootRect.offsetMax = Vector2.zero;
+            var backdrop = debugShortcutHelpRoot.GetComponent<Image>();
+            backdrop.color = new Color(.01f, .015f, .022f, .94f);
+            backdrop.raycastTarget = true;
+
+            var panel = CreateDebugHelpObject("Panel", debugShortcutHelpRoot.transform,
+                DebugShortcutHelpPanelSize, Vector2.zero);
+            var panelImage = panel.AddComponent<Image>();
+            panelImage.color = new Color(.055f, .075f, .105f, 1f);
+            panelImage.raycastTarget = true;
+
+            var title = CreateDebugHelpText(panel.transform, "Title", 8, TextAnchor.MiddleCenter,
+                new Vector2(210f, 14f), new Vector2(0f, 80.5f));
+            title.text = "MainGame 테스트 단축키";
+
+            var body = CreateDebugHelpText(panel.transform, "Shortcuts", DebugShortcutHelpBodyFontSize,
+                TextAnchor.UpperLeft,
+                new Vector2(205f, 155f), new Vector2(0f, -.5f));
+            body.text = DebugShortcutHelpText;
+            body.lineSpacing = .92f;
+            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            body.verticalOverflow = VerticalWrapMode.Truncate;
+
+            var footer = CreateDebugHelpText(panel.transform, "Footer", 6, TextAnchor.MiddleCenter,
+                new Vector2(210f, 10f), new Vector2(0f, -86.5f));
+            footer.text = "F1 · 닫기";
+
+            debugShortcutHelpRoot.SetActive(false);
+            debugShortcutHelpOpen = false;
+        }
+
+        private void SetDebugShortcutHelpOpen(bool value)
+        {
+            if (debugShortcutHelpRoot == null) return;
+            if (value)
+            {
+                debugShortcutHelpPreviousTimeScale = Time.timeScale;
+                Time.timeScale = 0f;
+                debugShortcutHelpRoot.transform.SetAsLastSibling();
+            }
+            else
+            {
+                Time.timeScale = debugShortcutHelpPreviousTimeScale;
+            }
+            debugShortcutHelpOpen = value;
+            debugShortcutHelpRoot.SetActive(value);
+        }
+
+        private static GameObject CreateDebugHelpObject(string name, Transform parent, Vector2 size,
+            Vector2 position)
+        {
+            var result = new GameObject(name, typeof(RectTransform));
+            result.transform.SetParent(parent, false);
+            var rect = (RectTransform)result.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = position;
+            return result;
+        }
+
+        private static Text CreateDebugHelpText(Transform parent, string name, int fontSize, TextAnchor anchor,
+            Vector2 size, Vector2 position)
+        {
+            var text = CreateDebugHelpObject(name, parent, size, position).AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = fontSize;
+            text.alignment = anchor;
+            text.color = new Color(.93f, .96f, 1f);
+            text.raycastTarget = false;
+            return text;
+        }
+#endif
 
         private void HandleBossStateChanged(BossDefinition _) => RefreshStatus();
 
         private void HandleBossStateChanged(BossDefinition _, bool __) => RefreshStatus();
 
-        private string BuildMaterialStatus(BossDefinition definition)
-        {
-            var parts = new List<string>();
-            var materials = definition.SummonMaterials;
-            for (var index = 0; index < materials.Length; index++)
-            {
-                var material = materials[index];
-                if (material.item == null) continue;
-                var owned = runtimeServices?.PlayerInventory?.Count(material.item.Id) ?? 0;
-                parts.Add($"{material.item.DisplayName} {owned}/{material.amount}");
-            }
-            return $"{StationLabel(definition.SummonStation)} [{string.Join(", ", parts)}]";
-        }
-
         private void OnDestroy()
         {
+#if UNITY_EDITOR
+            if (debugShortcutHelpOpen)
+            {
+                Time.timeScale = debugShortcutHelpPreviousTimeScale;
+                debugShortcutHelpOpen = false;
+            }
+            if (debugShortcutHelpInstance == this) debugShortcutHelpInstance = null;
+#endif
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed -= RefreshStatus;
             if (encounterCoordinator?.BossManager != null)

@@ -242,7 +242,8 @@ namespace Nyangbingo.World
                 TickDeathSequence(Time.deltaTime);
                 return;
             }
-            if (Nyangbingo.UI.MainGameCraftingUiController.BlocksGameplayInput)
+            if (Nyangbingo.UI.MainGameCraftingUiController.BlocksGameplayInput ||
+                Nyangbingo.UI.MainGameBossSummonUiController.IsDebugShortcutHelpOpen)
             {
                 movementInput = Vector2.zero;
                 CancelMining();
@@ -312,7 +313,8 @@ namespace Nyangbingo.World
             }
             var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
             var buildingPlacementActive = MainGameTurretRuntime.BlocksCombatInput ||
-                                          MainGameTilePaletteController.BlocksGameplayInput;
+                                          MainGameTilePaletteController.BlocksGameplayInput ||
+                                          MainGameHudController.BlocksWorldPrimaryInput;
             var primaryHeld = Input.GetMouseButton(0);
             if (!buildingPlacementActive && !pointerOverUi && primaryHeld)
             {

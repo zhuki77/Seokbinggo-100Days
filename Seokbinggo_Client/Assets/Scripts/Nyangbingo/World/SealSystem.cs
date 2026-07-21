@@ -43,6 +43,7 @@ namespace Nyangbingo.World
         {
             public bool isSealed;
             public float sealPercent;
+            public Vector3Int? representativeLeakCell;
 
             /// <summary>처방 C의 region_cells — 이 리전의 내부 공기 칸 수(=interiorAirCells.Count, 조회 편의용 캐시).</summary>
             public int regionCellCount;
@@ -335,6 +336,20 @@ namespace Nyangbingo.World
             return true;
         }
 
+        /// <summary>
+        /// Returns one actionable leak cell in the active seal-core window.
+        /// The diagnostic HUD consumes this read-only result instead of duplicating the flood-fill rules.
+        /// </summary>
+        public bool TryGetCoreLeakCell(out Vector3Int leakCell)
+        {
+            leakCell = default;
+            if (!sealCoreCell.HasValue) return false;
+            var region = GetOrComputeCoreRegion();
+            if (region.leakFaceCount <= 0 || !region.representativeLeakCell.HasValue) return false;
+            leakCell = region.representativeLeakCell.Value;
+            return true;
+        }
+
         // ------------------------------------------------------------------
         // 디버그 시각화 보조 — 실제 그리기는 MonoBehaviour(SealSystemDebugView)가 담당하고,
         // 여기서는 순수 데이터(칸 목록)만 노출한다.
@@ -477,6 +492,7 @@ namespace Nyangbingo.World
 
             var interior = new HashSet<Vector3Int> { core };
             var boundaryWalls = new HashSet<Vector3Int>();
+            var parents = new Dictionary<Vector3Int, Vector3Int>();
             var queue = new Queue<Vector3Int>();
             queue.Enqueue(core);
 
@@ -492,6 +508,7 @@ namespace Nyangbingo.World
                     if (!tileService.InBounds(neighbor))
                     {
                         leakFaceCount++; // 창 안이라도 맵 자체가 끝나면 새는 면이다.
+                        region.representativeLeakCell ??= ResolveActionableLeakCell(core, current, parents);
                         continue;
                     }
 
@@ -504,10 +521,12 @@ namespace Nyangbingo.World
                         if (outsideWindow)
                         {
                             leakFaceCount++; // 요구사항 5: 창 밖으로 이어지는 공기 면 = leak_faces.
+                            region.representativeLeakCell ??= ResolveActionableLeakCell(core, current, parents);
                             continue;
                         }
 
                         interior.Add(neighbor);
+                        parents[neighbor] = current;
                         queue.Enqueue(neighbor);
                         // interior는 [minX,maxX]×[minY,maxY] 안에서만 늘어나므로 WindowCellCap을 구조적으로
                         // 절대 넘지 않는다(요구사항 7 — 별도 카운터 없이 창 경계 체크 자체가 탐색 한도다).
@@ -517,7 +536,11 @@ namespace Nyangbingo.World
                         boundaryWalls.Add(neighbor);
                         // 화이트리스트: 자연 지형 + (있다면) B파트 설치물 레지스트리가 인정하는 구조물.
                         // 창 경계 위에 있든 없든 동일한 규칙 — 인정되지 않으면 그 면은 누출면이다.
-                        if (!IsRecognizedWall(neighborTile, neighbor)) leakFaceCount++;
+                        if (!IsRecognizedWall(neighborTile, neighbor))
+                        {
+                            leakFaceCount++;
+                            region.representativeLeakCell ??= neighbor;
+                        }
                     }
                 }
             }
@@ -532,6 +555,50 @@ namespace Nyangbingo.World
             region.isSealed = leakFaceCount == 0 && boundaryWalls.Count > 0;
 
             return region;
+        }
+
+        private Vector3Int ResolveActionableLeakCell(Vector3Int core, Vector3Int windowLeakCell,
+            IReadOnlyDictionary<Vector3Int, Vector3Int> parents)
+        {
+            // The formal leak face is at the edge of the 57x25 diagnostic window. Highlighting that
+            // distant edge is mathematically correct but not useful to the player. Follow the BFS path
+            // back to the core and select an air cell pinched by recognized foreground walls. That is
+            // the visible hole the player can close. Background art/depth transitions are deliberately
+            // ignored: they are visual layers and must never move the gameplay leak location.
+            var reversePath = new List<Vector3Int> { windowLeakCell };
+            var cursor = windowLeakCell;
+            while (cursor != core && parents.TryGetValue(cursor, out var parent))
+            {
+                cursor = parent;
+                reversePath.Add(cursor);
+            }
+            reversePath.Reverse();
+
+            var bestCell = windowLeakCell;
+            var bestScore = 0;
+            for (var index = 1; index < reversePath.Count; index++)
+            {
+                var cell = reversePath[index];
+                var left = IsRecognizedBoundaryCell(cell + Vector3Int.left);
+                var right = IsRecognizedBoundaryCell(cell + Vector3Int.right);
+                var down = IsRecognizedBoundaryCell(cell + Vector3Int.down);
+                var up = IsRecognizedBoundaryCell(cell + Vector3Int.up);
+                var score = (left ? 1 : 0) + (right ? 1 : 0) + (down ? 1 : 0) + (up ? 1 : 0);
+                if (left && right) score += 4;
+                if (down && up) score += 4;
+                if (score <= bestScore) continue;
+                bestScore = score;
+                bestCell = cell;
+            }
+
+            return bestScore >= 2 ? bestCell : windowLeakCell;
+        }
+
+        private bool IsRecognizedBoundaryCell(Vector3Int cell)
+        {
+            if (!tileService.InBounds(cell)) return false;
+            var tile = tileService.GetTile(cell);
+            return !tile.IsAir && IsRecognizedWall(tile, cell);
         }
 
         private SealRegion GetOrComputeRegion(Vector3Int cell)

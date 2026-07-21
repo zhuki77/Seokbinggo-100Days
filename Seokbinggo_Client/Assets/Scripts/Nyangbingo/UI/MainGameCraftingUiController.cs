@@ -48,6 +48,10 @@ namespace Nyangbingo.UI
         private ScrollRect craftingListScrollRect;
         private Button[] craftingListButtons = Array.Empty<Button>();
         private Text[] craftingListLabels = Array.Empty<Text>();
+        private Image[] craftingListOutputIcons = Array.Empty<Image>();
+        private Text[] craftingListOutputCounts = Array.Empty<Text>();
+        private Image[][] craftingListIngredientIcons = Array.Empty<Image[]>();
+        private Text[][] craftingListIngredientCounts = Array.Empty<Text[]>();
         private GameObject codexGridRoot;
         private GameObject storageModeRoot;
         private readonly Text[] storagePlayerLabels = new Text[Nyangbingo.Inventory.Inventory.SlotCount];
@@ -82,6 +86,10 @@ namespace Nyangbingo.UI
         private Button primaryButton;
         private Button collectButton;
         private Button debugCompleteButton;
+        private GameObject summonConfirmationRoot;
+        private Text summonConfirmationText;
+        private Text inventoryHintText;
+        private string pendingSummonItemId = string.Empty;
         private readonly Button[] tabButtons = new Button[4];
         private Page page;
         private int selectedIndex;
@@ -104,6 +112,7 @@ namespace Nyangbingo.UI
         public const int InventoryGridColumns = 10;
         public const int InventoryGridRows = 5;
         public const float InventorySlotPixelSize = 27f;
+        public const bool UsesIconOnlyCraftingList = true;
 
         public static bool SupportsDebugInstantCompletion
         {
@@ -189,6 +198,17 @@ namespace Nyangbingo.UI
             if (open && shell != null && shell.Screen != GameShellScreen.Gameplay)
             {
                 SetOpen(false);
+                return;
+            }
+
+            if (open && summonConfirmationRoot != null && summonConfirmationRoot.activeSelf)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    escapeConsumedFrame = Time.frameCount;
+                    CancelSummonConfirmation();
+                }
+                else if (Input.GetKeyDown(KeyCode.E)) ConfirmSummonItemUse();
                 return;
             }
 
@@ -310,6 +330,32 @@ namespace Nyangbingo.UI
             CreateButton(panel.transform, "Close", "ESC · 닫기", new Vector2(115f, -118f),
                 new Vector2(200f, 20f), () => SetOpen(false));
             BuildCodexExpandedView();
+            BuildSummonConfirmation();
+        }
+
+        private void BuildSummonConfirmation()
+        {
+            inventoryHintText = CreateText(panel.transform, "InventoryUseHint", 8, TextAnchor.MiddleCenter,
+                new Vector2(300f, 12f), new Vector2(0f, -76f));
+            inventoryHintText.gameObject.SetActive(false);
+
+            summonConfirmationRoot = CreateUiObject("SummonConfirmation", panel.transform,
+                new Vector2(470f, 260f), Vector2.zero);
+            var backdrop = summonConfirmationRoot.AddComponent<Image>();
+            backdrop.color = new Color(.01f, .015f, .025f, .82f);
+            var card = CreateUiObject("Card", summonConfirmationRoot.transform,
+                new Vector2(250f, 94f), Vector2.zero);
+            var cardImage = card.AddComponent<Image>();
+            cardImage.color = new Color(.055f, .075f, .105f, 1f);
+            summonConfirmationText = CreateText(card.transform, "Message", 11, TextAnchor.MiddleCenter,
+                new Vector2(224f, 44f), new Vector2(0f, 18f));
+            summonConfirmationText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            summonConfirmationText.verticalOverflow = VerticalWrapMode.Truncate;
+            CreateButton(card.transform, "ConfirmSummon", "E · 소환", new Vector2(-55f, -27f),
+                new Vector2(96f, 22f), ConfirmSummonItemUse);
+            CreateButton(card.transform, "CancelSummon", "취소", new Vector2(55f, -27f),
+                new Vector2(96f, 22f), CancelSummonConfirmation);
+            summonConfirmationRoot.SetActive(false);
         }
 
         private void BuildDetailsScrollArea()
@@ -399,6 +445,15 @@ namespace Nyangbingo.UI
 
             craftingListButtons = new Button[visibleRecipes.Count];
             craftingListLabels = new Text[visibleRecipes.Count];
+            craftingListOutputIcons = new Image[visibleRecipes.Count];
+            craftingListOutputCounts = new Text[visibleRecipes.Count];
+            craftingListIngredientIcons = new Image[visibleRecipes.Count][];
+            craftingListIngredientCounts = new Text[visibleRecipes.Count][];
+            var ingredientSlotCount = Mathf.Max(1, visibleRecipes.Count == 0
+                ? 1
+                : visibleRecipes.Max(recipe => recipe?.Ingredients?.Length ?? 0));
+            var ingredientSpacing = Mathf.Min(28f, 104f / ingredientSlotCount);
+            var ingredientIconSize = Mathf.Min(24f, ingredientSpacing - 2f);
             for (var index = 0; index < craftingListButtons.Length; index++)
             {
                 var capturedIndex = index;
@@ -408,10 +463,30 @@ namespace Nyangbingo.UI
                 layoutElement.preferredHeight = 34f;
                 layoutElement.minHeight = 34f;
                 var label = button.GetComponentInChildren<Text>();
-                label.fontSize = 8;
-                label.supportRichText = true;
-                label.horizontalOverflow = HorizontalWrapMode.Wrap;
-                label.verticalOverflow = VerticalWrapMode.Truncate;
+                label.fontSize = 9;
+                label.text = "▶";
+                var labelRect = (RectTransform)label.transform;
+                labelRect.sizeDelta = new Vector2(12f, 20f);
+                labelRect.anchoredPosition = new Vector2(-43f, 0f);
+
+                craftingListOutputIcons[index] = CreateArtImage(button.transform, "OutputIcon", null,
+                    new Vector2(-67f, 0f), new Vector2(26f, 26f));
+                craftingListOutputCounts[index] = CreateText(button.transform, "OutputCount", 7,
+                    TextAnchor.LowerRight, new Vector2(28f, 13f), new Vector2(-61f, -8f));
+
+                craftingListIngredientIcons[index] = new Image[ingredientSlotCount];
+                craftingListIngredientCounts[index] = new Text[ingredientSlotCount];
+                var ingredientStartX = -28f;
+                for (var ingredientIndex = 0; ingredientIndex < ingredientSlotCount; ingredientIndex++)
+                {
+                    var x = ingredientStartX + ingredientSpacing * ingredientIndex;
+                    craftingListIngredientIcons[index][ingredientIndex] = CreateArtImage(button.transform,
+                        $"IngredientIcon_{ingredientIndex + 1:00}", null, new Vector2(x, 0f),
+                        new Vector2(ingredientIconSize, ingredientIconSize));
+                    craftingListIngredientCounts[index][ingredientIndex] = CreateText(button.transform,
+                        $"IngredientCount_{ingredientIndex + 1:00}", 7, TextAnchor.LowerRight,
+                        new Vector2(ingredientSpacing, 13f), new Vector2(x + 3f, -8f));
+                }
                 craftingListButtons[index] = button;
                 craftingListLabels[index] = label;
             }
@@ -865,7 +940,7 @@ namespace Nyangbingo.UI
             }
             switch (page)
             {
-                case Page.Gathering: TryPlaceSelectedInventoryItem(); break;
+                case Page.Gathering: TryUseOrPlaceSelectedInventoryItem(); break;
                 case Page.Crafting:
                     if (showingSmelting) TrySmeltSelected();
                     else TryCraftSelected();
@@ -874,10 +949,22 @@ namespace Nyangbingo.UI
             }
         }
 
-        private void TryPlaceSelectedInventoryItem()
+        private void TryUseOrPlaceSelectedInventoryItem()
         {
             var item = CurrentInventoryItem();
-            if (item == null || !IsInventoryPlaceable(item)) return;
+            if (item == null) return;
+            var summonBoss = stationSource?.FindBossForSummonItem(item.Id);
+            if (summonBoss != null)
+            {
+                if (!stationSource.CanUseSummonItem(item.Id, out _, out var reason))
+                {
+                    if (inventoryHintText != null) inventoryHintText.text = reason;
+                    return;
+                }
+                OpenSummonConfirmation(summonBoss);
+                return;
+            }
+            if (!IsInventoryPlaceable(item)) return;
             if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             if (tilePalette != null && tilePalette.TryBeginPlacement(item.Id))
                 SetOpen(false);
@@ -889,6 +976,31 @@ namespace Nyangbingo.UI
                 ShowMessage("설치 미리보기를 시작할 수 없습니다.");
         }
 
+        private void OpenSummonConfirmation(BossDefinition definition)
+        {
+            if (definition?.SummonItem == null || summonConfirmationRoot == null) return;
+            pendingSummonItemId = definition.SummonItem.Id;
+            summonConfirmationText.text =
+                $"{definition.SummonItem.DisplayName}을 사용해\n{definition.DisplayName}을 소환할까요?";
+            summonConfirmationRoot.SetActive(true);
+            summonConfirmationRoot.transform.SetAsLastSibling();
+        }
+
+        private void ConfirmSummonItemUse()
+        {
+            if (string.IsNullOrEmpty(pendingSummonItemId) || stationSource == null) return;
+            var itemId = pendingSummonItemId;
+            CancelSummonConfirmation();
+            if (stationSource.TryUseSummonItem(itemId)) SetOpen(false);
+            else Refresh();
+        }
+
+        private void CancelSummonConfirmation()
+        {
+            pendingSummonItemId = string.Empty;
+            if (summonConfirmationRoot != null) summonConfirmationRoot.SetActive(false);
+        }
+
         private void TryCraftSelected()
         {
             var recipe = CurrentRecipe();
@@ -896,7 +1008,12 @@ namespace Nyangbingo.UI
             if (turretRuntime != null && IsProductPlaceableRecipe(recipe) &&
                 turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0)
             {
-                if (turretRuntime.BeginPlacementPreview(recipe.Output.item.Id)) SetOpen(false);
+                if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
+                var beganPlacement = tilePalette != null &&
+                                     tilePalette.TryBeginPlacement(recipe.Output.item.Id);
+                if (!beganPlacement)
+                    beganPlacement = turretRuntime.BeginPlacementPreview(recipe.Output.item.Id);
+                if (beganPlacement) SetOpen(false);
                 else ShowMessage("설치 미리보기를 시작할 수 없습니다.");
                 return;
             }
@@ -1037,7 +1154,11 @@ namespace Nyangbingo.UI
                 return;
             }
             open = value;
-            if (!open) storageObjectId = string.Empty;
+            if (!open)
+            {
+                storageObjectId = string.Empty;
+                CancelSummonConfirmation();
+            }
             if (!open && codexModel != null) codexModel.TapOutside();
             if (!open && codexExpandedBackdrop != null) codexExpandedBackdrop.SetActive(false);
             openControllerCount = Mathf.Max(0, openControllerCount + (open ? 1 : -1));
@@ -1105,6 +1226,7 @@ namespace Nyangbingo.UI
             collectButton.gameObject.SetActive(false);
             debugCompleteButton.gameObject.SetActive(SupportsDebugInstantCompletion && page == Page.Crafting);
             if (inventoryGridRoot != null) inventoryGridRoot.SetActive(gathering);
+            if (inventoryHintText != null) inventoryHintText.gameObject.SetActive(false);
             if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(equipment);
             if (craftingListRoot != null) craftingListRoot.SetActive(recipeList);
             if (codexGridRoot != null) codexGridRoot.SetActive(codex);
@@ -1214,20 +1336,50 @@ namespace Nyangbingo.UI
                 var recipe = filteredRecipes[index];
                 var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe) &&
                                    turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
-                var missing = new List<string>();
-                foreach (var ingredient in recipe.Ingredients)
+                var outputIcon = craftingListOutputIcons[index];
+                if (outputIcon != null)
                 {
+                    outputIcon.sprite = itemArtCatalog?.FindSprite(recipe.Output.item.Id);
+                    outputIcon.enabled = outputIcon.sprite != null;
+                }
+                if (craftingListOutputCounts[index] != null)
+                    craftingListOutputCounts[index].text = recipe.Output.amount > 1
+                        ? recipe.Output.amount.ToString()
+                        : string.Empty;
+
+                var lacksMaterials = false;
+                var ingredientIcons = craftingListIngredientIcons[index];
+                var ingredientCounts = craftingListIngredientCounts[index];
+                for (var ingredientIndex = 0; ingredientIndex < ingredientIcons.Length; ingredientIndex++)
+                {
+                    var hasIngredient = ingredientIndex < recipe.Ingredients.Length;
+                    var ingredient = hasIngredient ? recipe.Ingredients[ingredientIndex] : default;
+                    var icon = ingredientIcons[ingredientIndex];
+                    var count = ingredientCounts[ingredientIndex];
+                    if (!hasIngredient || ingredient.item == null)
+                    {
+                        if (icon != null) icon.enabled = false;
+                        if (count != null) count.text = string.Empty;
+                        continue;
+                    }
+
                     var owned = runtimeServices.PlayerInventory.Count(ingredient.item.Id);
-                    if (owned < ingredient.amount)
-                        missing.Add($"{ingredient.item.DisplayName} {owned}/{ingredient.amount}");
+                    var isMissing = owned < ingredient.amount && !readyToPlace;
+                    lacksMaterials |= isMissing;
+                    if (icon != null)
+                    {
+                        icon.sprite = itemArtCatalog?.FindSprite(ingredient.item.Id);
+                        icon.enabled = icon.sprite != null;
+                        icon.color = isMissing ? new Color(.6f, .6f, .6f, 1f) : Color.white;
+                    }
+                    if (count != null)
+                    {
+                        count.text = $"{owned}/{ingredient.amount}";
+                        count.color = isMissing ? new Color(1f, .32f, .32f, 1f) : new Color(.93f, .96f, 1f);
+                    }
                 }
 
-                var lacksMaterials = missing.Count > 0 && !readyToPlace;
-                label.text = readyToPlace
-                    ? $"{recipe.Output.item.DisplayName}\n완성품 설치 가능"
-                    : lacksMaterials
-                        ? $"{recipe.Output.item.DisplayName}\n<color=#FF6B6B>{string.Join(" · ", missing)}</color>"
-                        : $"{recipe.Output.item.DisplayName}\n제작 가능";
+                label.text = "▶";
                 if (button.targetGraphic is Image image)
                     image.color = lacksMaterials
                         ? index == selectedIndex
@@ -1315,15 +1467,28 @@ namespace Nyangbingo.UI
             if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             selectedIndex = Mathf.Clamp(selectedIndex, 0, Mathf.Max(0, inventory.Slots.Count - 1));
             var selectedItem = CurrentInventoryItem();
+            var summonBoss = selectedItem != null ? stationSource?.FindBossForSummonItem(selectedItem.Id) : null;
+            var summonReason = string.Empty;
+            var canSummon = summonBoss != null &&
+                            stationSource.CanUseSummonItem(selectedItem.Id, out _, out summonReason);
             var canPlace = selectedItem != null && IsInventoryPlaceable(selectedItem) &&
                            inventory.Count(selectedItem.Id) > 0 &&
                            (MainGameTilePaletteController.SupportsPalettePlacement(selectedItem.Id)
                                ? tilePalette != null
                                : turretRuntime != null);
-            primaryButton.GetComponentInChildren<Text>().text = canPlace
-                ? $"E · {selectedItem.DisplayName} 설치 미리보기"
+            primaryButton.GetComponentInChildren<Text>().text = summonBoss != null
+                ? canSummon ? $"E · {selectedItem.DisplayName} 사용" : summonReason
+                : canPlace ? $"E · {selectedItem.DisplayName} 설치 미리보기"
                 : "설치 가능한 소지품을 선택하세요";
-            primaryButton.interactable = canPlace && runtimeServices.NapService?.IsNapping != true;
+            primaryButton.interactable = (canSummon || canPlace) &&
+                                         runtimeServices.NapService?.IsNapping != true;
+            if (inventoryHintText != null && summonBoss != null)
+            {
+                inventoryHintText.gameObject.SetActive(true);
+                inventoryHintText.text = canSummon
+                    ? $"사용 시 {summonBoss.DisplayName} 소환 확인창이 열립니다."
+                    : summonReason;
+            }
             titleText.text = $"채집 · 소지품 10×5 = {inventory.Capacity}슬롯";
             for (var index = 0; index < inventoryGridLabels.Length; index++)
             {
@@ -1356,6 +1521,9 @@ namespace Nyangbingo.UI
                 {
                     icon.sprite = item != null ? itemArtCatalog?.FindSprite(item.Id) : null;
                     icon.enabled = icon.sprite != null;
+                    var dayLockedSummon = item != null && stationSource != null && !stationSource.IsNight &&
+                                          stationSource.FindBossForSummonItem(item.Id) != null;
+                    icon.color = dayLockedSummon ? new Color(.35f, .35f, .4f, .58f) : Color.white;
                 }
             }
             titleText.text = selectedItem == null
@@ -1877,7 +2045,7 @@ namespace Nyangbingo.UI
         private static string DefaultHelpText()
         {
 #if UNITY_EDITOR
-            return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행 · F4/Shift+F4 테스트";
+            return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else
             return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #endif

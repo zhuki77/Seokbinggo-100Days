@@ -573,6 +573,12 @@ public static class NyangbingoDevARegressionTests
             sealSystem.SetSealCoreCell(core);
             Assert(sealSystem.LeakFaceCount > 0, "창 밖으로 이어지는 공기가 있는데 누출로 집계되지 않음");
             Assert(sealSystem.SealPercent == 0f, "창 밖 누출이 있는데 SealPercent > 0");
+            Assert(sealSystem.TryGetCoreLeakCell(out var leakCell),
+                "누출이 있는데 제품 진단 HUD가 사용할 대표 누출 셀을 얻지 못함");
+            Assert(Mathf.Abs(leakCell.x - core.x) <= rx && Mathf.Abs(leakCell.y - core.y) <= ry,
+                "대표 누출 셀이 코어 진단 창 밖을 가리킴");
+            Assert(leakCell == new Vector3Int(room.xMax, core.y, 0),
+                "대표 누출 셀은 먼 진단 창 경계가 아니라 실제로 막아야 할 통로 입구를 가리켜야 함");
         }
         finally { sealSystem.Dispose(); }
     }

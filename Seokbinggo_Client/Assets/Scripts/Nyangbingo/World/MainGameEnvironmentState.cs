@@ -76,6 +76,8 @@ namespace Nyangbingo.World
                 return false;
             }
 
+            RegisterBoundaryTileArt();
+
             bootstrap.Session.ConfigureSealExtensions(this, this);
             coolingSources = new CoolingSourceRuntime(gameDataCatalog);
             var wallpaperBonus = gameDataCatalog.FindGlobal("wallpaper_coldsource_bonus");
@@ -88,6 +90,19 @@ namespace Nyangbingo.World
             Debug.Log("[Nyangbingo] MainGameEnvironmentState: 공식 설치물 경계와 냉기원 상태를 " +
                       "메인 SealSystem에 연결 완료.");
             return true;
+        }
+
+        private void RegisterBoundaryTileArt()
+        {
+            var renderer = bootstrap?.WorldRenderer;
+            if (renderer == null || buildingArtCatalog == null) return;
+            var boundaryIds = new[] { "insul_wall", "iron_insul_wall", "door", "roof" };
+            for (var index = 0; index < boundaryIds.Length; index++)
+            {
+                var entry = buildingArtCatalog.Find(boundaryIds[index]);
+                if (entry?.Sprite != null)
+                    renderer.RegisterRuntimeForegroundTile(boundaryIds[index], entry.Sprite);
+            }
         }
 
         public bool IsRecognizedBarrier(Vector3Int cell) =>

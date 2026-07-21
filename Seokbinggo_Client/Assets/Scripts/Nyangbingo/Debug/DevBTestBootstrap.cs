@@ -1780,6 +1780,13 @@ namespace Nyangbingo.Debugging
                         MainGameCraftingUiController.InventoryGridColumns == 10 &&
                         MainGameCraftingUiController.InventoryGridRows == 5 &&
                         Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f) &&
+                        MainGameCraftingUiController.UsesIconOnlyCraftingList &&
+                        MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F1 &&
+                        MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <= 480f &&
+                        MainGameBossSummonUiController.DebugShortcutHelpPanelSize.y <= 270f &&
+                        !MainGameHudController.ProductHudNarrativeTextEnabled &&
+                        !MainGameTurretRuntime.ProductHudNarrativeTextEnabled &&
+                        !MainGameTilePaletteController.ProductHudNarrativeTextEnabled &&
                         string.IsNullOrEmpty(MainGameCraftingUiController.UnifiedTabLabel(4)) &&
                         MainGameCraftingUiController.IsRecipeVisibleAtStation(
                             CraftingStation.None, CraftingStation.None) &&
@@ -2780,6 +2787,7 @@ namespace Nyangbingo.Debugging
             shell.RefreshTitle();
             var titleMatches = shell.Title.CanContinue && shell.Title.LatestSlot >= 0 &&
                                shell.Title.DaysUntilBaegilHeat >= 70 && shell.Title.DaysUntilBaegilHeat <= 100 &&
+                               GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat) == "D-86" &&
                                shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit && shell.CanShowFullscreenToggle;
 
             var newGameSlot = -1;
@@ -2814,10 +2822,10 @@ namespace Nyangbingo.Debugging
             shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
             shell.TryContinue();
             shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
-            var endingPolicy = GameShellController.ShouldEndDemo(30, 30, "gangcheol_boss", true) &&
-                               !GameShellController.ShouldEndDemo(29, 30, "gangcheol_boss", true) &&
-                               !GameShellController.ShouldEndDemo(30, 30, "gangcheol_boss", false) &&
-                               !GameShellController.ShouldEndDemo(30, 30, "king_dokkaebi", true);
+            var endingPolicy = GameShellController.ShouldEndDemoAtDawn(31, 30) &&
+                               !GameShellController.ShouldEndDemoAtDawn(30, 30) &&
+                               !GameShellController.ShouldEndDemoAtDawn(32, 30) &&
+                               !GameShellController.ShouldEndDemoAtDawn(31, 100);
             shell.ShowResult(activeSave);
             var result = shell.Result;
             var resultMatches = shell.Screen == GameShellScreen.Result && result != null &&
