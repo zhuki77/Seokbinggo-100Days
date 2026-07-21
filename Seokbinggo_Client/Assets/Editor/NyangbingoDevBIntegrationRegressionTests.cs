@@ -83,9 +83,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             ItemCategory.Material, ItemMvpScope.A);
         Require(MainGameCraftingUiController.IsInventoryItemPlaceable(runtimeDirt, null),
             "Mined foreground tiles must be placeable directly from the inventory without a recipe.");
-        Require(MainGameTilePaletteController.RequiresDevATileIntegration("wallpaper") &&
+        Require(!MainGameTilePaletteController.RequiresDevATileIntegration("wallpaper") &&
                 !MainGameTilePaletteController.RequiresDevATileIntegration("insul_wall"),
-            "Wallpaper must stay isolated until the Dev A background Tilemap contract is available.");
+            "The tile palette still blocks the merged Dev A wallpaper placement contract.");
+        Require(MainGameTilePaletteController.SupportsPalettePlacement("wallpaper") &&
+                MainGameTilePaletteController.SupportsPalettePlacement(WorldTileTypes.Dirt) &&
+                !MainGameTilePaletteController.SupportsPalettePlacement("workbench"),
+            "The tile palette must route wallpaper and foreground tiles, but not regular buildings.");
     }
 
     private static void TestIceStorageSealCoreLifecycle()

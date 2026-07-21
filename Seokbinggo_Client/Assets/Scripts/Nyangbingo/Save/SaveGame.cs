@@ -177,6 +177,8 @@ namespace Nyangbingo.Save
         public List<CoolingSourceStateRecord> coolingSources = new List<CoolingSourceStateRecord>();
         public List<DeathTearPouchRecord> deathTearPouches = new List<DeathTearPouchRecord>();
         public List<TileChangeRecord> tileChanges = new List<TileChangeRecord>();
+        /// <summary>A-16: 배경(벽지) 변경 이력. 구버전 세이브에서는 null일 수 있으며 NormalizeAfterLoad가 빈 목록으로 채운다.</summary>
+        public List<TileChangeRecord> backgroundChanges = new List<TileChangeRecord>();
         public List<string> modulesDone = new List<string>();
         public float sealPct;
         public int yokaiTears;
@@ -229,6 +231,7 @@ namespace Nyangbingo.Save
             if (coolingSources == null) coolingSources = new List<CoolingSourceStateRecord>();
             if (deathTearPouches == null) deathTearPouches = new List<DeathTearPouchRecord>();
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
+            if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
             if (bossRecords == null) bossRecords = new List<BossRecord>();
             if (forcedBossEncounters == null) forcedBossEncounters = new List<ForcedBossEncounterRecord>();

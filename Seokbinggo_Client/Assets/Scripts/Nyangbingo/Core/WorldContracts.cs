@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -47,6 +48,17 @@ namespace Nyangbingo.Core
     }
 
     /// <summary>
+    /// A-16/A-19: 밀폐된 석빙고 코어 구역의 배경 도포율. SealPercent/TemperaturePercent와 별개이며,
+    /// 개발 B는 물단지·얼음 항아리 지속시간 +25%에만 사용한다(얼음 저장고·빙정 냉각로·온도 상한은 변경 금지).
+    /// </summary>
+    public interface IWallpaperCoverageSource
+    {
+        float GetCoveragePercent(Vector3Int sealCoreCell);
+        bool IsCoverageComplete(Vector3Int sealCoreCell);
+        event Action WallpaperCoverageChanged;
+    }
+
+    /// <summary>
     /// 개발 A가 제공하는 중앙 game seconds Tick 계약(A-04). 제작·제련·유틸리티·AI·전투 등 매 프레임
     /// delta game seconds가 필요한 개발 B 소비자는 이 인터페이스만 구현하면 된다.
     /// </summary>
@@ -63,5 +75,91 @@ namespace Nyangbingo.Core
     {
         void Register(IGameSecondsTickable tickable);
         void Unregister(IGameSecondsTickable tickable);
+    }
+
+    /// <summary>
+    /// A-22: 새 게임·데모 세이브·손상 위치 교정용 공용 안전 지표면 스폰 계약.
+    /// 정상 저장 플레이어 위치는 호출측이 검증 실패일 때만 이 API로 대체한다.
+    /// </summary>
+    public interface IWorldSafeSpawnResolver
+    {
+        /// <summary>현재 전경 기준으로 액터가 서 있을 수 있는지(발밑 고체·몸/머리 공기·낙하 구멍 아님).</summary>
+        bool IsSafeStandingPosition(Vector2 worldPosition, float actorHalfExtent);
+
+        /// <summary>
+        /// preferredCellX 근처에서 결정론적으로 안전 지표면 스폰을 찾는다.
+        /// 동일 seed·월드·preferredCellX·actorHalfExtent → 동일 결과.
+        /// </summary>
+        bool TryResolveSafeSurfaceSpawn(int preferredCellX, float actorHalfExtent, out Vector2 worldPosition);
+    }
+
+    /// <summary>A-25: 한 셀의 배경/벽지 상태(전경과 독립).</summary>
+    public readonly struct BackgroundCellState
+    {
+        public readonly string CurrentBackgroundId;
+        public readonly string NaturalBackgroundId;
+        public readonly bool HasWallpaper;
+        public readonly bool HasNaturalBackground;
+
+        public BackgroundCellState(string currentBackgroundId, string naturalBackgroundId,
+            bool hasWallpaper, bool hasNaturalBackground)
+        {
+            CurrentBackgroundId = currentBackgroundId ?? string.Empty;
+            NaturalBackgroundId = naturalBackgroundId ?? string.Empty;
+            HasWallpaper = hasWallpaper;
+            HasNaturalBackground = hasNaturalBackground;
+        }
+    }
+
+    /// <summary>
+    /// A-23/A-25: 벽지·배경 전용 배치 계약. Collider·밀폐율에 영향 없음.
+    /// 인벤토리 소비는 TileService 오버로드(consumeFrom)로 처리하며, 성공 시 1개·실패 시 0개.
+    /// </summary>
+    public interface IBackgroundPlacementService
+    {
+        bool CanPlaceWallpaper(Vector3Int cell);
+        bool TryPlaceWallpaper(Vector3Int cell);
+        bool TryRemoveWallpaper(Vector3Int cell);
+        BackgroundCellState GetBackgroundState(Vector3Int cell);
+    }
+
+    /// <summary>A-26: 반경·밀폐 창 오버레이 형상.</summary>
+    public enum WorldRangeShape
+    {
+        Circle = 0,
+        AxisAlignedRect = 1
+    }
+
+    /// <summary>
+    /// A-26: 표시 전용 범위. Circle: Radius=타일 반경.
+    /// Rect: Radius=halfExtentX, SecondaryRadius=halfExtentY(0이면 Radius와 동일 — SealSystem rx/ry).
+    /// </summary>
+    public readonly struct WorldRangeOverlay
+    {
+        public readonly Vector2 Center;
+        public readonly float Radius;
+        public readonly float SecondaryRadius;
+        public readonly WorldRangeShape Shape;
+
+        public WorldRangeOverlay(Vector2 center, float radius, WorldRangeShape shape)
+            : this(center, radius, 0f, shape) { }
+
+        public WorldRangeOverlay(Vector2 center, float radius, float secondaryRadius, WorldRangeShape shape)
+        {
+            Center = center;
+            Radius = radius;
+            SecondaryRadius = secondaryRadius;
+            Shape = shape;
+        }
+    }
+
+    /// <summary>
+    /// A-26: 입력(R/팔레트)을 읽지 않는 표시 전용 오버레이. Collider·밀폐·저장에 부작용 없음.
+    /// </summary>
+    public interface IWorldRangeOverlayRenderer
+    {
+        void SetVisible(bool visible);
+        void Render(IReadOnlyList<WorldRangeOverlay> overlays);
+        void Clear();
     }
 }

@@ -829,7 +829,8 @@ namespace Nyangbingo.UI
             if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             if (tilePalette != null && tilePalette.TryBeginPlacement(item.Id))
                 SetOpen(false);
-            else if (!TileService.SupportsForegroundPlacement(item.Id) && turretRuntime != null &&
+            else if (!MainGameTilePaletteController.SupportsPalettePlacement(item.Id) &&
+                     turretRuntime != null &&
                      turretRuntime.BeginPlacementPreview(item.Id))
                 SetOpen(false);
             else
@@ -1182,7 +1183,7 @@ namespace Nyangbingo.UI
             IEnumerable<RecipeDefinition> recipes)
         {
             if (item == null || item.MvpScope == ItemMvpScope.B) return false;
-            if (TileService.SupportsForegroundPlacement(item.Id)) return true;
+            if (MainGameTilePaletteController.SupportsPalettePlacement(item.Id)) return true;
             if (recipes == null) return false;
             return recipes.Any(recipe => recipe?.Output.item != null &&
                                          recipe.Output.item.Id == item.Id &&
@@ -1204,7 +1205,7 @@ namespace Nyangbingo.UI
             var selectedItem = CurrentInventoryItem();
             var canPlace = selectedItem != null && IsInventoryPlaceable(selectedItem) &&
                            inventory.Count(selectedItem.Id) > 0 &&
-                           (TileService.SupportsForegroundPlacement(selectedItem.Id)
+                           (MainGameTilePaletteController.SupportsPalettePlacement(selectedItem.Id)
                                ? tilePalette != null
                                : turretRuntime != null);
             primaryButton.GetComponentInChildren<Text>().text = canPlace

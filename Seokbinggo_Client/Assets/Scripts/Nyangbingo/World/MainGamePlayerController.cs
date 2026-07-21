@@ -6,6 +6,7 @@ using Nyangbingo.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 
 namespace Nyangbingo.World
@@ -29,8 +30,9 @@ namespace Nyangbingo.World
         private const float NestInteractionRadius = 1.25f;
         private const float NapYokaiWakeRadius = 12f;
         private const float TearPouchPickupRadius = .75f;
-        private const float MiningReach = 1.1f;
-        private const float CollisionSkin = .001f;
+        // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
+        // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
+        private const float MiningReach = 1.5f;
         private const float CollapseSeconds = 1.5f;
         private const float FadeOutSeconds = 1.75f;
         private const float FadeInSeconds = 1.75f;
@@ -47,9 +49,12 @@ namespace Nyangbingo.World
         [Min(.1f)][SerializeField] private float gravityAcceleration = 20f;
         [Min(.1f)][SerializeField] private float maximumFallSpeed = 14f;
 
+        private const float GroundProbeDistance = .08f;
+
         private readonly StatSheet statSheet = new StatSheet();
         private Rigidbody2D body;
         private CircleCollider2D playerCollider;
+        private readonly RaycastHit2D[] groundProbeHits = new RaycastHit2D[8];
         private Health health;
         private MeleeArcAttack attack;
         private WireSnareAbility wireSnare;
@@ -153,9 +158,11 @@ namespace Nyangbingo.World
                 return false;
             }
 
-            body.bodyType = RigidbodyType2D.Kinematic;
+            body.bodyType = RigidbodyType2D.Dynamic;
             body.gravityScale = 0f;
             body.freezeRotation = true;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
             playerCollider.radius = .38f;
             playerCollider.isTrigger = false;
             ApplyGeneratedWorldSpawn();
@@ -216,7 +223,7 @@ namespace Nyangbingo.World
             RefreshEquipmentStats();
             RefreshCombatProfile();
             RefreshTearPouchVisuals();
-            grounded = HasGroundBelow(body.position);
+            grounded = IsStandingOnForeground();
             initialized = activeProfile != null;
             if (initialized)
                 Debug.Log($"[Nyangbingo] MainGamePlayerController: 이동·체력·근접 공격·카메라 연결 완료 " +
@@ -314,7 +321,7 @@ namespace Nyangbingo.World
                     var attacked = TryBasicAttack();
                     miningAllowedByLastSwing = !attacked || attack.LastHitCount == 0;
                 }
-                if (miningAllowedByLastSwing) TickMining(CurrentGameDeltaSeconds());
+                if (miningAllowedByLastSwing) TickMining();
                 else ResetMiningProgress();
             }
             else CancelMining();
@@ -326,11 +333,16 @@ namespace Nyangbingo.World
         {
             if (!initialized || dead || body == null) return;
             var deltaSeconds = Time.fixedDeltaTime;
+            grounded = IsStandingOnForeground();
+            if (grounded && verticalVelocity < 0f)
+            {
+                verticalVelocity = 0f;
+                airJumpConsumed = false;
+            }
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
-            var displacement = new Vector2(
-                CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed) * deltaSeconds,
-                verticalVelocity * deltaSeconds);
-            MoveWithTileCollision(displacement);
+            body.linearVelocity = new Vector2(
+                CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed),
+                verticalVelocity);
         }
 
         private void ApplyGeneratedWorldSpawn()
@@ -339,82 +351,15 @@ namespace Nyangbingo.World
             if (session?.HasWorld != true || !session.LastResult.passedValidation) return;
             var cell = session.LastResult.spawnPoint;
             var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
-            var spawn = TryFindTemporarySafeSurfaceSpawn(session.TileService, cell.x, halfExtent,
-                out var surfaceSpawn)
+            var spawn = session.SafeSpawnResolver != null &&
+                        session.SafeSpawnResolver.TryResolveSafeSurfaceSpawn(cell.x, halfExtent,
+                            out var surfaceSpawn)
                 ? surfaceSpawn
                 : new Vector2(cell.x + .5f, cell.y + .5f);
             transform.position = spawn;
             body.position = spawn;
             Debug.Log($"[Nyangbingo] MainGamePlayerController: safe surface spawn applied " +
                       $"(generated={cell}, player={spawn}).");
-        }
-
-        public static bool TryFindTemporarySafeSurfaceSpawn(TileService tileService, int centerX,
-            float halfExtent, out Vector2 spawn)
-        {
-            spawn = default;
-            if (tileService == null || tileService.Width <= 0 || tileService.Height <= 2) return false;
-            halfExtent = Mathf.Max(0f, halfExtent);
-            centerX = Mathf.Clamp(centerX, 0, tileService.Width - 1);
-            var minimumSurfaceY = EstimateSurfaceBandFloor(tileService);
-
-            for (var distance = 0; distance < tileService.Width; distance++)
-            {
-                if (TryColumn(centerX + distance, out spawn)) return true;
-                if (distance > 0 && TryColumn(centerX - distance, out spawn)) return true;
-            }
-            return false;
-
-            bool TryColumn(int x, out Vector2 candidate)
-            {
-                candidate = default;
-                if (x < 0 || x >= tileService.Width) return false;
-                for (var y = tileService.Height - 2; y >= minimumSurfaceY; y--)
-                {
-                    var groundCell = new Vector3Int(x, y, 0);
-                    var ground = tileService.GetTile(groundCell);
-                    if (ground.IsAir || !ground.isNaturalTerrain) continue;
-                    var feetCell = new Vector3Int(x, y + 1, 0);
-                    if (!tileService.GetTile(feetCell).IsAir) continue;
-                    if (y + 2 < tileService.Height &&
-                        !tileService.GetTile(new Vector3Int(x, y + 2, 0)).IsAir) continue;
-                    candidate = new Vector2(x + .5f, y + 1f + halfExtent + CollisionSkin);
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        private static int EstimateSurfaceBandFloor(TileService tileService)
-        {
-            var heightCounts = new int[tileService.Height];
-            var columnsWithNaturalTerrain = 0;
-            for (var x = 0; x < tileService.Width; x++)
-            {
-                for (var y = tileService.Height - 2; y >= 0; y--)
-                {
-                    var tile = tileService.GetTile(new Vector3Int(x, y, 0));
-                    if (tile.IsAir || !tile.isNaturalTerrain) continue;
-                    heightCounts[y]++;
-                    columnsWithNaturalTerrain++;
-                    break;
-                }
-            }
-
-            if (columnsWithNaturalTerrain <= 0) return tileService.Height / 2;
-            var medianIndex = (columnsWithNaturalTerrain - 1) / 2;
-            var accumulated = 0;
-            var medianHeight = tileService.Height / 2;
-            for (var y = 0; y < heightCounts.Length; y++)
-            {
-                accumulated += heightCounts[y];
-                if (accumulated <= medianIndex) continue;
-                medianHeight = y;
-                break;
-            }
-
-            var terrainTolerance = Mathf.Max(4, tileService.Height / 20);
-            return Mathf.Max(0, medianHeight - terrainTolerance);
         }
 
         private void UpdateAimDirection()
@@ -440,96 +385,35 @@ namespace Nyangbingo.World
             airJumpConsumed = true;
         }
 
-        private void MoveWithTileCollision(Vector2 displacement)
+        private bool IsStandingOnForeground()
         {
-            var tileService = bootstrap?.TileService;
-            if (tileService == null)
+            if (playerCollider == null || !playerCollider.enabled) return false;
+            var hitCount = playerCollider.Cast(Vector2.down, ContactFilter2D.noFilter,
+                groundProbeHits, GroundProbeDistance);
+            for (var index = 0; index < hitCount; index++)
             {
-                body.MovePosition(body.position + displacement);
-                grounded = false;
-                return;
+                var hitCollider = groundProbeHits[index].collider;
+                if (hitCollider is TilemapCollider2D || hitCollider is CompositeCollider2D)
+                    return true;
             }
-
-            var position = body.position;
-            position.x = ResolveHorizontal(position, displacement.x);
-            position.y = ResolveVertical(position, displacement.y);
-            var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
-            position.x = Mathf.Clamp(position.x, halfExtent, tileService.Width - halfExtent);
-            position.y = Mathf.Clamp(position.y, halfExtent, tileService.Height - halfExtent);
-            body.MovePosition(position);
-
-            grounded = verticalVelocity <= 0f && HasGroundBelow(position);
-            if (grounded)
-            {
-                verticalVelocity = 0f;
-                airJumpConsumed = false;
-            }
-        }
-
-        private float ResolveHorizontal(Vector2 position, float displacement)
-        {
-            if (Mathf.Abs(displacement) <= Mathf.Epsilon) return position.x;
-            var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
-            var targetX = position.x + displacement;
-            var minY = Mathf.FloorToInt(position.y - halfExtent + CollisionSkin);
-            var maxY = Mathf.FloorToInt(position.y + halfExtent - CollisionSkin);
-            var direction = displacement > 0f ? 1 : -1;
-            var startCell = Mathf.FloorToInt(position.x + direction * halfExtent);
-            var endCell = Mathf.FloorToInt(targetX + direction * halfExtent);
-
-            for (var x = startCell; direction > 0 ? x <= endCell : x >= endCell; x += direction)
-            {
-                var blocked = false;
-                for (var y = minY; y <= maxY && !blocked; y++) blocked = IsSolidCell(x, y);
-                if (!blocked) continue;
-                return direction > 0
-                    ? x - halfExtent - CollisionSkin
-                    : x + 1f + halfExtent + CollisionSkin;
-            }
-            return targetX;
-        }
-
-        private float ResolveVertical(Vector2 position, float displacement)
-        {
-            if (Mathf.Abs(displacement) <= Mathf.Epsilon) return position.y;
-            var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
-            var targetY = position.y + displacement;
-            var minX = Mathf.FloorToInt(position.x - halfExtent + CollisionSkin);
-            var maxX = Mathf.FloorToInt(position.x + halfExtent - CollisionSkin);
-            var direction = displacement > 0f ? 1 : -1;
-            var startCell = Mathf.FloorToInt(position.y + direction * halfExtent);
-            var endCell = Mathf.FloorToInt(targetY + direction * halfExtent);
-
-            for (var y = startCell; direction > 0 ? y <= endCell : y >= endCell; y += direction)
-            {
-                var blocked = false;
-                for (var x = minX; x <= maxX && !blocked; x++) blocked = IsSolidCell(x, y);
-                if (!blocked) continue;
-                verticalVelocity = 0f;
-                return direction > 0
-                    ? y - halfExtent - CollisionSkin
-                    : y + 1f + halfExtent + CollisionSkin;
-            }
-            return targetY;
-        }
-
-        private bool HasGroundBelow(Vector2 position)
-        {
-            var halfExtent = playerCollider != null ? playerCollider.radius : .38f;
-            var y = Mathf.FloorToInt(position.y - halfExtent - CollisionSkin * 2f);
-            var minX = Mathf.FloorToInt(position.x - halfExtent + CollisionSkin);
-            var maxX = Mathf.FloorToInt(position.x + halfExtent - CollisionSkin);
-            for (var x = minX; x <= maxX; x++)
-                if (IsSolidCell(x, y)) return true;
             return false;
         }
 
-        private bool IsSolidCell(int x, int y)
+        private void OnCollisionStay2D(Collision2D collision)
         {
-            var tileService = bootstrap?.TileService;
-            if (tileService == null) return false;
-            var cell = new Vector3Int(x, y, 0);
-            return !tileService.InBounds(cell) || !tileService.GetTile(cell).IsAir;
+            if (collision == null) return;
+            for (var index = 0; index < collision.contactCount; index++)
+            {
+                var normal = collision.GetContact(index).normal;
+                if (normal.y > .5f && verticalVelocity <= 0f)
+                {
+                    grounded = true;
+                    verticalVelocity = 0f;
+                    airJumpConsumed = false;
+                }
+                else if (normal.y < -.5f && verticalVelocity > 0f)
+                    verticalVelocity = 0f;
+            }
         }
 
         public static float CalculateHorizontalVelocity(float input, float moveSpeed)
@@ -585,17 +469,22 @@ namespace Nyangbingo.World
             return true;
         }
 
-        private void TickMining(float deltaGameSeconds)
+        private void TickMining()
         {
             var tileService = bootstrap?.TileService;
-            if (tileService == null || deltaGameSeconds <= 0f)
+            // 채굴은 플레이어 입력 진행이라 DayNight TimeScale이 아니라 Unity deltaTime을 쓴다.
+            // (공격 쿨다운과 동일 — 시계 정지/배속과 채굴 가능 여부가 어긋나지 않게)
+            var miningDelta = Time.deltaTime;
+            if (tileService == null || miningDelta <= 0f)
             {
                 ResetMiningProgress();
                 return;
             }
-            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            var target = (Vector2)transform.position + direction * MiningReach;
-            var cell = new Vector3Int(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 0);
+            if (!TryResolveMiningCell(tileService, out var cell))
+            {
+                ResetMiningProgress();
+                return;
+            }
             var clawTier = ResolveMiningClawTier();
             var tile = tileService.GetTile(cell);
             var definitionId = ResolveMiningDefinitionId(tile.elementType);
@@ -628,13 +517,40 @@ namespace Nyangbingo.World
             }
 
             miningElapsedSeconds = Mathf.Min(miningRequiredSeconds,
-                miningElapsedSeconds + deltaGameSeconds);
+                miningElapsedSeconds + miningDelta);
             Nyangbingo.Core.GameEvents.RaiseMiningProgress(miningCell, MiningProgress);
             if (miningElapsedSeconds < miningRequiredSeconds) return;
 
             CompleteMining(miningCell, clawTier);
             if (miningHasCompanion) CompleteMining(miningCompanionCell, clawTier);
             ResetMiningProgress();
+        }
+
+        /// <summary>
+        /// 마우스 아래 칸이 사거리 안이면 그 칸을 우선하고, 아니면 조준 방향 × 사거리 칸을 쓴다.
+        /// (조준만으로 짧은 레이를 쓰면 벽 앞 공기만 계속 선택되는 경우가 있다.)
+        /// </summary>
+        private bool TryResolveMiningCell(TileService tileService, out Vector3Int cell)
+        {
+            cell = default;
+            var origin = (Vector2)transform.position;
+            if (followCamera != null)
+            {
+                var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
+                var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                var mouseCenter = new Vector2(mouseCell.x + .5f, mouseCell.y + .5f);
+                if (tileService.InBounds(mouseCell) &&
+                    (mouseCenter - origin).sqrMagnitude <= MiningReach * MiningReach)
+                {
+                    cell = mouseCell;
+                    return true;
+                }
+            }
+
+            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
+            var target = origin + direction * MiningReach;
+            cell = new Vector3Int(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 0);
+            return tileService.InBounds(cell);
         }
 
         private bool TryGetMiningSeconds(Vector3Int cell, int clawTier, out float requiredSeconds)
@@ -679,12 +595,6 @@ namespace Nyangbingo.World
                     new Vector2(cell.x + .5f, cell.y + .5f));
                 Nyangbingo.Core.GameEvents.RaiseMiningResult(cell, item.DisplayName, totalAmount, critical);
             }
-        }
-
-        private float CurrentGameDeltaSeconds()
-        {
-            var scale = bootstrap?.TimeService != null ? bootstrap.TimeService.TimeScale : 1f;
-            return Time.deltaTime * Mathf.Max(0f, scale);
         }
 
         private void CancelMining()
@@ -884,7 +794,7 @@ namespace Nyangbingo.World
             transform.position = respawnPosition;
             if (body != null) body.position = respawnPosition;
             verticalVelocity = 0f;
-            grounded = HasGroundBelow(respawnPosition);
+            grounded = false;
             airJumpConsumed = false;
             transform.rotation = aliveRotation;
             if (health != null) health.RestoreCurrent(health.MaxHealth);

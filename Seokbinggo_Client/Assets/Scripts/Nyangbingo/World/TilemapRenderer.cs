@@ -13,8 +13,8 @@ namespace Nyangbingo.World
     ///
     /// 전경/배경 판정은 TileData 계약(<see cref="TileData"/>)을 그대로 따른다.
     ///  - 전경: hardness &gt; 0 인 칸만 elementType의 블록을 채운다.
-    ///  - 배경벽: isUndergroundDecor == true 인 칸만 elementType(bg_* 값)의 배경을 채운다.
-    /// 두 조건은 상호 배타적이지 않게 설계돼 있으므로(전경이 비어야 배경 decor가 의미를 가짐) 그대로 각각 평가한다.
+    ///  - 배경: HasBackground인 칸의 backgroundElementType(고체 칸 뒤의 자연 배경 포함).
+    /// A-17: EnsureForegroundCollision으로 전경 TilemapCollider2D+CompositeCollider2D를 구성한다.
     /// </summary>
     public sealed class TilemapRenderer : MonoBehaviour
     {
@@ -77,9 +77,12 @@ namespace Nyangbingo.World
         private Dictionary<string, TileBase> _lookup = new Dictionary<string, TileBase>();
         private readonly HashSet<string> _resourceLoadWarnings = new HashSet<string>();
 
+        private CompositeCollider2D foregroundComposite;
+
         private void Awake()
         {
             RebuildLookupTable();
+            EnsureForegroundCollision();
         }
 
         /// <summary>
@@ -181,8 +184,9 @@ namespace Nyangbingo.World
                         ? ResolveForegroundTile(tiles, x, y, tile.elementType, ref missing)
                         : null;
 
-                    backgroundBlock[index] = tile.isUndergroundDecor
-                        ? ResolveTile(tile.elementType, ref missing)
+                    // A-16: 전경 고체 뒤에도 자연 배경을 그린다. 동굴·하늘(빈 배경)은 null.
+                    backgroundBlock[index] = tile.HasBackground
+                        ? ResolveTile(tile.backgroundElementType, ref missing)
                         : null;
                 }
             }
@@ -196,12 +200,15 @@ namespace Nyangbingo.World
 
             var bounds = new BoundsInt(0, 0, 0, width, height, 1);
 
+            EnsureForegroundCollision();
+
             foregroundTilemap.ClearAllTiles();
             backgroundTilemap.ClearAllTiles();
             foregroundTilemap.SetTilesBlock(bounds, foregroundBlock);
             backgroundTilemap.SetTilesBlock(bounds, backgroundBlock);
             foregroundTilemap.RefreshAllTiles();
             backgroundTilemap.RefreshAllTiles();
+            NotifyForegroundCollisionDirty();
 
             // A-14: 월드 전체 먹선 오버레이 최초 1회 계산. 이후에는 TileService가 변경된 셀 +
             // 그 4방향 이웃만 RefreshEdgeOverlay로 갱신하므로, 이 전체 순회는 월드 생성/로드당 딱 한 번뿐이다.
@@ -232,6 +239,62 @@ namespace Nyangbingo.World
         private static bool IsIceAltar(TileData[,] tiles, int x, int y, int width, int height) =>
             x >= 0 && x < width && y >= 0 && y < height &&
             string.Equals(tiles[x, y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal);
+
+        /// <summary>
+        /// A-17/A-21: 전경 Tilemap에 TilemapCollider2D + CompositeCollider2D + Static Rigidbody2D를 구성한다.
+        /// 배경 Tilemap에는 Collider를 붙이지 않는다.
+        /// 좌표 계약: 논리 셀 (x,y)의 월드 AABB는 Grid/Tilemap 기본 Cell Size(1,1) 기준 [x,x+1]×[y,y+1],
+        /// 중심 GetCellCenterWorld ≈ (x+0.5, y+0.5). Tile Anchor 기본 (0.5,0.5) — 아트 피벗이 바뀌어도
+        /// Collider는 타일 점유 셀 경계를 따르며 스프라이트 피벗에 의존하지 않는다.
+        /// </summary>
+        public void EnsureForegroundCollision()
+        {
+            if (foregroundTilemap == null) return;
+
+            var fgGo = foregroundTilemap.gameObject;
+            var tilemapCollider = fgGo.GetComponent<TilemapCollider2D>();
+            if (tilemapCollider == null) tilemapCollider = fgGo.AddComponent<TilemapCollider2D>();
+            tilemapCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
+
+            var body = fgGo.GetComponent<Rigidbody2D>();
+            if (body == null) body = fgGo.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Static;
+            body.simulated = true;
+
+            foregroundComposite = fgGo.GetComponent<CompositeCollider2D>();
+            if (foregroundComposite == null) foregroundComposite = fgGo.AddComponent<CompositeCollider2D>();
+            foregroundComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+
+            // 배경에는 Collider를 두지 않는다.
+            if (backgroundTilemap != null)
+            {
+                var bgCollider = backgroundTilemap.GetComponent<TilemapCollider2D>();
+                if (bgCollider != null) DestroyComponentSafe(bgCollider);
+                var bgComposite = backgroundTilemap.GetComponent<CompositeCollider2D>();
+                if (bgComposite != null) DestroyComponentSafe(bgComposite);
+                var bgBody = backgroundTilemap.GetComponent<Rigidbody2D>();
+                if (bgBody != null) DestroyComponentSafe(bgBody);
+            }
+        }
+
+        /// <summary>전경 타일 변경 후 CompositeCollider가 형상을 다시 합치도록 알린다.</summary>
+        public void NotifyForegroundCollisionDirty()
+        {
+            if (foregroundTilemap == null) return;
+            if (foregroundComposite == null) foregroundComposite = foregroundTilemap.GetComponent<CompositeCollider2D>();
+            // TilemapCollider2D(compositeOperation=Merge)는 SetTile/RefreshTile 후 Composite가 자동 갱신된다.
+            // 대량 변경(RenderWorld) 뒤에는 컴포넌트를 한번 껐다 켜 합성 메시를 확정한다.
+            if (foregroundComposite == null) return;
+            foregroundComposite.enabled = false;
+            foregroundComposite.enabled = true;
+        }
+
+        private static void DestroyComponentSafe(Component component)
+        {
+            if (component == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(component);
+            else UnityEngine.Object.DestroyImmediate(component);
+        }
 
         /// <summary>
         /// A-14: 월드 전체에 대해 먹선 오버레이를 처음부터 다시 계산한다. RenderWorld(최초 생성/로드 복원 후
@@ -284,7 +347,28 @@ namespace Nyangbingo.World
         public bool TryGetTileBase(string elementType, out TileBase tile)
         {
             if (_lookup == null) RebuildLookupTable();
-            return _lookup.TryGetValue(elementType, out tile);
+            if (string.IsNullOrEmpty(elementType))
+            {
+                tile = null;
+                return false;
+            }
+
+            if (_lookup.TryGetValue(elementType, out tile) && tile != null) return true;
+
+            // v29 has no dedicated wallpaper tile art. The approved temporary visual reuses the
+            // delivered upper-layer background tile until art supplies a distinct asset.
+            if (string.Equals(elementType, WorldTileTypes.Wallpaper, StringComparison.Ordinal) &&
+                _lookup.TryGetValue(WorldTileTypes.BackgroundDirt, out tile) && tile != null)
+                return true;
+
+            // A-16: t_bg_* ↔ bg_* 별칭.
+            var canonical = TileIdAlias.ToCanonical(elementType);
+            if (!string.Equals(canonical, elementType, StringComparison.Ordinal) &&
+                _lookup.TryGetValue(canonical, out tile) && tile != null)
+                return true;
+
+            tile = null;
+            return false;
         }
 
         /// <summary>
@@ -294,10 +378,16 @@ namespace Nyangbingo.World
         private TileBase ResolveTile(string elementType, ref HashSet<string> missing)
         {
             if (string.IsNullOrEmpty(elementType)) return null;
+            elementType = TileIdAlias.ToCanonical(elementType);
 
             // 1순위: 인스펙터에 직접 드래그앤드롭으로 연결해둔 명시적 매핑.
             if (_lookup.TryGetValue(elementType, out var explicitTile) && explicitTile != null)
                 return explicitTile;
+
+            if (string.Equals(elementType, WorldTileTypes.Wallpaper, StringComparison.Ordinal) &&
+                _lookup.TryGetValue(WorldTileTypes.BackgroundDirt, out var wallpaperFallback) &&
+                wallpaperFallback != null)
+                return wallpaperFallback;
 
             // 2순위: Resources.Load 동적 폴백(선택 사항) — 파일명이 elementType과 정확히 일치해야 한다.
             // suppressMissingTileWarning이 켜진 더미 렌더러(회귀 테스트 등)에서는 애초에 시도할 필요가
@@ -357,7 +447,8 @@ namespace Nyangbingo.World
                 WorldTileTypes.StoneMid, WorldTileTypes.IronOre, WorldTileTypes.CopperOre, WorldTileTypes.IceShard,
                 WorldTileTypes.StoneDeep, WorldTileTypes.IceSteelOre, WorldTileTypes.FrostEssence,
                 WorldTileTypes.Bedrock, WorldTileTypes.RuinWall, WorldTileTypes.IceLake, WorldTileTypes.IceAltar,
-                WorldTileTypes.BackgroundDirt, WorldTileTypes.BackgroundStone, WorldTileTypes.BackgroundDeep
+                WorldTileTypes.BackgroundDirt, WorldTileTypes.BackgroundStone, WorldTileTypes.BackgroundDeep,
+                WorldTileTypes.Wallpaper
             };
 
             var existing = new HashSet<string>();

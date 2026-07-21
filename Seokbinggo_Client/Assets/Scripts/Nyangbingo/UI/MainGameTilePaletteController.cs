@@ -73,8 +73,10 @@ namespace Nyangbingo.UI
             if (initialized) RefreshPalette();
         }
 
-        public static bool RequiresDevATileIntegration(string itemId) =>
-            string.Equals(itemId, WallpaperItemId, StringComparison.Ordinal);
+        public static bool RequiresDevATileIntegration(string itemId) => false;
+
+        public static bool SupportsPalettePlacement(string itemId) =>
+            TileService.SupportsForegroundPlacement(itemId) || IsWallpaper(itemId);
 
         public bool TryBeginPlacement(string itemId)
         {
@@ -83,11 +85,11 @@ namespace Nyangbingo.UI
                 runtimeServices.PlayerInventory.Count(itemId) <= 0) return false;
 
             var item = gameDataCatalog?.FindItem(itemId);
-            if (item == null || item.MvpScope == ItemMvpScope.B || RequiresDevATileIntegration(itemId)) return false;
+            if (item == null || item.MvpScope == ItemMvpScope.B) return false;
 
             selectedItemId = itemId;
             placementRuntime?.CancelPlacementPreview();
-            if (TileService.SupportsForegroundPlacement(itemId))
+            if (SupportsPalettePlacement(itemId))
             {
                 BeginForegroundPlacement(itemId);
             }
@@ -241,8 +243,8 @@ namespace Nyangbingo.UI
             {
                 if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 || !seen.Add(slot.itemId)) continue;
                 var item = gameDataCatalog.FindItem(slot.itemId);
-                if (item == null || item.MvpScope == ItemMvpScope.B || RequiresDevATileIntegration(item.Id)) continue;
-                var foreground = TileService.SupportsForegroundPlacement(item.Id);
+                if (item == null || item.MvpScope == ItemMvpScope.B) continue;
+                var foreground = SupportsPalettePlacement(item.Id);
                 var product = MainGameCraftingUiController.IsInventoryItemPlaceable(item, gameDataCatalog.Recipes);
                 if (foreground || product) results.Add(item.Id);
             }
@@ -347,8 +349,12 @@ namespace Nyangbingo.UI
             foregroundPreview.transform.position = new Vector3(foregroundPlacementCell.x + .5f,
                 foregroundPlacementCell.y + .5f, 0f);
             var tileService = bootstrap?.TileService;
-            foregroundPlacementValid = tileService != null && tileService.InBounds(foregroundPlacementCell) &&
-                                       tileService.GetTile(foregroundPlacementCell).IsAir &&
+            foregroundPlacementValid = tileService != null &&
+                                       (IsWallpaper(foregroundPlacementItemId)
+                                           ? bootstrap.Session?.BackgroundPlacement?.CanPlaceWallpaper(
+                                               foregroundPlacementCell) == true
+                                           : tileService.CanPlaceForeground(foregroundPlacementCell,
+                                               foregroundPlacementItemId)) &&
                                        runtimeServices.PlayerInventory.Count(foregroundPlacementItemId) > 0;
             foregroundPreview.color = foregroundPlacementValid
                 ? new Color(.35f, 1f, .75f, .65f)
@@ -359,8 +365,12 @@ namespace Nyangbingo.UI
         {
             if (!foregroundPlacementValid) return;
             var tileService = bootstrap?.TileService;
-            if (tileService == null || !tileService.TryPlaceForeground(foregroundPlacementCell,
-                    foregroundPlacementItemId, runtimeServices.PlayerInventory)) return;
+            if (tileService == null) return;
+            var placed = IsWallpaper(foregroundPlacementItemId)
+                ? tileService.TryPlaceWallpaper(foregroundPlacementCell, runtimeServices.PlayerInventory)
+                : tileService.TryPlaceForeground(foregroundPlacementCell, foregroundPlacementItemId,
+                    runtimeServices.PlayerInventory);
+            if (!placed) return;
             if (runtimeServices.PlayerInventory.Count(foregroundPlacementItemId) <= 0)
                 CancelForegroundPlacement();
             else UpdateForegroundPreview();
@@ -376,6 +386,9 @@ namespace Nyangbingo.UI
             if (clearSelection) selectedItemId = string.Empty;
             RefreshSlotVisuals();
         }
+
+        private static bool IsWallpaper(string itemId) =>
+            string.Equals(itemId, WallpaperItemId, StringComparison.Ordinal);
 
         private void OnDestroy()
         {

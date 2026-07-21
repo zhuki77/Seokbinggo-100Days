@@ -46,13 +46,21 @@ namespace Nyangbingo.World
         public const string IceLake = "ice_lake";
         public const string IceAltar = "ice_altar";
 
-        // 배경벽 (채굴 불가 · 장식용 · 테라리아식 2중 구조)
+        // 배경벽 (채굴 불가 · 장식용 · 테라리아식 2중 구조). 런타임 저장 ID는 bg_* 유지.
         public const string BackgroundDirt = "bg_dirt";
         public const string BackgroundStone = "bg_stone";
         public const string BackgroundDeep = "bg_deep";
 
+        // 공식 기획 ID(v26) — TileIdAlias가 bg_*와 동일 타일로 해석한다(단순 문자열 교체 마이그레이션 금지).
+        public const string OfficialBackgroundDirt = "t_bg_dirt";
+        public const string OfficialBackgroundStone = "t_bg_stone";
+        public const string OfficialBackgroundDeep = "t_bg_deep";
+
+        /// <summary>플레이어 설치 벽지(items.csv wallpaper). seals=0 — 밀폐 경계로 인정하지 않는다.</summary>
+        public const string Wallpaper = "wallpaper";
+
         /// <summary>
-        /// Air를 제외한 모든 알려진 elementType(전경 15종 + 배경벽 3종 = 18종, 임시 타일 팔레트와 정확히 대응).
+        /// Air를 제외한 모든 알려진 elementType(전경 + 배경벽 + 벽지 + 공식 배경 ID 별칭).
         /// 세이브 로드 시 타일 변경 이력의 tileId가 이 목록에 없으면 손상된(또는 알 수 없는) 데이터로 간주해
         /// 거부한다(A-06/A-08 — 문자열을 직접 이곳저곳에서 비교하지 않고 단일 출처로 검증).
         /// </summary>
@@ -62,13 +70,44 @@ namespace Nyangbingo.World
             StoneMid, IronOre, CopperOre, IceShard,
             StoneDeep, IceSteelOre, FrostEssence,
             Bedrock, RuinWall, IceLake, IceAltar,
-            BackgroundDirt, BackgroundStone, BackgroundDeep
+            BackgroundDirt, BackgroundStone, BackgroundDeep,
+            OfficialBackgroundDirt, OfficialBackgroundStone, OfficialBackgroundDeep,
+            Wallpaper
         };
+
+        public static bool IsBackgroundId(string elementType)
+        {
+            var id = TileIdAlias.ToCanonical(elementType);
+            return id == BackgroundDirt || id == BackgroundStone || id == BackgroundDeep || id == Wallpaper;
+        }
+    }
+
+    /// <summary>
+    /// A-16: 공식 기획 ID(t_bg_*)와 런타임 저장 ID(bg_*)를 동일 타일로 해석하는 별칭 테이블.
+    /// 저장 파일의 기존 bg_* 문자열은 그대로 유효하며, 단순 일괄 교체는 하지 않는다.
+    /// </summary>
+    public static class TileIdAlias
+    {
+        public static string ToCanonical(string elementType)
+        {
+            if (string.IsNullOrEmpty(elementType)) return elementType;
+            if (string.Equals(elementType, WorldTileTypes.OfficialBackgroundDirt, StringComparison.Ordinal))
+                return WorldTileTypes.BackgroundDirt;
+            if (string.Equals(elementType, WorldTileTypes.OfficialBackgroundStone, StringComparison.Ordinal))
+                return WorldTileTypes.BackgroundStone;
+            if (string.Equals(elementType, WorldTileTypes.OfficialBackgroundDeep, StringComparison.Ordinal))
+                return WorldTileTypes.BackgroundDeep;
+            return elementType;
+        }
+
+        public static bool EqualsCanonical(string a, string b) =>
+            string.Equals(ToCanonical(a), ToCanonical(b), StringComparison.Ordinal);
     }
 
     /// <summary>
     /// WorldGenerator가 찍는 낱개 타일의 메타데이터.
-    /// TileService/SealSystem이 그대로 참조하는 계약이므로 필드 의미를 바꾸지 말 것.
+    /// A-16: 전경(elementType/hardness)과 배경(backgroundElementType)을 한 셀에 동시에 보존한다.
+    /// naturalBackgroundElementType은 벽지 제거 시 복원 기준(자연 배경 또는 빈 배경)이다.
     /// </summary>
     [Serializable]
     public struct TileData
@@ -82,42 +121,109 @@ namespace Nyangbingo.World
         /// </summary>
         public bool isNaturalTerrain;
 
-        /// <summary>자원/타일 종류 ID. <see cref="WorldTileTypes"/> 참조, items.csv/mineral-tiers.csv와 매칭.</summary>
+        /// <summary>전경 자원/타일 종류 ID. 공기면 <see cref="WorldTileTypes.Air"/>.</summary>
         public string elementType;
 
+        /// <summary>현재 배경 ID(bg_*/wallpaper/air). 전경과 독립적으로 유지된다.</summary>
+        public string backgroundElementType;
+
+        /// <summary>벽지 제거 시 복원할 원래 자연 배경(또는 air). 동굴·하늘은 air.</summary>
+        public string naturalBackgroundElementType;
+
         /// <summary>
-        /// 배경벽(채굴 불가·장식용) 여부. 전경이 비어 있어도(hardness 0, elementType "air") 이 값이 true면
-        /// 뒤에 배경벽 스프라이트가 깔려 있다는 뜻 — 테라리아식 2중 Tilemap 구조를 단일 배열로 표현한다.
+        /// 레거시 호환: 배경이 비어 있지 않으면 true.
+        /// 신규 코드는 <see cref="HasBackground"/>를 쓰는 것을 권장한다.
         /// </summary>
-        public bool isUndergroundDecor;
+        public bool isUndergroundDecor
+        {
+            get => HasBackground;
+            set
+            {
+                if (!value && !HasBackground) return;
+                if (!value)
+                {
+                    backgroundElementType = WorldTileTypes.Air;
+                }
+            }
+        }
+
+        public bool HasBackground =>
+            !string.IsNullOrEmpty(backgroundElementType) &&
+            !string.Equals(backgroundElementType, WorldTileTypes.Air, StringComparison.Ordinal);
+
+        public bool HasNaturalBackground =>
+            !string.IsNullOrEmpty(naturalBackgroundElementType) &&
+            !string.Equals(naturalBackgroundElementType, WorldTileTypes.Air, StringComparison.Ordinal);
+
+        public bool IsWallpaperBackground =>
+            string.Equals(TileIdAlias.ToCanonical(backgroundElementType), WorldTileTypes.Wallpaper, StringComparison.Ordinal);
+
+        /// <summary>벽지 도포율 분자: 자연 지하 배경이 있거나 벽지가 깔린 칸.</summary>
+        public bool CountsAsWallpaperCovered => HasNaturalBackground || IsWallpaperBackground;
 
         public static TileData CreateAir() => new TileData
         {
             hardness = 0,
             isNaturalTerrain = false,
             elementType = WorldTileTypes.Air,
-            isUndergroundDecor = false
+            backgroundElementType = WorldTileTypes.Air,
+            naturalBackgroundElementType = WorldTileTypes.Air
         };
 
         /// <summary>
-        /// 전경이 비어 있는(hardness 0) 지하 칸. elementType에는 뒤에 깔린 배경벽 종류(bg_dirt 등)를
-        /// 담아 렌더링이 참조하게 하고, isUndergroundDecor=true로 "채굴 불가·장식용"임을 표시한다.
-        /// 걷기/판정 목적의 "비어있음"은 elementType 문자열이 아니라 항상 hardness &lt;= 0으로 판별한다(<see cref="IsAir"/>).
+        /// A-16: 전경만 비운 칸. 기존 배경/자연 배경 기준은 그대로 유지한다(채굴 규칙).
+        /// backgroundElement가 주어지면(레거시 CreateCaveAir 호출) 그 값을 현재·자연 배경으로 깐다.
         /// </summary>
-        public static TileData CreateCaveAir(string backgroundElement) => new TileData
+        public static TileData CreateCaveAir(string backgroundElement)
+        {
+            if (string.IsNullOrEmpty(backgroundElement) ||
+                string.Equals(backgroundElement, WorldTileTypes.Air, StringComparison.Ordinal))
+                return CreateAir();
+
+            var bg = TileIdAlias.ToCanonical(backgroundElement);
+            return new TileData
+            {
+                hardness = 0,
+                isNaturalTerrain = false,
+                elementType = WorldTileTypes.Air,
+                backgroundElementType = bg,
+                naturalBackgroundElementType = bg
+            };
+        }
+
+        /// <summary>전경 자연 지형 + 해당 지층 자연 배경을 함께 생성(A-16).</summary>
+        public static TileData CreateNaturalWithBackground(string elementId, int hardnessValue, string naturalBackground) =>
+            new TileData
+            {
+                hardness = hardnessValue,
+                isNaturalTerrain = true,
+                elementType = elementId,
+                backgroundElementType = string.IsNullOrEmpty(naturalBackground) ? WorldTileTypes.Air : TileIdAlias.ToCanonical(naturalBackground),
+                naturalBackgroundElementType = string.IsNullOrEmpty(naturalBackground) ? WorldTileTypes.Air : TileIdAlias.ToCanonical(naturalBackground)
+            };
+
+        /// <summary>배경 없는 자연/구조물 전경(지상 폐허·제단 등).</summary>
+        public static TileData CreateNatural(string elementId, int hardnessValue) =>
+            CreateNaturalWithBackground(elementId, hardnessValue, WorldTileTypes.Air);
+
+        /// <summary>전경만 제거하고 배경 필드는 유지한다(채굴).</summary>
+        public TileData WithoutForeground() => new TileData
         {
             hardness = 0,
             isNaturalTerrain = false,
-            elementType = string.IsNullOrEmpty(backgroundElement) ? WorldTileTypes.Air : backgroundElement,
-            isUndergroundDecor = true
+            elementType = WorldTileTypes.Air,
+            backgroundElementType = string.IsNullOrEmpty(backgroundElementType) ? WorldTileTypes.Air : backgroundElementType,
+            naturalBackgroundElementType = string.IsNullOrEmpty(naturalBackgroundElementType) ? WorldTileTypes.Air : naturalBackgroundElementType
         };
 
-        public static TileData CreateNatural(string elementId, int hardnessValue) => new TileData
+        /// <summary>벽지 제거 시 자연 배경(또는 빈 배경)으로 복원한다.</summary>
+        public TileData WithBackgroundRestoredToNatural() => new TileData
         {
-            hardness = hardnessValue,
-            isNaturalTerrain = true,
-            elementType = elementId,
-            isUndergroundDecor = false
+            hardness = hardness,
+            isNaturalTerrain = isNaturalTerrain,
+            elementType = elementType,
+            backgroundElementType = string.IsNullOrEmpty(naturalBackgroundElementType) ? WorldTileTypes.Air : naturalBackgroundElementType,
+            naturalBackgroundElementType = string.IsNullOrEmpty(naturalBackgroundElementType) ? WorldTileTypes.Air : naturalBackgroundElementType
         };
 
         /// <summary>전경에 파괴/채굴 대상이 없는(통행 가능한) 칸인지. 배경벽 유무와 무관하게 hardness로만 판별한다.</summary>
@@ -199,6 +305,13 @@ namespace Nyangbingo.World
         private static readonly Vector2Int[] FourNeighbors =
         {
             new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1)
+        };
+
+        // v27: 대각선·지그재그 포함 세로 연결 공동을 잡기 위한 8방.
+        private static readonly Vector2Int[] EightNeighbors =
+        {
+            new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1),
+            new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1)
         };
 
         private readonly WorldGenerationConfig config;
@@ -314,6 +427,8 @@ namespace Nyangbingo.World
             var width = config.MapWidth;
             var height = config.MapHeight;
             var grid = new TileData[width, height];
+            // Pass 4 입구 등 — protectedAir는 스폰 발밑 3×3·제단 최소만 (연결 통로 성역화 금지).
+            var protectedAir = new bool[width, height];
 
             // 패스별로 완전히 분리된 RNG — 순서가 바뀌어도 재현성이 깨지지 않는다.
             var terrainRng = new System.Random(seed + 1);
@@ -321,16 +436,27 @@ namespace Nyangbingo.World
             var resourceRng = new System.Random(seed + 3);
             var structureRng = new System.Random(seed + 4);
 
-            var surfaceHeights = GenerateTerrain(grid, terrainRng, config);   // Pass 1
-            CarveCaves(grid, surfaceHeights, caveRng, config);                // Pass 2
-            PlaceOreVeins(grid, surfaceHeights, resourceRng, config);         // Pass 3
-            var structures = PlaceStructures(grid, surfaceHeights, structureRng, config); // Pass 4
-
-            // Pass 2 안전망(연결성 확정 통로)은 반드시 Pass 4보다 나중에 뚫어야 한다 — PlaceStartAlcove가
-            // 알코브 3면(좌/우/바닥)을 자연 지형으로 강제로 되메우는데, 그 바닥벽 행(y = bottom-1)이
-            // 스폰 컬럼과 겹쳐서 먼저 뚫어둔 샤프트를 다시 막아버리는 버그가 있었다(등록 순서 문제).
-            // 그래서 항상 마지막에 뚫어 "무조건 통과하는 확정 통로" 보장을 지킨다.
-            CarveConnectivityShafts(grid, surfaceHeights, caveRng, config);
+            // Pass 1 — 지형
+            var surfaceHeights = GenerateTerrain(grid, terrainRng, config);
+            // Pass 2 — 펄린 동굴(후처리 없음)
+            CarveCaves(grid, surfaceHeights, caveRng, config);
+            // Pass 3 — 광맥
+            PlaceOreVeins(grid, surfaceHeights, resourceRng, config);
+            // Pass 4 — 구조물·스폰·얕은 입구 (protectedAir는 스폰 발밑 3×3·제단 최소만)
+            var structures = PlaceStructures(grid, surfaceHeights, structureRng, config, protectedAir);
+            // Pass 4b — 심층 제단 접근(지표·crust 절대 미개척). 스폰 연결은 PostProcess 이후 4c에서 보장.
+            CarveConnectivityShafts(grid, surfaceHeights, caveRng, config,
+                structures.spawnPoint, structures.altarPosition);
+            // Pass 최종 — Hard Fill/Hard Cut
+            PostProcessCaveCavities(grid, surfaceHeights, config, protectedAir);
+            // Hard Fill 후 공식 얕은 입구만 재개방
+            ReopenSpawnEntrance(grid, surfaceHeights, structures.spawnPoint, config);
+            // Pass 4c — v27: 지상→심층 인공 통로 Carve 금지. 지하 공동 간 최소 벽(≤3)만 천공.
+            EnsureReachabilityByCavityBridges(grid, surfaceHeights, structures.spawnPoint,
+                structures.altarPosition, config);
+            EnsureOnboardingResourcesNearSpawn(grid, surfaceHeights, structures.spawnPoint, config);
+            // A-18: 스폰 발밑 최종 보강
+            ReinforceSafeSpawnFooting(grid, surfaceHeights, structures.spawnPoint, config);
 
             return new WorldGenerationResult
             {
@@ -373,11 +499,13 @@ namespace Nyangbingo.World
                     var layer = ClassifyLayer(y, surfaceY, config);
                     grid[x, y] = layer switch
                     {
+                        // A-16: 하늘은 전경·배경 모두 비움. 지하 고체는 전경+지층 자연 배경을 함께 생성.
                         WorldLayer.Surface => TileData.CreateAir(),
-                        WorldLayer.Bedrock => TileData.CreateNatural(WorldTileTypes.Bedrock, 3),
-                        WorldLayer.Upper => TileData.CreateNatural(PickUpperFillElement(x, y, fillNoiseOffsetX, fillNoiseOffsetY, config), 1),
-                        WorldLayer.Middle => TileData.CreateNatural(WorldTileTypes.StoneMid, 2),
-                        _ => TileData.CreateNatural(WorldTileTypes.StoneDeep, 3)
+                        WorldLayer.Bedrock => TileData.CreateNaturalWithBackground(WorldTileTypes.Bedrock, 3, WorldTileTypes.BackgroundDeep),
+                        WorldLayer.Upper => TileData.CreateNaturalWithBackground(
+                            PickUpperFillElement(x, y, fillNoiseOffsetX, fillNoiseOffsetY, config), 1, WorldTileTypes.BackgroundDirt),
+                        WorldLayer.Middle => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
+                        _ => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneDeep, 3, WorldTileTypes.BackgroundDeep)
                     };
                 }
             }
@@ -444,32 +572,302 @@ namespace Nyangbingo.World
         }
 
         // ==============================================================
-        // Pass 2 — 동굴 (2D 펄린 임계값, 깊이에 따라 상층 10% → 심층 25% 보간)
-        // 뚫린 칸의 전경은 비지만(hardness 0), isUndergroundDecor = true로
-        // "배경벽이 뒤에 깔려 있다"는 정보는 유지한다(테라리아식 2중 구조).
+        // Pass 2 — 2D 펄린 동굴 개척만 (세로 한도·지표 봉인은 최후반 PostProcess)
         // ==============================================================
         private static void CarveCaves(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config)
         {
             var width = config.MapWidth;
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
             var offsetX = (float)(rng.NextDouble() * 100000.0);
             var offsetY = (float)(rng.NextDouble() * 100000.0);
 
             for (var x = 0; x < width; x++)
             {
                 var surfaceY = surfaceHeights[x];
-                for (var y = config.BedrockThickness; y <= surfaceY; y++)
+                var carveMaxExclusive = surfaceY - crust + 1;
+                if (carveMaxExclusive <= config.BedrockThickness) continue;
+
+                for (var y = config.BedrockThickness; y < carveMaxExclusive; y++)
                 {
                     var layer = ClassifyLayer(y, surfaceY, config);
                     if (layer == WorldLayer.Surface || layer == WorldLayer.Bedrock) continue;
 
                     var depthT = Mathf.InverseLerp(surfaceY, config.BedrockThickness, y);
                     var caveChance = Mathf.Lerp(config.CaveChanceUpper, config.CaveChanceDeep, depthT);
-
-                    var noise = Mathf.PerlinNoise((x + offsetX) * config.CaveNoiseFrequency, (y + offsetY) * config.CaveNoiseFrequency);
+                    var noise = Mathf.PerlinNoise(
+                        (x + offsetX) * config.CaveNoiseFrequency,
+                        (y + offsetY) * config.CaveNoiseFrequency);
                     if (noise < caveChance)
-                        grid[x, y] = TileData.CreateCaveAir(BackgroundElementFor(layer));
+                        grid[x, y] = TileData.CreateAir();
                 }
             }
+        }
+
+        /// <summary>
+        /// v27 후처리 — Pass 4·4b(구조물·연결 통로) 이후 최후반 Hard Fill/Hard Cut.
+        /// protectedAir: 스폰 발밑 3×3·제단 최소만. Hard Cut은 span&gt;cave_max_height 시 protectedAir 무시.
+        /// </summary>
+        private static void PostProcessCaveCavities(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config, bool[,] protectedAir)
+        {
+            var width = config.MapWidth;
+            var maxChamberHeight = Mathf.Max(1, config.CaveMaxHeight);
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+
+            var visited = new bool[width, config.MapHeight];
+            var queueX = new int[width * config.MapHeight];
+            var queueY = new int[width * config.MapHeight];
+            var compX = new int[width * config.MapHeight];
+            var compY = new int[width * config.MapHeight];
+
+            HardFillTopSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
+            HardFillPreferredSpawnSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
+
+            const int maxCutPasses = 128;
+            for (var pass = 0; pass < maxCutPasses; pass++)
+            {
+                ClearVisited(visited, width, config.MapHeight);
+                var cutAny = false;
+
+                for (var x = 0; x < width; x++)
+                {
+                    var surfaceY = surfaceHeights[x];
+                    for (var y = config.BedrockThickness; y <= surfaceY; y++)
+                    {
+                        if (!grid[x, y].IsAir || visited[x, y]) continue;
+                        if (ShouldPreserveSpecialAir(grid[x, y])) continue;
+
+                        var head = 0;
+                        var tail = 0;
+                        queueX[tail] = x;
+                        queueY[tail] = y;
+                        tail++;
+                        visited[x, y] = true;
+
+                        var compCount = 0;
+                        var minX = x;
+                        var maxX = x;
+                        var minY = y;
+                        var maxY = y;
+
+                        while (head < tail)
+                        {
+                            var cx = queueX[head];
+                            var cy = queueY[head];
+                            head++;
+
+                            compX[compCount] = cx;
+                            compY[compCount] = cy;
+                            compCount++;
+                            if (cx < minX) minX = cx;
+                            if (cx > maxX) maxX = cx;
+                            if (cy < minY) minY = cy;
+                            if (cy > maxY) maxY = cy;
+
+                            for (var n = 0; n < EightNeighbors.Length; n++)
+                            {
+                                var nx = cx + EightNeighbors[n].x;
+                                var ny = cy + EightNeighbors[n].y;
+                                if ((uint)nx >= (uint)width || (uint)ny >= (uint)config.MapHeight) continue;
+                                if (ny < config.BedrockThickness || ny > surfaceHeights[nx]) continue;
+                                if (!grid[nx, ny].IsAir || visited[nx, ny]) continue;
+                                if (ShouldPreserveSpecialAir(grid[nx, ny])) continue;
+
+                                visited[nx, ny] = true;
+                                queueX[tail] = nx;
+                                queueY[tail] = ny;
+                                tail++;
+                            }
+                        }
+
+                        var span = maxY - minY + 1;
+                        if (span <= maxChamberHeight) continue;
+
+                        cutAny |= SealOversizedCavityComponent(grid, surfaceHeights, config, protectedAir,
+                            minX, maxX, minY, maxY, maxChamberHeight, compCount, compX, compY);
+                    }
+                }
+
+                if (!cutAny) break;
+            }
+
+            HardFillTopSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
+            HardFillPreferredSpawnSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
+        }
+
+        /// <summary>span &gt; cave_max_height 공동 — Y_mid 허리 밴드+3×3 봉인 후 하부 12칸만 유지.</summary>
+        private static bool SealOversizedCavityComponent(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config, bool[,] protectedAir,
+            int minX, int maxX, int minY, int maxY, int maxChamberHeight,
+            int compCount, int[] compX, int[] compY)
+        {
+            var cutAny = false;
+            var yMid = (minY + maxY) / 2;
+
+            // 1) Y_mid 가로 밴드: 공동 x범위 전체 + 3×3 주변 봉인(대각선 우회 차단).
+            for (var bx = minX; bx <= maxX; bx++)
+            {
+                if (!InBounds(bx, yMid, config.MapWidth, config.MapHeight)) continue;
+                if (yMid > surfaceHeights[bx]) continue;
+                if (ForceSealCavityAirCell(grid, surfaceHeights, bx, yMid, config))
+                    cutAny = true;
+                ForceSealNeighborhood3x3(grid, surfaceHeights, bx, yMid, config);
+            }
+
+            // 2) 공동 성분 칸 중 yMid 행 — 밴드 밖 x에 남은 허리도 메움.
+            for (var i = 0; i < compCount; i++)
+            {
+                if (compY[i] != yMid) continue;
+                if (ForceSealCavityAirCell(grid, surfaceHeights, compX[i], yMid, config))
+                    cutAny = true;
+                ForceSealNeighborhood3x3(grid, surfaceHeights, compX[i], yMid, config);
+            }
+
+            // 3) 하부 maxChamberHeight 유지 — 그 위 잔여 공기 제거(protectedAir·구역 보호 무시).
+            var keepMaxY = minY + maxChamberHeight - 1;
+            for (var i = 0; i < compCount; i++)
+            {
+                var cx = compX[i];
+                var cy = compY[i];
+                if (cy <= keepMaxY) continue;
+                if (ForceSealCavityAirCell(grid, surfaceHeights, cx, cy, config))
+                    cutAny = true;
+                ForceSealNeighborhood3x3(grid, surfaceHeights, cx, cy, config);
+            }
+
+            return cutAny;
+        }
+
+        /// <summary>공식 보호 칸(스폰 발밑 3×3·제단 주변)만 Hard Fill 예외. 긴 수직 통로는 보호하지 않음.</summary>
+        private static bool IsProtectedAirCell(int x, int y, bool[,] protectedAir) =>
+            protectedAir != null && InBounds(x, y, protectedAir.GetLength(0), protectedAir.GetLength(1)) &&
+            protectedAir[x, y];
+
+        private static bool ShouldPreserveSpecialAir(in TileData tile)
+        {
+            if (!tile.IsAir) return false;
+            return string.Equals(tile.elementType, WorldTileTypes.IceLake, StringComparison.Ordinal) ||
+                   string.Equals(tile.elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal);
+        }
+
+        /// <summary>Hard Cut 전용 — 얼음 호수/제단만 제외, protectedAir는 span 위반 시 무시.</summary>
+        private static bool ForceSealCavityAirCell(TileData[,] grid, int[] surfaceHeights, int x, int y,
+            WorldGenerationConfig config)
+        {
+            if (!InBounds(x, y, config.MapWidth, config.MapHeight)) return false;
+            if (!grid[x, y].IsAir) return false;
+            if (ShouldPreserveSpecialAir(grid[x, y])) return false;
+
+            SealCaveCellWithRock(grid, x, y, surfaceHeights[x], config);
+            return true;
+        }
+
+        private static void ForceSealNeighborhood3x3(TileData[,] grid, int[] surfaceHeights, int centerX, int centerY,
+            WorldGenerationConfig config)
+        {
+            for (var dx = -1; dx <= 1; dx++)
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                ForceSealCavityAirCell(grid, surfaceHeights, centerX + dx, centerY + dy, config);
+            }
+        }
+
+        private static bool TrySealCavityAirCell(TileData[,] grid, int[] surfaceHeights, int x, int y,
+            WorldGenerationConfig config, bool[,] protectedAir)
+        {
+            if (!InBounds(x, y, config.MapWidth, config.MapHeight)) return false;
+            if (!grid[x, y].IsAir) return false;
+            if (ShouldPreserveSpecialAir(grid[x, y])) return false;
+            if (IsProtectedAirCell(x, y, protectedAir)) return false;
+
+            SealCaveCellWithRock(grid, x, y, surfaceHeights[x], config);
+            return true;
+        }
+
+        private static void SealNeighborhood3x3(TileData[,] grid, int[] surfaceHeights, int centerX, int centerY,
+            WorldGenerationConfig config, bool[,] protectedAir)
+        {
+            for (var dx = -1; dx <= 1; dx++)
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                TrySealCavityAirCell(grid, surfaceHeights, centerX + dx, centerY + dy, config, protectedAir);
+            }
+        }
+
+        private static void HardFillTopSafetyZone(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config, int crust, bool[,] protectedAir)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var absoluteSurfaceBandMinY = Mathf.Max(0, height - 20);
+
+            for (var x = 0; x < width; x++)
+            {
+                var surfaceY = surfaceHeights[x];
+                var sealFrom = Mathf.Max(config.BedrockThickness, surfaceY - crust + 1);
+                if (absoluteSurfaceBandMinY <= surfaceY)
+                    sealFrom = Mathf.Min(sealFrom, Mathf.Max(config.BedrockThickness, absoluteSurfaceBandMinY));
+
+                for (var y = sealFrom; y <= surfaceY; y++)
+                {
+                    if (!InBounds(x, y, width, height)) continue;
+                    if (IsProtectedAirCell(x, y, protectedAir)) continue;
+                    if (ShouldPreserveSpecialAir(grid[x, y])) continue;
+                    if (!grid[x, y].IsAir) continue;
+                    SealCaveCellWithRock(grid, x, y, surfaceY, config);
+                }
+            }
+        }
+
+        /// <summary>스폰 근처는 지표 crust만 메움. 보호 칸(발밑 3×3)만 예외.</summary>
+        private static void HardFillPreferredSpawnSafetyZone(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config, int crust, bool[,] protectedAir)
+        {
+            var width = config.MapWidth;
+            var preferredX = Mathf.Clamp(Mathf.RoundToInt(width * config.SpawnColumnRatio), 3, width - 4);
+
+            for (var x = preferredX - 2; x <= preferredX + 2; x++)
+            {
+                if (x < 0 || x >= width) continue;
+                var surfaceY = surfaceHeights[x];
+                var sealFrom = Mathf.Max(config.BedrockThickness, surfaceY - crust + 1);
+                for (var y = sealFrom; y <= surfaceY; y++)
+                {
+                    if (IsProtectedAirCell(x, y, protectedAir)) continue;
+                    if (ShouldPreserveSpecialAir(grid[x, y])) continue;
+                    if (!grid[x, y].IsAir) continue;
+                    SealCaveCellWithRock(grid, x, y, surfaceY, config);
+                }
+            }
+        }
+
+        private static void ClearVisited(bool[,] visited, int width, int height)
+        {
+            for (var x = 0; x < width; x++)
+            for (var y = 0; y < height; y++)
+                visited[x, y] = false;
+        }
+
+        /// <summary>공동 단절용 — 해당 칸을 지층에 맞는 자연 전경+배경으로 복구.</summary>
+        private static void SealCaveCellWithRock(TileData[,] grid, int x, int y, int surfaceY,
+            WorldGenerationConfig config)
+        {
+            var layer = ClassifyLayer(y, surfaceY, config);
+            grid[x, y] = layer switch
+            {
+                WorldLayer.Upper => TileData.CreateNaturalWithBackground(
+                    WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt),
+                WorldLayer.Middle => TileData.CreateNaturalWithBackground(
+                    WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
+                WorldLayer.Deep => TileData.CreateNaturalWithBackground(
+                    WorldTileTypes.StoneDeep, 3, WorldTileTypes.BackgroundDeep),
+                WorldLayer.Bedrock => TileData.CreateNaturalWithBackground(
+                    WorldTileTypes.Bedrock, 3, WorldTileTypes.BackgroundDeep),
+                _ => TileData.CreateNaturalWithBackground(
+                    WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt)
+            };
         }
 
         private static string BackgroundElementFor(WorldLayer layer) => layer switch
@@ -480,32 +878,698 @@ namespace Nyangbingo.World
         };
 
         /// <summary>
-        /// 사이트 퍼콜레이션 임계값(2D grid ≈ 59.3%)보다 훨씬 낮은 공동률(10~25%)에서는 독립적인
-        /// 펄린 동굴 블롭만으로 "스폰→심층→제단"이 실제로 이어질 확률이 매우 낮다. §5 검증(경로 연결성/
-        /// 심층 연결/제단 도달)이 리롤 상한 안에서 통과하도록, 스폰 컬럼과 제단 컬럼을 잇는 확정 통로를
-        /// Pass 2에서 쓰던 caveRng로 결정론적으로 뚫어준다. 나머지는 여전히 펄린 동굴이 채운다.
-        ///
-        /// 호출 순서 주의: 반드시 Pass 4(PlaceStructures) 이후에 호출해야 한다. PlaceStartAlcove가
-        /// 알코브 좌/우/바닥 3면을 자연 지형으로 강제로 되메우는데, 그 바닥벽 행이 스폰 컬럼과 겹쳐서
-        /// Pass 4보다 먼저 뚫으면 알코브가 자기 발밑 통로를 다시 막아버린다(실제로 겪었던 회귀 버그).
+        /// 연결 통로(Pass 4b) 굴착 금지. 다음이면 절대 Air로 파지 않는다.
+        /// 1) 절대 깊이 상한 y ≥ ConnectivityDeepMaxYExclusive(15) — 심층만 허용
+        /// 2) globals surface_y=20 밴드(y ≥ height-20)
+        /// 3) 열별 지표 crust(surfaceY - crust + 1 이상)
         /// </summary>
-        private static void CarveConnectivityShafts(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config)
+        private const int ConnectivityDeepMaxYExclusive = 15;
+
+        private static int GetConnectivityDigForbiddenMinY(int x, int[] surfaceHeights, WorldGenerationConfig config)
         {
-            var width = config.MapWidth;
-            var spawnX = Mathf.Clamp(Mathf.RoundToInt(width * config.SpawnColumnRatio), 1, width - 2);
-            var altarX = Mathf.Clamp(Mathf.RoundToInt(width * config.DeepAltarColumnRatio), 1, width - 2);
-            var deepFloor = config.BedrockThickness + 1;
+            var width = surfaceHeights.Length;
+            var surfaceY = surfaceHeights[Mathf.Clamp(x, 0, width - 1)];
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+            var crustFloor = surfaceY - crust + 1;
+            var absoluteSkyBandFloor = Mathf.Max(config.BedrockThickness, config.MapHeight - 20);
 
-            var shaftTop = new Vector2Int(spawnX, Mathf.Max(config.BedrockThickness, surfaceHeights[spawnX] - 1));
-            var shaftBottom = new Vector2Int(spawnX, deepFloor);
-            CarveTunnel(grid, surfaceHeights, shaftTop, shaftBottom, rng, config);
-
-            var altarPoint = new Vector2Int(altarX, deepFloor);
-            CarveTunnel(grid, surfaceHeights, shaftBottom, altarPoint, rng, config);
+            // 가장 엄격(가장 낮은) 금지 시작 y — 그 이상은 전부 금지.
+            return Mathf.Min(ConnectivityDeepMaxYExclusive, crustFloor, absoluteSkyBandFloor);
         }
 
-        /// <summary>from→to를 맨해튼 거리만큼의 스텝으로 정확히 잇는 무작위 지그재그 통로. 매 스텝 거리가
-        /// 엄격히 줄어들기 때문에 별도 반복 상한 없이 항상 종료가 보장된다.</summary>
+        private static bool IsConnectivityDigForbidden(int x, int y, int[] surfaceHeights, WorldGenerationConfig config)
+        {
+            if (y < config.BedrockThickness) return true;
+            if (y >= ConnectivityDeepMaxYExclusive) return true;
+            var width = surfaceHeights.Length;
+            if (x < 0 || x >= width) return true;
+            if (y > surfaceHeights[x]) return true;
+            return y >= GetConnectivityDigForbiddenMinY(x, surfaceHeights, config);
+        }
+
+        /// <summary>
+        /// Pass 4b — 심층(y&lt;15) 제단 접근만. 긴 일자 수평 Bridge / 장거리 NarrowTunnel 금지.
+        /// 제단 주위 3×3 공기 + 기존 심층 공동까지 맨해튼 ≤5 최소 연결(또는 미세 지그재그).
+        /// </summary>
+        private static void CarveConnectivityShafts(TileData[,] grid, int[] surfaceHeights, System.Random rng,
+            WorldGenerationConfig config, Vector2Int spawnPoint, Vector2Int altarPosition)
+        {
+            _ = rng;
+            _ = spawnPoint;
+            var width = config.MapWidth;
+            var deepFloor = config.BedrockThickness + 2;
+            var deepCeiling = ConnectivityDeepMaxYExclusive - 1; // 14
+            if (deepCeiling < deepFloor) return;
+
+            // 1) 제단 주위 최소 공간(3×3) — 제단 타일 자체는 유지.
+            CarveDeepAltarLocalPocket(grid, surfaceHeights, altarPosition, config);
+
+            // 2) 심층 밴드 안 기존 공기 공동이 가까우면 ≤5타일만 천공해 합류.
+            if (TryLinkAltarToNearestDeepAir(grid, surfaceHeights, altarPosition, deepFloor, deepCeiling,
+                    config, maxDist: 5))
+                return;
+
+            // 3) 주변에 공동이 없으면 짧은 미세 지그재그(총 굴착 ≤5)로 국소 공간만 확보.
+            CarveDeepAltarMicroZigzag(grid, surfaceHeights, altarPosition, deepFloor, deepCeiling, config);
+        }
+
+        private static void CarveDeepAltarLocalPocket(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int altarPosition, WorldGenerationConfig config)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            for (var dx = -1; dx <= 1; dx++)
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                var x = altarPosition.x + dx;
+                var y = altarPosition.y + dy;
+                if ((uint)x >= (uint)width || (uint)y >= (uint)height) continue;
+                if (y >= ConnectivityDeepMaxYExclusive) continue;
+                if (IsConnectivityDigForbidden(x, y, surfaceHeights, config)) continue;
+                if (string.Equals(grid[x, y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                    continue;
+                grid[x, y] = TileData.CreateAir();
+            }
+        }
+
+        private static bool TryLinkAltarToNearestDeepAir(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int altarPosition, int deepFloor, int deepCeiling, WorldGenerationConfig config, int maxDist)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+
+            // 제단 인접 공기(방금 판 포켓 포함)를 출발점으로.
+            var starts = new List<Vector2Int>(8);
+            foreach (var offset in FourNeighbors)
+            {
+                var p = altarPosition + offset;
+                if (!InBounds(p, width, height)) continue;
+                if (!grid[p.x, p.y].IsAir) continue;
+                if (p.y < deepFloor || p.y > deepCeiling) continue;
+                starts.Add(p);
+            }
+            if (starts.Count == 0) return false;
+
+            Vector2Int bestFrom = default;
+            Vector2Int bestTo = default;
+            var bestDist = int.MaxValue;
+
+            for (var x = altarPosition.x - maxDist - 2; x <= altarPosition.x + maxDist + 2; x++)
+            for (var y = deepFloor; y <= deepCeiling; y++)
+            {
+                if (!InBounds(x, y, width, height)) continue;
+                if (!grid[x, y].IsAir) continue;
+                if (IsConnectivityDigForbidden(x, y, surfaceHeights, config)) continue;
+                // 이미 제단 포켓에 속한 공기는 스킵(다른 공동만).
+                if (Mathf.Abs(x - altarPosition.x) <= 1 && Mathf.Abs(y - altarPosition.y) <= 1) continue;
+
+                foreach (var from in starts)
+                {
+                    var dist = Mathf.Abs(x - from.x) + Mathf.Abs(y - from.y);
+                    if (dist < 2 || dist > maxDist || dist >= bestDist) continue;
+                    bestDist = dist;
+                    bestFrom = from;
+                    bestTo = new Vector2Int(x, y);
+                }
+            }
+
+            if (bestDist == int.MaxValue) return false;
+            CarveConnectivityShortZigzag(grid, surfaceHeights, bestFrom, bestTo, config);
+            return true;
+        }
+
+        /// <summary>맨해튼 ≤5 구간을 1~2칸마다 y를 ±1로 흔들며 연결 — 긴 일자 수평 Line 금지.</summary>
+        private static void CarveConnectivityShortZigzag(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int from, Vector2Int to, WorldGenerationConfig config)
+        {
+            var width = config.MapWidth;
+            var current = from;
+            CarveConnectivityTunnelCell(grid, surfaceHeights, current, config);
+            var step = 0;
+            var guard = 0;
+            var limit = Mathf.Abs(to.x - from.x) + Mathf.Abs(to.y - from.y) + 8;
+
+            while ((current.x != to.x || current.y != to.y) && guard++ < limit)
+            {
+                var dx = to.x - current.x;
+                var dy = to.y - current.y;
+                Vector2Int next;
+
+                if (dx != 0)
+                {
+                    // 가로 진행 중 2칸마다 목표 y 쪽으로 1칸 꺾기(일자 흉터 완화).
+                    if (step > 0 && step % 2 == 0 && dy != 0)
+                        next = new Vector2Int(current.x, current.y + Math.Sign(dy));
+                    else
+                        next = new Vector2Int(current.x + Math.Sign(dx), current.y);
+                }
+                else if (dy != 0)
+                {
+                    next = new Vector2Int(current.x, current.y + Math.Sign(dy));
+                }
+                else break;
+
+                if (IsConnectivityDigForbidden(next.x, next.y, surfaceHeights, config) ||
+                    !InBounds(next, width, config.MapHeight))
+                {
+                    // 막히면 순수 축정렬로 폴백.
+                    if (dx != 0)
+                        next = new Vector2Int(current.x + Math.Sign(dx), current.y);
+                    else
+                        next = new Vector2Int(current.x, current.y + Math.Sign(dy));
+                    if (IsConnectivityDigForbidden(next.x, next.y, surfaceHeights, config))
+                        break;
+                }
+
+                current = next;
+                CarveConnectivityTunnelCell(grid, surfaceHeights, current, config);
+                step++;
+            }
+        }
+
+        private static void CarveDeepAltarMicroZigzag(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int altarPosition, int deepFloor, int deepCeiling, WorldGenerationConfig config)
+        {
+            var width = config.MapWidth;
+            // 제단에서 왼쪽/오른쪽으로 최대 5칸, 2칸마다 y ±1 흔들기.
+            var dir = altarPosition.x > width / 2 ? -1 : 1;
+            var y = Mathf.Clamp(altarPosition.y, deepFloor, deepCeiling);
+            var x = altarPosition.x;
+            for (var i = 1; i <= 5; i++)
+            {
+                x = Mathf.Clamp(x + dir, 2, width - 3);
+                if (i % 2 == 0)
+                {
+                    var ny = Mathf.Clamp(y + ((i & 2) == 0 ? 1 : -1), deepFloor, deepCeiling);
+                    if (!IsConnectivityDigForbidden(x, ny, surfaceHeights, config))
+                        y = ny;
+                }
+                if (IsConnectivityDigForbidden(x, y, surfaceHeights, config)) break;
+                if (string.Equals(grid[x, y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                    continue;
+                grid[x, y] = TileData.CreateAir();
+            }
+        }
+
+        /// <summary>
+        /// v27 도달성 — 지상→심층 인공 계단/사선/미앤더 Carve 전면 금지.
+        /// 1) 공식 얕은 입구 + 옆 열 사이드스텝만 (crust 미침범)
+        /// 2) 입구 직하 플러그로 직통 샤프트 차단
+        /// 3) 지하(crust 아래) 기존 공동끼리 맨해튼 ≤3 벽만 최소 천공
+        /// 4) 심층 제단 인접 공기만 확보 (Pass 4b 심층 통로와 연계)
+        /// </summary>
+        private static void EnsureReachabilityByCavityBridges(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int spawnPoint, Vector2Int altarPosition, WorldGenerationConfig config)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var entranceX = Mathf.Clamp(spawnPoint.x - 1, 1, width - 2);
+            var spawnX = spawnPoint.x;
+            var deepFloor = config.BedrockThickness + 2;
+            var digGuard = ReachabilityDigGuard.Create(entranceX, spawnX, surfaceHeights, config);
+            SealEntranceColumnPlugs(grid, digGuard, config);
+
+            // 공식 입구 바닥 → 옆 열로만 1~3칸 사이드스텝 (아래로 뚫지 않음).
+            var sideX = Mathf.Clamp(entranceX + 2, 3, width - 4);
+            if (sideX == entranceX || sideX == spawnX)
+                sideX = Mathf.Clamp(entranceX - 2, 3, width - 4);
+
+            var deckY = digGuard.EntranceOfficialBottom;
+            if (deckY < deepFloor) deckY = deepFloor;
+            var sideAnchor = CarveHorizontalReachabilityLink(grid, digGuard, entranceX, sideX, deckY,
+                deepFloor, config);
+
+            // 얕은 입구 바닥에서 2~3타일 안의 기존 공동만 최소 연결.
+            TryLinkSideAnchorToNearestAir(grid, digGuard, sideAnchor, spawnPoint, config, maxDist: 3);
+
+            // 지하 공동 간 얇은 벽(≤3)만 반복 천공 — 맨땅 장거리 Carve 없음.
+            ConnectUndergroundCavitiesWithMinimalBridges(grid, digGuard, config, maxGap: 3, maxPasses: 400);
+
+            // 심층 제단 인접 공기(y&lt;15) — 지표에서 내려오는 통로가 아님.
+            foreach (var offset in FourNeighbors)
+            {
+                var cell = altarPosition + offset;
+                if ((uint)cell.x >= (uint)width || (uint)cell.y >= (uint)height) continue;
+                if (cell.y >= ConnectivityDeepMaxYExclusive) continue;
+                if (digGuard.Forbidden(cell.x, cell.y)) continue;
+                if (string.Equals(grid[cell.x, cell.y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                    continue;
+                grid[cell.x, cell.y] = TileData.CreateAir();
+            }
+        }
+
+        /// <summary>
+        /// crust 아래 공기 공동을 라벨링한 뒤, 서로 다른 공동이 맨해튼 ≤ maxGap 이면
+        /// 그 사이 암석만 L자로 최소 천공한다. 지상→심층 경로를 새로 만들지 않는다.
+        /// </summary>
+        private static void ConnectUndergroundCavitiesWithMinimalBridges(TileData[,] grid,
+            ReachabilityDigGuard digGuard, WorldGenerationConfig config, int maxGap, int maxPasses)
+        {
+            for (var pass = 0; pass < maxPasses; pass++)
+            {
+                if (!TryPunchClosestCavityWall(grid, digGuard, config, maxGap))
+                    break;
+            }
+        }
+
+        private static bool TryPunchClosestCavityWall(TileData[,] grid, ReachabilityDigGuard digGuard,
+            WorldGenerationConfig config, int maxGap)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var labels = new int[width, height];
+            var airCells = new List<Vector2Int>(4096);
+            var labelCount = 0;
+
+            for (var x = 0; x < width; x++)
+            {
+                var surfaceY = digGuard.SurfaceHeights[x];
+                for (var y = config.BedrockThickness; y <= surfaceY; y++)
+                {
+                    if (!grid[x, y].IsAir) continue;
+                    // crust/지표 밴드 공기는 공동 네트워크에서 제외 (공식 입구와 분리).
+                    if (IsSurfaceOrCrustDigForbidden(x, y, digGuard.SurfaceHeights, config)) continue;
+                    if (labels[x, y] != 0) continue;
+
+                    labelCount++;
+                    var label = labelCount;
+                    var q = new Queue<Vector2Int>();
+                    var start = new Vector2Int(x, y);
+                    q.Enqueue(start);
+                    labels[x, y] = label;
+                    airCells.Add(start);
+
+                    while (q.Count > 0)
+                    {
+                        var c = q.Dequeue();
+                        foreach (var offset in FourNeighbors)
+                        {
+                            var n = c + offset;
+                            if (!InBounds(n, width, height)) continue;
+                            if (labels[n.x, n.y] != 0) continue;
+                            if (!grid[n.x, n.y].IsAir) continue;
+                            if (IsSurfaceOrCrustDigForbidden(n.x, n.y, digGuard.SurfaceHeights, config)) continue;
+                            labels[n.x, n.y] = label;
+                            q.Enqueue(n);
+                            airCells.Add(n);
+                        }
+                    }
+                }
+            }
+
+            if (labelCount < 2) return false;
+
+            Vector2Int bestFrom = default;
+            Vector2Int bestTo = default;
+            var bestScore = int.MaxValue;
+            var found = false;
+
+            // 각 공기 칸 주변 맨해튼 1..maxGap 에서 다른 라벨 공기 탐색.
+            for (var i = 0; i < airCells.Count; i++)
+            {
+                var from = airCells[i];
+                var fromLabel = labels[from.x, from.y];
+                for (var dx = -maxGap; dx <= maxGap; dx++)
+                for (var dy = -maxGap; dy <= maxGap; dy++)
+                {
+                    var dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                    if (dist < 2 || dist > maxGap) continue; // 1이면 이미 같은 4연결 성분
+                    var to = new Vector2Int(from.x + dx, from.y + dy);
+                    if (!InBounds(to, width, height)) continue;
+                    if (!grid[to.x, to.y].IsAir) continue;
+                    if (IsSurfaceOrCrustDigForbidden(to.x, to.y, digGuard.SurfaceHeights, config)) continue;
+                    var toLabel = labels[to.x, to.y];
+                    if (toLabel == 0 || toLabel == fromLabel) continue;
+
+                    // 가로 연결 우선(같은 점수면 짧은 것). 수직 장거리 흉터 억제.
+                    var score = dist * 1000 + Mathf.Abs(dy) * 10 + Mathf.Abs(from.y + to.y);
+                    if (score >= bestScore) continue;
+                    // 경로상 굴착 칸이 digGuard에 막히면 스킵.
+                    if (!CanCarveMinimalLBridge(digGuard, from, to)) continue;
+                    bestScore = score;
+                    bestFrom = from;
+                    bestTo = to;
+                    found = true;
+                }
+            }
+
+            if (!found) return false;
+            CarveMinimalWallBridge(grid, digGuard, bestFrom, bestTo, config);
+            return true;
+        }
+
+        private static bool CanCarveMinimalLBridge(ReachabilityDigGuard digGuard, Vector2Int from, Vector2Int to)
+        {
+            var cornerA = new Vector2Int(to.x, from.y);
+            var cornerB = new Vector2Int(from.x, to.y);
+            if (!digGuard.Forbidden(cornerA.x, cornerA.y))
+            {
+                return !digGuard.Forbidden(from.x, from.y) && !digGuard.Forbidden(to.x, to.y);
+            }
+            return !digGuard.Forbidden(cornerB.x, cornerB.y) &&
+                   !digGuard.Forbidden(from.x, from.y) && !digGuard.Forbidden(to.x, to.y);
+        }
+
+        /// <summary>공동 사이 얇은 벽만 판다. 헤드룸 확장 없이 경로 칸만 Air.</summary>
+        private static void CarveMinimalWallBridge(TileData[,] grid, ReachabilityDigGuard digGuard,
+            Vector2Int from, Vector2Int to, WorldGenerationConfig config)
+        {
+            var cornerA = new Vector2Int(to.x, from.y);
+            var preferA = !digGuard.Forbidden(cornerA.x, cornerA.y);
+            if (preferA)
+            {
+                CarveMinimalAxis(grid, digGuard, from, cornerA, config);
+                CarveMinimalAxis(grid, digGuard, cornerA, to, config);
+            }
+            else
+            {
+                var cornerB = new Vector2Int(from.x, to.y);
+                CarveMinimalAxis(grid, digGuard, from, cornerB, config);
+                CarveMinimalAxis(grid, digGuard, cornerB, to, config);
+            }
+        }
+
+        private static void CarveMinimalAxis(TileData[,] grid, ReachabilityDigGuard digGuard,
+            Vector2Int from, Vector2Int to, WorldGenerationConfig config)
+        {
+            var current = from;
+            CarveMinimalCell(grid, digGuard, current, config);
+            var guard = 0;
+            var limit = config.MapWidth + config.MapHeight;
+            while ((current.x != to.x || current.y != to.y) && guard++ < limit)
+            {
+                var dx = to.x - current.x;
+                var dy = to.y - current.y;
+                if (dx != 0)
+                    current = new Vector2Int(current.x + Math.Sign(dx), current.y);
+                else if (dy != 0)
+                    current = new Vector2Int(current.x, current.y + Math.Sign(dy));
+                else break;
+                if (digGuard.Forbidden(current.x, current.y)) break;
+                CarveMinimalCell(grid, digGuard, current, config);
+            }
+        }
+
+        private static void CarveMinimalCell(TileData[,] grid, ReachabilityDigGuard digGuard,
+            Vector2Int point, WorldGenerationConfig config)
+        {
+            if (digGuard.Forbidden(point.x, point.y)) return;
+            if (!InBounds(point, config.MapWidth, config.MapHeight)) return;
+            if (string.Equals(grid[point.x, point.y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                return;
+            grid[point.x, point.y] = TileData.CreateAir();
+        }
+
+        private static void TryLinkSideAnchorToNearestAir(TileData[,] grid, ReachabilityDigGuard digGuard,
+            Vector2Int sideAnchor, Vector2Int spawnPoint, WorldGenerationConfig config, int maxDist)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var reachable = FloodFillTraversable(grid, spawnPoint, width, height);
+
+            Vector2Int best = default;
+            var bestDist = int.MaxValue;
+            for (var x = sideAnchor.x - maxDist; x <= sideAnchor.x + maxDist; x++)
+            for (var y = sideAnchor.y - maxDist; y <= sideAnchor.y + maxDist; y++)
+            {
+                if (!InBounds(x, y, width, height)) continue;
+                if (IsSurfaceOrCrustDigForbidden(x, y, digGuard.SurfaceHeights, config)) continue;
+                if (digGuard.Forbidden(x, y)) continue;
+                if (!grid[x, y].IsAir) continue;
+                var p = new Vector2Int(x, y);
+                if (reachable.Contains(p)) continue;
+                var dist = Mathf.Abs(x - sideAnchor.x) + Mathf.Abs(y - sideAnchor.y);
+                if (dist < 2 || dist > maxDist || dist >= bestDist) continue;
+                if (!CanCarveMinimalLBridge(digGuard, sideAnchor, p)) continue;
+                bestDist = dist;
+                best = p;
+            }
+
+            if (bestDist == int.MaxValue) return;
+            CarveMinimalWallBridge(grid, digGuard, sideAnchor, best, config);
+        }
+
+        /// <summary>도달성 굴착 가드 — crust/지표 밴드 + 공식 입구·스폰 열 하단 보호.</summary>
+        private readonly struct ReachabilityDigGuard
+        {
+            public readonly int EntranceX;
+            public readonly int SpawnX;
+            public readonly int EntranceOfficialBottom;
+            public readonly int SpawnOfficialBottom;
+            public readonly int[] SurfaceHeights;
+            public readonly WorldGenerationConfig Config;
+
+            private ReachabilityDigGuard(int entranceX, int spawnX, int entranceOfficialBottom,
+                int spawnOfficialBottom, int[] surfaceHeights, WorldGenerationConfig config)
+            {
+                EntranceX = entranceX;
+                SpawnX = spawnX;
+                EntranceOfficialBottom = entranceOfficialBottom;
+                SpawnOfficialBottom = spawnOfficialBottom;
+                SurfaceHeights = surfaceHeights;
+                Config = config;
+            }
+
+            public static ReachabilityDigGuard Create(int entranceX, int spawnX, int[] surfaceHeights,
+                WorldGenerationConfig config)
+            {
+                var entranceBottom = Mathf.Max(config.BedrockThickness, surfaceHeights[entranceX] - 5);
+                var spawnBottom = Mathf.Max(config.BedrockThickness, surfaceHeights[spawnX] - 5);
+                return new ReachabilityDigGuard(entranceX, spawnX, entranceBottom, spawnBottom,
+                    surfaceHeights, config);
+            }
+
+            public bool Forbidden(int x, int y)
+            {
+                if (IsSurfaceOrCrustDigForbidden(x, y, SurfaceHeights, Config)) return true;
+                // 입구/스폰 열은 공식 바닥 직하만 고체 플러그로 유지(연속 공기 run 차단).
+                // 열 전체를 막으면 심층 제단이 같은 열에 있을 때 도달성이 영원히 실패한다.
+                if (x == EntranceX && IsEntranceColumnPlug(y, EntranceOfficialBottom, Config))
+                    return true;
+                if (x == SpawnX && IsEntranceColumnPlug(y, SpawnOfficialBottom, Config))
+                    return true;
+                return false;
+            }
+
+            /// <summary>공식 입구 바닥 바로 아래 1~3칸 — 지표 관통 직통 assert용 플러그.</summary>
+            private static bool IsEntranceColumnPlug(int y, int officialBottom, WorldGenerationConfig config)
+            {
+                if (y >= officialBottom) return false;
+                var plugDepth = Mathf.Max(1, Mathf.Min(3, config.CaveMaxHeight));
+                return y >= officialBottom - plugDepth;
+            }
+        }
+
+        private static void SealEntranceColumnPlugs(TileData[,] grid, ReachabilityDigGuard digGuard,
+            WorldGenerationConfig config)
+        {
+            SealColumnPlugRange(grid, digGuard.EntranceX, digGuard.EntranceOfficialBottom, config);
+            if (digGuard.SpawnX != digGuard.EntranceX)
+                SealColumnPlugRange(grid, digGuard.SpawnX, digGuard.SpawnOfficialBottom, config);
+        }
+
+        private static void SealColumnPlugRange(TileData[,] grid, int columnX, int officialBottom,
+            WorldGenerationConfig config)
+        {
+            var plugDepth = Mathf.Max(1, Mathf.Min(3, config.CaveMaxHeight));
+            for (var y = officialBottom - 1; y >= officialBottom - plugDepth; y--)
+            {
+                if (y < config.BedrockThickness) break;
+                if (!InBounds(columnX, y, config.MapWidth, config.MapHeight)) continue;
+                if (string.Equals(grid[columnX, y].elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                    continue;
+                ForceNaturalWall(grid, columnX, y, config.MapWidth, config.MapHeight,
+                    WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
+            }
+        }
+
+        private static Vector2Int CarveHorizontalReachabilityLink(TileData[,] grid, ReachabilityDigGuard digGuard,
+            int fromX, int toX, int startY, int deepFloor, WorldGenerationConfig config)
+        {
+            var step = fromX <= toX ? 1 : -1;
+            var y = startY;
+            var last = new Vector2Int(fromX, startY);
+            // 사이드스텝은 가로만. 열 높이 차로 막히면 아주 짧게만 하강.
+            var maxDrop = Mathf.Max(2, config.CaveSurfaceCrustThickness + 2);
+            for (var x = fromX; x != toX + step; x += step)
+            {
+                if (digGuard.Forbidden(x, y))
+                {
+                    var dropped = false;
+                    var dropFloor = Mathf.Max(deepFloor, y - maxDrop);
+                    for (var tryY = y - 1; tryY >= dropFloor; tryY--)
+                    {
+                        if (digGuard.Forbidden(x, tryY)) continue;
+                        if (x != fromX)
+                        {
+                            var prevX = x - step;
+                            CarveMinimalAxis(grid, digGuard, new Vector2Int(prevX, y),
+                                new Vector2Int(prevX, tryY), config);
+                        }
+                        y = tryY;
+                        dropped = true;
+                        break;
+                    }
+                    if (!dropped) continue;
+                }
+
+                var cell = new Vector2Int(x, y);
+                CarveMinimalCell(grid, digGuard, cell, config);
+                last = cell;
+            }
+
+            return last;
+        }
+
+        /// <summary>스폰 반경 내 온보딩용 흙/돌이 부족하면 인접 자연 고체를 보정.</summary>
+        private static void EnsureOnboardingResourcesNearSpawn(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int spawn, WorldGenerationConfig config)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var radius = config.OnboardingSearchRadius;
+            var reachable = FloodFillTraversable(grid, spawn, width, height);
+
+            var dirt = 0;
+            var stone = 0;
+            CountOnboarding(grid, width, height, spawn, radius, reachable, ref dirt, ref stone);
+            if (dirt >= config.OnboardingRequiredDirt && stone >= config.OnboardingRequiredStone)
+                return;
+
+            var surfaceY = surfaceHeights[Mathf.Clamp(spawn.x, 0, width - 1)];
+            for (var ring = 1; ring <= radius && (dirt < config.OnboardingRequiredDirt || stone < config.OnboardingRequiredStone); ring++)
+            {
+                for (var dx = -ring; dx <= ring; dx++)
+                {
+                    for (var dy = -ring; dy <= ring; dy++)
+                    {
+                        if (Mathf.Abs(dx) != ring && Mathf.Abs(dy) != ring) continue;
+                        var x = spawn.x + dx;
+                        var y = surfaceY + dy;
+                        if (!InBounds(x, y, width, height)) continue;
+                        if (y > surfaceY) continue;
+                        var tile = grid[x, y];
+                        if (tile.IsAir || !tile.isNaturalTerrain) continue;
+                        if (!IsAdjacentToReachable(new Vector2Int(x, y), reachable, width, height)) continue;
+
+                        if (dirt < config.OnboardingRequiredDirt)
+                        {
+                            grid[x, y] = TileData.CreateNaturalWithBackground(
+                                WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
+                            dirt++;
+                        }
+                        else if (stone < config.OnboardingRequiredStone)
+                        {
+                            grid[x, y] = TileData.CreateNaturalWithBackground(
+                                WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+                            stone++;
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void CountOnboarding(TileData[,] grid, int width, int height, Vector2Int spawn,
+            int radius, HashSet<Vector2Int> reachable, ref int dirt, ref int stone)
+        {
+            for (var x = spawn.x - radius; x <= spawn.x + radius; x++)
+            for (var y = spawn.y - radius; y <= spawn.y + radius; y++)
+            {
+                var point = new Vector2Int(x, y);
+                if (!InBounds(point, width, height)) continue;
+                if (!IsAdjacentToReachable(point, reachable, width, height)) continue;
+                var tile = grid[x, y];
+                if (string.Equals(tile.elementType, WorldTileTypes.Dirt, StringComparison.Ordinal)) dirt++;
+                else if (string.Equals(tile.elementType, WorldTileTypes.Stone, StringComparison.Ordinal)) stone++;
+            }
+        }
+
+        private static bool IsSurfaceOrCrustDigForbidden(int x, int y, int[] surfaceHeights, WorldGenerationConfig config)
+        {
+            if (y < config.BedrockThickness) return true;
+            var width = surfaceHeights.Length;
+            if (x < 0 || x >= width) return true;
+            if (y > surfaceHeights[x]) return true;
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+            if (y >= surfaceHeights[x] - crust + 1) return true;
+            if (y >= config.MapHeight - 20) return true;
+            return false;
+        }
+
+        private static void CarveConnectivityTunnelCell(TileData[,] grid, int[] surfaceHeights, Vector2Int point,
+            WorldGenerationConfig config)
+        {
+            if (IsConnectivityDigForbidden(point.x, point.y, surfaceHeights, config))
+                return;
+
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            if (!InBounds(point, width, height)) return;
+
+            var existing = grid[point.x, point.y];
+            if (string.Equals(existing.elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                return;
+
+            grid[point.x, point.y] = TileData.CreateAir();
+        }
+
+        /// <summary>
+        /// 좁은 계단 통로. 연속 수직 스텝 ≤ cave_max_height, 지표 crust 미개척.
+        /// 이동은 목표 맨해튼 거리를 줄이는 결정론적 greedy(RNG 비의존)로 제단 도달을 보장한다.
+        /// </summary>
+        private static void CarveNarrowTunnel(TileData[,] grid, int[] surfaceHeights, Vector2Int from, Vector2Int to,
+            System.Random rng, WorldGenerationConfig config, bool[,] protectedAir)
+        {
+            _ = rng; // 호출 시그니처 유지(패스별 RNG 주입). 경로는 결정론 greedy.
+            var width = config.MapWidth;
+            var maxVertRun = Mathf.Max(2, config.CaveMaxHeight);
+            var verticalStreak = 0;
+            var current = from;
+            CarveWalkableColumn(grid, surfaceHeights, current, config, protectedAir);
+
+            var guard = 0;
+            var guardLimit = (config.MapWidth + config.MapHeight) * 8;
+            while ((current.x != to.x || current.y != to.y) && guard++ < guardLimit)
+            {
+                var dx = to.x - current.x;
+                var dy = to.y - current.y;
+
+                var moveHorizontal = false;
+                if (dx != 0 && dy == 0)
+                    moveHorizontal = true;
+                else if (dx != 0 && dy != 0)
+                {
+                    // 세로 연속 한도 또는 가로가 더 멀면 가로 우선.
+                    if (verticalStreak >= maxVertRun || Mathf.Abs(dx) >= Mathf.Abs(dy))
+                        moveHorizontal = true;
+                }
+                else if (dx == 0 && dy != 0 && verticalStreak >= maxVertRun)
+                {
+                    // 목표 x에 도착한 뒤에도 세로 한도면 잠깐 옆으로 비틀었다가 복귀.
+                    var jogDir = (guard & 1) == 0 ? 1 : -1;
+                    var jogX = Mathf.Clamp(current.x + jogDir, 1, width - 2);
+                    current = new Vector2Int(jogX, current.y);
+                    CarveWalkableColumn(grid, surfaceHeights, current, config, protectedAir);
+                    verticalStreak = 0;
+                    continue;
+                }
+
+                current += moveHorizontal ? new Vector2Int(Math.Sign(dx), 0) : new Vector2Int(0, Math.Sign(dy));
+                if (moveHorizontal) verticalStreak = 0;
+                else verticalStreak++;
+
+                CarveWalkableColumn(grid, surfaceHeights, current, config, protectedAir);
+            }
+        }
+
+        private static void CarveWalkableColumn(TileData[,] grid, int[] surfaceHeights, Vector2Int feet,
+            WorldGenerationConfig config, bool[,] protectedAir)
+        {
+            CarveTunnelCell(grid, surfaceHeights, feet, config, protectedAir);
+            CarveTunnelCell(grid, surfaceHeights, feet + new Vector2Int(0, 1), config, protectedAir);
+        }
+
+        /// <summary>레거시 +자 터널(연결 통로 미사용).</summary>
         private static void CarveTunnel(TileData[,] grid, int[] surfaceHeights, Vector2Int from, Vector2Int to, System.Random rng, WorldGenerationConfig config)
         {
             var current = from;
@@ -524,23 +1588,29 @@ namespace Nyangbingo.World
 
         private static void CarveTunnelPlus(TileData[,] grid, int[] surfaceHeights, Vector2Int center, WorldGenerationConfig config)
         {
-            CarveTunnelCell(grid, surfaceHeights, center, config);
+            CarveTunnelCell(grid, surfaceHeights, center, config, null);
             foreach (var offset in FourNeighbors)
-                CarveTunnelCell(grid, surfaceHeights, center + offset, config);
+                CarveTunnelCell(grid, surfaceHeights, center + offset, config, null);
         }
 
-        private static void CarveTunnelCell(TileData[,] grid, int[] surfaceHeights, Vector2Int point, WorldGenerationConfig config)
+        private static void CarveTunnelCell(TileData[,] grid, int[] surfaceHeights, Vector2Int point,
+            WorldGenerationConfig config, bool[,] protectedAir)
         {
+            _ = protectedAir;
+            // 레거시 경로도 지표/심층 상한 가드 공유 — 지표면 관통 재발 방지.
+            if (IsConnectivityDigForbidden(point.x, point.y, surfaceHeights, config))
+                return;
+
             var width = config.MapWidth;
             var height = config.MapHeight;
             if (!InBounds(point, width, height)) return;
-            if (point.y < config.BedrockThickness) return; // 최하단 경계암은 절대 뚫지 않는다.
+            if (point.y < config.BedrockThickness) return;
 
-            var surfaceY = surfaceHeights[Mathf.Clamp(point.x, 0, width - 1)];
-            if (point.y > surfaceY) return; // 지표면 위(하늘)에는 구멍을 내지 않는다.
+            var existing = grid[point.x, point.y];
+            if (string.Equals(existing.elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal))
+                return;
 
-            var layer = ClassifyLayer(point.y, surfaceY, config);
-            grid[point.x, point.y] = TileData.CreateCaveAir(BackgroundElementFor(layer));
+            grid[point.x, point.y] = TileData.CreateAir();
         }
 
         // ==============================================================
@@ -614,7 +1684,12 @@ namespace Nyangbingo.World
                     current.y = Mathf.Clamp(current.y, low, high);
                     if (InBounds(current, width, height) && !grid[current.x, current.y].IsAir)
                     {
-                        grid[current.x, current.y] = TileData.CreateNatural(profile.elementType, profile.hardness);
+                        var existing = grid[current.x, current.y];
+                        var naturalBg = existing.HasNaturalBackground
+                            ? existing.naturalBackgroundElementType
+                            : BackgroundElementFor(profile.layer);
+                        grid[current.x, current.y] = TileData.CreateNaturalWithBackground(
+                            profile.elementType, profile.hardness, naturalBg);
                     }
                 }
 
@@ -634,14 +1709,19 @@ namespace Nyangbingo.World
             public List<ChestSpawnPoint> chests;
         }
 
-        private static StructurePlacement PlaceStructures(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config)
+        private static StructurePlacement PlaceStructures(TileData[,] grid, int[] surfaceHeights, System.Random rng,
+            WorldGenerationConfig config, bool[,] protectedAir)
         {
             var occupied = new HashSet<Vector2Int>();
 
-            var spawnPoint = PlaceStartAlcove(grid, surfaceHeights, config, occupied);
-            var ruinFootprints = PlaceRuins(grid, surfaceHeights, rng, config, occupied);
+            var spawnPoint = PlaceSafeSurfaceSpawn(grid, surfaceHeights, config, occupied);
+            var ruinFootprints = PlaceRuins(grid, surfaceHeights, rng, config, occupied, spawnPoint);
             var altarPosition = PlaceDeepAltarAndLake(grid, surfaceHeights, rng, config, occupied);
             var chests = PlaceChests(grid, surfaceHeights, rng, config, occupied, ruinFootprints);
+
+            // protectedAir: 스폰 발밑 3×3 + 제단 주변 최소만. 입구/연결 통로 전체 마스킹 금지.
+            MarkSpawnFootingProtectedAir(surfaceHeights, spawnPoint, config, protectedAir);
+            MarkAltarProtectedAir(altarPosition, config, protectedAir);
 
             return new StructurePlacement
             {
@@ -651,66 +1731,147 @@ namespace Nyangbingo.World
             };
         }
 
+        /// <summary>스폰 발밑(지표 고체) 중심 3×3만 Hard Fill 예외로 표시.</summary>
+        private static void MarkSpawnFootingProtectedAir(int[] surfaceHeights, Vector2Int spawn,
+            WorldGenerationConfig config, bool[,] protectedAir)
+        {
+            if (protectedAir == null) return;
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var surfaceY = surfaceHeights[Mathf.Clamp(spawn.x, 0, width - 1)];
+            for (var dx = -1; dx <= 1; dx++)
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                var x = spawn.x + dx;
+                var y = surfaceY + dy;
+                if (!InBounds(x, y, width, height)) continue;
+                protectedAir[x, y] = true;
+            }
+        }
+
+        /// <summary>제단 2×2 + 1칸 링만 보호(호수/제단 자체는 ShouldPreserveSpecialAir로도 보존).</summary>
+        private static void MarkAltarProtectedAir(Vector2Int altarOrigin, WorldGenerationConfig config,
+            bool[,] protectedAir)
+        {
+            if (protectedAir == null) return;
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var size = Mathf.Max(1, config.AltarSize);
+            for (var x = altarOrigin.x - 1; x <= altarOrigin.x + size; x++)
+            for (var y = altarOrigin.y - 1; y <= altarOrigin.y + size; y++)
+            {
+                if (!InBounds(x, y, width, height)) continue;
+                protectedAir[x, y] = true;
+            }
+        }
+
         /// <summary>
-        /// 시작점 = 반지하 알코브. 좌/우/바닥 3면을 자연 지형으로 강제하고 위쪽만 개방한다.
-        /// v15 QA-H: 1일차 온도 완충 + "벽에 기대면 오른다"를 지형으로 가르치는 무텍스트 튜토리얼.
+        /// A-18: 안전 지표면 스폰. 발밑 자연 전경 고체 1칸, 발·머리 최소 2칸 공기,
+        /// 중앙 싱크홀/월드 경계/보호 구조물 회피. 같은 seed면 항상 같은 좌표.
+        /// 스폰 옆 1열에 얕은 입구를 뚫어 심층 연결 통로와 이어지게 한다(발밑은 뚫지 않음).
         /// </summary>
-        private static Vector2Int PlaceStartAlcove(TileData[,] grid, int[] surfaceHeights, WorldGenerationConfig config, HashSet<Vector2Int> occupied)
+        private static Vector2Int PlaceSafeSurfaceSpawn(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config, HashSet<Vector2Int> occupied)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
-            var spawnX = Mathf.Clamp(Mathf.RoundToInt(width * config.SpawnColumnRatio), config.AlcoveWidth, width - config.AlcoveWidth - 1);
-            var surfaceY = surfaceHeights[spawnX];
+            var preferredX = Mathf.Clamp(Mathf.RoundToInt(width * config.SpawnColumnRatio), 3, width - 4);
 
-            var alcoveWidth = config.AlcoveWidth;
-            var alcoveHeight = config.AlcoveHeight;
-            var left = spawnX - alcoveWidth / 2;
-            var right = left + alcoveWidth - 1;
-            var top = surfaceY;
-            var bottom = top - alcoveHeight + 1;
-
-            for (var x = left; x <= right; x++)
+            for (var dist = 0; dist < width; dist++)
             {
-                for (var y = bottom; y <= top; y++)
-                {
-                    if (!InBounds(x, y, width, height)) continue;
-                    grid[x, y] = TileData.CreateCaveAir(BackgroundElementFor(ClassifyLayer(y, surfaceY, config)));
-                    occupied.Add(new Vector2Int(x, y));
-                }
+                int x;
+                if (dist == 0) x = preferredX;
+                else if (dist % 2 == 1) x = preferredX + (dist + 1) / 2;
+                else x = preferredX - dist / 2;
+
+                if (x < 3 || x >= width - 3) continue;
+                if (!TryCommitSafeSurfaceSpawn(grid, surfaceHeights, x, width, height, config, occupied, out var spawn))
+                    continue;
+                return spawn;
             }
 
-            // 좌/우 벽면
-            for (var y = bottom - 1; y <= top; y++)
-            {
-                ForceNaturalWall(grid, left - 1, y, width, height, WorldTileTypes.Dirt, 1);
-                ForceNaturalWall(grid, right + 1, y, width, height, WorldTileTypes.Dirt, 1);
-            }
-
-            // 바닥면
-            for (var x = left - 1; x <= right + 1; x++)
-                ForceNaturalWall(grid, x, bottom - 1, width, height, WorldTileTypes.Stone, 1);
-
-            // 위쪽(top)은 강제하지 않는다 — 지표면과 이어져 개방된 "반지하" 구조를 유지.
-            var interiorY = Mathf.Clamp((top + bottom) / 2, bottom, top);
-            return new Vector2Int(spawnX, interiorY);
+            var fallbackSurface = surfaceHeights[preferredX];
+            var fallback = new Vector2Int(preferredX, Mathf.Clamp(fallbackSurface + 1, 0, height - 1));
+            occupied.Add(fallback);
+            CarveSpawnEntrance(grid, surfaceHeights, preferredX, config, occupied);
+            return fallback;
         }
 
-        private static void ForceNaturalWall(TileData[,] grid, int x, int y, int width, int height, string fallbackElement, int fallbackHardness)
+        private static bool TryCommitSafeSurfaceSpawn(TileData[,] grid, int[] surfaceHeights, int x,
+            int width, int height, WorldGenerationConfig config, HashSet<Vector2Int> occupied,
+            out Vector2Int spawn)
+        {
+            spawn = default;
+            var surfaceY = surfaceHeights[x];
+            var bodyY = surfaceY + 1;
+            var headY = surfaceY + 2;
+            if (bodyY >= height || headY >= height) return false;
+            if (occupied.Contains(new Vector2Int(x, bodyY))) return false;
+
+            var ground = grid[x, surfaceY];
+            if (ground.IsAir || !ground.isNaturalTerrain) return false;
+            if (!grid[x, bodyY].IsAir || !grid[x, headY].IsAir) return false;
+            if (bodyY != surfaceY + 1) return false;
+
+            spawn = new Vector2Int(x, bodyY);
+            occupied.Add(spawn);
+            CarveSpawnEntrance(grid, surfaceHeights, x, config, occupied);
+
+            ForceNaturalWall(grid, x + 1, surfaceY, width, height, WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
+            return true;
+        }
+
+        /// <summary>스폰 옆 열에 얕은 입구만 개방. protectedAir 미표시(수직 통로 성역화 금지).</summary>
+        private static void CarveSpawnEntrance(TileData[,] grid, int[] surfaceHeights, int spawnX,
+            WorldGenerationConfig config, HashSet<Vector2Int> occupied)
+        {
+            var width = config.MapWidth;
+            var entranceX = Mathf.Clamp(spawnX - 1, 1, width - 2);
+            var surfaceY = surfaceHeights[entranceX];
+            var bottom = Mathf.Max(config.BedrockThickness, surfaceY - 5);
+            for (var y = surfaceY; y >= bottom; y--)
+            {
+                if (!InBounds(entranceX, y, width, config.MapHeight)) continue;
+                grid[entranceX, y] = TileData.CreateAir();
+                occupied?.Add(new Vector2Int(entranceX, y));
+            }
+        }
+
+        private static void ReopenSpawnEntrance(TileData[,] grid, int[] surfaceHeights, Vector2Int spawnPoint,
+            WorldGenerationConfig config)
+        {
+            CarveSpawnEntrance(grid, surfaceHeights, spawnPoint.x, config, occupied: null);
+        }
+
+        private static void ForceNaturalWall(TileData[,] grid, int x, int y, int width, int height,
+            string fallbackElement, int fallbackHardness, string naturalBackground = null)
         {
             if (!InBounds(x, y, width, height)) return;
             var tile = grid[x, y];
+            var bg = string.IsNullOrEmpty(naturalBackground)
+                ? (tile.HasNaturalBackground ? tile.naturalBackgroundElementType : WorldTileTypes.BackgroundDirt)
+                : naturalBackground;
             if (tile.IsAir)
             {
-                tile.elementType = fallbackElement;
-                tile.hardness = fallbackHardness;
+                grid[x, y] = TileData.CreateNaturalWithBackground(fallbackElement, fallbackHardness, bg);
+                return;
             }
+
             tile.isNaturalTerrain = true;
-            tile.isUndergroundDecor = false;
+            if (string.IsNullOrEmpty(tile.elementType) || tile.elementType == WorldTileTypes.Air)
+                tile.elementType = fallbackElement;
+            if (tile.hardness <= 0) tile.hardness = fallbackHardness;
+            if (!tile.HasNaturalBackground)
+            {
+                tile.naturalBackgroundElementType = bg;
+                tile.backgroundElementType = bg;
+            }
             grid[x, y] = tile;
         }
 
         /// <summary>지상 폐허 2~3개. 철근 채집 및 상자(Ruins 지역) 배치의 앵커가 된다.</summary>
-        private static List<RectInt> PlaceRuins(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config, HashSet<Vector2Int> occupied)
+        private static List<RectInt> PlaceRuins(TileData[,] grid, int[] surfaceHeights, System.Random rng,
+            WorldGenerationConfig config, HashSet<Vector2Int> occupied, Vector2Int spawnPoint)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
@@ -723,12 +1884,33 @@ namespace Nyangbingo.World
             {
                 attempts++;
                 var x = rng.Next(margin, Mathf.Max(margin + 1, width - margin));
-                if (Mathf.Abs(x - width / 2) < margin) continue; // 스폰 근처는 피한다.
+                // 맵 중앙뿐 아니라 실제 스폰 열 근처도 피한다(스폰 발밑 자연 전경 보호).
+                if (Mathf.Abs(x - width / 2) < margin) continue;
+                if (Mathf.Abs(x + config.RuinWidth / 2 - spawnPoint.x) < margin + config.RuinWidth) continue;
 
                 var rect = new RectInt(x, 0, config.RuinWidth, config.RuinHeight);
                 if (Overlaps(rect, footprints)) continue;
 
                 var surfaceY = surfaceHeights[Mathf.Clamp(x, 0, width - 1)];
+                var overlapsSpawn = false;
+                for (var dx = 0; dx < config.RuinWidth && !overlapsSpawn; dx++)
+                {
+                    var cx = x + dx;
+                    if (!InBounds(cx, 0, width, height)) continue;
+                    var localSurfaceY = surfaceHeights[Mathf.Clamp(cx, 0, width - 1)];
+                    for (var dy = 0; dy < config.RuinHeight; dy++)
+                    {
+                        var cy = localSurfaceY + dy;
+                        if (occupied.Contains(new Vector2Int(cx, cy)) ||
+                            (cx == spawnPoint.x && cy == localSurfaceY))
+                        {
+                            overlapsSpawn = true;
+                            break;
+                        }
+                    }
+                }
+                if (overlapsSpawn) continue;
+
                 for (var dx = 0; dx < config.RuinWidth; dx++)
                 {
                     var cx = x + dx;
@@ -743,7 +1925,8 @@ namespace Nyangbingo.World
                             hardness = 1,
                             isNaturalTerrain = false,
                             elementType = WorldTileTypes.RuinWall,
-                            isUndergroundDecor = false
+                            backgroundElementType = WorldTileTypes.Air,
+                            naturalBackgroundElementType = WorldTileTypes.Air
                         };
                         // 폐허 잔해 칸은 occupied에 넣지 않는다 — Ruins 지역 상자가 잔해 속에 파묻힌 채
                         // 배치될 수 있도록 일부러 비워둔다(occupied는 상자·알코브·제단 간의 겹침만 막는다).
@@ -754,6 +1937,21 @@ namespace Nyangbingo.World
             }
 
             return footprints;
+        }
+
+        /// <summary>A-18: 스폰 발밑을 파괴되지 않은 자연 전경으로 강제 복구한다.</summary>
+        private static void ReinforceSafeSpawnFooting(TileData[,] grid, int[] surfaceHeights, Vector2Int spawn,
+            WorldGenerationConfig config)
+        {
+            if (!InBounds(spawn.x, 0, config.MapWidth, config.MapHeight)) return;
+            var surfaceY = surfaceHeights[Mathf.Clamp(spawn.x, 0, config.MapWidth - 1)];
+            if (surfaceY < 0 || surfaceY >= config.MapHeight) return;
+
+            var ground = grid[spawn.x, surfaceY];
+            if (!ground.IsAir && ground.isNaturalTerrain) return;
+
+            grid[spawn.x, surfaceY] = TileData.CreateNaturalWithBackground(
+                WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
         }
 
         private static bool Overlaps(RectInt candidate, List<RectInt> existing)
@@ -789,7 +1987,8 @@ namespace Nyangbingo.World
                         hardness = 0,
                         isNaturalTerrain = false,
                         elementType = WorldTileTypes.IceLake,
-                        isUndergroundDecor = false
+                        backgroundElementType = WorldTileTypes.BackgroundDeep,
+                        naturalBackgroundElementType = WorldTileTypes.BackgroundDeep
                     };
                     occupied.Add(new Vector2Int(x, y));
                 }
@@ -810,7 +2009,8 @@ namespace Nyangbingo.World
                         hardness = config.AltarHardness,
                         isNaturalTerrain = false,
                         elementType = WorldTileTypes.IceAltar,
-                        isUndergroundDecor = false
+                        backgroundElementType = WorldTileTypes.BackgroundDeep,
+                        naturalBackgroundElementType = WorldTileTypes.BackgroundDeep
                     };
                     occupied.Add(new Vector2Int(x, y));
                 }
@@ -848,12 +2048,9 @@ namespace Nyangbingo.World
                 var layer = ClassifyLayer(y, surfaceHeights[x], config);
                 if (layer == WorldLayer.Bedrock) continue;
 
+                // A-16: 상자 자리도 동굴과 같이 전경·배경을 비운다(지상 Ruins는 빈 하늘 배경).
                 if (!grid[position.x, position.y].IsAir)
-                {
-                    grid[position.x, position.y] = layer == WorldLayer.Surface
-                        ? TileData.CreateAir()
-                        : TileData.CreateCaveAir(BackgroundElementFor(layer));
-                }
+                    grid[position.x, position.y] = TileData.CreateAir();
 
                 occupied.Add(position);
                 var region = layer switch
@@ -905,11 +2102,7 @@ namespace Nyangbingo.World
 
                     // 자리가 막혀 있으면 상자 한 칸만 파서 안치한다(지하 보물상자 관용).
                     if (!grid[position.x, position.y].IsAir)
-                    {
-                        grid[position.x, position.y] = region == ChestRegion.Ruins
-                            ? TileData.CreateAir()
-                            : TileData.CreateCaveAir(BackgroundElementFor(layer));
-                    }
+                        grid[position.x, position.y] = TileData.CreateAir();
 
                     occupied.Add(position);
                     chests.Add(new ChestSpawnPoint
@@ -926,6 +2119,8 @@ namespace Nyangbingo.World
 
         // ==============================================================
         // Pass 5 (검증) — 실패 시 GenerateDetailed 루프가 seed+1로 재시도한다.
+        // v27: 스폰→제단 전깊이 공기 직통을 요구하지 않는다.
+        //      얕은 입구 접근 + 온보딩 + 심층 제단이 지하 공동/호수 네트워크에 있으면 통과.
         // ==============================================================
         private static bool ValidateWorld(WorldGenerationResult result, WorldGenerationConfig config)
         {
@@ -936,12 +2131,90 @@ namespace Nyangbingo.World
 
             var reachable = FloodFillTraversable(grid, spawn, width, height);
 
-            if (!CheckSpawnToBaseConnectivity(reachable, spawn)) return false;
-            if (!CheckOnboardingResources(grid, width, height, spawn, config, reachable)) return false;
-            if (!CheckDeepLayerConnectivity(reachable, config)) return false;
-            if (!CheckAltarReachability(reachable, result.altarPosition)) return false;
+            if (!CheckSpawnToBaseConnectivity(reachable, spawn))
+            {
+                Debug.LogWarning($"[MapGenerator] validation fail seed={result.acceptedSeed}: spawn not reachable/air");
+                return false;
+            }
+            if (!CheckOnboardingResources(grid, width, height, spawn, config, reachable))
+            {
+                Debug.LogWarning($"[MapGenerator] validation fail seed={result.acceptedSeed}: onboarding resources");
+                return false;
+            }
+            if (!CheckShallowUndergroundAccess(reachable, spawn, result.surfaceHeights, config))
+            {
+                Debug.LogWarning($"[MapGenerator] validation fail seed={result.acceptedSeed}: shallow underground access");
+                return false;
+            }
+            if (!CheckAltarUndergroundNetwork(grid, result.altarPosition, result.surfaceHeights, config))
+            {
+                Debug.LogWarning($"[MapGenerator] validation fail seed={result.acceptedSeed}: altar underground network");
+                return false;
+            }
 
             return true;
+        }
+
+        /// <summary>
+        /// 스폰에서 공식 입구를 통해 crust 아래(또는 입구 바닥) 공기까지 닿는지.
+        /// 지상→심층 전깊이 직통은 요구하지 않는다.
+        /// </summary>
+        private static bool CheckShallowUndergroundAccess(HashSet<Vector2Int> reachable, Vector2Int spawn,
+            int[] surfaceHeights, WorldGenerationConfig config)
+        {
+            var width = surfaceHeights.Length;
+            var sx = Mathf.Clamp(spawn.x, 0, width - 1);
+            var surfaceY = surfaceHeights[sx];
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+            var belowCrust = surfaceY - crust;
+            var entranceBottom = Mathf.Max(config.BedrockThickness, surfaceY - 5);
+
+            foreach (var cell in reachable)
+            {
+                if (cell.y <= belowCrust) return true;
+                if (cell.y <= entranceBottom) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 제단 인접 공기/호수에서 BFS — 심층에 의미 있는 지하 공동 네트워크가 있는지.
+        /// 스폰에서 걸어와야 한다는 요구는 없다(플레이어 채굴로 합류).
+        /// </summary>
+        private static bool CheckAltarUndergroundNetwork(TileData[,] grid, Vector2Int altarPosition,
+            int[] surfaceHeights, WorldGenerationConfig config)
+        {
+            var width = config.MapWidth;
+            var height = config.MapHeight;
+            var deepThreshold = config.BedrockThickness + Mathf.Max(1, config.MiddleLayerThickness / 4);
+
+            Vector2Int? start = null;
+            foreach (var offset in FourNeighbors)
+            {
+                var adj = altarPosition + offset;
+                if (!InBounds(adj, width, height)) continue;
+                if (!grid[adj.x, adj.y].IsAir) continue;
+                start = adj;
+                break;
+            }
+            if (start == null && grid[altarPosition.x, altarPosition.y].IsAir)
+                start = altarPosition;
+            if (start == null) return false;
+
+            var visited = FloodFillTraversable(grid, start.Value, width, height);
+            if (visited.Count < 8) return false;
+
+            var reachedDeep = false;
+            var belowCrustCount = 0;
+            foreach (var cell in visited)
+            {
+                if (cell.y < deepThreshold) reachedDeep = true;
+                if ((uint)cell.x < (uint)width &&
+                    !IsSurfaceOrCrustDigForbidden(cell.x, cell.y, surfaceHeights, config))
+                    belowCrustCount++;
+            }
+
+            return reachedDeep && belowCrustCount >= 8;
         }
 
         /// <summary>
@@ -990,28 +2263,6 @@ namespace Nyangbingo.World
 
         /// <summary>2) 스폰 지점(알코브 개방부)이 실제로 걸어 다닐 수 있는 공기 네트워크로 연결돼 있는가.</summary>
         private static bool CheckSpawnToBaseConnectivity(HashSet<Vector2Int> reachable, Vector2Int spawn) => reachable.Contains(spawn);
-
-        /// <summary>3) 스폰에서 심층까지 자연 동굴로 이어지는 통로가 존재하는가.</summary>
-        private static bool CheckDeepLayerConnectivity(HashSet<Vector2Int> reachable, WorldGenerationConfig config)
-        {
-            var deepThreshold = config.BedrockThickness + Mathf.Max(1, config.MiddleLayerThickness / 4);
-            foreach (var cell in reachable)
-            {
-                if (cell.y < deepThreshold) return true;
-            }
-            return false;
-        }
-
-        /// <summary>4) 심층 얼음 제단(이무기 소환처)까지 도달 가능한가.</summary>
-        private static bool CheckAltarReachability(HashSet<Vector2Int> reachable, Vector2Int altarPosition)
-        {
-            foreach (var offset in FourNeighbors)
-            {
-                var adjacent = altarPosition + offset;
-                if (reachable.Contains(adjacent)) return true;
-            }
-            return reachable.Contains(altarPosition);
-        }
 
         /// <summary>스폰에서 시작해 "공기(하드니스 0)" 칸만 타고 갈 수 있는 전체 영역을 BFS로 구한다.</summary>
         private static HashSet<Vector2Int> FloodFillTraversable(TileData[,] grid, Vector2Int start, int width, int height)
