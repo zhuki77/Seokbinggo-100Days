@@ -189,7 +189,8 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// A-16: 벽지 제거 시 naturalBackground로 복원(지하 자연 배경 / 하늘·동굴 빈 배경).
+        /// A-16: 벽지 제거 시 naturalBackground로 복원(지하 자연 배경 / 하늘·동굴 빈 배경)하고
+        /// 제거한 벽지 1장을 해당 셀에 월드 드롭으로 반환한다.
         /// </summary>
         public bool TryRemoveBackground(Vector3Int cell)
         {
@@ -206,6 +207,8 @@ namespace Nyangbingo.World
             ApplyBackgroundVisual(cell, restored.HasBackground ? restored.backgroundElementType : null);
             RecordBackgroundChange(cell, removedId, placed: false);
             GameEvents.RaiseTileBroken(cell);
+            if (TryResolveDrop(removedId, out var item, out var amount))
+                WorldItemDropRequest.Request(item, amount, new Vector2(cell.x + .5f, cell.y + .5f));
             return true;
         }
 
@@ -503,7 +506,13 @@ namespace Nyangbingo.World
             TileBase tileBase = null;
             if (!string.IsNullOrEmpty(elementType) &&
                 !string.Equals(elementType, WorldTileTypes.Air, StringComparison.Ordinal))
-                renderer.TryGetTileBase(elementType, out tileBase);
+            {
+                if (string.Equals(TileIdAlias.ToCanonical(elementType), WorldTileTypes.Wallpaper,
+                        StringComparison.Ordinal))
+                    renderer.TryGetWallpaperTileBase(cell.y, out tileBase);
+                else
+                    renderer.TryGetTileBase(elementType, out tileBase);
+            }
             renderer.Background.SetTile(cell, tileBase);
         }
 

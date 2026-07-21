@@ -79,6 +79,7 @@ namespace Nyangbingo.UI
         private Button nextButton;
         private Button primaryButton;
         private Button collectButton;
+        private Button debugCompleteButton;
         private readonly Button[] tabButtons = new Button[4];
         private Page page;
         private int selectedIndex;
@@ -101,6 +102,18 @@ namespace Nyangbingo.UI
         public const int InventoryGridColumns = 10;
         public const int InventoryGridRows = 5;
         public const float InventorySlotPixelSize = 27f;
+
+        public static bool SupportsDebugInstantCompletion
+        {
+            get
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
 
         public static string UnifiedTabLabel(int index)
         {
@@ -287,8 +300,11 @@ namespace Nyangbingo.UI
                 new Vector2(90f, 22f), () => SelectRelative(1));
             primaryButton = CreateButton(panel.transform, "Primary", "제작", new Vector2(110f, -91f),
                 new Vector2(240f, 22f), TryPrimaryAction);
-            collectButton = CreateButton(panel.transform, "Collect", "완료품 일괄 회수", new Vector2(-75f, -118f),
-                new Vector2(160f, 20f), TrySecondaryAction);
+            debugCompleteButton = CreateButton(panel.transform, "DebugComplete", "TEST · 즉시 완료",
+                new Vector2(-170f, -118f), new Vector2(100f, 20f), TryCompleteCurrentProcessForDebug);
+            debugCompleteButton.GetComponent<Image>().color = new Color(.48f, .29f, .12f, 1f);
+            collectButton = CreateButton(panel.transform, "Collect", "완료품 회수", new Vector2(-52f, -118f),
+                new Vector2(130f, 20f), TrySecondaryAction);
             CreateButton(panel.transform, "Close", "ESC · 닫기", new Vector2(115f, -118f),
                 new Vector2(200f, 20f), () => SetOpen(false));
             BuildCodexExpandedView();
@@ -900,6 +916,55 @@ namespace Nyangbingo.UI
             ShowMessage(collected > 0 ? $"완료품 {collected}묶음 회수" : "회수할 완료품이 없거나 인벤토리가 가득 찼습니다.");
         }
 
+        private void TryCompleteCurrentProcessForDebug()
+        {
+            if (!SupportsDebugInstantCompletion || !open || page != Page.Crafting || runtimeServices == null)
+                return;
+
+            if (!showingSmelting)
+            {
+                var process = runtimeServices.CraftingProcess;
+                if (process == null || !process.IsCrafting)
+                {
+                    ShowMessage("즉시 완료할 제작이 없습니다.");
+                    return;
+                }
+
+                var outputName = process.Active.Output.item.DisplayName;
+                var completed = process.Tick(Mathf.Max(process.RemainingSeconds, .001f));
+                ShowMessage(completed
+                    ? $"[TEST] 제작 즉시 완료: {outputName}"
+                    : "[TEST] 인벤토리 공간이 부족해 완료품을 지급할 수 없습니다.");
+                return;
+            }
+
+            var station = ResolveDisplayedSmeltingStation();
+            if (station == null || !station.IsSmelting)
+            {
+                ShowMessage("즉시 완료할 제련이 없습니다.");
+                return;
+            }
+
+            var smeltedName = station.Active.Output.item.DisplayName;
+            var smeltingCompleted = station.Tick(Mathf.Max(station.RemainingSeconds, .001f));
+            ShowMessage(smeltingCompleted
+                ? $"[TEST] 제련 즉시 완료: {smeltedName} · 완료품 회수 가능"
+                : "[TEST] 제련 즉시 완료에 실패했습니다.");
+        }
+
+        private SmeltingStation ResolveDisplayedSmeltingStation()
+        {
+            var definition = CurrentSmelting();
+            if (definition != null)
+                return definition.StationKind == SmeltingStationKind.Foundry
+                    ? runtimeServices.Foundry
+                    : runtimeServices.Furnace;
+
+            var nearby = NearbyStation();
+            if (nearby == CraftingStation.Foundry) return runtimeServices.Foundry;
+            return nearby == CraftingStation.Furnace ? runtimeServices.Furnace : null;
+        }
+
         private void TrySecondaryAction()
         {
             if (page == Page.Crafting && showingSmelting) TryCollectOutputs();
@@ -981,6 +1046,7 @@ namespace Nyangbingo.UI
                 nextButton.gameObject.SetActive(false);
                 primaryButton.gameObject.SetActive(false);
                 collectButton.gameObject.SetActive(false);
+                debugCompleteButton.gameObject.SetActive(false);
                 messageText.gameObject.SetActive(false);
                 if (inventoryGridRoot != null) inventoryGridRoot.SetActive(false);
                 if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(false);
@@ -1001,6 +1067,7 @@ namespace Nyangbingo.UI
             primaryButton.gameObject.SetActive(!codex);
             messageText.gameObject.SetActive(hasListActions);
             collectButton.gameObject.SetActive(false);
+            debugCompleteButton.gameObject.SetActive(SupportsDebugInstantCompletion && page == Page.Crafting);
             if (inventoryGridRoot != null) inventoryGridRoot.SetActive(gathering);
             if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(equipment);
             if (craftingListRoot != null) craftingListRoot.SetActive(recipeList);
@@ -1024,6 +1091,7 @@ namespace Nyangbingo.UI
         private void RefreshCrafting()
         {
             collectButton.gameObject.SetActive(false);
+            debugCompleteButton.interactable = runtimeServices.CraftingProcess?.IsCrafting == true;
             RebuildFilteredRecipes(NearbyStation());
             RefreshCraftingList();
             var recipe = CurrentRecipe();
@@ -1131,8 +1199,9 @@ namespace Nyangbingo.UI
         private void RefreshSmelting()
         {
             primaryButton.GetComponentInChildren<Text>().text = "E · 제련";
-            collectButton.GetComponentInChildren<Text>().text = "완료품 일괄 회수";
+            collectButton.GetComponentInChildren<Text>().text = "완료품 회수";
             collectButton.gameObject.SetActive(true);
+            debugCompleteButton.interactable = ResolveDisplayedSmeltingStation()?.IsSmelting == true;
             var definition = CurrentSmelting();
             if (definition == null)
             {

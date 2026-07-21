@@ -36,6 +36,7 @@ namespace Nyangbingo.World
             new Dictionary<string, GameObject>(StringComparer.Ordinal);
         private SealBoundaryPolicy boundaryPolicy;
         private CoolingSourceRuntime coolingSources;
+        private float wallpaperDurationMultiplier = 1.25f;
 
         public bool IsColdSourceActive { get; private set; }
         public float CoolingCapPercent { get; private set; }
@@ -77,6 +78,10 @@ namespace Nyangbingo.World
 
             bootstrap.Session.ConfigureSealExtensions(this, this);
             coolingSources = new CoolingSourceRuntime(gameDataCatalog);
+            var wallpaperBonus = gameDataCatalog.FindGlobal("wallpaper_coldsource_bonus");
+            if (wallpaperBonus != null && wallpaperBonus.TryGetFloat(out var bonusPercent) &&
+                !float.IsNaN(bonusPercent) && !float.IsInfinity(bonusPercent))
+                wallpaperDurationMultiplier = 1f + Mathf.Max(0f, bonusPercent) * .01f;
             coolingSources.ConsumableExpired += HandleConsumableExpired;
             bootstrap.TickDriver.Register(this);
             IsInitialized = true;
@@ -349,13 +354,23 @@ namespace Nyangbingo.World
             if (coolingSources == null) return;
             var beforeCount = coolingSources.ActiveCount;
             var beforeCap = coolingSources.CoolingCapPercent;
-            coolingSources.Tick(deltaGameSeconds);
+            coolingSources.Tick(deltaGameSeconds, ResolveCoolingDurationMultiplier());
             if (beforeCount != coolingSources.ActiveCount ||
                 !Mathf.Approximately(beforeCap, coolingSources.CoolingCapPercent))
                 RecomputeCoolingAndInvalidate();
         }
 
         private void HandleConsumableExpired(string objectId) => TryRemove(objectId);
+
+        private float ResolveCoolingDurationMultiplier()
+        {
+            var sealSystem = bootstrap?.SealSystem;
+            var coreCell = sealSystem?.SealCoreCell;
+            var coverage = bootstrap?.Session?.WallpaperCoverage;
+            return coreCell.HasValue && coverage?.IsCoverageComplete(coreCell.Value) == true
+                ? wallpaperDurationMultiplier
+                : 1f;
+        }
 
         private void InvalidateSeal() => bootstrap?.SealSystem?.InvalidateAll();
 

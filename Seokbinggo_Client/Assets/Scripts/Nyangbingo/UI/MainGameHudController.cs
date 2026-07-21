@@ -91,6 +91,8 @@ namespace Nyangbingo.UI
         private float saveIndicatorRemaining;
         private int lastTearBalance = -1;
         private float tearAnimationRemaining;
+        private Vector2 dayTextDefaultPosition;
+        private bool hasDayTextDefaultPosition;
 
         public int BoundSlotCount => inventorySlotTexts?.Length ?? 0;
         public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
@@ -180,6 +182,11 @@ namespace Nyangbingo.UI
                 deathPanel.SetActive(playerController != null ? playerController.IsDead : playerHealth != null && playerHealth.IsDead);
             }
             BuildBossHealthBar();
+            if (dayText != null)
+            {
+                dayTextDefaultPosition = dayText.rectTransform.anchoredPosition;
+                hasDayTextDefaultPosition = true;
+            }
             if (bossManager != null)
             {
                 bossManager.BossStarted += HandleBossStarted;
@@ -826,6 +833,7 @@ namespace Nyangbingo.UI
             if (definition == null || health == null)
             {
                 if (bossHealthBarRoot != null) bossHealthBarRoot.SetActive(false);
+                RestoreDayCounterPosition();
 #if UNITY_EDITOR
                 bossStatusText.text = bootstrap?.TimeService?.IsNight == true
                     ? "F8 도깨비 대왕  ·  Shift+F8 강철이 테스트"
@@ -837,6 +845,7 @@ namespace Nyangbingo.UI
             }
 
             if (bossHealthBarRoot != null) bossHealthBarRoot.SetActive(true);
+            MoveDayCounterBelowBossBar();
             if (bossHealthPortrait != null)
             {
                 bossHealthPortrait.sprite = ResolveBossHealthArt(definition.Id);
@@ -845,13 +854,9 @@ namespace Nyangbingo.UI
             ConfigureBossHealthVerticalLayout(definition.Id);
             ResizeBossHealthBar(CalculateHealthRatio(health.Current, health.MaxHealth));
 
-            var combat = health.GetComponent<BossCombatController>();
-            var state = combat != null && combat.IsTelegraphing
-                ? "  ·  특수공격 예고!"
-                : combat != null && combat.IsSpecialActive
-                    ? "  ·  특수공격 중"
-                    : string.Empty;
-            bossStatusText.text = $"{definition.DisplayName}  HP {health.Current}/{health.MaxHealth}{state}";
+            // v15 QA-E 무텍스트 규칙: 보스 이름은 전용 먹선 초상/프레임이 대신한다.
+            // 숫자는 허용되므로 체력 정보만 남긴다.
+            bossStatusText.text = $"HP {health.Current}/{health.MaxHealth}";
 #if UNITY_EDITOR
             bossStatusText.text += "  ·  K 테스트 처치";
 #endif
@@ -859,6 +864,18 @@ namespace Nyangbingo.UI
 
         public static float CalculateHealthRatio(int current, int maximum) =>
             maximum <= 0 ? 0f : Mathf.Clamp01((float)current / maximum);
+
+        private void MoveDayCounterBelowBossBar()
+        {
+            if (dayText == null || !hasDayTextDefaultPosition) return;
+            dayText.rectTransform.anchoredPosition = new Vector2(dayTextDefaultPosition.x, -58f);
+        }
+
+        private void RestoreDayCounterPosition()
+        {
+            if (dayText == null || !hasDayTextDefaultPosition) return;
+            dayText.rectTransform.anchoredPosition = dayTextDefaultPosition;
+        }
 
         private void BuildBossHealthBar()
         {

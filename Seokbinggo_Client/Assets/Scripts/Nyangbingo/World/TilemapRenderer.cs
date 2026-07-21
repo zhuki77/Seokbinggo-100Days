@@ -75,6 +75,7 @@ namespace Nyangbingo.World
         // 반환하는 경로를 타더라도 _lookup 자체는 항상 non-null이라, ResolveTile/TryGetTileBase가
         // NullReferenceException 없이 안전하게 동작한다.
         private Dictionary<string, TileBase> _lookup = new Dictionary<string, TileBase>();
+        private readonly Dictionary<int, TileBase> _wallpaperTileByRow = new Dictionary<int, TileBase>();
         private readonly HashSet<string> _resourceLoadWarnings = new HashSet<string>();
 
         private CompositeCollider2D foregroundComposite;
@@ -170,6 +171,7 @@ namespace Nyangbingo.World
             var foregroundBlock = new TileBase[width * height];
             var backgroundBlock = new TileBase[width * height];
             HashSet<string> missing = null;
+            RebuildWallpaperRowLookup(tiles, width, height, ref missing);
 
             // Tilemap.SetTilesBlock은 배열을 x가 가장 빠르게, 그다음 y 순서로 읽는다 (index = y*width + x).
             for (var y = 0; y < height; y++)
@@ -186,7 +188,7 @@ namespace Nyangbingo.World
 
                     // A-16: 전경 고체 뒤에도 자연 배경을 그린다. 동굴·하늘(빈 배경)은 null.
                     backgroundBlock[index] = tile.HasBackground
-                        ? ResolveTile(tile.backgroundElementType, ref missing)
+                        ? ResolveBackgroundTile(tile.backgroundElementType, y, ref missing)
                         : null;
                 }
             }
@@ -355,8 +357,8 @@ namespace Nyangbingo.World
 
             if (_lookup.TryGetValue(elementType, out tile) && tile != null) return true;
 
-            // v29 has no dedicated wallpaper tile art. The approved temporary visual reuses the
-            // delivered upper-layer background tile until art supplies a distinct asset.
+            // 깊이 정보가 없는 범용 조회의 안전 폴백. 실제 월드 렌더/설치는
+            // TryGetWallpaperTileBase로 해당 행의 배경 3종 중 하나를 선택한다.
             if (string.Equals(elementType, WorldTileTypes.Wallpaper, StringComparison.Ordinal) &&
                 _lookup.TryGetValue(WorldTileTypes.BackgroundDirt, out tile) && tile != null)
                 return true;
@@ -369,6 +371,43 @@ namespace Nyangbingo.World
 
             tile = null;
             return false;
+        }
+
+        /// <summary>벽지는 전용 아트 없이 해당 깊이의 t_bg_dirt/stone/deep를 재사용한다.</summary>
+        public bool TryGetWallpaperTileBase(int cellY, out TileBase tile)
+        {
+            if (_wallpaperTileByRow.TryGetValue(cellY, out tile) && tile != null) return true;
+            return _lookup.TryGetValue(WorldTileTypes.BackgroundDirt, out tile) && tile != null;
+        }
+
+        private TileBase ResolveBackgroundTile(string elementType, int cellY, ref HashSet<string> missing)
+        {
+            if (string.Equals(TileIdAlias.ToCanonical(elementType), WorldTileTypes.Wallpaper,
+                    StringComparison.Ordinal) && TryGetWallpaperTileBase(cellY, out var wallpaperTile))
+                return wallpaperTile;
+            return ResolveTile(elementType, ref missing);
+        }
+
+        private void RebuildWallpaperRowLookup(TileData[,] tiles, int width, int height,
+            ref HashSet<string> missing)
+        {
+            _wallpaperTileByRow.Clear();
+            for (var y = 0; y < height; y++)
+            {
+                var visualId = WorldTileTypes.BackgroundDirt;
+                for (var x = 0; x < width; x++)
+                {
+                    var naturalId = TileIdAlias.ToCanonical(tiles[x, y].naturalBackgroundElementType);
+                    if (naturalId != WorldTileTypes.BackgroundDirt &&
+                        naturalId != WorldTileTypes.BackgroundStone &&
+                        naturalId != WorldTileTypes.BackgroundDeep) continue;
+                    visualId = naturalId;
+                    break;
+                }
+
+                var tile = ResolveTile(visualId, ref missing);
+                if (tile != null) _wallpaperTileByRow[y] = tile;
+            }
         }
 
         /// <summary>
