@@ -1333,8 +1333,8 @@ namespace Nyangbingo.World
             public static ReachabilityDigGuard Create(int entranceX, int spawnX, int[] surfaceHeights,
                 WorldGenerationConfig config)
             {
-                var entranceBottom = Mathf.Max(config.BedrockThickness, surfaceHeights[entranceX] - 5);
-                var spawnBottom = Mathf.Max(config.BedrockThickness, surfaceHeights[spawnX] - 5);
+                var entranceBottom = config.GetSpawnEntranceOfficialBottom(surfaceHeights[entranceX]);
+                var spawnBottom = config.GetSpawnEntranceOfficialBottom(surfaceHeights[spawnX]);
                 return new ReachabilityDigGuard(entranceX, spawnX, entranceBottom, spawnBottom,
                     surfaceHeights, config);
             }
@@ -1828,7 +1828,7 @@ namespace Nyangbingo.World
             var width = config.MapWidth;
             var entranceX = Mathf.Clamp(spawnX - 1, 1, width - 2);
             var surfaceY = surfaceHeights[entranceX];
-            var bottom = Mathf.Max(config.BedrockThickness, surfaceY - 5);
+            var bottom = config.GetSpawnEntranceOfficialBottom(surfaceY);
             for (var y = surfaceY; y >= bottom; y--)
             {
                 if (!InBounds(entranceX, y, width, config.MapHeight)) continue;
@@ -2167,7 +2167,7 @@ namespace Nyangbingo.World
             var surfaceY = surfaceHeights[sx];
             var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
             var belowCrust = surfaceY - crust;
-            var entranceBottom = Mathf.Max(config.BedrockThickness, surfaceY - 5);
+            var entranceBottom = config.GetSpawnEntranceOfficialBottom(surfaceY);
 
             foreach (var cell in reachable)
             {

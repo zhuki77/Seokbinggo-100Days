@@ -470,7 +470,7 @@ DEV_A_WORLD_SPEC_SYNC_HANDOFF.md
 
 1. 후보 표시 시 `y < surfaceHeights[x]` 만 허용 → **표면 타일(`surfaceY`)과 그 위는 절대 뚫지 않음**.
 2. 후보의 4방 연결 성분마다 세로 span이 `cave_max_height`를 넘으면 **심층(낮은 y) 쪽만** 남기고 지표 쪽은 되메움.
-3. **시작 지점**은 지표 안전지대 고정(A-18). 입구는 `CarveSpawnEntrance`로 **얕은 6칸**만 개방.
+3. **시작 지점**은 지표 안전지대 고정(A-18). 입구는 `CarveSpawnEntrance`로 **얕은 3칸**만 개방(`SpawnEntranceDepthTiles`, 점프 3.5타일 탈출 보장).
 4. **연결 통로**(`CarveConnectivityShafts`)는 검증용으로 유지하되, 예전처럼 입구 열 **전깊이 수직 + +자 3열 우물**을 만들지 않는다 → **1열×2칸 계단식 좁은 통로**(경유점 jog).
 5. **Top Safety Zone**: `caveSurfaceCrustThickness`(기본 2) + 기획 `surface_y=20` 절대 상단 밴드 Hard Fill.
 6. **`PostProcessCaveCavities`**: **Pass 4·연결 통로 이후 최후반**에 실행. 8방 BFS → 비보호 공기만 허리 Hard Cut. 입구·연결 통로는 `protectedAir`로 면제.

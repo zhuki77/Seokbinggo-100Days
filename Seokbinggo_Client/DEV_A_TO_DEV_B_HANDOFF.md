@@ -33,23 +33,30 @@ MainGame에서 **흙·돌 채굴은 확인됨**.
 - 안전 스폰 판정·해결 (`IWorldSafeSpawnResolver`)
 - 전경/배경 배치 가능 판정·원자적 설치 (`SupportsForegroundPlacement` / `IBackgroundPlacementService`)
 - 반경·밀폐 창 월드 오버레이 렌더러 (`WorldRangeOverlayRenderer`) — **렌더 API만**, 입력 미연결
-- `NyangbingoDevARegressionTests` (**16/16**)
+- `NyangbingoDevARegressionTests` (**18/18**)
 
 ### 회귀
 
 메뉴: **Nyangbingo / Run Dev A Regression Tests**  
-성공 로그: `Dev A 회귀 테스트 전체 통과 (16/16)`
+성공 로그: `Dev A 회귀 테스트 전체 통과 (18/18)`
 
 ### 예외적으로 건드린 Dev B 파일
 
 | 파일 | 이유 |
 |------|------|
-| `MainGamePlayerController.cs` | MainGame 수동 검증 중 채굴이 안 되어 타깃 선정 버그 수정 (`c38336b`) |
+| `MainGamePlayerController.cs` | MainGame 수동 검증 중 채굴 타깃 버그 수정 (`c38336b`) + v7 플레이어 점프·중력 globals 연동 |
 
 수정 요지:
 - 채굴 사거리 1.1 → **1.5** (공격 사거리와 정합)
 - **마우스 아래 칸**이 사거리 안이면 그 칸 우선 채굴
 - 채굴 진행에 `Time.deltaTime` 사용 (DayNight TimeScale과 분리)
+
+**v7 플레이어 물리(점프·중력)** — 정본 미정 항목을 Dev A가 globals 가안으로 등재:
+- `PlayerMovementPhysics.cs` — 중력·가변 점프 컷·시뮬레이션
+- `globals.csv` 4키: `player_jump_height_tiles`(3.5), `player_gravity`(32), `player_max_fall_speed`(12), `player_jump_cut`(0.5)
+- 테라리아급 체감: 풀 점프 약 **3.5타일**, 점프 키를 빨리 떼면 낮은 점프 (`FixedUpdate` 매 틱 컷)
+- 입력: `W` / `↑` / `Space` (누르고 있으면 상승 유지, 떼면 컷)
+- 스폰 옆 입구 깊이: `WorldGenerationConfig.spawnEntranceDepthTiles` = **3** (점프 3.5보다 얕게 — 낙하 후 탈출 가능)
 
 전투·요괴 피격·인벤 UI 등은 개발 B 영역으로 남깁니다.
 
@@ -61,10 +68,11 @@ MainGame에서 **흙·돌 채굴은 확인됨**.
 |------|------|------|
 | 새 게임 / 데모 지표면 스폰 | 확인 권장 유지 | 타이틀 → 새 게임 / 1·15·30일 데모 |
 | 흙·돌 채굴 → 인벤 획득 | ✅ 확인 | 마우스 타일 위 좌클릭 **유지** ~1초 |
+| 점프 높이·가변 점프 | 확인 권장 | `W`/`Space` — 약 3.5타일·짧게 누르면 낮게 |
 | 흙·돌 팔레트 재설치 | ❌ 미배선 | 우클릭 ≠ 재설치 (아래 §3) |
 | Collider 전환 후 낙하·비관통 | 보류 | 아직 `MoveWithTileCollision` 사용 중 |
 | 반경 4/6/8·밀폐 창 정렬 | 보류 | `R`/팔레트 ↔ `IWorldRangeOverlayRenderer` 미연결 |
-| 지상 요괴 피격 | 개발 B | 전투 소유 |
+| 지상 요괴 피격 | 수정함 | `hits`=맞은 대상 수. 요괴에 Kinematic RB+트리거 허트박스, OverlapBox `useTriggers` 명시 |
 
 ---
 
@@ -72,8 +80,10 @@ MainGame에서 **흙·돌 채굴은 확인됨**.
 
 | 입력 | 실제 동작 |
 |------|-----------|
-| 좌클릭 유지 | 공격 + (벽에 허공 휘두르기 시) 채굴 |
-| 우클릭 | **부채 액티브** (맨발톱이면 사실상 무반응). **타일 재설치 아님** |
+| 좌클릭 유지 | 공격 + (벽에 허공 휘두르기 시) 채굴. **지표**는 마우스가 공기 칸이어도 발밑 돌·흙으로 보정 |
+| `W` / `↑` / `Space` | **점프** (키 누르는 동안 상승·떼면 낮은 점프) |
+| 우클릭 | **미개봉 상자 개봉**(마우스/인접) → 없으면 **부채 액티브**. **타일 재설치 아님** |
+| `E` | 근처 상자·설치물 상호작용 (상자 개봉 포함) |
 | 제작 UI → 설치형 레시피 → E | 건물/설비 **설치 미리보기** (흙·돌 전경 재설치와 별개) |
 
 흙·돌 전경 재설치는 개발 A가 `TileService` 계약을 준비해 두었고, **하단 팔레트 UI는 개발 B가 연결**해야 합니다.
@@ -140,7 +150,7 @@ renderer.Clear();
 3. [ ] 하단 팔레트: 흙·돌 ↔ `TryPlaceForeground` / 벽지 ↔ `IBackgroundPlacementService`
 4. [ ] 반경·밀폐 창 ↔ `IWorldRangeOverlayRenderer` (`R`/팔레트 토글)
 5. [ ] 벽지 도포율 → 냉기원 지속시간 보너스
-6. [ ] Dev A 회귀 16/16 → Dev B 통합 회귀 → MainGame 새 게임·데모·저장/로드 → 제품 빌드
+6. [ ] Dev A 회귀 18/18 → Dev B 통합 회귀 → MainGame 새 게임·데모·저장/로드 → 제품 빌드
 7. [ ] (선택) 채굴 타깃 수정(`c38336b`)과 팔레트 배치 UX가 충돌하지 않는지 확인
 
 ---
@@ -170,4 +180,4 @@ MainGame 수동 검증 (날짜 / 브랜치 / 커밋)
 | A-10~A-20 / 동굴 | `DEV_A_WORLD_SPEC_SYNC_HANDOFF.md` |
 | 본 인수인계 | `DEV_A_TO_DEV_B_HANDOFF.md` |
 
-질문·불일치 시 개발 A 회귀 16항목을 먼저 재실행한 뒤, 실패 로그와 함께 공유해 주세요.
+질문·불일치 시 개발 A 회귀 18항목을 먼저 재실행한 뒤, 실패 로그와 함께 공유해 주세요.

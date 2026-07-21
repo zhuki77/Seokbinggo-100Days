@@ -109,18 +109,18 @@ public static class NyangbingoDataMenu
             rootDirectory + "/Recipes/wallpaper.asset");
         var jangdok = AssetDatabase.LoadAssetAtPath<ModuleDefinition>(
             rootDirectory + "/Modules/jangdok.asset");
-        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 89 || sealRules.Length != 23 ||
+        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 93 || sealRules.Length != 23 ||
             wallpaper == null || wallpaper.Output.item == null || wallpaper.Output.item.Id != "wallpaper" ||
             wallpaper.Output.amount != 16 || jangdok == null || jangdok.Role != "보관함 40슬롯(v29 확정)")
         {
-            Debug.LogError("[Nyangbingo] v29 data bundle reimport failed its 86/54/89/23, wallpaper x16, " +
+            Debug.LogError("[Nyangbingo] v29 data bundle reimport failed its 86/54/93/23, wallpaper x16, " +
                            "or jangdok 40-slot check.");
             return;
         }
 
         RebuildGameDataCatalog();
         Debug.Log("[Nyangbingo] v29 data bundle reimport completed: 86 items, 54 recipes, " +
-                  "89 globals, 23 seal rules, wallpaper output 16, jangdok storage 40.");
+                  "93 globals, 23 seal rules, wallpaper output 16, jangdok storage 40.");
     }
 
     [MenuItem("Nyangbingo/Validate CSV Data")]
@@ -1697,9 +1697,9 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 89 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count != 93 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain the v27 official rows and v28/v29 manual overlay (89 rows).");
+            Debug.LogError("[Nyangbingo] globals.csv must contain the v29 official rows plus player physics (93 rows).");
             return;
         }
 

@@ -63,6 +63,10 @@ cold_cap_icejar,50,pct,얼음 항아리 온도 상한 — day15 백중 권장 50
 cold_cap_icestorage,100,pct,얼음 저장고(코어) 온도 상한 — 완공 모듈이자 온도 축 종착
 cold_cap_frostcooler,100,pct,빙정 냉각로 온도 상한 — 보스 보상. 차별점은 기존 체온 회복 x2
 player_move_speed,3.0,tile_per_sec,플레이어 이동 속도(v22 정본화) — 6-7 요괴 이속이 강제: 야광귀3.5보다 느려야 체가 카운터로 성립·어둑시니2.5보다 빨라야 심층 탈출 가능. balance 추정 4.0은 야광귀를 따라잡아 체를 무의미하게 만들어 기각
+player_jump_height_tiles,3.5,tile,플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·요괴 점프 추격 없어 판정 무관
+player_gravity,32,tile_per_sec2,플레이어 중력(가안 v7) — jump_height와 조합해 v0=sqrt(2gh)
+player_max_fall_speed,12,tile_per_sec,최대 낙하 속도(가안 v7) — 테라리아 체감 낙하 상한
+player_jump_cut,0.5,ratio,점프 키 뗄 때 상승 속도 배율(가안 v7) — 테라리아식 가변 점프(매 틱 적용)
 surface_y,20,tile,지표 평균선(맵 상단 기준) — 1D 펄린 진폭 +-6. 위 20타일은 하늘·지상 건설 여유(밀폐 창 RY12 상단 d=-7 수용)
 layer_t1_depth,45,tile,상층 T1 하단 깊이(지표 기준) — balance 검증치 강제: 중층 왕복 145초=계단굴착 90타일=수직45. 변경 금지
 layer_t2_depth,90,tile,중층 T2 하단 깊이 — 얼음 조각·철·구리

@@ -84,6 +84,7 @@ MonoBehaviour:
     depthMin: 91
     depthMax: 135
   spawnColumnRatio: 0.5
+  spawnEntranceDepthTiles: 3
   alcoveWidth: 5
   alcoveHeight: 4
   ruinCountMin: 2

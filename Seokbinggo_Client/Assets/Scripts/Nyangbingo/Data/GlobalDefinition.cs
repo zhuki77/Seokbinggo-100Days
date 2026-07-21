@@ -24,6 +24,10 @@ namespace Nyangbingo.Data
         public const string BadgeWindowDays = "badge_window_days";
         public const string BossFieldYokai = "boss_field_yokai";
         public const string CaveMaxHeight = "cave_max_height";
+        public const string PlayerJumpHeightTiles = "player_jump_height_tiles";
+        public const string PlayerGravity = "player_gravity";
+        public const string PlayerMaxFallSpeed = "player_max_fall_speed";
+        public const string PlayerJumpCut = "player_jump_cut";
         public const string FurnitureMvpScope = "furniture_mvp_scope";
         public const string InventorySlots = "inventory_slots";
         public const string ActiveSlotRule = "active_slot_rule";
