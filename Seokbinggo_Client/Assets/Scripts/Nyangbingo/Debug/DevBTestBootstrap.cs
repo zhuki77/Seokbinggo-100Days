@@ -1781,7 +1781,7 @@ namespace Nyangbingo.Debugging
                         MainGameCraftingUiController.InventoryGridRows == 5 &&
                         Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f) &&
                         MainGameCraftingUiController.UsesIconOnlyCraftingList &&
-                        MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F1 &&
+                        MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F5 &&
                         MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <= 480f &&
                         MainGameBossSummonUiController.DebugShortcutHelpPanelSize.y <= 270f &&
                         !MainGameHudController.ProductHudNarrativeTextEnabled &&

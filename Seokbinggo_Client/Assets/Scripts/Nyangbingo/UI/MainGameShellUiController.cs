@@ -122,6 +122,8 @@ namespace Nyangbingo.UI
             BindButtons();
             BuildResultView();
             CreateDemoSaveButtons();
+            ConfigureTitleMenuLayout();
+            ConfigureSettingsMenuLayout();
             bgmSlider.value = audioService.BgmVolume;
             sfxSlider.value = audioService.SfxVolume;
             fullscreenToggle.isOn = Screen.fullScreen;
@@ -242,8 +244,8 @@ namespace Nyangbingo.UI
                 titleLabel.alignment = TextAnchor.MiddleCenter;
                 var labelRect = titleLabel.rectTransform;
                 labelRect.anchorMin = labelRect.anchorMax = labelRect.pivot = new Vector2(.5f, .5f);
-                labelRect.anchoredPosition = new Vector2(0f, 52.5f);
-                labelRect.sizeDelta = new Vector2(220f, 30f);
+                labelRect.anchoredPosition = new Vector2(-112f, 88f);
+                labelRect.sizeDelta = new Vector2(180f, 30f);
             }
             var titleArtTransform = titlePanel.Find("TitleArt") as RectTransform;
             if (titleArtTransform != null) titleArtTransform.gameObject.SetActive(false);
@@ -265,7 +267,7 @@ namespace Nyangbingo.UI
             }
             counterTransform.anchorMin = counterTransform.anchorMax = counterTransform.pivot =
                 new Vector2(.5f, .5f);
-            counterTransform.anchoredPosition = new Vector2(0f, 105f);
+            counterTransform.anchoredPosition = new Vector2(-112f, 56f);
             counterTransform.sizeDelta = new Vector2(120f, 28f);
             titleDayCounterText = counterTransform.GetComponent<Text>();
             var menuLabel = titleNewGameButton.GetComponentInChildren<Text>(true);
@@ -286,8 +288,8 @@ namespace Nyangbingo.UI
                 playerTransform = (RectTransform)playerObject.transform;
             }
             playerTransform.anchorMin = playerTransform.anchorMax = playerTransform.pivot = new Vector2(1f, 0f);
-            playerTransform.anchoredPosition = new Vector2(-18f, 10f);
-            playerTransform.sizeDelta = new Vector2(32f, 32f);
+            playerTransform.anchoredPosition = new Vector2(-54f, 34f);
+            playerTransform.sizeDelta = new Vector2(72f, 72f);
             var playerImage = playerTransform.GetComponent<Image>();
             playerImage.preserveAspect = true;
             playerImage.raycastTarget = false;
@@ -455,10 +457,11 @@ namespace Nyangbingo.UI
             SetButtonLabel(settingsButton, "설정");
             SetButtonLabel(returnTitleButton, "타이틀로");
 
-            ConfigurePauseButton(resumeButton, 24f);
-            ConfigurePauseButton(pauseSaveButton, 8f);
-            ConfigurePauseButton(settingsButton, -8f);
-            ConfigurePauseButton(returnTitleButton, -24f);
+            ConfigurePauseCard();
+            ConfigurePauseButton(resumeButton, 36f);
+            ConfigurePauseButton(pauseSaveButton, 7f);
+            ConfigurePauseButton(settingsButton, -22f);
+            ConfigurePauseButton(returnTitleButton, -51f);
 
             for (var index = 1; index < saveButtons.Length; index++)
                 if (saveButtons[index] != null) saveButtons[index].gameObject.SetActive(false);
@@ -475,7 +478,138 @@ namespace Nyangbingo.UI
             rect.anchoredPosition = new Vector2(0f, y);
             // PausePanel is migrated to the native 480x270 UI root before this controller starts.
             // Keep these values in native coordinates (legacy 280x52 scaled by 0.25).
-            rect.sizeDelta = new Vector2(70f, 13f);
+            rect.sizeDelta = new Vector2(150f, 24f);
+        }
+
+        private void ConfigurePauseCard()
+        {
+            var pausePanel = resumeButton != null ? resumeButton.transform.parent : null;
+            if (pausePanel == null) return;
+            var card = pausePanel.Find("PauseMenuCard") as RectTransform;
+            if (card == null)
+            {
+                var cardObject = new GameObject("PauseMenuCard", typeof(RectTransform), typeof(Image), typeof(Outline));
+                cardObject.transform.SetParent(pausePanel, false);
+                card = (RectTransform)cardObject.transform;
+            }
+            card.anchorMin = card.anchorMax = card.pivot = new Vector2(.5f, .5f);
+            card.anchoredPosition = Vector2.zero;
+            card.sizeDelta = new Vector2(182f, 204f);
+            var image = card.GetComponent<Image>();
+            image.color = new Color(.045f, .065f, .11f, .97f);
+            image.raycastTarget = false;
+            var outline = card.GetComponent<Outline>();
+            outline.effectColor = new Color(.72f, .48f, .12f, .85f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            card.SetAsFirstSibling();
+            var title = pausePanel.Find("Title") as RectTransform;
+            if (title != null)
+            {
+                title.anchoredPosition = new Vector2(0f, 76f);
+                title.sizeDelta = new Vector2(160f, 24f);
+            }
+
+            // Keep the keyboard hint separate from the return-to-title button.
+            // The legacy layout placed it at the same height as the last button.
+            if (statusText != null)
+            {
+                var statusRect = statusText.rectTransform;
+                statusRect.anchorMin = statusRect.anchorMax = statusRect.pivot = new Vector2(.5f, .5f);
+                statusRect.anchoredPosition = new Vector2(0f, -83f);
+                statusRect.sizeDelta = new Vector2(150f, 14f);
+                statusText.alignment = TextAnchor.MiddleCenter;
+                statusText.fontSize = 8;
+                statusText.transform.SetAsLastSibling();
+            }
+        }
+
+        private void ConfigureTitleMenuLayout()
+        {
+            ConfigureShellButton(titleContinueButton, new Vector2(-112f, 17f), new Vector2(150f, 27f));
+            ConfigureShellButton(titleNewGameButton, new Vector2(-112f, -17f), new Vector2(150f, 27f));
+            ConfigureShellButton(titleQuitButton, new Vector2(-112f, -51f), new Vector2(150f, 27f));
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+                ConfigureShellButton(demoSaveButtons[index],
+                    new Vector2(-162f + index * 50f, -82f), new Vector2(46f, 15f));
+        }
+
+        private void ConfigureSettingsMenuLayout()
+        {
+            var settingsPanel = bgmSlider != null ? bgmSlider.transform.parent : null;
+            if (settingsPanel == null) return;
+            var card = settingsPanel.Find("SettingsMenuCard") as RectTransform;
+            if (card == null)
+            {
+                var cardObject = new GameObject("SettingsMenuCard", typeof(RectTransform), typeof(Image), typeof(Outline));
+                cardObject.transform.SetParent(settingsPanel, false);
+                card = (RectTransform)cardObject.transform;
+            }
+            card.anchorMin = card.anchorMax = card.pivot = new Vector2(.5f, .5f);
+            card.anchoredPosition = Vector2.zero;
+            card.sizeDelta = new Vector2(220f, 210f);
+            var image = card.GetComponent<Image>();
+            image.color = new Color(.045f, .065f, .11f, .98f);
+            image.raycastTarget = false;
+            var outline = card.GetComponent<Outline>();
+            outline.effectColor = new Color(.72f, .48f, .12f, .85f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            card.SetAsFirstSibling();
+
+            ConfigureNamedRect(settingsPanel, "Title", new Vector2(0f, 78f), new Vector2(180f, 24f));
+            ConfigureNamedRect(settingsPanel, "BgmLabel", new Vector2(-72f, 31f), new Vector2(54f, 18f));
+            ConfigureNamedRect(settingsPanel, "BgmVolume", new Vector2(31f, 31f), new Vector2(96f, 18f));
+            ConfigureNamedRect(settingsPanel, "SfxLabel", new Vector2(-72f, -5f), new Vector2(54f, 18f));
+            ConfigureNamedRect(settingsPanel, "SfxVolume", new Vector2(31f, -5f), new Vector2(96f, 18f));
+            ConfigureFullscreenToggleLayout(settingsPanel);
+            ConfigureShellButton(settingsApplyButton, new Vector2(-43f, -78f), new Vector2(78f, 22f));
+            ConfigureShellButton(settingsBackButton, new Vector2(43f, -78f), new Vector2(78f, 22f));
+        }
+
+        private static void ConfigureFullscreenToggleLayout(Transform settingsPanel)
+        {
+            var toggleRect = settingsPanel != null ? settingsPanel.Find("Fullscreen") as RectTransform : null;
+            if (toggleRect == null) return;
+
+            toggleRect.anchorMin = toggleRect.anchorMax = toggleRect.pivot = new Vector2(.5f, .5f);
+            toggleRect.anchoredPosition = new Vector2(0f, -42f);
+            toggleRect.sizeDelta = new Vector2(180f, 20f);
+
+            var labelRect = toggleRect.Find("Label") as RectTransform;
+            if (labelRect != null)
+            {
+                labelRect.anchorMin = labelRect.anchorMax = labelRect.pivot = new Vector2(.5f, .5f);
+                labelRect.anchoredPosition = new Vector2(-72f, 0f);
+                labelRect.sizeDelta = new Vector2(54f, 18f);
+                var label = labelRect.GetComponent<Text>();
+                if (label != null)
+                {
+                    label.alignment = TextAnchor.MiddleCenter;
+                    label.fontSize = 6;
+                }
+            }
+
+            var backgroundRect = toggleRect.Find("Background") as RectTransform;
+            if (backgroundRect == null) return;
+            backgroundRect.anchorMin = backgroundRect.anchorMax = backgroundRect.pivot = new Vector2(.5f, .5f);
+            backgroundRect.anchoredPosition = new Vector2(18f, 0f);
+            backgroundRect.sizeDelta = new Vector2(9f, 9f);
+        }
+
+        private static void ConfigureNamedRect(Transform parent, string childName, Vector2 position, Vector2 size)
+        {
+            var rect = parent != null ? parent.Find(childName) as RectTransform : null;
+            if (rect == null) return;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+        }
+
+        private static void ConfigureShellButton(Button button, Vector2 position, Vector2 size)
+        {
+            if (button == null) return;
+            var rect = button.GetComponent<RectTransform>();
+            if (rect == null) return;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
         }
 
         private static void SetButtonLabel(Button button, string label)
@@ -486,8 +620,13 @@ namespace Nyangbingo.UI
 
         private void RefreshPauseControls()
         {
-            if (pauseSaveButton == null) return;
-            pauseSaveButton.interactable = bossManager == null || !bossManager.IsBossActive;
+            if (pauseSaveButton != null)
+                pauseSaveButton.interactable = bossManager == null || !bossManager.IsBossActive;
+
+            // Settings is displayed on top of the paused gameplay view, so the pause-only
+            // keyboard hint must be hidden until the player returns to the pause card.
+            if (statusText != null)
+                statusText.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause);
         }
 
         private void CreateDemoSaveButtons()
@@ -498,7 +637,6 @@ namespace Nyangbingo.UI
             var quitRect = titleQuitButton.GetComponent<RectTransform>();
             if (parent == null || templateRect == null || quitRect == null) return;
 
-            var rowY = -42f;
             for (var index = 0; index < GameShellController.DemoSaveDays.Length; index++)
             {
                 var day = GameShellController.DemoSaveDays[index];
@@ -507,8 +645,8 @@ namespace Nyangbingo.UI
                 button.onClick.RemoveAllListeners();
                 button.onClick.AddListener(() => RequestDemoSave(day));
                 var rect = button.GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2((index - 1) * 82f, rowY);
-                rect.sizeDelta = new Vector2(76f, 16f);
+                rect.anchoredPosition = new Vector2(-162f + index * 50f, -82f);
+                rect.sizeDelta = new Vector2(46f, 15f);
                 var label = button.GetComponentInChildren<Text>(true);
                 if (label != null)
                 {
@@ -517,7 +655,7 @@ namespace Nyangbingo.UI
                 }
                 demoSaveButtons.Add(button);
             }
-            quitRect.anchoredPosition = new Vector2(0f, -68f);
+            quitRect.anchoredPosition = new Vector2(-112f, -51f);
         }
 
         private void RequestDemoSave(int day)

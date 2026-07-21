@@ -25,6 +25,7 @@ namespace Nyangbingo.UI
             public Button Button;
             public Image Icon;
             public Text Amount;
+            public Text Shortcut;
         }
 
         public const float MaxScreenWidthRatio = .5f;
@@ -33,6 +34,7 @@ namespace Nyangbingo.UI
         public const float SlotPixelSize = 27f;
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
+        public const int ShortcutSlotCount = 8;
 
         private static int escapeConsumedFrame = -1;
         private static bool foregroundPlacementActive;
@@ -119,6 +121,30 @@ namespace Nyangbingo.UI
             return true;
         }
 
+        public bool TrySelectPaletteSlot(int slotIndex)
+        {
+            if (!initialized || slotIndex < 0 || slotIndex >= ShortcutSlotCount ||
+                slotIndex >= paletteItemIds.Count) return false;
+            SelectPaletteItem(paletteItemIds[slotIndex]);
+            return string.Equals(selectedItemId, paletteItemIds[slotIndex], StringComparison.Ordinal);
+        }
+
+        public static KeyCode ShortcutKeyForSlot(int slotIndex)
+        {
+            switch (slotIndex)
+            {
+                case 0: return KeyCode.Alpha1;
+                case 1: return KeyCode.Alpha2;
+                case 2: return KeyCode.Alpha3;
+                case 3: return KeyCode.Alpha4;
+                case 4: return KeyCode.Alpha5;
+                case 5: return KeyCode.Alpha6;
+                case 6: return KeyCode.Alpha7;
+                case 7: return KeyCode.Alpha8;
+                default: return KeyCode.None;
+            }
+        }
+
         private void Start()
         {
             if (gameDataCatalog == null) gameDataCatalog = FindAnyObjectByType<MainGameBootstrap>()?.GameDataCatalog;
@@ -170,6 +196,16 @@ namespace Nyangbingo.UI
             if (rangeToggleStatusText != null && rangeToggleStatusText.gameObject.activeSelf &&
                 Time.unscaledTime >= rangeToggleStatusUntil)
                 rangeToggleStatusText.gameObject.SetActive(false);
+
+            if (gameplayVisible && Time.timeScale > 0f)
+            {
+                var shortcutSlot = ReadPaletteShortcutSlot();
+                if (shortcutSlot >= 0)
+                {
+                    TrySelectPaletteSlot(shortcutSlot);
+                    return;
+                }
+            }
 
             var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
             if (gameplayVisible && !pointerOverUi && Input.GetMouseButtonDown(1) &&
@@ -310,8 +346,9 @@ namespace Nyangbingo.UI
             foreach (var view in slotViews)
                 if (view?.Button != null) Destroy(view.Button.gameObject);
             slotViews.Clear();
-            foreach (var itemId in paletteItemIds)
+            for (var slotIndex = 0; slotIndex < paletteItemIds.Count; slotIndex++)
             {
+                var itemId = paletteItemIds[slotIndex];
                 var capturedId = itemId;
                 var slotObject = new GameObject($"Slot_{itemId}", typeof(RectTransform), typeof(Image), typeof(Button));
                 slotObject.transform.SetParent(content, false);
@@ -347,9 +384,40 @@ namespace Nyangbingo.UI
                 amount.raycastTarget = false;
                 amount.horizontalOverflow = HorizontalWrapMode.Overflow;
 
-                slotViews.Add(new SlotView { ItemId = itemId, Button = button, Icon = icon, Amount = amount });
+                Text shortcut = null;
+                if (slotIndex < ShortcutSlotCount)
+                {
+                    var shortcutObject = new GameObject("Shortcut", typeof(RectTransform), typeof(Text));
+                    shortcutObject.transform.SetParent(slotObject.transform, false);
+                    var shortcutRect = (RectTransform)shortcutObject.transform;
+                    shortcutRect.anchorMin = Vector2.zero;
+                    shortcutRect.anchorMax = Vector2.one;
+                    shortcutRect.offsetMin = new Vector2(2f, 1f);
+                    shortcutRect.offsetMax = new Vector2(-2f, -1f);
+                    shortcut = shortcutObject.GetComponent<Text>();
+                    shortcut.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                    shortcut.fontSize = 7;
+                    shortcut.fontStyle = FontStyle.Bold;
+                    shortcut.alignment = TextAnchor.UpperLeft;
+                    shortcut.color = Color.white;
+                    shortcut.raycastTarget = false;
+                    shortcut.text = (slotIndex + 1).ToString();
+                }
+
+                slotViews.Add(new SlotView
+                    { ItemId = itemId, Button = button, Icon = icon, Amount = amount, Shortcut = shortcut });
             }
             RefreshSlotVisuals();
+        }
+
+        private static int ReadPaletteShortcutSlot()
+        {
+            for (var index = 0; index < ShortcutSlotCount; index++)
+            {
+                if (Input.GetKeyDown(ShortcutKeyForSlot(index)) ||
+                    Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index))) return index;
+            }
+            return -1;
         }
 
         private void RefreshSlotVisuals()

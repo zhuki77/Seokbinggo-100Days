@@ -1117,7 +1117,7 @@ namespace Nyangbingo.UI
             // The illustrated segmented bar communicates health without a separate number label.
             bossStatusText.text = string.Empty;
 #if UNITY_EDITOR
-            // Test controls are listed in the F1 debug shortcut popup.
+            // Test controls are listed in the F5 debug shortcut popup.
 #endif
         }
 

@@ -253,8 +253,22 @@ namespace Nyangbingo.World
             bossObject.transform.position = position;
             var health = bossObject.AddComponent<Health>();
             var collider = bossObject.AddComponent<CircleCollider2D>();
-            collider.radius = .65f;
-            collider.isTrigger = true;
+            collider.radius = WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind);
+            var locomotion = WorldMobPhysicsBody.ForBoss(definition.Kind);
+            if (locomotion == WorldMobLocomotion.Grounded)
+                collider.offset = Vector2.up * WorldMobPhysicsBody.GroundBossColliderVerticalOffset;
+            bossObject.AddComponent<Rigidbody2D>();
+            var physicsBody = bossObject.AddComponent<WorldMobPhysicsBody>();
+            physicsBody.ConfigureForRuntime(locomotion, bootstrap.TileService);
+            physicsBody.IgnoreCollisionWith(raidTarget.transform);
+            if (locomotion == WorldMobLocomotion.Flying)
+            {
+                var hurtboxObject = new GameObject("BossHurtbox");
+                hurtboxObject.transform.SetParent(bossObject.transform, false);
+                var hurtbox = hurtboxObject.AddComponent<CircleCollider2D>();
+                hurtbox.radius = .65f;
+                hurtbox.isTrigger = true;
+            }
             var visualObject = new GameObject("Visual");
             visualObject.transform.SetParent(bossObject.transform, false);
             var bossRenderer = visualObject.AddComponent<SpriteRenderer>();
@@ -591,7 +605,10 @@ namespace Nyangbingo.World
             var health = yokaiObject.AddComponent<Health>();
             var collider = yokaiObject.AddComponent<CircleCollider2D>();
             collider.radius = .42f;
-            collider.isTrigger = true;
+            yokaiObject.AddComponent<Rigidbody2D>();
+            var physicsBody = yokaiObject.AddComponent<WorldMobPhysicsBody>();
+            physicsBody.ConfigureForRuntime(WorldMobPhysicsBody.ForYokai(definition.Kind), bootstrap.TileService);
+            physicsBody.IgnoreCollisionWith(raidTarget.transform);
             var usesEoduksiniPresentation = definition.Kind == YokaiKind.Eoduksini;
             var visualObject = usesEoduksiniPresentation ? new GameObject("Visual") : yokaiObject;
             if (usesEoduksiniPresentation) visualObject.transform.SetParent(yokaiObject.transform, false);

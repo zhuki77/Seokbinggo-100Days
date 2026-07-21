@@ -113,6 +113,7 @@ namespace Nyangbingo.UI
         public const int InventoryGridRows = 5;
         public const float InventorySlotPixelSize = 27f;
         public const bool UsesIconOnlyCraftingList = true;
+        public const KeyCode DebugGrantRequirementsKey = KeyCode.F5;
 
         public static bool SupportsDebugInstantCompletion
         {
@@ -135,6 +136,18 @@ namespace Nyangbingo.UI
                 case 2: return "장비";
                 case 3: return "도감";
                 default: return string.Empty;
+            }
+        }
+
+        public static KeyCode UnifiedTabHotkey(int index)
+        {
+            switch (index)
+            {
+                case 0: return KeyCode.F1;
+                case 1: return KeyCode.F2;
+                case 2: return KeyCode.F3;
+                case 3: return KeyCode.F4;
+                default: return KeyCode.None;
             }
         }
 
@@ -241,7 +254,9 @@ namespace Nyangbingo.UI
                 if (openedFrame != Time.frameCount && Input.GetKeyDown(KeyCode.E)) TryPrimaryAction();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.R)) TryRefuelPortableLantern();
 #if UNITY_EDITOR
-                if (page != Page.Gathering && Input.GetKeyDown(KeyCode.F4))
+                if (page != Page.Gathering && Input.GetKeyDown(DebugGrantRequirementsKey) &&
+                    (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) ||
+                     Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
                 {
                     if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
                         TeleportToRequiredStationForEditorTest();
@@ -299,13 +314,13 @@ namespace Nyangbingo.UI
             background.color = new Color(.035f, .05f, .075f, .96f);
             titleText = CreateText(panel.transform, "Title", 15, TextAnchor.MiddleCenter,
                 new Vector2(450f, 20f), new Vector2(0f, 118f));
-            tabButtons[0] = CreateButton(panel.transform, "GatheringTab", "1 · 채집",
+            tabButtons[0] = CreateButton(panel.transform, "GatheringTab", "F1 · 채집",
                 new Vector2(-165f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Gathering));
-            tabButtons[1] = CreateButton(panel.transform, "CraftingTab", "2 · 제작",
+            tabButtons[1] = CreateButton(panel.transform, "CraftingTab", "F2 · 제작",
                 new Vector2(-55f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Crafting));
-            tabButtons[2] = CreateButton(panel.transform, "EquipmentTab", "3 · 장비",
+            tabButtons[2] = CreateButton(panel.transform, "EquipmentTab", "F3 · 장비",
                 new Vector2(55f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Equipment));
-            tabButtons[3] = CreateButton(panel.transform, "CodexTab", "4 · 도감",
+            tabButtons[3] = CreateButton(panel.transform, "CodexTab", "F4 · 도감",
                 new Vector2(165f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Codex));
             BuildDetailsScrollArea();
             BuildCraftingList();
@@ -327,8 +342,8 @@ namespace Nyangbingo.UI
             debugCompleteButton.GetComponent<Image>().color = new Color(.48f, .29f, .12f, 1f);
             collectButton = CreateButton(panel.transform, "Collect", "완료품 회수", new Vector2(-52f, -118f),
                 new Vector2(130f, 20f), TrySecondaryAction);
-            CreateButton(panel.transform, "Close", "ESC · 닫기", new Vector2(115f, -118f),
-                new Vector2(200f, 20f), () => SetOpen(false));
+            CreateButton(panel.transform, "Close", "ESC · 닫기", new Vector2(145f, -118f),
+                new Vector2(150f, 22f), () => SetOpen(false));
             BuildCodexExpandedView();
             BuildSummonConfirmation();
         }
@@ -809,13 +824,16 @@ namespace Nyangbingo.UI
 
         private bool TryHandlePageHotkey()
         {
-            // GDD 5 UI/UX PC 조작 정본: 숫자 1~4로 통합 패널의 탭을 직접 선택한다.
-            Page target;
-            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) target = Page.Gathering;
-            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) target = Page.Crafting;
-            else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) target = Page.Equipment;
-            else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4)) target = Page.Codex;
-            else return false;
+            // Product input: F1~F4 select the unified panels; number keys belong to the tile palette.
+            var targetIndex = -1;
+            for (var index = 0; index < UnifiedTabCount; index++)
+            {
+                if (!Input.GetKeyDown(UnifiedTabHotkey(index))) continue;
+                targetIndex = index;
+                break;
+            }
+            if (targetIndex < 0) return false;
+            var target = (Page)targetIndex;
 
             if ((shell != null && shell.Screen != GameShellScreen.Gameplay) || Time.timeScale <= 0f) return true;
             TogglePage(target);
@@ -1005,18 +1023,6 @@ namespace Nyangbingo.UI
         {
             var recipe = CurrentRecipe();
             if (recipe == null) { ShowMessage("표시할 제작법이 없습니다."); return; }
-            if (turretRuntime != null && IsProductPlaceableRecipe(recipe) &&
-                turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0)
-            {
-                if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
-                var beganPlacement = tilePalette != null &&
-                                     tilePalette.TryBeginPlacement(recipe.Output.item.Id);
-                if (!beganPlacement)
-                    beganPlacement = turretRuntime.BeginPlacementPreview(recipe.Output.item.Id);
-                if (beganPlacement) SetOpen(false);
-                else ShowMessage("설치 미리보기를 시작할 수 없습니다.");
-                return;
-            }
             if (runtimeServices.CraftingProcess.IsCrafting)
             { ShowMessage("다른 제작이 진행 중입니다."); return; }
             var nearby = NearbyStation();
@@ -1034,6 +1040,18 @@ namespace Nyangbingo.UI
                 Debug.Log($"[Nyangbingo] Product crafting accepted: {recipe.Id}, station={recipe.Station}.");
             }
             else ShowMessage("재료 또는 인벤토리 공간이 부족합니다.");
+        }
+
+        private void TryPlaceSelectedCraftingOutput()
+        {
+            var recipe = CurrentRecipe();
+            if (recipe == null || turretRuntime == null || !IsProductPlaceableRecipe(recipe) ||
+                turretRuntime.GetInventoryCount(recipe.Output.item.Id) <= 0) return;
+            if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
+            var beganPlacement = tilePalette != null && tilePalette.TryBeginPlacement(recipe.Output.item.Id);
+            if (!beganPlacement) beganPlacement = turretRuntime.BeginPlacementPreview(recipe.Output.item.Id);
+            if (beganPlacement) SetOpen(false);
+            else ShowMessage("설치 미리보기를 시작할 수 없습니다.");
         }
 
         private void TrySmeltSelected()
@@ -1121,6 +1139,7 @@ namespace Nyangbingo.UI
         private void TrySecondaryAction()
         {
             if (page == Page.Crafting && showingSmelting) TryCollectOutputs();
+            else if (page == Page.Crafting) TryPlaceSelectedCraftingOutput();
             else if (page == Page.Equipment) TryRefuelPortableLantern();
         }
 
@@ -1222,6 +1241,12 @@ namespace Nyangbingo.UI
             previousButton.gameObject.SetActive(hasListActions && !recipeList);
             nextButton.gameObject.SetActive(hasListActions && !recipeList);
             primaryButton.gameObject.SetActive(!codex);
+            var primaryRect = primaryButton.GetComponent<RectTransform>();
+            primaryRect.anchoredPosition = new Vector2(110f, -91f);
+            primaryRect.sizeDelta = new Vector2(240f, 22f);
+            var collectRect = collectButton.GetComponent<RectTransform>();
+            collectRect.anchoredPosition = new Vector2(-52f, -118f);
+            collectRect.sizeDelta = new Vector2(130f, 20f);
             messageText.gameObject.SetActive(hasListActions);
             collectButton.gameObject.SetActive(false);
             debugCompleteButton.gameObject.SetActive(SupportsDebugInstantCompletion && page == Page.Crafting);
@@ -1262,11 +1287,23 @@ namespace Nyangbingo.UI
             }
             var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe) &&
                                turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
-            primaryButton.GetComponentInChildren<Text>().text = readyToPlace ? "E · 설치 미리보기" : "E · 제작";
+            primaryButton.GetComponentInChildren<Text>().text = "E · 제작";
+            var primaryRect = primaryButton.GetComponent<RectTransform>();
+            primaryRect.anchoredPosition = new Vector2(65f, -91f);
+            primaryRect.sizeDelta = new Vector2(150f, 22f);
+            collectButton.gameObject.SetActive(readyToPlace);
+            if (readyToPlace)
+            {
+                var placementRect = collectButton.GetComponent<RectTransform>();
+                placementRect.anchoredPosition = new Vector2(-100f, -91f);
+                placementRect.sizeDelta = new Vector2(150f, 22f);
+                collectButton.GetComponentInChildren<Text>().text = "설치";
+                collectButton.interactable = runtimeServices.NapService?.IsNapping != true;
+            }
             titleText.text = $"제작 {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
             var stationOk = recipe.Station == CraftingStation.None || recipe.Station == NearbyStation();
-            var canCraft = readyToPlace || (!runtimeServices.CraftingProcess.IsCrafting && stationOk &&
-                                            runtimeServices.CraftingService.CanCraft(recipe, recipe.Station));
+            var canCraft = !runtimeServices.CraftingProcess.IsCrafting && stationOk &&
+                           runtimeServices.CraftingService.CanCraft(recipe, recipe.Station);
             primaryButton.interactable = canCraft && runtimeServices.NapService?.IsNapping != true;
             var builder = new StringBuilder();
             builder.AppendLine($"결과: {recipe.Output.item.DisplayName} ×{recipe.Output.amount}");
@@ -1281,7 +1318,7 @@ namespace Nyangbingo.UI
             }
             if (turretRuntime != null && IsProductPlaceableRecipe(recipe))
                 builder.AppendLine($"\n완성품 보유: {turretRuntime.GetInventoryCount(recipe.Output.item.Id)} · " +
-                                   (readyToPlace ? "E로 설치 모드 진입" : "제작 완료 후 설치 가능"));
+                                   (readyToPlace ? "설치 버튼으로 배치 가능" : "제작 완료 후 설치 가능"));
             if (runtimeServices.CraftingProcess.IsCrafting)
                 builder.AppendLine($"\n진행 중: {runtimeServices.CraftingProcess.Active.Output.item.DisplayName} " +
                                    $"{runtimeServices.CraftingProcess.RemainingSeconds:0.0}초");
@@ -1334,8 +1371,6 @@ namespace Nyangbingo.UI
 
                 button.gameObject.SetActive(true);
                 var recipe = filteredRecipes[index];
-                var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe) &&
-                                   turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
                 var outputIcon = craftingListOutputIcons[index];
                 if (outputIcon != null)
                 {
@@ -1364,7 +1399,7 @@ namespace Nyangbingo.UI
                     }
 
                     var owned = runtimeServices.PlayerInventory.Count(ingredient.item.Id);
-                    var isMissing = owned < ingredient.amount && !readyToPlace;
+                    var isMissing = owned < ingredient.amount;
                     lacksMaterials |= isMissing;
                     if (icon != null)
                     {
@@ -1964,8 +1999,8 @@ namespace Nyangbingo.UI
             {
                 var recipe = CurrentRecipe();
                 if (recipe != null && TryGrantItems(recipe.Ingredients))
-                    ShowMessage($"F4 테스트 재료 지급: {recipe.Output.item.DisplayName}");
-                else ShowMessage("F4 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                    ShowMessage($"Ctrl+F5 테스트 재료 지급: {recipe.Output.item.DisplayName}");
+                else ShowMessage("Ctrl+F5 재료 지급 실패: 인벤토리 공간을 확인하세요.");
                 return;
             }
             if (page == Page.Crafting && showingSmelting)
@@ -1973,8 +2008,8 @@ namespace Nyangbingo.UI
                 var definition = CurrentSmelting();
                 var requirements = definition == null ? null : new[] { definition.Input, definition.Fuel };
                 if (requirements != null && TryGrantItems(requirements))
-                    ShowMessage($"F4 테스트 재료·연료 지급: {definition.Output.item.DisplayName}");
-                else ShowMessage("F4 제련 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                    ShowMessage($"Ctrl+F5 테스트 재료·연료 지급: {definition.Output.item.DisplayName}");
+                else ShowMessage("Ctrl+F5 제련 재료 지급 실패: 인벤토리 공간을 확인하세요.");
                 return;
             }
             if (page == Page.Equipment)
@@ -1987,7 +2022,7 @@ namespace Nyangbingo.UI
                     .FirstOrDefault();
                 if (activeCandidate != null && runtimeServices.PlayerInventory.TryAdd(activeCandidate.Id, 1))
                 {
-                    ShowMessage($"F4 테스트 무기·도구 지급: {activeCandidate.DisplayName}");
+                    ShowMessage($"Ctrl+F5 테스트 무기·도구 지급: {activeCandidate.DisplayName}");
                     return;
                 }
 
@@ -1997,8 +2032,8 @@ namespace Nyangbingo.UI
                     .OrderBy(definition => definition.Id, StringComparer.Ordinal)
                     .FirstOrDefault();
                 if (candidate != null && runtimeServices.EquipmentCollection.TryAdd(candidate))
-                    ShowMessage($"F4 테스트 장비 지급: {candidate.Id}");
-                else ShowMessage("F4 지급 가능한 새 장비가 없습니다.");
+                    ShowMessage($"Ctrl+F5 테스트 장비 지급: {candidate.Id}");
+                else ShowMessage("Ctrl+F5 지급 가능한 새 장비가 없습니다.");
             }
         }
 
@@ -2037,7 +2072,7 @@ namespace Nyangbingo.UI
             if (station == CraftingStation.None)
             { ShowMessage("선택 항목은 제작대 이동이 필요하지 않습니다."); return; }
             ShowMessage(stationSource != null && stationSource.TeleportToCraftingStationForEditorTest(station)
-                ? $"Shift+F4 테스트 이동: {StationLabel(station)}"
+                ? $"Shift+F5 테스트 이동: {StationLabel(station)}"
                 : "테스트 제작대 위치를 찾지 못했습니다.");
         }
 #endif
@@ -2045,9 +2080,9 @@ namespace Nyangbingo.UI
         private static string DefaultHelpText()
         {
 #if UNITY_EDITOR
-            return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+            return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else
-            return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+            return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #endif
         }
 
