@@ -1,6 +1,7 @@
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.Yokai
@@ -40,6 +41,8 @@ namespace Nyangbingo.Yokai
         private float frostSlowFraction;
         private float frostSlowRemaining;
         private bool bossEncounterPaused;
+        private WorldMobPhysicsBody physicsBody;
+        private RuntimeCharacterSpriteAnimator characterAnimator;
         private SpriteRenderer[] pausedRenderers = System.Array.Empty<SpriteRenderer>();
         private Color[] pausedRendererColors = System.Array.Empty<Color>();
         public YokaiDefinition Definition => definition;
@@ -61,6 +64,8 @@ namespace Nyangbingo.Yokai
         private void Awake()
         {
             health = GetComponent<Health>();
+            physicsBody = GetComponent<WorldMobPhysicsBody>();
+            characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
             gameSecondsSource = gameSecondsSourceComponent as IGameSecondsSource;
             if (visibilityRenderer == null) visibilityRenderer = GetComponentInChildren<Renderer>();
         }
@@ -103,6 +108,8 @@ namespace Nyangbingo.Yokai
             frostSlowRemaining = 0f;
             SetBossEncounterPaused(false);
             health = GetComponent<Health>();
+            physicsBody = GetComponent<WorldMobPhysicsBody>();
+            characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
             if (health != null)
             {
                 if (definition != null) health.ConfigureForRuntime(definition.HitPoints);
@@ -150,6 +157,8 @@ namespace Nyangbingo.Yokai
         public bool SetBossEncounterPaused(bool paused)
         {
             if (bossEncounterPaused == paused) return true;
+            if (physicsBody == null) physicsBody = GetComponent<WorldMobPhysicsBody>();
+            physicsBody?.SetEncounterPaused(paused);
             if (paused)
             {
                 pausedRenderers = GetComponentsInChildren<SpriteRenderer>(true);
@@ -213,6 +222,7 @@ namespace Nyangbingo.Yokai
 
         public void Tick(float deltaSeconds)
         {
+            SetAnimationMoving(false);
             if (bossEncounterPaused || deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) ||
                 definition == null) return;
             if (health == null) health = GetComponent<Health>();
@@ -299,9 +309,16 @@ namespace Nyangbingo.Yokai
             var targetPosition = target.TargetTransform.position;
             var currentPosition = transform.position;
             if (!IsFinite(currentPosition) || !IsFinite(targetPosition)) return;
-            var offset = targetPosition - currentPosition;
-            var distance = offset.magnitude;
-            var direction = distance <= Mathf.Epsilon ? Vector3.zero : offset / distance;
+            var targetOffset = targetPosition - currentPosition;
+            var navigationOffset = physicsBody != null
+                ? (Vector3)physicsBody.NavigationOffset(targetOffset)
+                : targetOffset;
+            var navigationDistance = navigationOffset.magnitude;
+            var direction = navigationDistance <= Mathf.Epsilon
+                ? Vector3.zero
+                : physicsBody != null
+                    ? (Vector3)physicsBody.NavigationDirection(targetOffset)
+                    : navigationOffset / navigationDistance;
             var attackRange = float.IsNaN(wallAttackRange) || float.IsInfinity(wallAttackRange)
                 ? 1f
                 : Mathf.Max(0f, wallAttackRange);
@@ -310,13 +327,13 @@ namespace Nyangbingo.Yokai
             {
                 case State.Approach:
                     if (YokaiSpecialRules.ShouldAttemptTheft(definition.Kind, counters)) state = State.StealLoot;
-                    else if (IsWithinAttackRange(distance, attackRange)) state = State.AttackWall;
-                    else if (MoveTowardAttackRange(direction, distance, attackRange, actionSeconds))
+                    else if (CanAttackTarget(targetPosition, attackRange)) state = State.AttackWall;
+                    else if (MoveTowardAttackRange(direction, navigationDistance, attackRange, actionSeconds))
                         state = State.AttackWall;
                     break;
                 case State.StealLoot:
-                    if (!IsWithinAttackRange(distance, attackRange))
-                        MoveTowardAttackRange(direction, distance, attackRange, actionSeconds);
+                    if (!CanAttackTarget(targetPosition, attackRange))
+                        MoveTowardAttackRange(direction, navigationDistance, attackRange, actionSeconds);
                     else
                     {
                         var lootTarget = target as IYokaiLootTarget;
@@ -329,10 +346,10 @@ namespace Nyangbingo.Yokai
                     }
                     break;
                 case State.AttackWall:
-                    if (!IsWithinAttackRange(distance, attackRange))
+                    if (!CanAttackTarget(targetPosition, attackRange))
                     {
                         state = State.Approach;
-                        MoveTowardAttackRange(direction, distance, attackRange, actionSeconds);
+                        MoveTowardAttackRange(direction, navigationDistance, attackRange, actionSeconds);
                         break;
                     }
                     if (YokaiSpecialRules.ShouldAttemptTheft(definition.Kind, counters))
@@ -381,7 +398,7 @@ namespace Nyangbingo.Yokai
                 float.IsInfinity(retreatMultiplier) || !IsFinite(direction)) return;
             var retreatDistance = moveSpeed * retreatMultiplier * actionSeconds;
             if (!float.IsNaN(retreatDistance) && !float.IsInfinity(retreatDistance))
-                transform.position += direction * retreatDistance;
+                MoveBy(direction * retreatDistance);
         }
 
         private bool MoveTowardAttackRange(Vector3 direction, float distance, float attackRange, float actionSeconds)
@@ -392,8 +409,45 @@ namespace Nyangbingo.Yokai
             if (float.IsNaN(travelDistance) || float.IsInfinity(travelDistance)) return false;
             var maximumDistance = Mathf.Max(0f, distance - attackRange);
             var movedDistance = Mathf.Min(travelDistance, maximumDistance);
-            transform.position += direction * movedDistance;
-            return IsWithinAttackRange(distance - movedDistance, attackRange);
+            MoveBy(direction * movedDistance);
+            return CanAttackTarget(target.TargetTransform.position, attackRange);
+        }
+
+        private bool CanAttackTarget(Vector3 targetPosition, float attackRange)
+        {
+            var offset = targetPosition - transform.position;
+            if (!IsFinite(offset) || !IsWithinAttackRange(offset.magnitude, attackRange)) return false;
+            return physicsBody == null || physicsBody.HasClearAttackLine(targetPosition);
+        }
+
+        private float MoveBy(Vector3 displacement)
+        {
+            var movedDistance = physicsBody != null ? physicsBody.Move(displacement) : displacement.magnitude;
+            if (physicsBody == null) transform.position += displacement;
+            if (movedDistance > Mathf.Epsilon)
+            {
+                if (characterAnimator == null)
+                    characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+                characterAnimator?.SetFacing(ResolveFacingDirection(displacement));
+                characterAnimator?.SetMoving(true);
+            }
+            return movedDistance;
+        }
+
+        private Vector2 ResolveFacingDirection(Vector3 movement)
+        {
+            if (target?.TargetTransform == null) return movement;
+            var targetOffset = target.TargetTransform.position - transform.position;
+            if (targetOffset.magnitude > 1.5f && Mathf.Abs(targetOffset.x) > .35f)
+                return targetOffset.x > 0f ? Vector2.right : Vector2.left;
+            return movement;
+        }
+
+        private void SetAnimationMoving(bool moving)
+        {
+            if (characterAnimator == null)
+                characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+            characterAnimator?.SetMoving(moving);
         }
 
         private static bool IsWithinAttackRange(float distance, float attackRange) =>

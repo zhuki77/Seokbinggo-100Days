@@ -39,6 +39,8 @@ namespace Nyangbingo.Bosses
         private float specialTickRemaining;
         private bool telegraphing;
         private bool specialActive;
+        private WorldMobPhysicsBody physicsBody;
+        private RuntimeCharacterSpriteAnimator characterAnimator;
 
         public BossDefinition Definition => definition;
         public bool IsTelegraphing => telegraphing;
@@ -67,6 +69,8 @@ namespace Nyangbingo.Bosses
             targetTransform = target != null ? target.transform : null;
             combatTarget = target as IBossCombatTarget;
             health = GetComponent<Health>();
+            physicsBody = GetComponent<WorldMobPhysicsBody>();
+            characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
             if (definition == null || targetTransform == null || combatTarget == null || health == null)
                 return false;
 
@@ -84,6 +88,7 @@ namespace Nyangbingo.Bosses
 
         public void Tick(float deltaGameSeconds)
         {
+            SetAnimationMoving(false);
             if (!IsFinite(deltaGameSeconds) || deltaGameSeconds < 0f || definition == null ||
                 targetTransform == null || combatTarget == null || health == null || health.IsDead) return;
 
@@ -100,27 +105,37 @@ namespace Nyangbingo.Bosses
             }
 
             specialCooldownRemaining = Mathf.Max(0f, specialCooldownRemaining - deltaGameSeconds);
-            var offset = (Vector2)(targetTransform.position - transform.position);
-            if (!IsFinite(offset)) return;
-            var distance = offset.magnitude;
-            var direction = distance > Mathf.Epsilon ? offset / distance : lockedAim;
+            var targetOffset = (Vector2)(targetTransform.position - transform.position);
+            if (!IsFinite(targetOffset)) return;
+            var distance = targetOffset.magnitude;
+            var navigationOffset = physicsBody != null ? physicsBody.NavigationOffset(targetOffset) : targetOffset;
+            var navigationDistance = navigationOffset.magnitude;
+            var direction = navigationDistance > Mathf.Epsilon
+                ? physicsBody != null ? physicsBody.NavigationDirection(targetOffset) : navigationOffset / navigationDistance
+                : lockedAim;
+            var hasAttackLine = physicsBody == null || physicsBody.HasClearAttackLine(targetTransform.position);
 
             if (specialCooldownRemaining <= .0001f &&
-                distance <= definition.SpecialRangeTiles + RangeTolerance)
+                distance <= definition.SpecialRangeTiles + RangeTolerance && hasAttackLine)
             {
                 BeginTelegraph(direction);
                 return;
             }
 
-            if (distance > ContactRange + RangeTolerance)
+            if (distance > ContactRange + RangeTolerance || !hasAttackLine)
             {
                 var travel = Mathf.Min(MoveSpeedTilesPerGameSecond * deltaGameSeconds,
-                    Mathf.Max(0f, distance - ContactRange));
-                transform.position += (Vector3)(direction * travel);
-                distance -= travel;
+                    Mathf.Max(0f, navigationDistance - ContactRange));
+                var actualTravel = physicsBody != null
+                    ? physicsBody.Move(direction * travel)
+                    : MoveWithoutPhysics(direction * travel);
+                if (actualTravel > Mathf.Epsilon) SetAnimationMovement(direction);
+                targetOffset = (Vector2)(targetTransform.position - transform.position);
+                distance = targetOffset.magnitude;
+                hasAttackLine = physicsBody == null || physicsBody.HasClearAttackLine(targetTransform.position);
             }
 
-            if (distance <= ContactRange + RangeTolerance && contactAttackRemaining <= .0001f &&
+            if (distance <= ContactRange + RangeTolerance && hasAttackLine && contactAttackRemaining <= .0001f &&
                 definition.ContactDamage > 0 && combatTarget.TryApplyContactDamage(definition.ContactDamage))
             {
                 contactAttackRemaining = ContactAttackIntervalGameSeconds;
@@ -305,6 +320,36 @@ namespace Nyangbingo.Bosses
         {
             if (telegraphRenderer != null) telegraphRenderer.enabled = visible;
             if (warningRenderer != null) warningRenderer.enabled = visible;
+        }
+
+        private float MoveWithoutPhysics(Vector2 displacement)
+        {
+            transform.position += (Vector3)displacement;
+            return displacement.magnitude;
+        }
+
+        private void SetAnimationMovement(Vector2 direction)
+        {
+            if (characterAnimator == null)
+                characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+            characterAnimator?.SetFacing(ResolveFacingDirection(direction));
+            characterAnimator?.SetMoving(true);
+        }
+
+        private Vector2 ResolveFacingDirection(Vector2 movement)
+        {
+            if (targetTransform == null) return movement;
+            var targetOffset = (Vector2)(targetTransform.position - transform.position);
+            if (targetOffset.magnitude > 1.5f && Mathf.Abs(targetOffset.x) > .35f)
+                return targetOffset.x > 0f ? Vector2.right : Vector2.left;
+            return movement;
+        }
+
+        private void SetAnimationMoving(bool moving)
+        {
+            if (characterAnimator == null)
+                characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+            characterAnimator?.SetMoving(moving);
         }
 
         private void OnDisable() => SetTelegraphVisible(false);

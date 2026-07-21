@@ -35,7 +35,7 @@ namespace Nyangbingo.UI
             "Ctrl+F8  어미 불가사리  ·  Alt+F8  이무기\n" +
             "J  일반 요괴 정리  ·  K  활성 보스 처치\n\n" +
             "제작·설치·연출\n" +
-            "F4  선택 항목 재료 지급  ·  Shift+F4  필요 제작대로 이동\n" +
+            "Ctrl+F5  선택 항목 재료 지급  ·  Shift+F5  필요 제작대로 이동\n" +
             "F10  냥잠 연출  ·  Shift+F10  채굴 파괴 연출\n" +
             "Ctrl+F10  채굴 치명타 연출\n" +
             "F11  등탑 지급  ·  Shift+F11  등탑 재료 지급\n" +
@@ -67,7 +67,7 @@ namespace Nyangbingo.UI
         private static MainGameBossSummonUiController debugShortcutHelpInstance;
 #endif
 
-        public const KeyCode DebugShortcutHelpKey = KeyCode.F1;
+        public const KeyCode DebugShortcutHelpKey = KeyCode.F5;
         public static readonly Vector2 DebugShortcutHelpPanelSize = new Vector2(230f, 190f);
         public const int DebugShortcutHelpBodyFontSize = 6;
 #if UNITY_EDITOR
@@ -146,7 +146,10 @@ namespace Nyangbingo.UI
             if (!initialized) return;
 #if UNITY_EDITOR
             if (ConsumeEscapeIfDebugHelpOpen()) return;
-            if (Input.GetKeyDown(DebugShortcutHelpKey))
+            if (Input.GetKeyDown(DebugShortcutHelpKey) &&
+                !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&
+                !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
+                !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt))
             {
                 if (debugShortcutHelpOpen || gameShell?.Screen == GameShellScreen.Gameplay)
                     SetDebugShortcutHelpOpen(!debugShortcutHelpOpen);
@@ -504,7 +507,7 @@ namespace Nyangbingo.UI
 
             var footer = CreateDebugHelpText(panel.transform, "Footer", 6, TextAnchor.MiddleCenter,
                 new Vector2(210f, 10f), new Vector2(0f, -86.5f));
-            footer.text = "F1 · 닫기";
+            footer.text = "F5 · 닫기";
 
             debugShortcutHelpRoot.SetActive(false);
             debugShortcutHelpOpen = false;

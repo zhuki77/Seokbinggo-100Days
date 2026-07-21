@@ -29,7 +29,271 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestWorldCellCoordinateContract();
         TestDemoSafeSpawnRestorePolicy();
         TestLatestProductFlowContracts();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (12/12).");
+        TestWorldMobPhysicsContract();
+        TestWorldDropVisualSurfaceOffset();
+        TestTreeVegetationVisualOffset();
+        TestCraftAndPlacementActionsRemainIndependent();
+        TestRuntimeTileEdgeOverlayWiring();
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (17/17).");
+    }
+
+    private static void TestRuntimeTileEdgeOverlayWiring()
+    {
+        var host = new GameObject("RuntimeEdgeOverlayContract", typeof(Grid));
+        try
+        {
+            var foregroundObject = new GameObject("Foreground",
+                typeof(UnityEngine.Tilemaps.Tilemap), typeof(UnityEngine.Tilemaps.TilemapRenderer));
+            foregroundObject.transform.SetParent(host.transform, false);
+            var foreground = foregroundObject.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+            var foregroundRenderer = foregroundObject.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+            foregroundRenderer.sortingOrder = 7;
+
+            var worldRenderer = host.AddComponent<Nyangbingo.World.TilemapRenderer>();
+            typeof(Nyangbingo.World.TilemapRenderer).GetField("foregroundTilemap", InstanceMembers)
+                ?.SetValue(worldRenderer, foreground);
+            worldRenderer.EnsureEdgeOverlayWiring();
+
+            var overlay = typeof(Nyangbingo.World.TilemapRenderer)
+                .GetField("edgeOverlayTilemap", InstanceMembers)?.GetValue(worldRenderer)
+                as UnityEngine.Tilemaps.Tilemap;
+            var shapes = typeof(Nyangbingo.World.TilemapRenderer)
+                .GetField("edgeShapeTiles", InstanceMembers)?.GetValue(worldRenderer)
+                as UnityEngine.Tilemaps.TileBase[];
+
+            Require(overlay != null && overlay.transform.parent == foreground.transform.parent,
+                "A scene with empty edge wiring must receive a grid-aligned runtime overlay Tilemap.");
+            Require(overlay.GetComponent<Collider2D>() == null &&
+                    overlay.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder == 8,
+                "The runtime edge overlay must render above terrain without participating in physics.");
+            Require(shapes != null && shapes.Length == TileEdgeOverlayResolver.ShapeCount,
+                "The runtime edge overlay must provide all five reusable base shapes.");
+
+            for (var index = 0; index < shapes.Length; index++)
+            {
+                var tile = shapes[index] as UnityEngine.Tilemaps.Tile;
+                Require(tile != null && tile.sprite != null &&
+                        tile.colliderType == UnityEngine.Tilemaps.Tile.ColliderType.None,
+                    $"Runtime edge shape {index} must be a visible, non-colliding Tile.");
+            }
+
+            var straightTexture = ((UnityEngine.Tilemaps.Tile)shapes[TileEdgeOverlayResolver.ShapeStraight])
+                .sprite.texture;
+            var pixels = straightTexture.GetPixels32();
+            var ink = pixels[(straightTexture.height - 1) * straightTexture.width];
+            var transparent = pixels[0];
+            Require(ink.r == 0x1A && ink.g == 0x1A && ink.b == 0x24 && ink.a == 0xFF &&
+                    transparent.a == 0,
+                "Runtime exposed-edge art must use the planned #1A1A24 one-pixel ink line.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(host);
+        }
+    }
+
+    private static void TestCraftAndPlacementActionsRemainIndependent()
+    {
+        var source = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
+        Require(source.Contains("private void TryPlaceSelectedCraftingOutput()") &&
+                source.Contains("collectButton.GetComponentInChildren<Text>().text = \"설치\"") &&
+                source.Contains("primaryButton.GetComponentInChildren<Text>().text = \"E · 제작\"") &&
+                !source.Contains("var isMissing = owned < ingredient.amount && !readyToPlace"),
+            "Owned placeable products must expose a separate placement action without replacing or bypassing crafting requirements.");
+    }
+
+    private static void TestTreeVegetationVisualOffset()
+    {
+        Require(Mathf.Approximately(MainGameWorldDecorationRenderer.TreeVegetationVisualOffset, -.5f),
+            "Tree vegetation must be lowered by half a tile to match the visible foreground surface.");
+        Require(MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("tree_0") &&
+                MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("tree_2") &&
+                !MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("hemp") &&
+                !MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("ruin_pillar"),
+            "The half-tile correction must affect only tree vegetation, not hemp or ruin decorations.");
+    }
+
+    private static void TestWorldDropVisualSurfaceOffset()
+    {
+        Require(Mathf.Approximately(MainGameWorldDropRuntime.VisualSurfaceOffset, .5f),
+            "World-drop visuals must sit half a tile above the physics root to match the visible foreground surface.");
+        Require(!MainGameWorldDropRuntime.DropToDropCollisionResponseEnabled,
+            "World drops must not physically push one another after their initial reward fan-out.");
+        var smallBatchDirection = MainGameWorldDropRuntime.CalculateLaunchDirection(0, 2);
+        var largeBatchLeft = MainGameWorldDropRuntime.CalculateLaunchDirection(0, 12);
+        var largeBatchRight = MainGameWorldDropRuntime.CalculateLaunchDirection(11, 12);
+        Require(smallBatchDirection.x < 0f && largeBatchLeft.x < -.8f && largeBatchRight.x > .8f &&
+                MainGameWorldDropRuntime.CalculateLaunchSpeed(12) >
+                MainGameWorldDropRuntime.CalculateLaunchSpeed(2),
+            "Larger reward batches must fan across both sides with greater launch speed.");
+        var source = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameWorldDropRuntime.cs");
+        Require(source.Contains("visual.transform.localPosition += Vector3.up * VisualSurfaceOffset"),
+            "Delivered and placeholder item art must share the same surface-height correction.");
+        Require(source.Contains("IgnoreCollisionWithExistingDrops(dropCollider)") &&
+                source.Contains("Physics2D.IgnoreCollision(newDropCollider, existingCollider, true)"),
+            "Every new world drop must ignore existing drop colliders while retaining terrain collision.");
+        Require(source.Contains("WorldMobPhysicsBody.IgnoreCollisionWithActiveMobs(dropCollider)") &&
+                source.Contains("GetComponentsInChildren<Collider2D>(true)"),
+            "Drops must ignore every player, yokai, and boss collider while preserving position-based magnet pickup.");
+    }
+
+    private static void TestWorldMobPhysicsContract()
+    {
+        Require(WorldMobPhysicsBody.ForYokai(Nyangbingo.Core.YokaiKind.ClubGoblin) ==
+                    WorldMobLocomotion.Grounded &&
+                WorldMobPhysicsBody.ForYokai(Nyangbingo.Core.YokaiKind.Bulgasari) ==
+                    WorldMobLocomotion.Grounded &&
+                WorldMobPhysicsBody.ForYokai(Nyangbingo.Core.YokaiKind.Yagwanggwi) ==
+                    WorldMobLocomotion.Grounded &&
+                WorldMobPhysicsBody.ForYokai(Nyangbingo.Core.YokaiKind.Eoduksini) ==
+                    WorldMobLocomotion.Flying,
+            "Ordinary yokai locomotion must match the latest ground/flying art and design contract.");
+        Require(WorldMobPhysicsBody.ForBoss(Nyangbingo.Core.BossKind.GoblinChief) ==
+                    WorldMobLocomotion.Grounded &&
+                WorldMobPhysicsBody.ForBoss(Nyangbingo.Core.BossKind.MotherBulgasari) ==
+                    WorldMobLocomotion.Grounded &&
+                WorldMobPhysicsBody.ForBoss(Nyangbingo.Core.BossKind.Imugi) ==
+                    WorldMobLocomotion.Flying &&
+                WorldMobPhysicsBody.ForBoss(Nyangbingo.Core.BossKind.Gangcheori) ==
+                    WorldMobLocomotion.Flying,
+            "Boss locomotion must keep land bosses grounded and airborne dragons flying.");
+        Require(Mathf.Approximately(WorldMobPhysicsBody.PhysicalRadiusForBoss(
+                    Nyangbingo.Core.BossKind.GoblinChief), .65f) &&
+                WorldMobPhysicsBody.PhysicalRadiusForBoss(Nyangbingo.Core.BossKind.Imugi) < .4f &&
+                WorldMobPhysicsBody.PhysicalRadiusForBoss(Nyangbingo.Core.BossKind.Gangcheori) < .4f,
+            "Flying bosses need a narrow movement core for one-cell passages while ground bosses retain their body radius.");
+        Require(Mathf.Approximately(WorldMobPhysicsBody.GroundBossColliderVerticalOffset, .15f) &&
+                WorldMobPhysicsBody.StepJumpVelocityForCollider(.65f) >
+                WorldMobPhysicsBody.StepJumpVelocityForCollider(.42f),
+            "Ground bosses must align their feet to the surface and use a stronger one-tile step jump than ordinary yokai.");
+
+        var groundObject = new GameObject("GroundMobPhysicsContract", typeof(CircleCollider2D),
+            typeof(Rigidbody2D), typeof(WorldMobPhysicsBody));
+        var flyingObject = new GameObject("FlyingMobPhysicsContract", typeof(CircleCollider2D),
+            typeof(Rigidbody2D), typeof(WorldMobPhysicsBody));
+        try
+        {
+            var ground = groundObject.GetComponent<WorldMobPhysicsBody>();
+            var flying = flyingObject.GetComponent<WorldMobPhysicsBody>();
+            ground.ConfigureForRuntime(WorldMobLocomotion.Grounded);
+            flying.ConfigureForRuntime(WorldMobLocomotion.Flying);
+            Require(groundObject.GetComponent<Rigidbody2D>().gravityScale > 0f &&
+                    Mathf.Approximately(flyingObject.GetComponent<Rigidbody2D>().gravityScale, 0f) &&
+                    !groundObject.GetComponent<Collider2D>().isTrigger &&
+                    !flyingObject.GetComponent<Collider2D>().isTrigger &&
+                    Mathf.Approximately(ground.NavigationOffset(new Vector2(2f, 3f)).y, 0f) &&
+                    flying.NavigationOffset(new Vector2(2f, 3f)) == new Vector2(2f, 3f),
+                "Ground mobs must use gravity and horizontal navigation; flying mobs must stay gravity-free while retaining solid collision.");
+            Require(Physics2D.GetIgnoreCollision(groundObject.GetComponent<Collider2D>(),
+                    flyingObject.GetComponent<Collider2D>()),
+                "Yokai and bosses must ignore mutual physical response so faster mobs are never slowed by the mob ahead.");
+
+            var stepCells = new TileData[8, 6];
+            for (var x = 0; x < 8; x++)
+                stepCells[x, 0] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            stepCells[3, 1] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            var stepTiles = new TileService(stepCells, null, null, 3);
+            var groundBody = groundObject.GetComponent<Rigidbody2D>();
+            groundObject.transform.position = new Vector3(2.5f, 1.5f, 0f);
+            groundBody.position = new Vector2(2.5f, 1.5f);
+            groundBody.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+            ground.ConfigureForRuntime(WorldMobLocomotion.Grounded, stepTiles);
+            ground.Move(Vector2.right * .25f);
+            Require(groundBody.linearVelocity.y > 8f,
+                "A grounded yokai or boss must jump when pursuing across a clear one-tile step.");
+
+            ground.SetEncounterPaused(true);
+            Require(!groundObject.GetComponent<Rigidbody2D>().simulated,
+                "Regular yokai paused for a boss encounter must leave physics simulation so they cannot block the boss.");
+            ground.SetEncounterPaused(false);
+            Require(groundObject.GetComponent<Rigidbody2D>().simulated,
+                "Regular yokai must restore physics simulation when the boss encounter ends.");
+
+            var passThroughPlayer = new GameObject("MobPassThroughPlayer", typeof(CircleCollider2D));
+            var playerCollider = passThroughPlayer.GetComponent<CircleCollider2D>();
+            ground.IgnoreCollisionWith(passThroughPlayer.transform);
+            Require(Physics2D.GetIgnoreCollision(groundObject.GetComponent<Collider2D>(), playerCollider),
+                "Player and mob colliders must ignore physical response so player movement cannot push yokai or bosses.");
+            UnityEngine.Object.DestroyImmediate(passThroughPlayer);
+
+            var navigationCells = new TileData[8, 6];
+            for (var x = 0; x <= 5; x++)
+                navigationCells[x, 2] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            var navigationTiles = new TileService(navigationCells, null, null, 1);
+            var flyingBody = flyingObject.GetComponent<Rigidbody2D>();
+            flyingObject.transform.position = new Vector3(1.5f, 3.5f, 0f);
+            flyingBody.position = new Vector2(1.5f, 3.5f);
+            flyingBody.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+            flying.ConfigureForRuntime(WorldMobLocomotion.Flying, navigationTiles);
+            var detourDirection = flying.NavigationDirection(new Vector2(0f, -2f));
+            Require(detourDirection.x > .5f && Mathf.Abs(detourDirection.y) < .5f,
+                "A flying yokai blocked by terrain must route toward the nearest opening instead of pushing into the direct wall.");
+
+            var ledgeCells = new TileData[8, 6];
+            for (var x = 2; x < 8; x++)
+                ledgeCells[x, 2] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            var ledgeTiles = new TileService(ledgeCells, null, null, 2);
+            flyingObject.transform.position = new Vector3(1.5f, 3.05f, 0f);
+            flyingBody.position = new Vector2(1.5f, 3.05f);
+            flyingBody.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+            flying.ConfigureForRuntime(WorldMobLocomotion.Flying, ledgeTiles);
+            var ledgeDirection = flying.NavigationDirection(new Vector2(2f, .45f));
+            Require(ledgeDirection.y > .9f && Mathf.Abs(ledgeDirection.x) < .1f,
+                "A flying yokai below a ledge must rise to its current cell center before turning across the ledge.");
+
+            var separatedTargetObject = new GameObject("VerticallySeparatedYokaiTarget");
+            var separatedTarget = separatedTargetObject.AddComponent<Nyangbingo.Debugging.DevBTestYokaiTarget>();
+            separatedTargetObject.transform.position = new Vector3(1.5f, 3.5f, 0f);
+            groundObject.transform.position = new Vector3(1.5f, 1.5f, 0f);
+            groundBody.position = new Vector2(1.5f, 1.5f);
+            groundBody.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+            ground.ConfigureForRuntime(WorldMobLocomotion.Grounded, navigationTiles);
+            var separatedDefinition = YokaiDefinition.CreateRuntime(Nyangbingo.Core.YokaiKind.ClubGoblin,
+                10, 1f, 1, 5f, Array.Empty<ItemAmount>());
+            var separatedBrain = groundObject.AddComponent<Nyangbingo.Yokai.YokaiBrain>();
+            separatedBrain.ConfigureForRuntime(separatedDefinition, separatedTarget);
+            separatedBrain.Tick(1f);
+            separatedBrain.Tick(1f);
+            Require(Mathf.Approximately(separatedTarget.WallDamageReceived, 0f),
+                "A grounded yokai must not attack a target on another vertical level or through foreground terrain.");
+            UnityEngine.Object.DestroyImmediate(separatedTargetObject);
+            UnityEngine.Object.DestroyImmediate(separatedDefinition);
+
+            var encounterSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+            Require(encounterSource.Contains("AddComponent<WorldMobPhysicsBody>()") &&
+                    encounterSource.Contains("WorldMobPhysicsBody.ForYokai(definition.Kind)") &&
+                    encounterSource.Contains("WorldMobPhysicsBody.ForBoss(definition.Kind)") &&
+                    encounterSource.Contains("bootstrap.TileService") &&
+                    encounterSource.Contains("new GameObject(\"BossHurtbox\")"),
+                "MainGame encounter spawning must attach the shared world physics body to yokai and bosses.");
+            var animatorSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
+            Require(animatorSource.Contains("characterAnimator?.SetMoving(true)") &&
+                    animatorSource.Contains("characterAnimator?.SetFacing(ResolveFacingDirection(displacement))"),
+                "Physics-driven yokai movement must explicitly keep walk and flight animation state active.");
+            var physicsSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/WorldMobPhysicsBody.cs");
+            Require(physicsSource.Contains("NavigationReversalHoldSeconds") &&
+                    physicsSource.Contains("PathTargetCellTolerance") &&
+                    physicsSource.Contains("targetActuallyCrossedBehind") &&
+                    physicsSource.Contains("DirectPathConfirmationSeconds"),
+                "Moving targets must not cause equal detours to alternate every frame, while real target crossings still reverse pursuit immediately.");
+            Require(animatorSource.Contains("ResolveFacingDirection") &&
+                    animatorSource.Contains("targetOffset.magnitude > 1.5f"),
+                "A distant moving target must own horizontal facing so temporary detours do not visibly flip yokai every frame.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(groundObject);
+            UnityEngine.Object.DestroyImmediate(flyingObject);
+        }
     }
 
     private static void TestLatestProductFlowContracts()
@@ -275,14 +539,22 @@ public static class NyangbingoDevBIntegrationRegressionTests
             $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
         Require(MainGameCraftingUiController.UsesIconOnlyCraftingList,
             "v28 crafting list must use icon and quantity presentation without narrative row text.");
-        Require(MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F1,
-            "MainGame Editor test shortcut help must be assigned to F1.");
+        Require(MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F5,
+            "MainGame Editor test shortcut help must be assigned to F5.");
+        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.F1 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.F2 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.F3 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.F4 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(4) == KeyCode.None,
+            "The four unified panels must be assigned to F1 through F4.");
+        Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F5,
+            "Crafting test grants must share modified F5 without reclaiming the F1-F4 product panel keys.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&
                 MainGameBossSummonUiController.DebugShortcutHelpPanelSize.y <=
                     MainGameUiResolutionController.LogicalResolution.y &&
                 MainGameBossSummonUiController.DebugShortcutHelpBodyFontSize <= 8,
-            "The F1 help popup must use native 480x270 coordinates instead of legacy 1920x1080 sizing.");
+            "The F5 help popup must use native 480x270 coordinates instead of legacy 1920x1080 sizing.");
         Require(MainGameCraftingUiController.SupportsDebugInstantCompletion,
             "The Editor must expose the crafting and smelting instant-completion test control.");
 
@@ -328,6 +600,16 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "A 480 px logical canvas must use a 240 px tile palette.");
         Require(Mathf.Approximately(MainGameTilePaletteController.SlotPixelSize, 27f),
             "The tile palette must reuse the delivered 27 px inventory slot scale.");
+        Require(MainGameTilePaletteController.ShortcutSlotCount == 8 &&
+                MainGameTilePaletteController.ShortcutKeyForSlot(0) == KeyCode.Alpha1 &&
+                MainGameTilePaletteController.ShortcutKeyForSlot(7) == KeyCode.Alpha8 &&
+                MainGameTilePaletteController.ShortcutKeyForSlot(8) == KeyCode.None,
+            "The eight visible tile-palette slots must be assigned to number keys 1 through 8.");
+        var paletteSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
+        Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot)") &&
+                paletteSource.Contains("SelectPaletteItem(paletteItemIds[slotIndex])"),
+            "A tile-palette number shortcut must use the same selection and placement path as clicking its slot.");
         Require(TileService.SupportsForegroundPlacement(WorldTileTypes.Dirt) &&
                 TileService.SupportsForegroundPlacement(WorldTileTypes.Stone) &&
                 TileService.SupportsForegroundPlacement("insul_wall") &&

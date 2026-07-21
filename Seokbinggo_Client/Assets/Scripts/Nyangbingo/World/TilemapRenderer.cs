@@ -130,14 +130,30 @@ namespace Nyangbingo.World
         private readonly Dictionary<int, TileBase> _wallpaperTileByRow = new Dictionary<int, TileBase>();
         private readonly Dictionary<string, Tile> _runtimeTiles = new Dictionary<string, Tile>(StringComparer.Ordinal);
         private readonly HashSet<string> _resourceLoadWarnings = new HashSet<string>();
+        private readonly List<Tile> _runtimeEdgeTiles = new List<Tile>();
+        private readonly List<Sprite> _runtimeEdgeSprites = new List<Sprite>();
+        private readonly List<Texture2D> _runtimeEdgeTextures = new List<Texture2D>();
 
         private CompositeCollider2D foregroundComposite;
         private TilemapCollider2D foregroundTilemapCollider;
+        private GameObject runtimeEdgeOverlayObject;
+
+        private const int RuntimeEdgeTextureSize = 16;
+        private static readonly Color32 RuntimeEdgeInkColor = new Color32(0x1A, 0x1A, 0x24, 0xFF);
+        private static readonly TileEdgeMask[] RuntimeEdgeBaseMasks =
+        {
+            TileEdgeMask.Top,
+            TileEdgeMask.Top | TileEdgeMask.Right,
+            TileEdgeMask.Top | TileEdgeMask.Bottom,
+            TileEdgeMask.Top | TileEdgeMask.Right | TileEdgeMask.Bottom,
+            TileEdgeMask.Top | TileEdgeMask.Right | TileEdgeMask.Bottom | TileEdgeMask.Left,
+        };
 
         private void Awake()
         {
             RebuildLookupTable();
             EnsureForegroundCollision();
+            EnsureEdgeOverlayWiring();
         }
 
         /// <summary>
@@ -217,6 +233,7 @@ namespace Nyangbingo.World
             }
 
             if (_lookup == null) RebuildLookupTable();
+            EnsureEdgeOverlayWiring();
 
             var width = tiles.GetLength(0);
             var height = tiles.GetLength(1);
@@ -370,6 +387,7 @@ namespace Nyangbingo.World
         /// </summary>
         public void RebuildEdgeOverlayForWorld(TileData[,] tiles)
         {
+            EnsureEdgeOverlayWiring();
             if (edgeOverlayTilemap == null || tiles == null) return;
 
             var width = tiles.GetLength(0);
@@ -408,6 +426,118 @@ namespace Nyangbingo.World
 
             edgeOverlayTilemap.SetTile(cell, tile);
             if (tile != null) edgeOverlayTilemap.SetTransformMatrix(cell, TileEdgeOverlayResolver.BuildRotationMatrix(rotationSteps));
+        }
+
+        /// <summary>
+        /// Latest art direction no longer requires separate edge sprites. If a scene has no explicit
+        /// edge overlay wiring, create a sibling Tilemap and five reusable 1 px ink-line shapes at
+        /// runtime. Explicit scene/art bindings always win and are never replaced.
+        /// </summary>
+        public void EnsureEdgeOverlayWiring()
+        {
+            if (foregroundTilemap == null) return;
+
+            if (edgeOverlayTilemap == null)
+            {
+                runtimeEdgeOverlayObject = new GameObject("RuntimeEdgeOverlay");
+                runtimeEdgeOverlayObject.transform.SetParent(foregroundTilemap.transform.parent, false);
+                runtimeEdgeOverlayObject.transform.localPosition = foregroundTilemap.transform.localPosition;
+                runtimeEdgeOverlayObject.transform.localRotation = foregroundTilemap.transform.localRotation;
+                runtimeEdgeOverlayObject.transform.localScale = foregroundTilemap.transform.localScale;
+
+                edgeOverlayTilemap = runtimeEdgeOverlayObject.AddComponent<Tilemap>();
+                edgeOverlayTilemap.tileAnchor = foregroundTilemap.tileAnchor;
+                edgeOverlayTilemap.orientation = foregroundTilemap.orientation;
+                edgeOverlayTilemap.orientationMatrix = foregroundTilemap.orientationMatrix;
+                edgeOverlayTilemap.animationFrameRate = foregroundTilemap.animationFrameRate;
+
+                var edgeRenderer = runtimeEdgeOverlayObject.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+                var foregroundRenderer = foregroundTilemap.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+                if (foregroundRenderer != null)
+                {
+                    edgeRenderer.sharedMaterial = foregroundRenderer.sharedMaterial;
+                    edgeRenderer.sortingLayerID = foregroundRenderer.sortingLayerID;
+                    edgeRenderer.sortingOrder = foregroundRenderer.sortingOrder + 1;
+                    edgeRenderer.maskInteraction = foregroundRenderer.maskInteraction;
+                }
+            }
+
+            EnsureRuntimeEdgeShapeTiles();
+        }
+
+        private void EnsureRuntimeEdgeShapeTiles()
+        {
+            if (edgeShapeTiles == null || edgeShapeTiles.Length != TileEdgeOverlayResolver.ShapeCount)
+            {
+                var previous = edgeShapeTiles;
+                edgeShapeTiles = new TileBase[TileEdgeOverlayResolver.ShapeCount];
+                if (previous != null)
+                    Array.Copy(previous, edgeShapeTiles, Mathf.Min(previous.Length, edgeShapeTiles.Length));
+            }
+
+            for (var index = 0; index < edgeShapeTiles.Length; index++)
+            {
+                if (edgeShapeTiles[index] != null) continue;
+                edgeShapeTiles[index] = CreateRuntimeEdgeTile(RuntimeEdgeBaseMasks[index], index);
+            }
+        }
+
+        private Tile CreateRuntimeEdgeTile(TileEdgeMask mask, int shapeIndex)
+        {
+            var texture = new Texture2D(RuntimeEdgeTextureSize, RuntimeEdgeTextureSize, TextureFormat.RGBA32, false)
+            {
+                name = $"RuntimeEdgeTexture_{shapeIndex}",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave,
+            };
+
+            var pixels = new Color32[RuntimeEdgeTextureSize * RuntimeEdgeTextureSize];
+            if ((mask & TileEdgeMask.Top) != 0)
+                DrawRuntimeEdgeHorizontal(pixels, RuntimeEdgeTextureSize - 1);
+            if ((mask & TileEdgeMask.Bottom) != 0)
+                DrawRuntimeEdgeHorizontal(pixels, 0);
+            if ((mask & TileEdgeMask.Left) != 0)
+                DrawRuntimeEdgeVertical(pixels, 0);
+            if ((mask & TileEdgeMask.Right) != 0)
+                DrawRuntimeEdgeVertical(pixels, RuntimeEdgeTextureSize - 1);
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, RuntimeEdgeTextureSize, RuntimeEdgeTextureSize),
+                new Vector2(.5f, .5f),
+                RuntimeEdgeTextureSize,
+                0,
+                SpriteMeshType.FullRect);
+            sprite.name = $"RuntimeEdgeSprite_{shapeIndex}";
+            sprite.hideFlags = HideFlags.DontSave;
+
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            tile.name = $"RuntimeEdgeTile_{shapeIndex}";
+            tile.sprite = sprite;
+            tile.color = Color.white;
+            tile.colliderType = Tile.ColliderType.None;
+            tile.hideFlags = HideFlags.DontSave;
+
+            _runtimeEdgeTextures.Add(texture);
+            _runtimeEdgeSprites.Add(sprite);
+            _runtimeEdgeTiles.Add(tile);
+            return tile;
+        }
+
+        private static void DrawRuntimeEdgeHorizontal(Color32[] pixels, int y)
+        {
+            var offset = y * RuntimeEdgeTextureSize;
+            for (var x = 0; x < RuntimeEdgeTextureSize; x++)
+                pixels[offset + x] = RuntimeEdgeInkColor;
+        }
+
+        private static void DrawRuntimeEdgeVertical(Color32[] pixels, int x)
+        {
+            for (var y = 0; y < RuntimeEdgeTextureSize; y++)
+                pixels[y * RuntimeEdgeTextureSize + x] = RuntimeEdgeInkColor;
         }
 
         /// <summary>이후 TileService(채굴)가 elementType → TileBase를 조회할 때도 재사용할 수 있게 공개한다.</summary>
@@ -469,6 +599,26 @@ namespace Nyangbingo.World
                 else DestroyImmediate(tile);
             }
             _runtimeTiles.Clear();
+
+            foreach (var tile in _runtimeEdgeTiles)
+                DestroyRuntimeObject(tile);
+            foreach (var sprite in _runtimeEdgeSprites)
+                DestroyRuntimeObject(sprite);
+            foreach (var texture in _runtimeEdgeTextures)
+                DestroyRuntimeObject(texture);
+            _runtimeEdgeTiles.Clear();
+            _runtimeEdgeSprites.Clear();
+            _runtimeEdgeTextures.Clear();
+
+            if (runtimeEdgeOverlayObject != null)
+                DestroyRuntimeObject(runtimeEdgeOverlayObject);
+        }
+
+        private static void DestroyRuntimeObject(UnityEngine.Object target)
+        {
+            if (target == null) return;
+            if (Application.isPlaying) Destroy(target);
+            else DestroyImmediate(target);
         }
 
         /// <summary>벽지는 전용 아트 없이 해당 깊이의 t_bg_dirt/stone/deep를 재사용한다.</summary>

@@ -83,7 +83,7 @@ namespace Nyangbingo.UI
         private void Update()
         {
             if (model == null || unifiedPanelMode) return;
-            if (Input.GetKeyDown(KeyCode.Alpha4) && (open || gameShell == null ||
+            if (Input.GetKeyDown(KeyCode.F4) && (open || gameShell == null ||
                                                   gameShell.Screen == GameShellScreen.Gameplay)) SetOpen(!open);
             else if (open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
         }

@@ -31,10 +31,18 @@ namespace Nyangbingo.World
             public int Amount;
             public GameObject Root;
             public Rigidbody2D Body;
+            public Collider2D Collider;
             public float PickupDelay;
         }
 
         public const float MagnetRadius = 1.5f;
+        public const float VisualSurfaceOffset = .5f;
+        public const bool DropToDropCollisionResponseEnabled = false;
+        private const float MinimumLaunchAngle = 25f;
+        private const float MaximumLaunchAngle = 155f;
+        private const float BaseLaunchSpeed = 2.2f;
+        private const float LaunchSpeedPerExtraDrop = .12f;
+        private const float MaximumLaunchSpeedBonus = 1.8f;
         private const float PickupRadius = .22f;
         private const float MagnetSpeed = 6f;
         private const float Gravity = 12f;
@@ -42,12 +50,12 @@ namespace Nyangbingo.World
         private const float InitialPickupDelay = .45f;
 
         private readonly List<Entry> drops = new List<Entry>();
+        private static readonly HashSet<Collider2D> ActiveDropColliders = new HashSet<Collider2D>();
         private Transform player;
         private Nyangbingo.Inventory.Inventory inventory;
         private ItemArtCatalog itemArtCatalog;
-        private Collider2D playerCollider;
+        private Collider2D[] playerColliders = Array.Empty<Collider2D>();
         private PhysicsMaterial2D dropMaterial;
-        private int spawnSequence;
 
         public int ActiveDropCount => drops.Count;
 
@@ -57,7 +65,9 @@ namespace Nyangbingo.World
             player = playerTransform;
             inventory = playerInventory;
             itemArtCatalog = artCatalog;
-            playerCollider = playerTransform != null ? playerTransform.GetComponent<Collider2D>() : null;
+            playerColliders = playerTransform != null
+                ? playerTransform.GetComponentsInChildren<Collider2D>(true)
+                : Array.Empty<Collider2D>();
             if (dropMaterial == null)
             {
                 dropMaterial = new PhysicsMaterial2D("NyangbingoWorldDrop")
@@ -80,6 +90,7 @@ namespace Nyangbingo.World
                 var entry = drops[index];
                 if (entry?.Root == null)
                 {
+                    if (entry?.Collider != null) ActiveDropColliders.Remove(entry.Collider);
                     drops.RemoveAt(index);
                     continue;
                 }
@@ -100,6 +111,7 @@ namespace Nyangbingo.World
                     PickupRadius * PickupRadius) continue;
                 if (!inventory.TryAdd(entry.Item.Id, entry.Amount)) continue;
                 acquiredAny = true;
+                if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
                 Destroy(entry.Root);
                 drops.RemoveAt(index);
             }
@@ -109,16 +121,14 @@ namespace Nyangbingo.World
         private void Spawn(ItemDefinition item, int amount, Vector2 position)
         {
             if (item == null || amount <= 0) return;
-            for (var index = 0; index < amount; index++) SpawnSingle(item, position);
+            for (var index = 0; index < amount; index++) SpawnSingle(item, position, index, amount);
         }
 
-        private void SpawnSingle(ItemDefinition item, Vector2 position)
+        private void SpawnSingle(ItemDefinition item, Vector2 position, int batchIndex, int batchCount)
         {
             var root = new GameObject($"WorldDrop_{item.Id}");
             root.transform.SetParent(transform, false);
-            var fanIndex = spawnSequence++ % 17;
-            var angle = Mathf.Lerp(22.5f, 157.5f, fanIndex / 16f) * Mathf.Deg2Rad;
-            var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            var direction = CalculateLaunchDirection(batchIndex, batchCount);
             root.transform.position = position + direction * .08f;
 
             var body = root.AddComponent<Rigidbody2D>();
@@ -128,11 +138,16 @@ namespace Nyangbingo.World
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             body.linearDamping = .8f;
-            body.linearVelocity = direction * (2.2f + fanIndex % 3 * .25f);
+            body.linearVelocity = direction * CalculateLaunchSpeed(batchCount);
             var dropCollider = root.AddComponent<CircleCollider2D>();
             dropCollider.radius = .22f;
             dropCollider.sharedMaterial = dropMaterial;
-            if (playerCollider != null) Physics2D.IgnoreCollision(dropCollider, playerCollider, true);
+            for (var index = 0; index < playerColliders.Length; index++)
+                if (playerColliders[index] != null)
+                    Physics2D.IgnoreCollision(dropCollider, playerColliders[index], true);
+            IgnoreCollisionWithExistingDrops(dropCollider);
+            WorldMobPhysicsBody.IgnoreCollisionWithActiveMobs(dropCollider);
+            ActiveDropColliders.Add(dropCollider);
 
             // Keep the simulated drop root at unit scale. Delivered Aseprite files use
             // different canvas sizes and pivots, so scaling the root would make the art
@@ -151,6 +166,7 @@ namespace Nyangbingo.World
             }
             else
                 RuntimePlaceholderVisual.Configure(renderer, new Color(.85f, .92f, 1f, 1f), .42f, 32);
+            visual.transform.localPosition += Vector3.up * VisualSurfaceOffset;
 
             drops.Add(new Entry
             {
@@ -158,8 +174,40 @@ namespace Nyangbingo.World
                 Amount = 1,
                 Root = root,
                 Body = body,
+                Collider = dropCollider,
                 PickupDelay = InitialPickupDelay
             });
+        }
+
+        private void IgnoreCollisionWithExistingDrops(Collider2D newDropCollider)
+        {
+            if (newDropCollider == null || DropToDropCollisionResponseEnabled) return;
+            for (var index = 0; index < drops.Count; index++)
+            {
+                var existingCollider = drops[index]?.Collider;
+                if (existingCollider != null)
+                    Physics2D.IgnoreCollision(newDropCollider, existingCollider, true);
+            }
+        }
+
+        public static Vector2 CalculateLaunchDirection(int batchIndex, int batchCount)
+        {
+            if (batchCount <= 1) return Vector2.up;
+            var normalized = Mathf.Clamp01(batchIndex / (batchCount - 1f));
+            var angle = Mathf.Lerp(MaximumLaunchAngle, MinimumLaunchAngle, normalized) * Mathf.Deg2Rad;
+            return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+        }
+
+        public static float CalculateLaunchSpeed(int batchCount) =>
+            BaseLaunchSpeed + Mathf.Min(MaximumLaunchSpeedBonus,
+                Mathf.Max(0, batchCount - 1) * LaunchSpeedPerExtraDrop);
+
+        public static void IgnoreCollisionWithActiveDrops(WorldMobPhysicsBody mobBody)
+        {
+            if (mobBody == null) return;
+            ActiveDropColliders.RemoveWhere(collider => collider == null);
+            foreach (var dropCollider in ActiveDropColliders)
+                mobBody.IgnoreCollisionWith(dropCollider);
         }
 
         private static float ResolveGravityScale()
@@ -171,7 +219,10 @@ namespace Nyangbingo.World
         private void OnDestroy()
         {
             foreach (var entry in drops)
+            {
+                if (entry?.Collider != null) ActiveDropColliders.Remove(entry.Collider);
                 if (entry?.Root != null) Destroy(entry.Root);
+            }
             drops.Clear();
             if (dropMaterial != null) Destroy(dropMaterial);
         }

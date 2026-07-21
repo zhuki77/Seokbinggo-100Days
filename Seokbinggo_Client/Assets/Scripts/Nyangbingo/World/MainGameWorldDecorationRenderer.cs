@@ -11,6 +11,8 @@ namespace Nyangbingo.World
     [DefaultExecutionOrder(-50)]
     public sealed class MainGameWorldDecorationRenderer : MonoBehaviour
     {
+        public const float TreeVegetationVisualOffset = -.5f;
+
         private const int DecorationSeedSalt = 0x4E59414E;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private WorldDecorationArtCatalog artCatalog;
@@ -197,9 +199,13 @@ namespace Nyangbingo.World
             var art = artCatalog.Find(id);
             if (art?.Sprite == null) return;
             var centerY = surfaceY + 1f + art.Sprite.bounds.extents.y;
+            if (UsesTreeVegetationOffset(id)) centerY += TreeVegetationVisualOffset;
             Spawn(id, art, new Vector2(x + .5f, centerY), random.Next(2) == 0);
             occupiedColumns.Add(x);
         }
+
+        public static bool UsesTreeVegetationOffset(string id) =>
+            !string.IsNullOrEmpty(id) && id.StartsWith("tree_", StringComparison.Ordinal);
 
         private void PlaceRuinDecorations(WorldGenerationResult result, System.Random random)
         {
