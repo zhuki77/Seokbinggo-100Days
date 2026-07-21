@@ -39,6 +39,11 @@ MonoBehaviour:
   - {fileID: -734855239842383610, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
   - {fileID: -3731632179725249485, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
   - {fileID: -5504637012312644558, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
+  miningBreakFrames:
+  - {fileID: -5971709302525199856, guid: 90f33835526615643a16622fb8bff71e, type: 3}
+  - {fileID: -2422142207492911686, guid: 90f33835526615643a16622fb8bff71e, type: 3}
+  miningCriticalFrames:
+  - {fileID: 6302327574464696932, guid: 8860b0f9a47a04045a545d81a10cac8a, type: 3}
   bossWarningFrames:
   - {fileID: 3297973032039475795, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
   - {fileID: 4423930028971399608, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
@@ -104,6 +109,18 @@ MonoBehaviour:
   - {fileID: 1451380000352412553, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
   - {fileID: 2450228824927592135, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
   - {fileID: -1222377997886849009, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  button1x1Frames:
+  - {fileID: -2492862134000260289, guid: adc9089c66c1e4d4d94ae53ada1270be, type: 3}
+  - {fileID: 2270689531458779038, guid: adc9089c66c1e4d4d94ae53ada1270be, type: 3}
+  button1x2Frames:
+  - {fileID: -1411963470813779916, guid: d67e4c3df036c514793088b9f3113c40, type: 3}
+  - {fileID: -8000976017939039805, guid: d67e4c3df036c514793088b9f3113c40, type: 3}
+  button1x4Frames:
+  - {fileID: 3427406440333397765, guid: 5b752aef758a19e4ea285c98d3e15545, type: 3}
+  - {fileID: 1402200268748892693, guid: 5b752aef758a19e4ea285c98d3e15545, type: 3}
+  button1x6Frames:
+  - {fileID: 2271397755962344763, guid: 4cd269f2b060f2e4482a28b4029780ac, type: 3}
+  - {fileID: -1702372114011394435, guid: 4cd269f2b060f2e4482a28b4029780ac, type: 3}
   dangerIcon: {fileID: 1821668838913166679, guid: 5b4488cd45c23944e8c314bfa7e70b4b, type: 3}
   bossWarningLarge: {fileID: -5218591732139051355, guid: be5c714da4f8b324e932ba1c069c442c, type: 3}
   bossWarningSmall: {fileID: 5143714742549247459, guid: b646ba39a938a2e4f99d6ea9d8e39782, type: 3}
@@ -118,6 +135,7 @@ MonoBehaviour:
   inventorySlotTopSelected: {fileID: -7167540399092338382, guid: ad73587d4dd8f7d41bb902e8c83c5223, type: 3}
   equipmentCharacter: {fileID: 9106190380705548200, guid: 1c308343531639d4491fd6e667d4f608, type: 3}
   equipmentHeadSlot: {fileID: -3398976084798905247, guid: ec8f58aeaf88e02489eb2570806cbe57, type: 3}
+  equipmentHeadSlotSelected: {fileID: -4268893108642944330, guid: 2e8b3352f16362445b91c28e4a0feb65, type: 3}
   equipmentBodySlot: {fileID: 5252287133239624101, guid: 4e68432100db14849bb937fed309f57b, type: 3}
   equipmentBodySlotSelected: {fileID: 582638777608344396, guid: 685a1fef6849e1e44afc9e15701e07d9, type: 3}
   equipmentFeetSlot: {fileID: -4010199133860001978, guid: d433a4aec2b73f2429daaa98376371dd, type: 3}
@@ -126,6 +144,9 @@ MonoBehaviour:
   equipmentAccessorySlotSelected: {fileID: -1074637335440080146, guid: 03f6ef49353a4854c9d3d50bee714d36, type: 3}
   activeItemSlot: {fileID: 6599963918097900599, guid: b0c8436da772e1b47aa44878a9d00a05, type: 3}
   activeItemSlotSelected: {fileID: 9117833818891896295, guid: ba613282e41558e44ae7fe07e13153d7, type: 3}
+  tilePaletteSlotSelected: {fileID: -884221672439184897, guid: 7c439f1ae081c934d9dfaea01cde2c38, type: 3}
+  jangdokStorageGrid: {fileID: -7257352378360446423, guid: 0c7f5a56b9c5c014aac81a10283ca9b6, type: 3}
+  codexCard: {fileID: 7003845439208138208, guid: 93a66700e05f39b4bba9af681c92feb8, type: 3}
   shellStart: {fileID: 2239346518032559643, guid: 7e92f1a6372ca054b9581f94f7c7f471, type: 3}
   shellSettings: {fileID: -8730528316343547412, guid: 590c1b8a7a4d90946a0930a2aac32051, type: 3}
   shellLeave: {fileID: 4653755586049538878, guid: 3c14f4b52aa727745bd50cdf67377ef0, type: 3}

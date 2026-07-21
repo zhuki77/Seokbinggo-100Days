@@ -51,6 +51,7 @@ namespace Nyangbingo.Editor
                 ["bg_deep"] = "t_bg_deep.aseprite",
                 ["coal"] = "coal.aseprite",
                 ["copper_ore"] = "copper_ore.aseprite",
+                ["clay"] = "clay.aseprite",
                 ["dirt"] = "dirt.aseprite",
                 ["frost_essence"] = "frost_essence.aseprite",
                 ["ice_lake"] = "ice_lake.aseprite",
@@ -59,6 +60,7 @@ namespace Nyangbingo.Editor
                 ["iron_ore"] = "iron_ore.aseprite",
                 ["ruin_wall"] = "ruin_wall.aseprite",
                 ["stone"] = "stone.aseprite",
+                ["stone_mid"] = "stone_mid.aseprite",
                 ["stone_deep"] = "stone_deep.aseprite"
             };
 
@@ -81,6 +83,20 @@ namespace Nyangbingo.Editor
         private static readonly IReadOnlyDictionary<string, string> ItemArtFiles =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["bare_claw"] = "bare_claw.aseprite",
+                ["iron_claw"] = "iron_claw.aseprite",
+                ["icesteel_claw"] = "icesteel_claw.aseprite",
+                ["dokkaebi_club"] = "dokkaebi_club.aseprite",
+                ["cheolseon"] = "cheolseon.aseprite",
+                ["clay"] = "clay.aseprite",
+                ["drought_heart"] = "drought_heart.aseprite",
+                ["frostclaw_gauntlet"] = "frostclaw_gauntlet.aseprite",
+                ["iron_forge_core"] = "iron_forge_core.aseprite",
+                ["hapjukseon"] = "hapjukseon.aseprite",
+                ["copper_ingot"] = "copper_ingot.aseprite",
+                ["icesteel_ingot"] = "icesteel_ingot.aseprite",
+                ["iron_ingot"] = "iron_ingot.aseprite",
+                ["water_jar"] = "water_jar.aseprite",
                 ["straw_helm"] = "straw_helm.aseprite",
                 ["straw_armor"] = "straw_armor.aseprite",
                 ["straw_boots"] = "straw_boots.aseprite",
@@ -586,15 +602,15 @@ namespace Nyangbingo.Editor
             var catalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentArtCatalogPath);
             var valid = catalog != null && catalog.DistantView != null && catalog.Clouds != null &&
                         catalog.Underground != null && catalog.TitleBackground != null &&
-                        catalog.TitleFrames.Count >= 10;
+                        catalog.TitleFrames.Count >= 10 && catalog.HasDayNightSurfaceSet;
             if (!valid)
             {
                 Debug.LogError("[Nyangbingo] Environment art validation failed: " +
-                                "sky, title background, title logo, or preserved underground reference is missing.");
+                                "day/night surface set, title background, title logo, or preserved underground reference is missing.");
                 return;
             }
-            Debug.Log("[Nyangbingo] Environment art validation passed: sky 2/2, underground 1/1, " +
-                      "title background 1/1, title 10/10.");
+            Debug.Log("[Nyangbingo] Environment art validation passed: day/night surface 10/10, " +
+                      "legacy sky 2/2, underground 1/1, title background 1/1, title 10/10.");
         }
 
         [MenuItem("Nyangbingo/Art/Apply Combat and Temperature Art")]
@@ -1002,7 +1018,7 @@ namespace Nyangbingo.Editor
                 property.GetArrayElementAtIndex(i).objectReferenceValue = sprites[i];
         }
 
-        private static bool ConfigureAsepriteImporter(string artPath, ICollection<string> failures)
+        internal static bool ConfigureAsepriteImporter(string artPath, ICollection<string> failures)
         {
             var importer = AssetImporter.GetAtPath(artPath) as AsepriteImporter;
             if (importer == null)

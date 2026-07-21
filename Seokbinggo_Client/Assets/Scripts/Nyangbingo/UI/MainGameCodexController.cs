@@ -14,6 +14,7 @@ namespace Nyangbingo.UI
         [SerializeField] private Text[] cardTexts = new Text[YokaiCodexPresentationModel.ExpectedCardCount];
         [SerializeField] private Text detailText;
         [SerializeField] private GameShellController gameShell;
+        [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
 
         private YokaiCodexPresentationModel model;
         private CharacterArtCatalog characterArtCatalog;
@@ -65,11 +66,13 @@ namespace Nyangbingo.UI
 
             model = saveCoordinator.ProgressTracker.CreateCodexPresentationModel();
             ResolveCharacterArtCatalog();
+            ResolveGameplayArtCatalog();
             ConfigureNativeGrid();
             BuildExpandedView();
             for (var index = 0; index < cardButtons.Length; index++)
             {
                 var capturedIndex = index;
+                RuntimeUiButtonArt.ApplyCodexCard(cardButtons[index], gameplayArtCatalog);
                 cardButtons[index].onClick.AddListener(() => HandleCardClicked(capturedIndex));
             }
             panel.SetActive(false);
@@ -204,6 +207,18 @@ namespace Nyangbingo.UI
             }
         }
 
+        private void ResolveGameplayArtCatalog()
+        {
+            if (gameplayArtCatalog != null) return;
+            var loadedCatalogs = Resources.FindObjectsOfTypeAll<GameplayArtCatalog>();
+            for (var index = 0; index < loadedCatalogs.Length; index++)
+            {
+                if (loadedCatalogs[index] == null) continue;
+                gameplayArtCatalog = loadedCatalogs[index];
+                if (loadedCatalogs[index].name == "GameplayArtCatalog") break;
+            }
+        }
+
         private Sprite FindPortrait(string entryId) => characterArtCatalog != null
             ? characterArtCatalog.FindSprite(entryId)
             : null;
@@ -308,19 +323,20 @@ namespace Nyangbingo.UI
             cardRect.anchoredPosition = Vector2.zero;
             cardRect.sizeDelta = YokaiCodexPresentationModel.EnlargedCardSize;
             expandedCardBackground = cardObject.GetComponent<Image>();
+            RuntimeUiButtonArt.ApplyCodexCard(expandedCardBackground, gameplayArtCatalog);
             expandedCardButton = cardObject.GetComponent<Button>();
             expandedCardButton.onClick.AddListener(HandleExpandedCardClicked);
 
             expandedTitle = CreateText(cardObject.transform, "Title", 15, TextAnchor.MiddleCenter,
-                new Vector2(176f, 24f), new Vector2(0f, 111f));
+                new Vector2(140f, 18f), new Vector2(0f, 86f));
             expandedPortrait = CreateImage(cardObject.transform, "Portrait",
-                new Vector2(170f, 150f), new Vector2(0f, 20f));
+                new Vector2(116f, 112f), new Vector2(0f, 16f));
             expandedFrontText = CreateText(cardObject.transform, "Front", 10, TextAnchor.UpperCenter,
-                new Vector2(176f, 54f), new Vector2(0f, -82f));
+                new Vector2(140f, 40f), new Vector2(0f, -61f));
             expandedBackText = CreateText(cardObject.transform, "Back", 10, TextAnchor.UpperLeft,
-                new Vector2(168f, 190f), new Vector2(0f, -2f));
+                new Vector2(140f, 168f), new Vector2(0f, -8f));
             expandedHintText = CreateText(cardObject.transform, "Hint", 8, TextAnchor.MiddleCenter,
-                new Vector2(184f, 16f), new Vector2(0f, -118f));
+                new Vector2(142f, 14f), new Vector2(0f, -113f));
             expandedHintText.color = new Color(.78f, .83f, .86f, 1f);
             expandedBackdrop.transform.SetAsLastSibling();
             expandedBackdrop.SetActive(false);

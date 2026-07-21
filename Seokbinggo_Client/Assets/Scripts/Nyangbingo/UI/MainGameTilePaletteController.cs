@@ -360,7 +360,7 @@ namespace Nyangbingo.UI
                 if (background != null)
                 {
                     background.sprite = selected
-                        ? gameplayArtCatalog?.InventorySlotSelected
+                        ? gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected
                         : gameplayArtCatalog?.InventorySlot;
                     background.color = background.sprite != null
                         ? Color.white

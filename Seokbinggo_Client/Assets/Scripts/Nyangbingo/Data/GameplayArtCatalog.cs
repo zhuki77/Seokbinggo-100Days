@@ -11,6 +11,8 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite[] playerAttackFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] napFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] miningCrackFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] miningBreakFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] miningCriticalFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] bossWarningFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] blueProjectileFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] dayCounterFrames = Array.Empty<Sprite>();
@@ -19,6 +21,10 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite[] fuelGaugeFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] saveIndicatorFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] playerVitalsFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] button1x1Frames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] button1x2Frames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] button1x4Frames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] button1x6Frames = Array.Empty<Sprite>();
         [SerializeField] private Sprite dangerIcon;
         [SerializeField] private Sprite bossWarningLarge;
         [SerializeField] private Sprite bossWarningSmall;
@@ -33,6 +39,7 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite inventorySlotTopSelected;
         [SerializeField] private Sprite equipmentCharacter;
         [SerializeField] private Sprite equipmentHeadSlot;
+        [SerializeField] private Sprite equipmentHeadSlotSelected;
         [SerializeField] private Sprite equipmentBodySlot;
         [SerializeField] private Sprite equipmentBodySlotSelected;
         [SerializeField] private Sprite equipmentFeetSlot;
@@ -41,6 +48,9 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite equipmentAccessorySlotSelected;
         [SerializeField] private Sprite activeItemSlot;
         [SerializeField] private Sprite activeItemSlotSelected;
+        [SerializeField] private Sprite tilePaletteSlotSelected;
+        [SerializeField] private Sprite jangdokStorageGrid;
+        [SerializeField] private Sprite codexCard;
         [SerializeField] private Sprite shellStart;
         [SerializeField] private Sprite shellSettings;
         [SerializeField] private Sprite shellLeave;
@@ -54,6 +64,8 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> PlayerAttackFrames => playerAttackFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> NapFrames => napFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> MiningCrackFrames => miningCrackFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> MiningBreakFrames => miningBreakFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> MiningCriticalFrames => miningCriticalFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> BossWarningFrames => bossWarningFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> BlueProjectileFrames => blueProjectileFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> DayCounterFrames => dayCounterFrames ?? Array.Empty<Sprite>();
@@ -62,6 +74,10 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> FuelGaugeFrames => fuelGaugeFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> SaveIndicatorFrames => saveIndicatorFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerVitalsFrames => playerVitalsFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> Button1x1Frames => button1x1Frames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> Button1x2Frames => button1x2Frames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> Button1x4Frames => button1x4Frames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> Button1x6Frames => button1x6Frames ?? Array.Empty<Sprite>();
         public Sprite DangerIcon => dangerIcon;
         public Sprite BossWarningLarge => bossWarningLarge;
         public Sprite BossWarningSmall => bossWarningSmall;
@@ -76,6 +92,7 @@ namespace Nyangbingo.Data
         public Sprite InventorySlotTopSelected => inventorySlotTopSelected;
         public Sprite EquipmentCharacter => equipmentCharacter;
         public Sprite EquipmentHeadSlot => equipmentHeadSlot;
+        public Sprite EquipmentHeadSlotSelected => equipmentHeadSlotSelected;
         public Sprite EquipmentBodySlot => equipmentBodySlot;
         public Sprite EquipmentBodySlotSelected => equipmentBodySlotSelected;
         public Sprite EquipmentFeetSlot => equipmentFeetSlot;
@@ -84,6 +101,9 @@ namespace Nyangbingo.Data
         public Sprite EquipmentAccessorySlotSelected => equipmentAccessorySlotSelected;
         public Sprite ActiveItemSlot => activeItemSlot;
         public Sprite ActiveItemSlotSelected => activeItemSlotSelected;
+        public Sprite TilePaletteSlotSelected => tilePaletteSlotSelected;
+        public Sprite JangdokStorageGrid => jangdokStorageGrid;
+        public Sprite CodexCard => codexCard;
         public Sprite ShellStart => shellStart;
         public Sprite ShellSettings => shellSettings;
         public Sprite ShellLeave => shellLeave;

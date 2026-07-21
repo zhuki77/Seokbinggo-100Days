@@ -15,6 +15,16 @@ MonoBehaviour:
   distantView: {fileID: 21300000, guid: aed7ce89b773c374085265418a7803f1, type: 3}
   clouds: {fileID: 21300000, guid: f1a7487adb81d434aa9aa94f97208cea, type: 3}
   underground: {fileID: 21300000, guid: 462f8ea1c392618429cd095b293ed74a, type: 3}
+  daySky: {fileID: -6697690022638063364, guid: 5d8f7f98cfb84b64c8488d4965483cad, type: 3}
+  dayRearClouds: {fileID: 3299356039679321662, guid: efa087e7a99c1c045bc939651f466d5e, type: 3}
+  dayMountains: {fileID: -4126097568309891322, guid: 7aa130a4ee3900e438cd636fdcf26853, type: 3}
+  dayFrontClouds: {fileID: 8967588146648195393, guid: 0bd15b9453542914fa9931beb444f1cf, type: 3}
+  sun: {fileID: 1963038324212828887, guid: 6bb9a793645df8d4ca3270cbfdd5ffcb, type: 3}
+  nightSky: {fileID: 7228306875894143758, guid: a64c039e35e7350448ffa98b0f91a4dd, type: 3}
+  nightRearClouds: {fileID: -4010671795993488323, guid: 2b11e10469229d1439709c46274ff4cc, type: 3}
+  nightMountains: {fileID: 4022202699556227913, guid: 2c92fb1dbefe54c40a6e258dfa7cb249, type: 3}
+  nightFrontClouds: {fileID: -3975432569198308456, guid: 01572e926f54e764cacd309cfb8ad577, type: 3}
+  moon: {fileID: -2437023318195934569, guid: 07ed2ef6e2cddaa4e81fd0f1e4d3baa1, type: 3}
   titleBackground: {fileID: 21300000, guid: 611f5fbacb874ad7a8b59eb059f934c8, type: 3}
   titleFrames:
   - {fileID: -6253688462931843144, guid: ce319cc37c1269441bb226ff24f5b821, type: 3}

@@ -11,6 +11,7 @@ public static class NyangbingoArt720Binder
     private const string ItemCatalogPath = "Assets/Art/Items/ItemArtCatalog.asset";
     private const string GameplayCatalogPath = "Assets/Art/Gameplay/GameplayArtCatalog.asset";
     private const string BuildingCatalogPath = "Assets/Art/Buildings/BuildingArtCatalog.asset";
+    private const string EnvironmentCatalogPath = "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset";
     private const string DeepBackgroundTilePath = "Assets/Tiles/Temp/bg_deep.asset";
     private const string DeepBackgroundArtPath = "Assets/Art/Tiles/t_bg_deep.aseprite";
     private const string RuinWallTilePath = "Assets/Tiles/Temp/ruin_wall.asset";
@@ -31,6 +32,21 @@ public static class NyangbingoArt720Binder
         ("ice_shard", "Assets/Art/Tiles/ice_shard.aseprite"),
         ("icesteel_ore", "Assets/Art/Tiles/icesteel_ore.aseprite"),
         ("frost_essence", "Assets/Art/Tiles/frost_essence.aseprite"),
+        ("clay", "Assets/Art/Items/clay.aseprite"),
+        ("stone_mid", "Assets/Art/Tiles/stone_mid.aseprite"),
+        ("bare_claw", "Assets/Art/Items/bare_claw.aseprite"),
+        ("iron_claw", "Assets/Art/Items/iron_claw.aseprite"),
+        ("icesteel_claw", "Assets/Art/Items/icesteel_claw.aseprite"),
+        ("dokkaebi_club", "Assets/Art/Items/dokkaebi_club.aseprite"),
+        ("cheolseon", "Assets/Art/Items/cheolseon.aseprite"),
+        ("drought_heart", "Assets/Art/Items/drought_heart.aseprite"),
+        ("frostclaw_gauntlet", "Assets/Art/Items/frostclaw_gauntlet.aseprite"),
+        ("iron_forge_core", "Assets/Art/Items/iron_forge_core.aseprite"),
+        ("hapjukseon", "Assets/Art/Items/hapjukseon.aseprite"),
+        ("copper_ingot", "Assets/Art/Items/copper_ingot.aseprite"),
+        ("icesteel_ingot", "Assets/Art/Items/icesteel_ingot.aseprite"),
+        ("iron_ingot", "Assets/Art/Items/iron_ingot.aseprite"),
+        ("water_jar", "Assets/Art/Items/water_jar.aseprite"),
         ("yokai_tear", "Assets/Art/UI/yokai_tear_balance.aseprite"),
         ("workbench", "Assets/Art/Buildings/workbench.aseprite"),
         ("furnace", "Assets/Art/Buildings/furnace.aseprite"),
@@ -56,7 +72,6 @@ public static class NyangbingoArt720Binder
         ("singijeon_cart", "Assets/Art/Buildings/singijeon_cart.aseprite"),
         ("ice_crystal_cooler", "Assets/Art/Buildings/ice_crystal_cooler.aseprite"),
         ("cold_wave_core", "Assets/Art/Buildings/cold_wave_core.aseprite"),
-        ("water_jar", "Assets/Art/Buildings/jangdok.aseprite"),
         ("ice_jar", "Assets/Art/Buildings/ice_jar.aseprite"),
         ("straw_insul", "Assets/Art/Buildings/straw_insul.aseprite"),
         ("clay_plaster", "Assets/Art/Buildings/clay_plaster.aseprite"),
@@ -84,7 +99,13 @@ public static class NyangbingoArt720Binder
         ("yokaiTearBalanceFrames", "Assets/Art/UI/yokai_tear_balance.aseprite", 4),
         ("fuelGaugeFrames", "Assets/Art/UI/fuel_gauge.aseprite", 4),
         ("saveIndicatorFrames", "Assets/Art/UI/save_indicator.aseprite", 6),
-        ("playerVitalsFrames", "Assets/Art/UI/player_vitals_combined.aseprite", 12)
+        ("playerVitalsFrames", "Assets/Art/UI/player_vitals_combined.aseprite", 12),
+        ("button1x1Frames", "Assets/Art/UI/Common/button_1x1.aseprite", 2),
+        ("button1x2Frames", "Assets/Art/UI/Common/button_1x2.aseprite", 2),
+        ("button1x4Frames", "Assets/Art/UI/Common/button_1x4.aseprite", 2),
+        ("button1x6Frames", "Assets/Art/UI/Common/button_1x6.aseprite", 2),
+        ("miningBreakFrames", "Assets/Art/Gameplay/mining_break.aseprite", 2),
+        ("miningCriticalFrames", "Assets/Art/Gameplay/mining_critical.aseprite", 1)
     };
 
     private static readonly (string property, string path)[] SpriteBindings =
@@ -103,6 +124,7 @@ public static class NyangbingoArt720Binder
         ("inventorySlotTopSelected", "Assets/Art/UI/Inventory/inventory_slot_top_selected.aseprite"),
         ("equipmentCharacter", "Assets/Art/UI/Inventory/equipment_character.aseprite"),
         ("equipmentHeadSlot", "Assets/Art/UI/Inventory/equipment_head_slot.aseprite"),
+        ("equipmentHeadSlotSelected", "Assets/Art/UI/Inventory/equipment_head_slot_selected.aseprite"),
         ("equipmentBodySlot", "Assets/Art/UI/Inventory/equipment_body_slot.aseprite"),
         ("equipmentBodySlotSelected", "Assets/Art/UI/Inventory/equipment_body_slot_selected.aseprite"),
         ("equipmentFeetSlot", "Assets/Art/UI/Inventory/equipment_feet_slot.aseprite"),
@@ -111,6 +133,9 @@ public static class NyangbingoArt720Binder
         ("equipmentAccessorySlotSelected", "Assets/Art/UI/Inventory/equipment_accessory_slot_selected.aseprite"),
         ("activeItemSlot", "Assets/Art/UI/Inventory/active_item_slot.aseprite"),
         ("activeItemSlotSelected", "Assets/Art/UI/Inventory/active_item_slot_selected.aseprite"),
+        ("tilePaletteSlotSelected", "Assets/Art/UI/Inventory/tile_palette_slot_selected.aseprite"),
+        ("jangdokStorageGrid", "Assets/Art/UI/Inventory/jangdok_storage_grid.aseprite"),
+        ("codexCard", "Assets/Art/UI/Common/codex_card.aseprite"),
         ("shellStart", "Assets/Art/UI/Shell/start.aseprite"),
         ("shellSettings", "Assets/Art/UI/Shell/setting.aseprite"),
         ("shellLeave", "Assets/Art/UI/Shell/leave.aseprite"),
@@ -119,6 +144,20 @@ public static class NyangbingoArt720Binder
         ("shellSpeakerMuted", "Assets/Art/UI/Shell/sp3.aseprite"),
         ("shellVolumeBar", "Assets/Art/UI/Shell/spbar.aseprite"),
         ("shellVolumeHandle", "Assets/Art/UI/Shell/spbar2.aseprite")
+    };
+
+    private static readonly (string property, string path)[] EnvironmentBindings =
+    {
+        ("daySky", "Assets/Art/Backgrounds/day_sky.aseprite"),
+        ("dayRearClouds", "Assets/Art/Backgrounds/day_rear_clouds.aseprite"),
+        ("dayMountains", "Assets/Art/Backgrounds/day_mountains.aseprite"),
+        ("dayFrontClouds", "Assets/Art/Backgrounds/day_front_clouds.aseprite"),
+        ("sun", "Assets/Art/Backgrounds/sun.aseprite"),
+        ("nightSky", "Assets/Art/Backgrounds/night_sky.aseprite"),
+        ("nightRearClouds", "Assets/Art/Backgrounds/night_rear_clouds.aseprite"),
+        ("nightMountains", "Assets/Art/Backgrounds/night_mountains.aseprite"),
+        ("nightFrontClouds", "Assets/Art/Backgrounds/night_front_clouds.aseprite"),
+        ("moon", "Assets/Art/Backgrounds/moon.aseprite")
     };
 
     static NyangbingoArt720Binder()
@@ -131,16 +170,32 @@ public static class NyangbingoArt720Binder
     {
         AssetDatabase.Refresh();
         Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyTileArt();
+        Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyItemArt();
         Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyBuildingArt();
-        if (!TryBindItemCatalog() || !TryBindGameplayCatalog())
+        var importFailures = new List<string>();
+        Nyangbingo.Editor.NyangbingoTileArtIntegrator.ConfigureAsepriteImporter(
+            "Assets/Art/Gameplay/mining_break.aseprite", importFailures);
+        Nyangbingo.Editor.NyangbingoTileArtIntegrator.ConfigureAsepriteImporter(
+            "Assets/Art/Gameplay/mining_critical.aseprite", importFailures);
+        foreach (var binding in EnvironmentBindings)
+            Nyangbingo.Editor.NyangbingoTileArtIntegrator.ConfigureAsepriteImporter(
+                binding.path, importFailures);
+        if (importFailures.Count > 0)
+        {
+            Debug.LogError("[Nyangbingo] Delivered UI/effect art importer configuration failed.\n- " +
+                           string.Join("\n- ", importFailures));
+            return;
+        }
+        if (!TryBindItemCatalog() || !TryBindGameplayCatalog() || !TryBindEnvironmentCatalog())
         {
             Debug.LogError("[Nyangbingo] 제공 아트 카탈로그 연결에 실패했습니다. 임포트 오류와 파일 경로를 확인하세요.");
             return;
         }
 
         AssetDatabase.SaveAssets();
+        var frameCount = FrameBindings.Sum(binding => binding.expectedFrames);
         Debug.Log($"[Nyangbingo] 제공 아트 카탈로그 연결 완료 " +
-                  $"(아이템/드롭 {ItemBindings.Length}, HUD 프레임 49, " +
+                  $"(아이템/드롭 {ItemBindings.Length}, HUD/버튼 프레임 {frameCount}, " +
                   $"HUD/보스/인벤토리 단일 스프라이트 {SpriteBindings.Length}).");
     }
 
@@ -169,6 +224,18 @@ public static class NyangbingoArt720Binder
                     failures.Add(
                         $"{binding.property}: expected '{binding.path}', actual '{AssetDatabase.GetAssetPath(sprite)}'");
             }
+            foreach (var binding in FrameBindings.Where(binding =>
+                         binding.path.StartsWith("Assets/Art/UI/Common/button_", StringComparison.Ordinal)))
+            {
+                var property = serialized.FindProperty(binding.property);
+                if (property == null || property.arraySize != binding.expectedFrames)
+                    failures.Add($"{binding.property}: expected {binding.expectedFrames} frames, " +
+                                 $"actual {property?.arraySize ?? 0}");
+            }
+            var codexCard = serialized.FindProperty("codexCard")?.objectReferenceValue as Sprite;
+            if (codexCard == null || !string.Equals(AssetDatabase.GetAssetPath(codexCard),
+                    "Assets/Art/UI/Common/codex_card.aseprite", StringComparison.Ordinal))
+                failures.Add("codexCard: delivered Sprite reference missing");
         }
         if (environmentCatalog == null || environmentCatalog.TitleFrames.Count != 10)
             failures.Add($"title_on: expected 10 frames, actual {environmentCatalog?.TitleFrames.Count ?? 0}");
@@ -181,7 +248,7 @@ public static class NyangbingoArt720Binder
             return;
         }
         Debug.Log("[Nyangbingo] Shell UI art validation passed: title background 1/1, " +
-                  "title 10/10, shell icons 8/8.");
+                  "title 10/10, shell icons 8/8, buttons 8/8, codex card 1/1.");
     }
 
     private static void BindOnFirstImport()
@@ -189,11 +256,14 @@ public static class NyangbingoArt720Binder
         var itemCatalog = AssetDatabase.LoadAssetAtPath<ItemArtCatalog>(ItemCatalogPath);
         var gameplayCatalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayCatalogPath);
         var buildingCatalog = AssetDatabase.LoadAssetAtPath<BuildingArtCatalog>(BuildingCatalogPath);
+        var environmentCatalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentCatalogPath);
         var deepBackgroundTile = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(DeepBackgroundTilePath);
         var ruinWallTile = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(RuinWallTilePath);
-        if (itemCatalog == null || gameplayCatalog == null || buildingCatalog == null) return;
+        if (itemCatalog == null || gameplayCatalog == null || buildingCatalog == null ||
+            environmentCatalog == null) return;
         var itemSerialized = new SerializedObject(itemCatalog);
         var gameplaySerialized = new SerializedObject(gameplayCatalog);
+        var environmentSerialized = new SerializedObject(environmentCatalog);
         var deepBackgroundBound = deepBackgroundTile != null && deepBackgroundTile.sprite != null &&
                                   string.Equals(AssetDatabase.GetAssetPath(deepBackgroundTile.sprite),
                                       DeepBackgroundArtPath, StringComparison.Ordinal);
@@ -215,6 +285,13 @@ public static class NyangbingoArt720Binder
             gameplaySerialized.FindProperty("shellSpeakerMuted")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellVolumeBar")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellVolumeHandle")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("button1x1Frames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("button1x2Frames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("button1x4Frames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("button1x6Frames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("codexCard")?.objectReferenceValue != null &&
+            EnvironmentBindings.All(binding =>
+                environmentSerialized.FindProperty(binding.property)?.objectReferenceValue != null) &&
             deepBackgroundBound && ruinWallBound;
         if (otherCatalogsCurrent &&
             Nyangbingo.Editor.NyangbingoTileArtIntegrator.IsBuildingArtCurrent(buildingCatalog)) return;
@@ -266,6 +343,24 @@ public static class NyangbingoArt720Binder
         }
 
         foreach (var binding in SpriteBindings)
+        {
+            var sprite = LoadFirstSprite(binding.path);
+            var property = serialized.FindProperty(binding.property);
+            if (sprite == null || property == null) return false;
+            property.objectReferenceValue = sprite;
+        }
+
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(catalog);
+        return true;
+    }
+
+    private static bool TryBindEnvironmentCatalog()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentCatalogPath);
+        if (catalog == null) return false;
+        var serialized = new SerializedObject(catalog);
+        foreach (var binding in EnvironmentBindings)
         {
             var sprite = LoadFirstSprite(binding.path);
             var property = serialized.FindProperty(binding.property);

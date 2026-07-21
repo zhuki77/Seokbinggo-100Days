@@ -13,6 +13,8 @@ namespace Nyangbingo.World
         [SerializeField] private Transform playerTransform;
         private RuntimeOneShotSpriteEffect napEffect;
         private RuntimeOneShotSpriteEffect miningEffect;
+        private RuntimeOneShotSpriteEffect miningBreakEffect;
+        private RuntimeOneShotSpriteEffect miningCriticalEffect;
         private SpriteRenderer miningProgressRenderer;
         private System.Collections.Generic.IReadOnlyList<Sprite> miningProgressFrames;
         private Vector3Int miningProgressCell;
@@ -30,6 +32,9 @@ namespace Nyangbingo.World
             napEffect = CreateEffect("NapEffect", playerTransform, artCatalog.NapFrames, 26);
             napEffect.transform.localPosition = new Vector3(0f, 1.15f, 0f);
             miningEffect = CreateEffect("MiningCrackEffect", transform, artCatalog.MiningCrackFrames, 24);
+            miningBreakEffect = CreateEffect("MiningBreakEffect", transform, artCatalog.MiningBreakFrames, 29);
+            miningCriticalEffect = CreateEffect("MiningCriticalEffect", transform,
+                artCatalog.MiningCriticalFrames, 30);
             var progressObject = new GameObject("MiningProgressOverlay");
             progressObject.transform.SetParent(transform, false);
             miningProgressRenderer = progressObject.AddComponent<SpriteRenderer>();
@@ -47,11 +52,16 @@ namespace Nyangbingo.World
         private void Update()
         {
             if (playerTransform == null || !Input.GetKeyDown(KeyCode.F10)) return;
-            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            var cell = Vector3Int.FloorToInt(playerTransform.position + Vector3.right);
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             {
-                var cell = Vector3Int.FloorToInt(playerTransform.position + Vector3.right);
+                HandleMiningResult(cell, "철광석", 2, true);
+                Debug.Log("[Nyangbingo] Ctrl+F10 mining critical VFX preview.");
+            }
+            else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            {
                 HandleTileBroken(cell);
-                Debug.Log("[Nyangbingo] Shift+F10 mining crack VFX preview.");
+                Debug.Log("[Nyangbingo] Shift+F10 mining break VFX preview.");
             }
             else
             {
@@ -90,7 +100,12 @@ namespace Nyangbingo.World
             if (miningEffect == null) return;
             miningEffect.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
             miningEffect.Play(.35f);
-            RuntimeTileDebrisBurst.Create(transform, cell, lastMiningSurface);
+            if (miningBreakEffect != null && artCatalog.MiningBreakFrames.Count > 0)
+            {
+                miningBreakEffect.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+                miningBreakEffect.Play(.2f);
+            }
+            else RuntimeTileDebrisBurst.Create(transform, cell, lastMiningSurface);
         }
 
         private void HandleMiningResult(Vector3Int cell, string itemName, int amount, bool critical)
@@ -110,7 +125,13 @@ namespace Nyangbingo.World
             var renderer = text.GetComponent<MeshRenderer>();
             if (renderer != null) renderer.sortingOrder = 28;
             popupObject.AddComponent<RuntimeFloatingWorldText>().Configure(text, .8f, .65f);
-            if (critical) RuntimeMiningCriticalSparkle.Create(transform, cell);
+            if (!critical) return;
+            if (miningCriticalEffect != null && artCatalog.MiningCriticalFrames.Count > 0)
+            {
+                miningCriticalEffect.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+                miningCriticalEffect.Play(.3f);
+            }
+            else RuntimeMiningCriticalSparkle.Create(transform, cell);
         }
 
         private static RuntimeOneShotSpriteEffect CreateEffect(string name, Transform parent,
