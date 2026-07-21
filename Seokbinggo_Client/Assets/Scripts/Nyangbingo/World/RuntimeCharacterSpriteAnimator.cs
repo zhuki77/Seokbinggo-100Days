@@ -92,7 +92,10 @@ namespace Nyangbingo.World
 
             var delta = transform.position - previousPosition;
             previousPosition = transform.position;
-            if (Mathf.Abs(delta.x) > Mathf.Epsilon)
+            // Player movement supplies an explicit facing direction. Dynamic Rigidbody2D contact
+            // correction can move the body by tiny alternating X deltas while idle, so only infer
+            // facing from transform movement for actors that do not supply that explicit state.
+            if (!hasExplicitMovementState && Mathf.Abs(delta.x) > Mathf.Epsilon)
                 spriteRenderer.flipX = entry.SourceFacesRight ? delta.x < 0f : delta.x > 0f;
 
             if (actionRemaining > 0f)

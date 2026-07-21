@@ -77,8 +77,9 @@ namespace Nyangbingo.Editor
         {
             var generatedSpawn = world.spawnPoint;
             var spawnTileService = new TileService(world.tiles, null, catalog, world.acceptedSeed);
-            var playerSpawn = MainGamePlayerController.TryFindTemporarySafeSurfaceSpawn(
-                spawnTileService, generatedSpawn.x, .38f, out var safeSurfaceSpawn)
+            IWorldSafeSpawnResolver spawnResolver = spawnTileService;
+            var playerSpawn = spawnResolver.TryResolveSafeSurfaceSpawn(
+                generatedSpawn.x, .38f, out var safeSurfaceSpawn)
                 ? safeSurfaceSpawn
                 : new Vector2(generatedSpawn.x + .5f, generatedSpawn.y + .5f);
             var save = new SaveGame
@@ -291,11 +292,12 @@ namespace Nyangbingo.Editor
             if (!WorldSaveAdapter.RestoreChests(save, validationGenerator, new ChestProgress()))
                 throw new InvalidOperationException($"Demo day {profile.Day}: chest state cannot be replayed.");
 
-            if (!MainGamePlayerController.TryFindTemporarySafeSurfaceSpawn(tileService,
-                    validationWorld.spawnPoint.x, .38f, out var expectedPlayerSpawn) ||
+            IWorldSafeSpawnResolver spawnResolver = tileService;
+            if (!spawnResolver.TryResolveSafeSurfaceSpawn(validationWorld.spawnPoint.x, .38f,
+                    out var expectedPlayerSpawn) ||
                 Vector2.Distance(save.playerState.position, expectedPlayerSpawn) > .001f)
                 throw new InvalidOperationException(
-                    $"Demo day {profile.Day}: player is not saved at the temporary safe surface spawn.");
+                    $"Demo day {profile.Day}: player is not saved at the shared safe surface spawn.");
 
             var expectedModules = profile.Day >= 30 ? 5 : profile.Day >= 15 ? 3 : 1;
             if (save.modulesDone.Count != expectedModules || save.modulesDone.Any(moduleId =>

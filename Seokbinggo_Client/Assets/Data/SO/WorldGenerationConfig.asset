@@ -24,6 +24,8 @@ MonoBehaviour:
   caveNoiseFrequency: 0.08
   caveChanceUpper: 0.1
   caveChanceDeep: 0.25
+  caveMaxHeight: 12
+  caveSurfaceCrustThickness: 2
   oreVeins:
   - elementType: coal
     layer: 1

@@ -313,6 +313,28 @@ namespace Nyangbingo.World
 
         public bool IsWatchPointSealed(Vector3Int cell) => watchPoints.TryGetValue(cell, out var sealedNow) ? sealedNow : GetOrComputeRegion(cell).isSealed;
 
+        /// <summary>
+        /// A-16: 벽지 도포율이 재사용할 코어 창 리전 스냅샷.
+        /// 코어가 없으면 false. interior는 창 안 Flood Fill 공기 칸이다.
+        /// </summary>
+        public bool TryGetCoreRegionSnapshot(out bool isSealed, out int leakFaceCount,
+            out IReadOnlyCollection<Vector3Int> interiorAirCells)
+        {
+            if (!sealCoreCell.HasValue)
+            {
+                isSealed = false;
+                leakFaceCount = 0;
+                interiorAirCells = Array.Empty<Vector3Int>();
+                return false;
+            }
+
+            var region = GetOrComputeCoreRegion();
+            isSealed = region.isSealed;
+            leakFaceCount = region.leakFaceCount;
+            interiorAirCells = region.interiorAirCells;
+            return true;
+        }
+
         // ------------------------------------------------------------------
         // 디버그 시각화 보조 — 실제 그리기는 MonoBehaviour(SealSystemDebugView)가 담당하고,
         // 여기서는 순수 데이터(칸 목록)만 노출한다.

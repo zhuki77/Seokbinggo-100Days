@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
@@ -36,6 +37,7 @@ namespace Nyangbingo.World
         private MapGenerator generator;
         private TileService tileService;
         private SealSystem sealSystem;
+        private WallpaperCoverageService wallpaperCoverage;
         private ChestProgress chestProgress = new ChestProgress();
         private int seed;
         private bool disposed;
@@ -46,6 +48,11 @@ namespace Nyangbingo.World
 
         public TileService TileService => tileService;
         public SealSystem SealSystem => sealSystem;
+        public IWallpaperCoverageSource WallpaperCoverage => wallpaperCoverage;
+        /// <summary>A-22: 안전 지표면 스폰 공용 계약(TileService 구현).</summary>
+        public IWorldSafeSpawnResolver SafeSpawnResolver => tileService;
+        /// <summary>A-25: 배경·벽지 배치 공용 계약(TileService 구현).</summary>
+        public IBackgroundPlacementService BackgroundPlacement => tileService;
         public ChestProgress ChestProgress => chestProgress;
         public MapGenerator Generator => generator;
         public int Seed => seed;
@@ -164,13 +171,18 @@ namespace Nyangbingo.World
             return result;
         }
 
-        /// <summary>현재 라이브 상태(타일 diff + 상자 개봉 여부)를 save에 캡처한다.</summary>
+        /// <summary>현재 라이브 상태(타일 diff + 배경 diff + 상자 개봉 여부)를 save에 캡처한다.</summary>
         public bool CaptureSnapshot(SaveGame save)
         {
             if (save == null || !HasWorld) return false;
             save.seed = seed;
-            return Nyangbingo.Save.WorldSaveAdapter.CaptureWorld(save, tileService.GetTileChangeRecords(),
-                Array.Empty<PlacedObjectRecord>(), generator, chestProgress);
+            if (!Nyangbingo.Save.WorldSaveAdapter.CaptureWorld(save, tileService.GetTileChangeRecords(),
+                    Array.Empty<PlacedObjectRecord>(), generator, chestProgress))
+                return false;
+
+            // A-16: 전경 diff와 분리된 배경 변경 이력. CaptureWorld 시그니처는 Dev B 호환을 위해 유지한다.
+            save.backgroundChanges = new List<TileChangeRecord>(tileService.GetBackgroundChangeRecords());
+            return true;
         }
 
         /// <summary>
@@ -208,6 +220,13 @@ namespace Nyangbingo.World
                 return false;
             }
 
+            // A-16: 배경 변경 이력(없으면 구버전 세이브 — RestoreBackgroundChanges가 성공 처리).
+            if (!loadedTileService.RestoreBackgroundChanges(save.backgroundChanges))
+            {
+                Debug.LogError("[Nyangbingo] WorldSessionController: 배경 변경 이력 재생에 실패해 로드를 중단합니다.");
+                return false;
+            }
+
             // 2) 이무기 제단은 파괴 불가 + 시드로만 결정되는 타일이라 재생성만으로 이미 원상 복구돼 있다.
             // 상자는 사용자 상호작용 결과(열림 여부)가 시드로 재현되지 않으므로 별도 복원이 필요하다.
             var loadedChestProgress = new ChestProgress();
@@ -235,10 +254,15 @@ namespace Nyangbingo.World
             {
                 CreateSealSystem();
                 ApplySealExtensions();
+                wallpaperCoverage = new WallpaperCoverageService(tileService, sealSystem);
             }
             else
             {
                 sealSystem.Rebind(tileService);
+                if (wallpaperCoverage == null)
+                    wallpaperCoverage = new WallpaperCoverageService(tileService, sealSystem);
+                else
+                    wallpaperCoverage.Rebind(tileService);
             }
 
             WorldLoaded?.Invoke(); // §5 항목 7 — 라이브 참조 교체가 전부 끝난 뒤에만 통지한다.
@@ -271,15 +295,18 @@ namespace Nyangbingo.World
         {
             if (disposed) return;
             disposed = true;
+            wallpaperCoverage?.Dispose();
             sealSystem?.Dispose();
         }
 
         private void RebuildLiveSystems(TileData[,] tiles)
         {
+            wallpaperCoverage?.Dispose();
             sealSystem?.Dispose();
             tileService = new TileService(tiles, renderer, catalog, seed);
             CreateSealSystem();
             ApplySealExtensions();
+            wallpaperCoverage = new WallpaperCoverageService(tileService, sealSystem);
         }
 
         private static string RegionCatalogId(ChestRegion region) => region switch

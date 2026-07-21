@@ -142,14 +142,25 @@ namespace Nyangbingo.World
                 entry.Lifetime == LifetimeKind.Permanent ? 0f : entry.RemainingGameSeconds))
             .ToArray();
 
-        public void Tick(float deltaGameSeconds)
+        public void Tick(float deltaGameSeconds) => Tick(deltaGameSeconds, 1f);
+
+        /// <summary>
+        /// 벽지 100% 도포 시 지속시간 배율을 소모 속도로 환산한다.
+        /// 1.25배는 180초 물단지를 225초, 300초 얼음 항아리를 375초 동안 유지한다.
+        /// 영구 냉기원은 애초에 감소하지 않으므로 영향을 받지 않는다.
+        /// </summary>
+        public void Tick(float deltaGameSeconds, float durationMultiplier)
         {
             if (!IsFinite(deltaGameSeconds) || deltaGameSeconds <= 0f) return;
+            durationMultiplier = IsFinite(durationMultiplier) && durationMultiplier >= 1f
+                ? durationMultiplier
+                : 1f;
+            var consumedGameSeconds = deltaGameSeconds / durationMultiplier;
             expired.Clear();
             foreach (var entry in entries.Values)
             {
                 if (entry.Lifetime == LifetimeKind.Permanent || entry.RemainingGameSeconds <= 0f) continue;
-                entry.RemainingGameSeconds = Mathf.Max(0f, entry.RemainingGameSeconds - deltaGameSeconds);
+                entry.RemainingGameSeconds = Mathf.Max(0f, entry.RemainingGameSeconds - consumedGameSeconds);
                 if (entry.Lifetime == LifetimeKind.Consumable && entry.RemainingGameSeconds <= 0f)
                     expired.Add(entry.ObjectId);
             }

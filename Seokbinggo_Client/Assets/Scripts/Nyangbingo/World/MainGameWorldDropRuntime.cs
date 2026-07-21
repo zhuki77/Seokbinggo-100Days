@@ -30,7 +30,7 @@ namespace Nyangbingo.World
             public ItemDefinition Item;
             public int Amount;
             public GameObject Root;
-            public Vector2 Velocity;
+            public Rigidbody2D Body;
             public float PickupDelay;
         }
 
@@ -39,16 +39,14 @@ namespace Nyangbingo.World
         private const float MagnetSpeed = 6f;
         private const float Gravity = 12f;
         private const float MaximumFallSpeed = 10f;
-        private const float DropHalfExtent = .22f;
-        private const float CollisionSkin = .001f;
         private const float InitialPickupDelay = .45f;
-        private const float GroundFriction = 9f;
 
         private readonly List<Entry> drops = new List<Entry>();
         private Transform player;
         private Nyangbingo.Inventory.Inventory inventory;
         private ItemArtCatalog itemArtCatalog;
-        private TileService tileService;
+        private Collider2D playerCollider;
+        private PhysicsMaterial2D dropMaterial;
         private int spawnSequence;
 
         public int ActiveDropCount => drops.Count;
@@ -59,7 +57,15 @@ namespace Nyangbingo.World
             player = playerTransform;
             inventory = playerInventory;
             itemArtCatalog = artCatalog;
-            tileService = worldTileService;
+            playerCollider = playerTransform != null ? playerTransform.GetComponent<Collider2D>() : null;
+            if (dropMaterial == null)
+            {
+                dropMaterial = new PhysicsMaterial2D("NyangbingoWorldDrop")
+                {
+                    friction = .55f,
+                    bounciness = .08f
+                };
+            }
         }
 
         private void OnEnable() => WorldItemDropRequest.Requested += Spawn;
@@ -81,12 +87,14 @@ namespace Nyangbingo.World
                 var delta = (Vector2)player.position - (Vector2)entry.Root.transform.position;
                 entry.PickupDelay = Mathf.Max(0f, entry.PickupDelay - Time.deltaTime);
                 var magnetActive = entry.PickupDelay <= 0f && delta.sqrMagnitude <= MagnetRadius * MagnetRadius;
-                if (magnetActive && delta.sqrMagnitude > Mathf.Epsilon)
-                    entry.Velocity = delta.normalized * MagnetSpeed;
-                else
-                    entry.Velocity.y = Mathf.Max(-MaximumFallSpeed,
-                        entry.Velocity.y - Gravity * Time.deltaTime);
-                MoveWithTileCollision(entry, Time.deltaTime, magnetActive);
+                if (entry.Body != null)
+                {
+                    entry.Body.gravityScale = magnetActive ? 0f : ResolveGravityScale();
+                    if (magnetActive && delta.sqrMagnitude > Mathf.Epsilon)
+                        entry.Body.linearVelocity = delta.normalized * MagnetSpeed;
+                    else if (entry.Body.linearVelocity.y < -MaximumFallSpeed)
+                        entry.Body.linearVelocity = new Vector2(entry.Body.linearVelocity.x, -MaximumFallSpeed);
+                }
                 if (!magnetActive) continue;
                 if (((Vector2)player.position - (Vector2)entry.Root.transform.position).sqrMagnitude >
                     PickupRadius * PickupRadius) continue;
@@ -113,6 +121,19 @@ namespace Nyangbingo.World
             var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
             root.transform.position = position + direction * .08f;
 
+            var body = root.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Dynamic;
+            body.gravityScale = ResolveGravityScale();
+            body.freezeRotation = true;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.linearDamping = .8f;
+            body.linearVelocity = direction * (2.2f + fanIndex % 3 * .25f);
+            var dropCollider = root.AddComponent<CircleCollider2D>();
+            dropCollider.radius = .22f;
+            dropCollider.sharedMaterial = dropMaterial;
+            if (playerCollider != null) Physics2D.IgnoreCollision(dropCollider, playerCollider, true);
+
             // Keep the simulated drop root at unit scale. Delivered Aseprite files use
             // different canvas sizes and pivots, so scaling the root would make the art
             // appear far away from the position used for collision and pickup checks.
@@ -136,98 +157,15 @@ namespace Nyangbingo.World
                 Item = item,
                 Amount = 1,
                 Root = root,
-                Velocity = direction * (2.2f + fanIndex % 3 * .25f),
+                Body = body,
                 PickupDelay = InitialPickupDelay
             });
         }
 
-        private void MoveWithTileCollision(Entry entry, float deltaTime, bool magnetActive)
+        private static float ResolveGravityScale()
         {
-            if (entry?.Root == null) return;
-            var position = (Vector2)entry.Root.transform.position;
-            if (tileService == null)
-            {
-                entry.Root.transform.position = position + entry.Velocity * deltaTime;
-                return;
-            }
-
-            var targetX = ResolveHorizontal(position, entry.Velocity.x * deltaTime, out var hitWall);
-            position.x = targetX;
-            if (hitWall) entry.Velocity.x *= -.25f;
-            var wasFalling = entry.Velocity.y <= 0f;
-            var targetY = ResolveVertical(position, entry.Velocity.y * deltaTime, out var hitFloorOrCeiling);
-            position.y = targetY;
-            if (hitFloorOrCeiling)
-                entry.Velocity.y = entry.Velocity.y < 0f ? 0f : -entry.Velocity.y * .2f;
-            position.x = Mathf.Clamp(position.x, DropHalfExtent, tileService.Width - DropHalfExtent);
-            position.y = Mathf.Clamp(position.y, DropHalfExtent, tileService.Height - DropHalfExtent);
-            entry.Root.transform.position = position;
-            var grounded = wasFalling && (hitFloorOrCeiling || HasGroundBelow(position));
-            if (grounded && !magnetActive)
-                entry.Velocity.x = Mathf.MoveTowards(entry.Velocity.x, 0f, GroundFriction * deltaTime);
-        }
-
-        private float ResolveHorizontal(Vector2 position, float displacement, out bool collided)
-        {
-            collided = false;
-            if (Mathf.Abs(displacement) <= Mathf.Epsilon) return position.x;
-            var targetX = position.x + displacement;
-            var minY = Mathf.FloorToInt(position.y - DropHalfExtent + CollisionSkin);
-            var maxY = Mathf.FloorToInt(position.y + DropHalfExtent - CollisionSkin);
-            var direction = displacement > 0f ? 1 : -1;
-            var startCell = Mathf.FloorToInt(position.x + direction * DropHalfExtent);
-            var endCell = Mathf.FloorToInt(targetX + direction * DropHalfExtent);
-            for (var x = startCell; direction > 0 ? x <= endCell : x >= endCell; x += direction)
-            {
-                var blocked = false;
-                for (var y = minY; y <= maxY && !blocked; y++) blocked = IsSolidCell(x, y);
-                if (!blocked) continue;
-                collided = true;
-                return direction > 0
-                    ? x - DropHalfExtent - CollisionSkin
-                    : x + 1f + DropHalfExtent + CollisionSkin;
-            }
-            return targetX;
-        }
-
-        private float ResolveVertical(Vector2 position, float displacement, out bool collided)
-        {
-            collided = false;
-            if (Mathf.Abs(displacement) <= Mathf.Epsilon) return position.y;
-            var targetY = position.y + displacement;
-            var minX = Mathf.FloorToInt(position.x - DropHalfExtent + CollisionSkin);
-            var maxX = Mathf.FloorToInt(position.x + DropHalfExtent - CollisionSkin);
-            var direction = displacement > 0f ? 1 : -1;
-            var startCell = Mathf.FloorToInt(position.y + direction * DropHalfExtent);
-            var endCell = Mathf.FloorToInt(targetY + direction * DropHalfExtent);
-            for (var y = startCell; direction > 0 ? y <= endCell : y >= endCell; y += direction)
-            {
-                var blocked = false;
-                for (var x = minX; x <= maxX && !blocked; x++) blocked = IsSolidCell(x, y);
-                if (!blocked) continue;
-                collided = true;
-                return direction > 0
-                    ? y - DropHalfExtent - CollisionSkin
-                    : y + 1f + DropHalfExtent + CollisionSkin;
-            }
-            return targetY;
-        }
-
-        private bool IsSolidCell(int x, int y)
-        {
-            if (tileService == null) return false;
-            var cell = new Vector3Int(x, y, 0);
-            return !tileService.InBounds(cell) || !tileService.GetTile(cell).IsAir;
-        }
-
-        private bool HasGroundBelow(Vector2 position)
-        {
-            var y = Mathf.FloorToInt(position.y - DropHalfExtent - CollisionSkin * 2f);
-            var minX = Mathf.FloorToInt(position.x - DropHalfExtent + CollisionSkin);
-            var maxX = Mathf.FloorToInt(position.x + DropHalfExtent - CollisionSkin);
-            for (var x = minX; x <= maxX; x++)
-                if (IsSolidCell(x, y)) return true;
-            return false;
+            var gravity = Mathf.Abs(Physics2D.gravity.y);
+            return gravity > Mathf.Epsilon ? Gravity / gravity : 0f;
         }
 
         private void OnDestroy()
@@ -235,6 +173,7 @@ namespace Nyangbingo.World
             foreach (var entry in drops)
                 if (entry?.Root != null) Destroy(entry.Root);
             drops.Clear();
+            if (dropMaterial != null) Destroy(dropMaterial);
         }
     }
 }

@@ -3,10 +3,9 @@
 작성일: 2026-07-20
 브랜치: `feat/deva-world-spec-sync` (기준: 최신 `main`, 직접 커밋 없음)
 Unity 버전: `6000.5.3f1` (`ProjectSettings/ProjectVersion.txt` 기준, 변경 없음)
-대상 문서: 「개발 A파트 최신 기획 정합성 보완 작업 명세서」A-10~A-15
+대상 문서: 「개발 A파트 최신 기획 정합성 보완 작업 명세서」A-10~A-15 + 「개발 A 추가 작업 명세서」A-16~A-20
 
-> 이 문서는 A-10~A-15 작업 전용입니다. A-01~A-11(구 번호)까지의 이전 라운드 인수인계는
-> `DEV_A_HANDOFF_REPORT.md`를 참고하세요. 두 문서는 서로 다른 작업 사이클을 다룹니다.
+> A-01~A-11(구 번호) 이전 라운드는 `DEV_A_HANDOFF_REPORT.md`를 참고하세요.
 
 ---
 
@@ -20,9 +19,14 @@ Unity 버전: `6000.5.3f1` (`ProjectSettings/ProjectVersion.txt` 기준, 변경 
 | A-13 | SealSystem 회귀 테스트 13종 추가 | ✅ 완료 |
 | A-14 | 타일 노출면 먹선(edge) 오버레이 렌더러 구조 | ✅ 완료(렌더러 구조·연결 슬롯, 아트 자산은 미배선) |
 | A-15 | 월드 렌더링 최적화 점검(P1) | ✅ 점검 완료 — 개발 A 소유 코드에 추가 수정 불필요 |
+| A-16 | v26 배경벽·벽지 전용 Tilemap / 도포율 계약 | ✅ 완료 |
+| A-17 | 전경 Tilemap 충돌 + 런타임 시각 갱신 | ✅ 완료 (`EnsureForegroundCollision`) |
+| A-18 | 새 게임 안전 지표면 스폰 | ✅ 완료 |
+| A-19 | SealSystem·냉기원 v26 보충(벽지≠밀폐) | ✅ 완료 |
+| A-20 | 추가 회귀 테스트 + 인수인계 | ✅ 완료 |
+| v27 | 동굴 공동 지표 관통 금지 (`cave_max_height`) | ✅ 완료(가안 12, 실측 튜닝 여지) |
 
-기존 개발 A 회귀 테스트(6/6)는 그대로 유지되고, 위 작업으로 검증 항목이 **8개**로 늘어났습니다
-(`Nyangbingo/Run Dev A Regression Tests` 메뉴 하나로 전부 실행).
+`Nyangbingo/Run Dev A Regression Tests` 메뉴 하나로 **13개** 묶음을 실행합니다.
 
 ---
 
@@ -344,3 +348,144 @@ Unity 에디터 메뉴: `Nyangbingo > Run Dev A Regression Tests`
      `AssetDatabase.LoadAssetAtPath`로 직접 로드해 `CreateDefault()`와 필드 단위로 대조하는 검증을
      추가 — 앞으로 이런 코드/에셋 드리프트가 생기면 회귀 테스트가 즉시 잡아냅니다(완료 조건 1
      "설정 에셋과 `CreateDefault()` 모두 동일한 깊이값 사용"을 문자 그대로 검사).
+
+---
+
+## 12. A-16~A-20 추가 작업 (v26 배경벽·충돌·안전 스폰)
+
+### 12.1 배경 타일 ID 정책 (별칭)
+
+- 런타임 저장/생성 ID: `bg_dirt` / `bg_stone` / `bg_deep` (기존 타일 에셋 호환)
+- 공식 기획 ID: `t_bg_dirt` / `t_bg_stone` / `t_bg_deep` → `TileIdAlias.ToCanonical`으로 동일 타일 해석
+- 플레이어 벽지: `wallpaper` (`seals=0`, 밀폐 경계 아님)
+- **저장 파일의 `bg_*`를 일괄 문자열 교체하지 않음**
+
+### 12.2 TileData 이중 상태
+
+```csharp
+hardness / isNaturalTerrain / elementType          // 전경
+backgroundElementType                              // 현재 배경 (air / bg_* / wallpaper)
+naturalBackgroundElementType                       // 벽지 제거 시 복원 기준
+```
+
+| 규칙 | 동작 |
+|------|------|
+| 지하 자연 고체 | 전경 + 지층 자연 배경 동시 생성 |
+| 자연 동굴 | 전경·배경 모두 비움 (`CreateAir`) |
+| 채굴 | 전경만 제거, 기존 배경 유지 |
+| 벽지 설치 | 빈 배경 칸에만 (`TryPlaceBackground`) |
+| 벽지 제거 | `naturalBackground` 복원 (`TryRemoveBackground`) |
+
+### 12.3 공용 인터페이스 (신규)
+
+```csharp
+// Nyangbingo.Core.WorldContracts
+public interface IWallpaperCoverageSource
+{
+    float GetCoveragePercent(Vector3Int sealCoreCell);
+    bool IsCoverageComplete(Vector3Int sealCoreCell); // 정확히 100% + 밀폐 구역일 때만 true
+    event Action WallpaperCoverageChanged;
+}
+```
+
+접근: `WorldSessionController.WallpaperCoverage`  
+구현: `WallpaperCoverageService` (SealSystem 코어 창 리전 재사용, 이벤트 기반 무효화)
+
+확정: 도포율은 `SealPercent`/`TemperaturePercent`/냉기원 상한을 **변경하지 않음**.  
+개발 B는 물단지·얼음 항아리 지속시간에만 +25% 적용(얼음 저장고·빙정 냉각로 제외).
+
+### 12.4 저장
+
+- `SaveGame.backgroundChanges` (`List<TileChangeRecord>`) — 전경 `tileChanges`와 분리
+- 구버전: `backgroundChanges == null` → 로드 허용(`NormalizeAfterLoad`가 빈 목록으로 채움)
+- 손상된 배경 이력 실패 시 라이브/화면 부분 적용 금지(전경과 동일 트랜잭션)
+
+### 12.5 MainGame Collider 구성값 (개발 B 배선용)
+
+`TilemapRenderer.EnsureForegroundCollision()`이 런타임에 구성합니다(씬 생성기 미수정).
+
+| 대상 | 컴포넌트 | 설정 |
+|------|----------|------|
+| Foreground Tilemap GO | `TilemapCollider2D` | `usedByComposite = true` |
+| Foreground Tilemap GO | `Rigidbody2D` | `bodyType = Static` |
+| Foreground Tilemap GO | `CompositeCollider2D` | `geometryType = Polygons` |
+| Background Tilemap GO | Collider 없음 | 있으면 제거 |
+
+### 12.6 개발 B가 제거해야 할 임시 코드
+
+| 위치 | 내용 |
+|------|------|
+| `MainGamePlayerController.MoveWithTileCollision` | TileService 직접 읽기 임시 충돌 → Rigidbody2D 이동으로 교체 |
+| `MainGamePlayerController.ApplyGeneratedWorldSpawn` / `TryFindSafeSurfaceSpawn` | 지표 재탐색 보정 → `LastResult.spawnPoint` 직접 사용 |
+
+개발 A는 위 파일을 **수정하지 않았습니다**.
+
+### 12.7 수정 파일 목록 (A-16~A-20)
+
+```text
+MapGenerator.cs (TileData/WorldTileTypes/TileIdAlias, 생성 규칙, 안전 스폰)
+TileService.cs (채굴 BG 유지, TryPlace/RemoveBackground, backgroundChanges)
+TilemapRenderer.cs (이중 렌더, alias, EnsureForegroundCollision)
+WallpaperCoverageService.cs (신규)
+SealSystem.cs (TryGetCoreRegionSnapshot)
+WorldContracts.cs (IWallpaperCoverageSource)
+SaveGame.cs (backgroundChanges)
+WorldSessionController.cs (배경 저장/로드, WallpaperCoverage)
+NyangbingoDevARegressionTests.cs (배경·충돌·스폰 묶음)
+DEV_A_WORLD_SPEC_SYNC_HANDOFF.md
+```
+
+**개발 A가 건드리지 않음:** CSV/v26 SO, `MainGamePlayerController`, `MainGameEnvironmentState`,
+`NyangbingoMainGameSceneCreator`, Dev B Draft 브랜치 병합 없음.
+
+### 12.8 회귀 테스트 (추가 3묶음 → 총 12, v27로 13)
+
+10. 배경·벽지 규칙  
+11. 전경 충돌·렌더 동기화  
+12. 지표면 안전 스폰  
+13. 동굴 지표 관통 금지 (`cave_max_height`)
+
+전부 통과 시: `[Nyangbingo] Dev A 회귀 테스트 전체 통과 (13/13).`
+
+---
+
+## 13. v27. 동굴 공동 지표 관통 금지
+
+### 배경
+
+②동굴 패스의 2D 펄린 공동이 세로로 이어지면 맵 중앙에 지표를 뚫는 거대 수직 구멍이 생길 수 있음(개발 실측).  
+지하 공동 자체는 낮=지하 채굴 코어 루프에 필요하지만, **지표(표면 타일, y≈`surface_y`) 관통은 금지**.
+
+### 정본 파라미터
+
+| 키 | 가안 | 단위 | 비고 |
+|---|---|---|---|
+| `cave_max_height` | **12** | tile | 공동(4방 연결 성분) 하나의 최대 세로 길이. 화면 세로(~34)의 약 1/3. 개발 A가 실측 튜닝 후 globals에 확정 |
+
+- CSV: `Assets/Data/CSV/globals.csv`
+- SO: `Assets/Data/SO/Globals/cave_max_height.asset` + `GameDataCatalog.globals`
+- 런타임 생성: `WorldGenerationConfig.caveMaxHeight` / `CaveMaxHeight` (맵 생성기가 config를 읽음)
+
+### 생성 규칙 (`MapGenerator.CarveCaves`)
+
+1. 후보 표시 시 `y < surfaceHeights[x]` 만 허용 → **표면 타일(`surfaceY`)과 그 위는 절대 뚫지 않음**.
+2. 후보의 4방 연결 성분마다 세로 span이 `cave_max_height`를 넘으면 **심층(낮은 y) 쪽만** 남기고 지표 쪽은 되메움.
+3. **시작 지점**은 지표 안전지대 고정(A-18). 입구는 `CarveSpawnEntrance`로 **얕은 6칸**만 개방.
+4. **연결 통로**(`CarveConnectivityShafts`)는 검증용으로 유지하되, 예전처럼 입구 열 **전깊이 수직 + +자 3열 우물**을 만들지 않는다 → **1열×2칸 계단식 좁은 통로**(경유점 jog).
+5. **Top Safety Zone**: `caveSurfaceCrustThickness`(기본 2) + 기획 `surface_y=20` 절대 상단 밴드 Hard Fill.
+6. **`PostProcessCaveCavities`**: **Pass 4·연결 통로 이후 최후반**에 실행. 8방 BFS → 비보호 공기만 허리 Hard Cut. 입구·연결 통로는 `protectedAir`로 면제.
+7. **연결 통로 제약**: 지표 crust 미개척, 연속 수직 ≤ `cave_max_height`, 초과 시 가로 jog.
+
+### 수정 파일 (v27 + 우물 제거)
+
+```text
+MapGenerator.cs (CarveCaves Top Safety / 8-conn / waist seal / column ceiling)
+WorldGenerationConfig.cs / .asset (caveMaxHeight, caveSurfaceCrustThickness)
+globals.csv / cave_max_height.asset / GameDataCatalog
+NyangbingoDevARegressionTests.cs (Pass2 + 전체 파이프라인 거대 우물 검사)
+DEV_A_WORLD_SPEC_SYNC_HANDOFF.md
+```
+
+### 튜닝 메모
+
+가안 12 + crust 2 + 연결 통로 우물 제거. 인스펙터에서 `caveMaxHeight` / `caveSurfaceCrustThickness` 조절. **맵 중앙 거대 구멍**이 다시 보이면 연결 통로가 +자/동일 x 수직으로 되돌아갔는지 확인.

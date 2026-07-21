@@ -21,7 +21,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestV29InventoryLayoutContract();
         TestV29InventoryArtBindings();
         TestTilePaletteContract();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (4/4).");
+        TestWallpaperCoolingDurationMultiplier();
+        TestWallpaperRemovalDropContract();
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (6/6).");
     }
 
     private static void TestV29InventoryLayoutContract()
@@ -34,6 +36,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
             $"v29 inventory grid must have 5 rows (actual {MainGameCraftingUiController.InventoryGridRows}).");
         Require(Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f),
             $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
+        Require(MainGameCraftingUiController.SupportsDebugInstantCompletion,
+            "The Editor must expose the crafting and smelting instant-completion test control.");
 
         var inventory = new Inventory(_ => null);
         Require(inventory.Capacity == 50 && inventory.Slots.Count == 50,
@@ -83,9 +87,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             ItemCategory.Material, ItemMvpScope.A);
         Require(MainGameCraftingUiController.IsInventoryItemPlaceable(runtimeDirt, null),
             "Mined foreground tiles must be placeable directly from the inventory without a recipe.");
-        Require(MainGameTilePaletteController.RequiresDevATileIntegration("wallpaper") &&
+        Require(!MainGameTilePaletteController.RequiresDevATileIntegration("wallpaper") &&
                 !MainGameTilePaletteController.RequiresDevATileIntegration("insul_wall"),
-            "Wallpaper must stay isolated until the Dev A background Tilemap contract is available.");
+            "The tile palette still blocks the merged Dev A wallpaper placement contract.");
+        Require(MainGameTilePaletteController.SupportsPalettePlacement("wallpaper") &&
+                MainGameTilePaletteController.SupportsPalettePlacement(WorldTileTypes.Dirt) &&
+                !MainGameTilePaletteController.SupportsPalettePlacement("workbench"),
+            "The tile palette must route wallpaper and foreground tiles, but not regular buildings.");
     }
 
     private static void TestIceStorageSealCoreLifecycle()
@@ -137,6 +145,64 @@ public static class NyangbingoDevBIntegrationRegressionTests
             UnityEngine.Object.DestroyImmediate(config);
             UnityEngine.Object.DestroyImmediate(host);
             UnityEngine.Object.DestroyImmediate(rendererHost);
+        }
+    }
+
+    private static void TestWallpaperCoolingDurationMultiplier()
+    {
+        var runtime = new CoolingSourceRuntime(null);
+        Require(runtime.TryRegister("water_jar_test", CoolingSourceRuntime.WaterJarId),
+            "The wallpaper duration test could not register a water jar.");
+        runtime.Tick(225f, 1.25f);
+        Require(runtime.ActiveCount == 0 && !runtime.TryGetRemaining("water_jar_test", out _),
+            "A 100% wallpaper-covered water jar must expire after exactly 225 seconds.");
+
+        runtime = new CoolingSourceRuntime(null);
+        Require(runtime.TryRegister("water_jar_control", CoolingSourceRuntime.WaterJarId),
+            "The wallpaper duration control could not register a water jar.");
+        runtime.Tick(180f);
+        Require(runtime.ActiveCount == 0 && !runtime.TryGetRemaining("water_jar_control", out _),
+            "An uncovered water jar must retain its exact 180-second duration.");
+    }
+
+    private static void TestWallpaperRemovalDropContract()
+    {
+        var wallpaper = ItemDefinition.CreateRuntime(WorldTileTypes.Wallpaper, "Wallpaper", 99,
+            ItemCategory.Material, ItemMvpScope.A);
+        var catalog = GameDataCatalog.CreateRuntime(wallpaper);
+        var tiles = new TileData[1, 1];
+        tiles[0, 0] = TileData.CreateAir();
+        var service = new TileService(tiles, null, catalog, 1);
+        ItemDefinition droppedItem = null;
+        var droppedAmount = 0;
+        var droppedPosition = Vector2.zero;
+
+        void CaptureDrop(ItemDefinition item, int amount, Vector2 position)
+        {
+            droppedItem = item;
+            droppedAmount = amount;
+            droppedPosition = position;
+        }
+
+        WorldItemDropRequest.Requested += CaptureDrop;
+        try
+        {
+            Require(service.TryPlaceWallpaper(Vector3Int.zero),
+                "The wallpaper removal test could not place its wallpaper fixture.");
+            Require(service.TryRemoveWallpaper(Vector3Int.zero),
+                "A player-placed wallpaper could not be removed.");
+            Require(droppedItem == wallpaper && droppedAmount == 1,
+                "Removing wallpaper must return exactly one wallpaper item as a world drop.");
+            Require(droppedPosition == new Vector2(.5f, .5f),
+                $"The recovered wallpaper must drop at the removed cell center (actual {droppedPosition}).");
+            Require(!service.GetBackgroundState(Vector3Int.zero).HasWallpaper,
+                "Removing wallpaper did not restore the original background state.");
+        }
+        finally
+        {
+            WorldItemDropRequest.Requested -= CaptureDrop;
+            UnityEngine.Object.DestroyImmediate(catalog);
+            UnityEngine.Object.DestroyImmediate(wallpaper);
         }
     }
 
