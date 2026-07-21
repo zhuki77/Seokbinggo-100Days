@@ -55,7 +55,9 @@ namespace Nyangbingo.World
             // remain removable with the default claw just like the natural block it came from.
             { WorldTileTypes.Stone, 1 }, { WorldTileTypes.StoneMid, 2 }, { WorldTileTypes.IronOre, 2 },
             { WorldTileTypes.CopperOre, 2 }, { WorldTileTypes.IceShard, 2 }, { WorldTileTypes.RuinWall, 2 },
-            { WorldTileTypes.StoneDeep, 3 }, { WorldTileTypes.IceSteelOre, 3 }, { WorldTileTypes.FrostEssence, 3 }
+            { WorldTileTypes.StoneDeep, 3 }, { WorldTileTypes.IceSteelOre, 3 }, { WorldTileTypes.FrostEssence, 3 },
+            // Product insulation boundaries are foreground tiles, not floor-standing objects.
+            { "insul_wall", 1 }, { "door", 1 }, { "roof", 1 }, { "iron_insul_wall", 2 }
         };
 
         public int Width { get; }
@@ -104,6 +106,14 @@ namespace Nyangbingo.World
             ApplyBackgroundVisual(cell, cleared.HasBackground ? cleared.backgroundElementType : null);
             RefreshEdgeOverlayAround(cell);
             renderer?.NotifyForegroundCollisionDirty();
+
+#if UNITY_EDITOR
+            if (renderer != null)
+                Debug.Log($"[Nyangbingo] Mining cell cleared: cell={cell}, " +
+                          $"dataAir={tiles[cell.x, cell.y].IsAir}, " +
+                          $"foregroundTile={renderer.HasForegroundTile(cell)}, " +
+                          $"foregroundCollision={renderer.HasForegroundCollision(cell)}");
+#endif
 
             if (TryResolveDrop(minedElementType, out var item, out var amount))
             {

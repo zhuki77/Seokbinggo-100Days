@@ -43,6 +43,95 @@ namespace Nyangbingo.UI
         }
     }
 
+    [RequireComponent(typeof(Image))]
+    public sealed class RuntimeDayCounterScrollPresenter : MonoBehaviour
+    {
+        public const float DeliveredPixelToLogicalScale = .82f;
+        private enum PlaybackPhase { Opening, Holding, Closing }
+
+        [Min(.01f)] [SerializeField] private float frameSeconds = .08f;
+        private Sprite[] frames = Array.Empty<Sprite>();
+        private Image image;
+        private PlaybackPhase phase;
+        private int frameIndex;
+        private float remaining;
+        private int pendingDaysRemaining;
+
+        public int DisplayedDaysRemaining { get; private set; }
+        public bool IsAnimating => phase != PlaybackPhase.Holding;
+        public bool IsFullyOpen => phase == PlaybackPhase.Holding;
+
+        public void ConfigureForRuntime(IReadOnlyList<Sprite> sourceFrames, int initialDaysRemaining)
+        {
+            image = GetComponent<Image>();
+            var validFrames = new List<Sprite>();
+            if (sourceFrames != null)
+                for (var index = 0; index < sourceFrames.Count; index++)
+                    if (sourceFrames[index] != null) validFrames.Add(sourceFrames[index]);
+            frames = validFrames.ToArray();
+            DisplayedDaysRemaining = pendingDaysRemaining = Mathf.Max(0, initialDaysRemaining);
+            frameIndex = 0;
+            phase = frames.Length > 1 ? PlaybackPhase.Opening : PlaybackPhase.Holding;
+            remaining = frameSeconds;
+            ApplyFrame();
+        }
+
+        public void SetDaysRemaining(int daysRemaining)
+        {
+            var clamped = Mathf.Max(0, daysRemaining);
+            if (clamped == pendingDaysRemaining) return;
+            pendingDaysRemaining = clamped;
+            if (phase == PlaybackPhase.Holding)
+            {
+                phase = PlaybackPhase.Closing;
+                frameIndex = Mathf.Max(0, frames.Length - 1);
+                remaining = frameSeconds;
+            }
+        }
+
+        private void Update()
+        {
+            if (frames.Length <= 1 || phase == PlaybackPhase.Holding) return;
+            remaining -= Time.unscaledDeltaTime;
+            while (remaining <= 0f && phase != PlaybackPhase.Holding)
+            {
+                if (phase == PlaybackPhase.Opening)
+                {
+                    if (frameIndex < frames.Length - 1) frameIndex++;
+                    else if (DisplayedDaysRemaining != pendingDaysRemaining)
+                        phase = PlaybackPhase.Closing;
+                    else
+                        phase = PlaybackPhase.Holding;
+                }
+                else
+                {
+                    if (frameIndex > 0) frameIndex--;
+                    else
+                    {
+                        DisplayedDaysRemaining = pendingDaysRemaining;
+                        phase = PlaybackPhase.Opening;
+                    }
+                }
+                ApplyFrame();
+                remaining += frameSeconds;
+            }
+        }
+
+        private void ApplyFrame()
+        {
+            if (image == null || frames.Length == 0)
+            {
+                if (image != null) image.enabled = false;
+                return;
+            }
+            image.enabled = true;
+            image.sprite = frames[Mathf.Clamp(frameIndex, 0, frames.Length - 1)];
+            // Aseprite sprites use 16 PPU while the HUD treats delivered pixels as logical UI pixels.
+            // Image.SetNativeSize() divides by that PPU and inflates the scroll across most of the screen.
+            image.rectTransform.sizeDelta = image.sprite.rect.size * DeliveredPixelToLogicalScale;
+        }
+    }
+
     /// <summary>Delivered pixel UI art adapter for runtime-created and scene-authored buttons.</summary>
     public static class RuntimeUiButtonArt
     {
@@ -66,7 +155,9 @@ namespace Nyangbingo.UI
                 highlightedSprite = frames[1],
                 pressedSprite = frames[1],
                 selectedSprite = frames[1],
-                disabledSprite = frames[0]
+                // The delivered hover frame is the darkened variant. Reuse it for disabled
+                // controls so unavailable actions remain visibly distinct without extra art.
+                disabledSprite = frames[1]
             };
         }
 

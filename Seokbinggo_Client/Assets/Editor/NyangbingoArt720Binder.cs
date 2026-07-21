@@ -237,8 +237,9 @@ public static class NyangbingoArt720Binder
                     "Assets/Art/UI/Common/codex_card.aseprite", StringComparison.Ordinal))
                 failures.Add("codexCard: delivered Sprite reference missing");
         }
-        if (environmentCatalog == null || environmentCatalog.TitleFrames.Count != 10)
-            failures.Add($"title_on: expected 10 frames, actual {environmentCatalog?.TitleFrames.Count ?? 0}");
+        if (environmentCatalog == null || environmentCatalog.DayCounterScrollFrames.Count != 10)
+            failures.Add($"day-counter scroll: expected 10 frames, " +
+                         $"actual {environmentCatalog?.DayCounterScrollFrames.Count ?? 0}");
         if (environmentCatalog == null || environmentCatalog.TitleBackground == null)
             failures.Add("title background: keyvisual-day Sprite reference missing");
         if (failures.Count > 0)
@@ -247,8 +248,8 @@ public static class NyangbingoArt720Binder
                            string.Join("\n- ", failures));
             return;
         }
-        Debug.Log("[Nyangbingo] Shell UI art validation passed: title background 1/1, " +
-                  "title 10/10, shell icons 8/8, buttons 8/8, codex card 1/1.");
+        Debug.Log("[Nyangbingo] Shell UI art validation passed: title background 1/1, day-counter scroll 10/10, " +
+                  "shell icons 8/8, buttons 8/8, codex card 1/1.");
     }
 
     private static void BindOnFirstImport()

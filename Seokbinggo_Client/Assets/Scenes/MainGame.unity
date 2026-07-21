@@ -12320,6 +12320,7 @@ MonoBehaviour:
   - {fileID: 1943676607}
   detailText: {fileID: 1861014005}
   gameShell: {fileID: 1841315027}
+  gameplayArtCatalog: {fileID: 0}
 --- !u!114 &1841315029
 MonoBehaviour:
   m_ObjectHideFlags: 0

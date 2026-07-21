@@ -569,23 +569,8 @@ public static class NyangbingoMainGameSceneCreator
         codexPanel.SetActive(false);
 
         var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel", new Color(.02f, .035f, .05f, 1f));
-        var titleLabel = CreateMenuText(titlePanel.transform, "Title", "석빙고 100일", new Vector2(0f, 180f),
+        var titleLabel = CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(0f, 180f),
             new Vector2(620f, 80f), 48);
-        if (environmentArtCatalog != null && environmentArtCatalog.TitleFrames.Count > 0)
-        {
-            titleLabel.gameObject.SetActive(false);
-            var titleArtObject = new GameObject("TitleArt", typeof(RectTransform));
-            titleArtObject.transform.SetParent(titlePanel.transform, false);
-            var titleArt = titleArtObject.AddComponent<Image>();
-            titleArt.preserveAspect = true;
-            titleArt.raycastTarget = false;
-            var titleRect = titleArt.rectTransform;
-            titleRect.anchorMin = titleRect.anchorMax = titleRect.pivot = new Vector2(.5f, .5f);
-            titleRect.anchoredPosition = new Vector2(0f, 210f);
-            titleRect.sizeDelta = new Vector2(512f, 192f);
-            titleArtObject.AddComponent<RuntimeUiSpriteAnimator>()
-                .ConfigureForScene(environmentArtCatalog.TitleFrames.ToArray(), .1f);
-        }
         var titleContinue = CreateMenuButton(titlePanel.transform, "Continue", "이어하기",
             new Vector2(0f, 60f), new Vector2(300f, 58f));
         var titleNew = CreateMenuButton(titlePanel.transform, "NewGame", "새 게임",
@@ -597,20 +582,23 @@ public static class NyangbingoMainGameSceneCreator
         CreateMenuText(pausePanel.transform, "Title", "일시정지", new Vector2(0f, 250f),
             new Vector2(500f, 68f), 40);
         var resumeButton = CreateMenuButton(pausePanel.transform, "Resume", "계속하기",
-            new Vector2(0f, 175f), new Vector2(280f, 52f));
+            new Vector2(0f, 96f), new Vector2(280f, 52f));
         var saveButtons = new Button[SaveManager.SlotCount];
         var loadButtons = new Button[SaveManager.SlotCount];
         for (var index = 0; index < SaveManager.SlotCount; index++)
         {
-            saveButtons[index] = CreateMenuButton(pausePanel.transform, $"Save_{index + 1}", $"저장 {index + 1}",
-                new Vector2(-220f + index * 220f, 90f), new Vector2(190f, 50f));
+            saveButtons[index] = CreateMenuButton(pausePanel.transform, $"Save_{index + 1}",
+                index == 0 ? "저장" : $"구형 저장 {index + 1}",
+                new Vector2(0f, 32f), new Vector2(280f, 52f));
             loadButtons[index] = CreateMenuButton(pausePanel.transform, $"Load_{index + 1}", $"불러오기 {index + 1}",
                 new Vector2(-220f + index * 220f, 25f), new Vector2(190f, 50f));
+            if (index > 0) saveButtons[index].gameObject.SetActive(false);
+            loadButtons[index].gameObject.SetActive(false);
         }
         var settingsButton = CreateMenuButton(pausePanel.transform, "Settings", "설정",
-            new Vector2(0f, -65f), new Vector2(280f, 52f));
+            new Vector2(0f, -32f), new Vector2(280f, 52f));
         var returnTitleButton = CreateMenuButton(pausePanel.transform, "ReturnTitle", "타이틀로",
-            new Vector2(0f, -130f), new Vector2(280f, 52f));
+            new Vector2(0f, -96f), new Vector2(280f, 52f));
         var statusText = CreateMenuText(pausePanel.transform, "Status", "", new Vector2(0f, -230f),
             new Vector2(760f, 48f), 20);
 
@@ -672,7 +660,7 @@ public static class NyangbingoMainGameSceneCreator
         hud.ConfigureForScene(catalog, bootstrap, runtimeServices, temperature, seal, day, claw, playerHealth,
             playerController.GetComponent<Health>(), Object.FindAnyObjectByType<BossManager>(), bossStatus,
             deathPanel, slots, slotIcons, itemArtCatalog, temperatureArt, gameplayArtCatalog,
-            craftingProgressPanel, craftingText, craftingFill);
+            craftingProgressPanel, craftingText, craftingFill, environmentArtCatalog);
         EditorUtility.SetDirty(codexController);
         EditorUtility.SetDirty(shell);
         EditorUtility.SetDirty(shellUi);

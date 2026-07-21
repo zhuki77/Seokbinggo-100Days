@@ -17,12 +17,26 @@ namespace Nyangbingo.UI
     {
         private const float LegacyHudToLogicalScale = .25f;
         public const int LegacyInventoryBarSlotCount = 12;
+        public const bool ProductHudNarrativeTextEnabled = false;
+        public const bool ProductBossHealthTextEnabled = false;
+        public const float BossHealthBarBelowClockY = -50f;
+        public const float BossFleeRollSeconds = .45f;
+        public const int DayCounterFontSize = 12;
+        public const int DayCounterClockFontSize = 7;
+        public const float DayCounterExpandedHeight = 32f;
+        public const float DayCounterClockGap = 1f;
+        public const float BaekjungDayCounterBorderPixels = 1f;
+        public const float SealDiagnosticHoldSeconds = .6f;
+        private const float SealLeakMarkerSeconds = 1.4f;
+        private const float SealLeakMarkerVisualYOffset = .5f;
+        private const float SealDeltaDisplaySeconds = 1.15f;
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
         [SerializeField] private Text temperatureText;
         [SerializeField] private Image temperatureArt;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
+        [SerializeField] private EnvironmentArtCatalog environmentArtCatalog;
         [SerializeField] private Text sealText;
         [SerializeField] private Text dayText;
         [SerializeField] private Text clawText;
@@ -40,6 +54,7 @@ namespace Nyangbingo.UI
         [SerializeField] private ItemArtCatalog itemArtCatalog;
         private PlayerInventory inventory;
         private GameObject bossHealthBarRoot;
+        private float bossFleeRollRemaining;
         private readonly List<Image> bossHealthBarFills = new List<Image>();
         private readonly List<float> bossHealthSegmentWidths = new List<float>();
         private readonly List<RectTransform> bossHealthSegmentRects = new List<RectTransform>();
@@ -93,6 +108,31 @@ namespace Nyangbingo.UI
         private float tearAnimationRemaining;
         private Vector2 dayTextDefaultPosition;
         private bool hasDayTextDefaultPosition;
+        private RectTransform dayCounterScrollRect;
+        private Vector2 dayCounterScrollDefaultPosition;
+        private RuntimeDayCounterScrollPresenter dayCounterScrollPresenter;
+        private GameObject baekjungDayCounterBorder;
+        private bool baekjungHudActive;
+        private bool baekjungHudSuppressedForBoss;
+        private Text dayClockText;
+        private Image dayNightClockArt;
+        private GameObject nightSpawnLockRoot;
+        private Vector2 dayClockDefaultPosition;
+        private Vector2 bossStatusDefaultPosition;
+        private int bossStatusDefaultFontSize;
+        private bool hasBossStatusDefaultLayout;
+        private Canvas hudCanvas;
+        private float sealDiagnosticHold;
+        private bool sealDiagnosticTriggered;
+        private LineRenderer sealLeakMarker;
+        private Material sealLeakMarkerMaterial;
+        private readonly Vector3[] sealLeakMarkerCorners = new Vector3[4];
+        private float sealLeakMarkerRemaining;
+        private Text sealDeltaText;
+        private float sealDeltaRemaining;
+        private float lastSealPercent;
+        private bool hasLastSealPercent;
+        private static MainGameHudController activeHud;
 
         public int BoundSlotCount => inventorySlotTexts?.Length ?? 0;
         public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
@@ -100,12 +140,14 @@ namespace Nyangbingo.UI
         public bool HasPlayerStatusBindings => playerHealth != null && playerHealthText != null && deathPanel != null;
         public bool HasCraftingProgressBindings => craftingProgressPanel != null && craftingProgressText != null &&
                                                    craftingProgressFill != null;
+        public static bool BlocksWorldPrimaryInput => activeHud != null && activeHud.IsPointerOverSealGauge();
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, Text temperature, Text seal, Text day, Text claw, Text healthText,
             Health health, BossManager manager, Text bossText, GameObject playerDeathPanel, Text[] slots,
             Image[] icons, ItemArtCatalog artCatalog, Image temperatureImage, GameplayArtCatalog gameplayArt,
-            GameObject craftingPanel, Text craftingText, Image craftingFill)
+            GameObject craftingPanel, Text craftingText, Image craftingFill,
+            EnvironmentArtCatalog environmentArt = null)
         {
             gameDataCatalog = catalog;
             bootstrap = mainBootstrap;
@@ -124,6 +166,7 @@ namespace Nyangbingo.UI
             itemArtCatalog = artCatalog;
             temperatureArt = temperatureImage;
             gameplayArtCatalog = gameplayArt;
+            environmentArtCatalog = environmentArt;
             craftingProgressPanel = craftingPanel;
             craftingProgressText = craftingText;
             craftingProgressFill = craftingFill;
@@ -131,6 +174,7 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
+            activeHud = this;
             if (bootstrap == null || runtimeServices == null || gameDataCatalog == null ||
                 !runtimeServices.Initialize())
             {
@@ -145,12 +189,12 @@ namespace Nyangbingo.UI
             alertCamera = Camera.main;
             HideLegacyInventoryBar();
             playerController ??= FindAnyObjectByType<MainGamePlayerController>();
-            var canvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>();
-            if (canvas != null)
+            hudCanvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>();
+            if (hudCanvas != null)
             {
-                var uiResolution = canvas.GetComponent<MainGameUiResolutionController>() ??
-                                   canvas.gameObject.AddComponent<MainGameUiResolutionController>();
-                uiResolution.ConfigureForRuntime(canvas);
+                var uiResolution = hudCanvas.GetComponent<MainGameUiResolutionController>() ??
+                                   hudCanvas.gameObject.AddComponent<MainGameUiResolutionController>();
+                uiResolution.ConfigureForRuntime(hudCanvas);
             }
             var mainCamera = Camera.main;
             if (mainCamera != null)
@@ -175,6 +219,8 @@ namespace Nyangbingo.UI
                 playerHealth.Died += HandlePlayerDied;
             }
             GameEvents.OnSealChanged += RefreshStatus;
+            GameEvents.OnTilePlaced += HandleSealAffectingPlacement;
+            GameEvents.OnPlacedObjectBuilt += HandleSealAffectingPlacement;
             if (deathPanel != null)
             {
                 var deathLabel = deathPanel.GetComponentInChildren<Text>(true);
@@ -184,9 +230,23 @@ namespace Nyangbingo.UI
             BuildBossHealthBar();
             if (dayText != null)
             {
+                dayText.verticalOverflow = VerticalWrapMode.Overflow;
+                dayText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                dayText.alignment = TextAnchor.MiddleCenter;
+                dayText.fontSize = DayCounterFontSize;
+                dayText.color = new Color32(0x3A, 0x26, 0x30, 0xFF);
+                var dayRect = dayText.rectTransform;
+                dayRect.localScale = Vector3.one;
+                dayRect.sizeDelta = new Vector2(96f, DayCounterExpandedHeight);
                 dayTextDefaultPosition = dayText.rectTransform.anchoredPosition;
                 hasDayTextDefaultPosition = true;
             }
+            BuildDayCounterScroll();
+            encounterCoordinator = FindAnyObjectByType<MainGameEncounterCoordinator>();
+            baekjungHudActive = encounterCoordinator?.BaekjungScheduler?.IsActive == true;
+            baekjungHudSuppressedForBoss = bossManager?.IsBossActive == true;
+            GameEvents.OnBaekjungStart += HandleBaekjungStarted;
+            GameEvents.OnBaekjungEnd += HandleBaekjungEnded;
             if (bossManager != null)
             {
                 bossManager.BossStarted += HandleBossStarted;
@@ -194,6 +254,9 @@ namespace Nyangbingo.UI
             }
             BuildGoalBadges();
             BuildStatusArtHud();
+            BuildSealFeedbackHud();
+            lastSealPercent = bootstrap.SealSystem?.SealPercent ?? 0f;
+            hasLastSealPercent = bootstrap.SealSystem != null;
             BuildAlertOverlay();
             RefreshInventory();
             RefreshStatus();
@@ -219,13 +282,19 @@ namespace Nyangbingo.UI
             damageWarningRemaining = Mathf.Max(0f, damageWarningRemaining - Time.unscaledDeltaTime);
             bellWarningRemaining = Mathf.Max(0f, bellWarningRemaining - Time.unscaledDeltaTime);
             bossEntranceArtRemaining = Mathf.Max(0f, bossEntranceArtRemaining - Time.unscaledDeltaTime);
+            bossFleeRollRemaining = Mathf.Max(0f, bossFleeRollRemaining - Time.unscaledDeltaTime);
             saveIndicatorRemaining = Mathf.Max(0f, saveIndicatorRemaining - Time.unscaledDeltaTime);
             tearAnimationRemaining = Mathf.Max(0f, tearAnimationRemaining - Time.unscaledDeltaTime);
+            sealLeakMarkerRemaining = Mathf.Max(0f, sealLeakMarkerRemaining - Time.unscaledDeltaTime);
+            sealDeltaRemaining = Mathf.Max(0f, sealDeltaRemaining - Time.unscaledDeltaTime);
+            UpdateSealDiagnosticInput();
+            RefreshSealFeedbackVisuals();
             if (bossEntranceArtRoot != null && bossEntranceArtRemaining <= 0f)
                 bossEntranceArtRoot.SetActive(false);
             RefreshBellRopeDetection();
             RefreshAlertOverlay();
             RefreshStatus();
+            SynchronizeSealPercentBaseline();
             if (deathPanel != null && playerController != null && deathPanel.activeSelf != playerController.IsDead)
                 deathPanel.SetActive(playerController.IsDead);
         }
@@ -233,14 +302,29 @@ namespace Nyangbingo.UI
         private void RefreshStatus()
         {
             if (bootstrap == null || runtimeServices == null) return;
-            if (temperatureText != null) temperatureText.text = $"체온 {runtimeServices.PlayerTemperature.Current:0.0}";
+            if (temperatureText != null) temperatureText.text = $"{runtimeServices.PlayerTemperature.Current:0.0}";
             RefreshTemperatureArt();
             if (sealText != null)
-                sealText.text = $"석빙고 {runtimeServices.PlayerTemperature.EffectiveCoolingPercent:0}%";
-            if (dayText != null) dayText.text = $"D-{bootstrap.TimeService.DaysRemaining}";
-            if (clawText != null) clawText.text = $"발톱 T{ResolveClawTier()}";
+            {
+                sealText.text = string.Empty;
+                sealText.gameObject.SetActive(false);
+            }
+            if (dayText != null)
+            {
+                dayCounterScrollPresenter?.SetDaysRemaining(bootstrap.TimeService.DaysRemaining);
+                var displayedDays = dayCounterScrollPresenter != null
+                    ? dayCounterScrollPresenter.DisplayedDaysRemaining
+                    : bootstrap.TimeService.DaysRemaining;
+                dayText.text = $"D-{displayedDays}";
+                dayText.enabled = dayCounterScrollPresenter == null || dayCounterScrollPresenter.IsFullyOpen;
+                if (dayClockText != null)
+                    dayClockText.text = FormatCycleCountdown(bootstrap.TimeService);
+                RefreshDayNightClockArt();
+                RefreshBaekjungDayCounterFeedback();
+            }
+            if (clawText != null) clawText.text = $"T{ResolveClawTier()}";
             if (playerHealthText != null && playerHealth != null)
-                playerHealthText.text = $"HP {playerHealth.Current}/{playerHealth.MaxHealth}";
+                playerHealthText.text = $"{playerHealth.Current}/{playerHealth.MaxHealth}";
             RefreshBossStatus();
             RefreshCraftingProgress();
             RefreshGoalBadges();
@@ -250,7 +334,19 @@ namespace Nyangbingo.UI
         private void BuildStatusArtHud()
         {
             if (statusArtRoot != null) return;
-            if (temperatureArt != null) temperatureArt.enabled = false;
+            if (temperatureArt != null)
+            {
+                var sealRect = temperatureArt.rectTransform;
+                sealRect.SetParent(transform, false);
+                sealRect.anchorMin = sealRect.anchorMax = sealRect.pivot = new Vector2(1f, 1f);
+                sealRect.anchoredPosition = new Vector2(-8f, -8f);
+                sealRect.sizeDelta = new Vector2(17f, 31f);
+                sealRect.localScale = Vector3.one;
+                temperatureArt.preserveAspect = true;
+                // This gauge owns a long-press gesture. Keeping it raycastable makes the EventSystem
+                // consume the primary pointer so the claw cannot attack or mine through the HUD.
+                temperatureArt.raycastTarget = true;
+            }
 
             statusArtRoot = new GameObject("PlayerStatusArt", typeof(RectTransform));
             statusArtRoot.transform.SetParent(transform, false);
@@ -294,6 +390,152 @@ namespace Nyangbingo.UI
 
             hudSaveManager = FindAnyObjectByType<SaveManager>();
             if (hudSaveManager != null) hudSaveManager.Saved += HandleSaved;
+        }
+
+        private void BuildSealFeedbackHud()
+        {
+            if (sealDeltaText != null) return;
+            var deltaRoot = CreateStatusRoot(transform, "SealDeltaFeedback", new Vector2(-29f, -36f),
+                new Vector2(44f, 12f), new Vector2(1f, 1f));
+            sealDeltaText = CreateStatusText(deltaRoot, "Delta", Vector2.zero, deltaRoot.sizeDelta, 9);
+            sealDeltaText.alignment = TextAnchor.MiddleRight;
+            sealDeltaText.fontStyle = FontStyle.Bold;
+            sealDeltaText.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, .9f);
+            sealDeltaText.enabled = false;
+        }
+
+        private void UpdateSealDiagnosticInput()
+        {
+            if (temperatureArt == null || bootstrap?.SealSystem == null || Time.timeScale <= 0f)
+            {
+                ResetSealDiagnosticHold();
+                return;
+            }
+
+            var pointerInside = IsPointerOverSealGauge();
+            if (!Input.GetMouseButton(0) || !pointerInside)
+            {
+                ResetSealDiagnosticHold();
+                return;
+            }
+
+            if (sealDiagnosticTriggered) return;
+            sealDiagnosticHold += Time.unscaledDeltaTime;
+            if (sealDiagnosticHold < SealDiagnosticHoldSeconds) return;
+            sealDiagnosticTriggered = true;
+            ShowRepresentativeSealLeak();
+        }
+
+        private bool IsPointerOverSealGauge()
+        {
+            if (temperatureArt == null || !temperatureArt.isActiveAndEnabled) return false;
+            var eventCamera = hudCanvas != null && hudCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? hudCanvas.worldCamera
+                : null;
+            return RectTransformUtility.RectangleContainsScreenPoint(
+                temperatureArt.rectTransform, Input.mousePosition, eventCamera);
+        }
+
+        private void ResetSealDiagnosticHold()
+        {
+            sealDiagnosticHold = 0f;
+            sealDiagnosticTriggered = false;
+        }
+
+        private void ShowRepresentativeSealLeak()
+        {
+            if (bootstrap?.SealSystem == null || !bootstrap.SealSystem.TryGetCoreLeakCell(out var cell)) return;
+            EnsureSealLeakMarker();
+            bootstrap.WorldRenderer?.GetCellWorldCorners(cell, sealLeakMarkerCorners, .04f);
+            if (bootstrap.WorldRenderer == null)
+            {
+                sealLeakMarkerCorners[0] = new Vector3(cell.x + .04f, cell.y + .04f, 0f);
+                sealLeakMarkerCorners[1] = new Vector3(cell.x + .96f, cell.y + .04f, 0f);
+                sealLeakMarkerCorners[2] = new Vector3(cell.x + .96f, cell.y + .96f, 0f);
+                sealLeakMarkerCorners[3] = new Vector3(cell.x + .04f, cell.y + .96f, 0f);
+            }
+            sealLeakMarker.positionCount = 4;
+            for (var index = 0; index < sealLeakMarkerCorners.Length; index++)
+                sealLeakMarker.SetPosition(
+                    index,
+                    sealLeakMarkerCorners[index] + Vector3.up * SealLeakMarkerVisualYOffset);
+            sealLeakMarkerRemaining = SealLeakMarkerSeconds;
+            sealLeakMarker.enabled = true;
+        }
+
+        private void EnsureSealLeakMarker()
+        {
+            if (sealLeakMarker != null) return;
+            var marker = new GameObject("SealLeakDiagnosticMarker");
+            sealLeakMarker = marker.AddComponent<LineRenderer>();
+            sealLeakMarker.useWorldSpace = true;
+            sealLeakMarker.loop = true;
+            sealLeakMarker.startWidth = .09f;
+            sealLeakMarker.endWidth = .09f;
+            sealLeakMarker.numCornerVertices = 2;
+            sealLeakMarker.sortingOrder = 120;
+            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
+            sealLeakMarkerMaterial = new Material(shader);
+            sealLeakMarker.sharedMaterial = sealLeakMarkerMaterial;
+        }
+
+        private void RefreshSealFeedbackVisuals()
+        {
+            if (sealLeakMarker != null)
+            {
+                sealLeakMarker.enabled = sealLeakMarkerRemaining > 0f;
+                if (sealLeakMarker.enabled)
+                {
+                    var pulse = .55f + .45f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 9f));
+                    var color = new Color(0.15f, 1f, 1f, pulse);
+                    sealLeakMarker.startColor = color;
+                    sealLeakMarker.endColor = color;
+                }
+            }
+
+            if (sealDeltaText == null) return;
+            sealDeltaText.enabled = sealDeltaRemaining > 0f;
+            if (!sealDeltaText.enabled) return;
+            var colorValue = sealDeltaText.color;
+            colorValue.a = Mathf.Clamp01(sealDeltaRemaining / .25f);
+            sealDeltaText.color = colorValue;
+        }
+
+        private void HandleSealAffectingPlacement(Vector3Int _) => RefreshSealDeltaFeedback();
+
+        private void HandleSealAffectingPlacement(string _) => RefreshSealDeltaFeedback();
+
+        private void RefreshSealDeltaFeedback()
+        {
+            var sealSystem = bootstrap?.SealSystem;
+            if (sealSystem == null) return;
+            var current = sealSystem.SealPercent;
+            if (!hasLastSealPercent)
+            {
+                lastSealPercent = current;
+                hasLastSealPercent = true;
+                return;
+            }
+
+            var delta = (current - lastSealPercent) * 100f;
+            lastSealPercent = current;
+            if (Mathf.Abs(delta) < .05f || sealDeltaText == null) return;
+            sealDeltaText.text = FormatSealDelta(delta);
+            sealDeltaText.color = delta > 0f
+                ? new Color(0.3f, 1f, .75f, 1f)
+                : new Color(1f, .4f, .4f, 1f);
+            sealDeltaRemaining = SealDeltaDisplaySeconds;
+        }
+
+        public static string FormatSealDelta(float percentagePoints) =>
+            $"{(percentagePoints >= 0f ? "+" : string.Empty)}{percentagePoints:0.0}%";
+
+        private void SynchronizeSealPercentBaseline()
+        {
+            var sealSystem = bootstrap?.SealSystem;
+            if (sealSystem == null) return;
+            lastSealPercent = sealSystem.SealPercent;
+            hasLastSealPercent = true;
         }
 
         private static RectTransform CreateStatusRoot(Transform parent, string name, Vector2 position,
@@ -417,7 +659,7 @@ namespace Nyangbingo.UI
                     var index = ResolveDescendingGaugeFrame(fuelRatio, fuelFrames.Count);
                     fuelGaugeArt.sprite = fuelFrames[index];
                     fuelGaugeArt.enabled = fuelGaugeArt.sprite != null;
-                    fuelGaugeText.text = $"{Mathf.CeilToInt(remaining)}s";
+                    fuelGaugeText.text = Mathf.CeilToInt(remaining).ToString();
                 }
             }
 
@@ -677,12 +919,13 @@ namespace Nyangbingo.UI
             if (alertOverlayRoot == null) return;
             if (damageWarningRemaining > 0f)
             {
-                SetAlertOverlay(new Color(.72f, .03f, .02f, .2f), "피격!", new Color(1f, .75f, .72f), false);
+                SetAlertOverlay(new Color(.72f, .03f, .02f, .2f), string.Empty,
+                    new Color(1f, .75f, .72f), false);
                 return;
             }
             if (bellWarningRemaining > 0f)
             {
-                SetAlertOverlay(new Color(.72f, .34f, .02f, .1f), "방울 금줄 경보 · 침입자 접근",
+                SetAlertOverlay(new Color(.72f, .34f, .02f, .1f), string.Empty,
                     new Color(1f, .82f, .28f), true);
                 return;
             }
@@ -700,7 +943,7 @@ namespace Nyangbingo.UI
             alertOverlayRoot.gameObject.SetActive(true);
             alertOverlayRoot.SetAsLastSibling();
             alertOverlayTint.color = tint;
-            alertOverlayText.text = message;
+            alertOverlayText.text = string.Empty;
             alertOverlayText.color = textColor;
             var hasDangerArt = gameplayArtCatalog?.DangerIcon != null;
             alertDangerIcon.gameObject.SetActive(showThreatDirection && hasDangerArt);
@@ -786,10 +1029,12 @@ namespace Nyangbingo.UI
             var remaining = Mathf.Clamp(process.RemainingSeconds, 0f, duration);
             var completion = Mathf.Clamp01(1f - remaining / duration);
             ResizeCraftingProgressFill(completion);
-            var itemName = recipe.Output.item != null ? recipe.Output.item.DisplayName : recipe.Id;
             craftingProgressText.text = remaining <= .0001f
-                ? $"{itemName} 제작 완료 · 인벤토리 공간 대기"
-                : $"제작 중 · {itemName}  {remaining:0.0}초";
+                ? "!"
+                : $"{remaining:0.0}";
+            craftingProgressText.color = remaining <= .0001f
+                ? new Color(1f, .4f, .35f, 1f)
+                : Color.white;
         }
 
         private void ResizeCraftingProgressFill(float completion)
@@ -808,11 +1053,6 @@ namespace Nyangbingo.UI
         private void RefreshTemperatureArt()
         {
             if (temperatureArt == null) return;
-            if (statusArtRoot != null)
-            {
-                temperatureArt.enabled = false;
-                return;
-            }
             var frames = gameplayArtCatalog?.TemperatureFrames;
             if (frames == null || frames.Count == 0)
             {
@@ -820,7 +1060,8 @@ namespace Nyangbingo.UI
                 return;
             }
 
-            var index = Mathf.RoundToInt(runtimeServices.PlayerTemperature.Normalized * (frames.Count - 1));
+            var cooling = Mathf.Clamp01(runtimeServices.PlayerTemperature.EffectiveCoolingPercent / 100f);
+            var index = Mathf.RoundToInt((1f - cooling) * (frames.Count - 1));
             temperatureArt.sprite = frames[Mathf.Clamp(index, 0, frames.Count - 1)];
             temperatureArt.enabled = temperatureArt.sprite != null;
         }
@@ -832,20 +1073,39 @@ namespace Nyangbingo.UI
             var health = bossManager != null ? bossManager.ActiveHealth : null;
             if (definition == null || health == null)
             {
-                if (bossHealthBarRoot != null) bossHealthBarRoot.SetActive(false);
+                if (bossHealthBarRoot != null)
+                {
+                    if (bossFleeRollRemaining > 0f && bossHealthBarRoot.activeSelf)
+                    {
+                        var rollScale = CalculateBossFleeRollScale(
+                            bossFleeRollRemaining, BossFleeRollSeconds);
+                        bossHealthBarRoot.transform.localScale = new Vector3(rollScale, 1f, 1f);
+                    }
+                    else
+                    {
+                        bossHealthBarRoot.transform.localScale = Vector3.one;
+                        bossHealthBarRoot.SetActive(false);
+                    }
+                }
                 RestoreDayCounterPosition();
 #if UNITY_EDITOR
-                bossStatusText.text = bootstrap?.TimeService?.IsNight == true
-                    ? "F8 도깨비 대왕  ·  Shift+F8 강철이 테스트"
-                    : "보스는 밤에 출현";
+                RestoreBossStatusLayout();
+                bossStatusText.text = string.Empty;
 #else
+                RestoreBossStatusLayout();
                 bossStatusText.text = string.Empty;
 #endif
                 return;
             }
 
-            if (bossHealthBarRoot != null) bossHealthBarRoot.SetActive(true);
-            MoveDayCounterBelowBossBar();
+            RestoreBossStatusLayout();
+            if (bossHealthBarRoot != null)
+            {
+                bossFleeRollRemaining = 0f;
+                bossHealthBarRoot.transform.localScale = Vector3.one;
+                bossHealthBarRoot.SetActive(true);
+            }
+            RestoreDayCounterPosition();
             if (bossHealthPortrait != null)
             {
                 bossHealthPortrait.sprite = ResolveBossHealthArt(definition.Id);
@@ -854,32 +1114,225 @@ namespace Nyangbingo.UI
             ConfigureBossHealthVerticalLayout(definition.Id);
             ResizeBossHealthBar(CalculateHealthRatio(health.Current, health.MaxHealth));
 
-            // v15 QA-E 무텍스트 규칙: 보스 이름은 전용 먹선 초상/프레임이 대신한다.
-            // 숫자는 허용되므로 체력 정보만 남긴다.
-            bossStatusText.text = $"HP {health.Current}/{health.MaxHealth}";
+            // The illustrated segmented bar communicates health without a separate number label.
+            bossStatusText.text = string.Empty;
 #if UNITY_EDITOR
-            bossStatusText.text += "  ·  K 테스트 처치";
+            // Test controls are listed in the F1 debug shortcut popup.
 #endif
         }
 
         public static float CalculateHealthRatio(int current, int maximum) =>
             maximum <= 0 ? 0f : Mathf.Clamp01((float)current / maximum);
 
-        private void MoveDayCounterBelowBossBar()
+        public static float CalculateBossFleeRollScale(float remainingSeconds, float durationSeconds) =>
+            durationSeconds <= 0f ? 0f : Mathf.SmoothStep(0f, 1f,
+                Mathf.Clamp01(remainingSeconds / durationSeconds));
+
+        public static string FormatCycleCountdown(DayNightService timeService)
         {
-            if (dayText == null || !hasDayTextDefaultPosition) return;
-            dayText.rectTransform.anchoredPosition = new Vector2(dayTextDefaultPosition.x, -58f);
+            if (timeService == null) return string.Empty;
+            return FormatRemainingTime(timeService.SecondsUntilNextTransition);
+        }
+
+        public static int ResolveDayNightClockFrameIndex(float timeOfDaySeconds,
+            float cycleLengthSeconds, int frameCount)
+        {
+            if (frameCount <= 0 || cycleLengthSeconds <= 0f || float.IsNaN(timeOfDaySeconds) ||
+                float.IsInfinity(timeOfDaySeconds)) return -1;
+            var normalized = Mathf.Repeat(timeOfDaySeconds, cycleLengthSeconds) / cycleLengthSeconds;
+            var chronologicalIndex = Mathf.Clamp(Mathf.FloorToInt(normalized * frameCount), 0, frameCount - 1);
+            // Delivered clock sprites are authored from the end of the day toward the start.
+            return frameCount - 1 - chronologicalIndex;
+        }
+
+        public static bool ShouldShowNightSpawnLock(bool isNight, bool bossActive, bool baekjungActive) =>
+            isNight && (bossActive || baekjungActive);
+
+        public static string FormatRemainingTime(float seconds)
+        {
+            var totalSeconds = Mathf.Max(0, Mathf.CeilToInt(seconds));
+            return $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
         }
 
         private void RestoreDayCounterPosition()
         {
             if (dayText == null || !hasDayTextDefaultPosition) return;
             dayText.rectTransform.anchoredPosition = dayTextDefaultPosition;
+            if (dayCounterScrollRect != null)
+                dayCounterScrollRect.anchoredPosition = dayCounterScrollDefaultPosition;
+            if (dayClockText != null) dayClockText.rectTransform.anchoredPosition = dayClockDefaultPosition;
+        }
+
+        private void BuildDayCounterScroll()
+        {
+            if (dayText == null || dayCounterScrollPresenter != null) return;
+            if (environmentArtCatalog == null)
+            {
+                var catalogs = Resources.FindObjectsOfTypeAll<EnvironmentArtCatalog>();
+                for (var index = 0; index < catalogs.Length; index++)
+                    if (catalogs[index] != null && catalogs[index].name == "EnvironmentArtCatalog")
+                    {
+                        environmentArtCatalog = catalogs[index];
+                        break;
+                    }
+            }
+            var frames = environmentArtCatalog?.DayCounterScrollFrames;
+            if (frames == null || frames.Count == 0) return;
+
+            var scrollObject = new GameObject("DayCounterScroll", typeof(RectTransform), typeof(Image));
+            scrollObject.transform.SetParent(dayText.transform.parent, false);
+            dayCounterScrollRect = (RectTransform)scrollObject.transform;
+            dayCounterScrollRect.anchorMin = dayCounterScrollRect.anchorMax = dayCounterScrollRect.pivot =
+                new Vector2(.5f, 1f);
+            dayCounterScrollDefaultPosition = dayTextDefaultPosition;
+            dayCounterScrollRect.anchoredPosition = dayCounterScrollDefaultPosition;
+            var image = scrollObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            image.preserveAspect = true;
+            baekjungDayCounterBorder = BuildBaekjungDayCounterBorder(scrollObject.transform);
+            baekjungDayCounterBorder.SetActive(false);
+            scrollObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex());
+            dayCounterScrollPresenter = scrollObject.AddComponent<RuntimeDayCounterScrollPresenter>();
+            dayCounterScrollPresenter.ConfigureForRuntime(frames, bootstrap.TimeService.DaysRemaining);
+
+            var clockObject = new GameObject("DayCycleClock", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Text));
+            clockObject.transform.SetParent(dayText.transform.parent, false);
+            dayClockText = clockObject.GetComponent<Text>();
+            dayClockText.font = dayText.font;
+            dayClockText.fontSize = DayCounterClockFontSize;
+            dayClockText.alignment = TextAnchor.UpperCenter;
+            dayClockText.color = new Color(.88f, .93f, 1f, 1f);
+            dayClockText.raycastTarget = false;
+            dayClockText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            dayClockText.verticalOverflow = VerticalWrapMode.Overflow;
+            var clockRect = dayClockText.rectTransform;
+            clockRect.anchorMin = clockRect.anchorMax = clockRect.pivot = new Vector2(.5f, 1f);
+            dayClockDefaultPosition = dayCounterScrollDefaultPosition +
+                                      Vector2.down * (DayCounterExpandedHeight + DayCounterClockGap);
+            clockRect.anchoredPosition = dayClockDefaultPosition;
+            clockRect.sizeDelta = new Vector2(96f, 10f);
+            clockObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
+
+            var clockArtObject = new GameObject("DayNightClockArt", typeof(RectTransform), typeof(Image));
+            clockArtObject.transform.SetParent(dayText.transform.parent, false);
+            dayNightClockArt = clockArtObject.GetComponent<Image>();
+            dayNightClockArt.raycastTarget = false;
+            dayNightClockArt.preserveAspect = true;
+            var artRect = dayNightClockArt.rectTransform;
+            artRect.anchorMin = artRect.anchorMax = artRect.pivot = new Vector2(.5f, 1f);
+            artRect.anchoredPosition = dayClockDefaultPosition + new Vector2(-19f, 1f);
+            artRect.sizeDelta = new Vector2(10f, 10f);
+            clockArtObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
+            nightSpawnLockRoot = BuildNightSpawnLock(artRect);
+            nightSpawnLockRoot.SetActive(false);
+            RefreshDayNightClockArt();
+        }
+
+        private void RefreshDayNightClockArt()
+        {
+            if (dayNightClockArt == null || bootstrap?.TimeService == null) return;
+            var frames = gameplayArtCatalog?.DayNightClockFrames;
+            var index = ResolveDayNightClockFrameIndex(bootstrap.TimeService.TimeOfDayGameSeconds,
+                bootstrap.TimeService.CycleLengthSeconds, frames?.Count ?? 0);
+            dayNightClockArt.sprite = index >= 0 ? frames[index] : null;
+            dayNightClockArt.enabled = dayNightClockArt.sprite != null;
+            if (nightSpawnLockRoot != null)
+                nightSpawnLockRoot.SetActive(dayNightClockArt.enabled && ShouldShowNightSpawnLock(
+                    bootstrap.TimeService.IsNight,
+                    bossManager != null && bossManager.IsBossActive,
+                    encounterCoordinator?.BaekjungScheduler?.IsActive == true));
+        }
+
+        private static GameObject BuildNightSpawnLock(RectTransform parent)
+        {
+            var root = new GameObject("NightSpawnLock", typeof(RectTransform));
+            var rootRect = (RectTransform)root.transform;
+            rootRect.SetParent(parent, false);
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+            var lockColor = new Color32(0x49, 0x2D, 0x4D, 0xFF);
+            AddNightSpawnLockPiece(rootRect, "Bar", Vector2.zero, new Vector2(12f, 2f), lockColor);
+            AddNightSpawnLockPiece(rootRect, "LeftCap", new Vector2(-5f, 0f), new Vector2(2f, 6f), lockColor);
+            AddNightSpawnLockPiece(rootRect, "RightCap", new Vector2(5f, 0f), new Vector2(2f, 6f), lockColor);
+            return root;
+        }
+
+        private static void AddNightSpawnLockPiece(RectTransform parent, string name,
+            Vector2 anchoredPosition, Vector2 size, Color color)
+        {
+            var piece = new GameObject(name, typeof(RectTransform), typeof(Image));
+            var rect = (RectTransform)piece.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+            var image = piece.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+        }
+
+        public static bool ShouldShowBaekjungDayCounterFeedback(bool baekjungActive,
+            bool suppressedForBoss, bool bossActive) =>
+            baekjungActive && !suppressedForBoss && !bossActive;
+
+        private void RefreshBaekjungDayCounterFeedback()
+        {
+            if (baekjungDayCounterBorder == null) return;
+            if (!baekjungHudActive)
+            {
+                encounterCoordinator ??= FindAnyObjectByType<MainGameEncounterCoordinator>();
+                baekjungHudActive = encounterCoordinator?.BaekjungScheduler?.IsActive == true;
+            }
+            baekjungDayCounterBorder.SetActive(ShouldShowBaekjungDayCounterFeedback(
+                baekjungHudActive, baekjungHudSuppressedForBoss, bossManager?.IsBossActive == true));
+        }
+
+        private static GameObject BuildBaekjungDayCounterBorder(Transform parent)
+        {
+            var root = new GameObject("BaekjungDayCounterBorder", typeof(RectTransform));
+            var rootRect = (RectTransform)root.transform;
+            rootRect.SetParent(parent, false);
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+
+            AddBaekjungBorderEdge(rootRect, "Top", new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, BaekjungDayCounterBorderPixels));
+            AddBaekjungBorderEdge(rootRect, "Bottom", new Vector2(0f, 0f), new Vector2(1f, 0f),
+                new Vector2(0f, BaekjungDayCounterBorderPixels));
+            AddBaekjungBorderEdge(rootRect, "Left", new Vector2(0f, 0f), new Vector2(0f, 1f),
+                new Vector2(BaekjungDayCounterBorderPixels, 0f));
+            AddBaekjungBorderEdge(rootRect, "Right", new Vector2(1f, 0f), new Vector2(1f, 1f),
+                new Vector2(BaekjungDayCounterBorderPixels, 0f));
+            return root;
+        }
+
+        private static void AddBaekjungBorderEdge(RectTransform parent, string edgeName,
+            Vector2 anchorMin, Vector2 anchorMax, Vector2 sizeDelta)
+        {
+            var edge = new GameObject(edgeName, typeof(RectTransform), typeof(Image));
+            var edgeRect = (RectTransform)edge.transform;
+            edgeRect.SetParent(parent, false);
+            edgeRect.anchorMin = anchorMin;
+            edgeRect.anchorMax = anchorMax;
+            edgeRect.pivot = (anchorMin + anchorMax) * .5f;
+            edgeRect.anchoredPosition = Vector2.zero;
+            edgeRect.sizeDelta = sizeDelta;
+            var image = edge.GetComponent<Image>();
+            image.color = new Color32(0x9B, 0x6D, 0xD6, 0xFF);
+            image.raycastTarget = false;
         }
 
         private void BuildBossHealthBar()
         {
             if (bossStatusText == null || bossHealthBarRoot != null) return;
+            bossStatusDefaultPosition = bossStatusText.rectTransform.anchoredPosition;
+            bossStatusDefaultFontSize = bossStatusText.fontSize;
+            hasBossStatusDefaultLayout = true;
             bossStatusText.alignment = TextAnchor.UpperCenter;
 
             bossHealthBarRoot = new GameObject("BossHealthBar", typeof(RectTransform));
@@ -887,7 +1340,7 @@ namespace Nyangbingo.UI
             var nativeRoot = MainGameUiResolutionController.ResolveNativeRoot(transform) ?? transform;
             rootRect.SetParent(nativeRoot, false);
             rootRect.anchorMin = rootRect.anchorMax = rootRect.pivot = new Vector2(.5f, 1f);
-            rootRect.anchoredPosition = new Vector2(0f, -22f);
+            rootRect.anchoredPosition = new Vector2(0f, BossHealthBarBelowClockY);
             rootRect.sizeDelta = new Vector2(128f, 32f);
 
             var segmentStarts = new[] { 13f, 32f, 51f, 80f, 99f };
@@ -917,6 +1370,13 @@ namespace Nyangbingo.UI
             bossEntranceArt.preserveAspect = true;
             bossEntranceArt.raycastTarget = false;
             bossEntranceArtRoot.SetActive(false);
+        }
+
+        private void RestoreBossStatusLayout()
+        {
+            if (!hasBossStatusDefaultLayout || bossStatusText == null) return;
+            bossStatusText.fontSize = bossStatusDefaultFontSize;
+            bossStatusText.rectTransform.anchoredPosition = bossStatusDefaultPosition;
         }
 
         private void BuildBossHealthSegment(RectTransform parent, int index, float start, float width)
@@ -952,8 +1412,10 @@ namespace Nyangbingo.UI
             var verticalOffset = bossId switch
             {
                 "mother_bulgasari" => -4.5f,
-                "king_dokkaebi" => -5f,
-                "gangcheol_boss" => -2.75f,
+                // These offsets follow the delivered frame artwork. After correcting the
+                // Gangcheol/King row mapping, their previously calibrated offsets swap too.
+                "king_dokkaebi" => -2.75f,
+                "gangcheol_boss" => -5f,
                 "imugi" => -4f,
                 _ => -2.5f
             };
@@ -969,19 +1431,22 @@ namespace Nyangbingo.UI
             if (runtimeBossHealthSprite != null && runtimeBossHealthSpriteId == bossId)
                 return runtimeBossHealthSprite;
 
-            var source = BossHealthArtSource(bossId);
+            // boss_health_frame is the authoritative four-row sheet. The per-boss Aseprite
+            // assets contain the same sheet with different canvas offsets, so cropping those
+            // imports again can select another boss after a reimport.
+            var source = gameplayArtCatalog?.BossHealthFrame ?? BossHealthArtSource(bossId);
             if (source == null) return null;
             if (runtimeBossHealthSprite != null) Destroy(runtimeBossHealthSprite);
 
             var sourceRect = source.textureRect;
             float topStart;
             float topEnd;
-            switch (bossId)
+            switch (BossHealthArtRow(bossId))
             {
-                case "gangcheol_boss": topStart = 0f; topEnd = 28f; break;
-                case "imugi": topStart = 28f; topEnd = 60f; break;
-                case "mother_bulgasari": topStart = 60f; topEnd = 92f; break;
-                case "king_dokkaebi": topStart = 92f; topEnd = sourceRect.height; break;
+                case 0: topStart = 0f; topEnd = 28f; break;
+                case 1: topStart = 28f; topEnd = 60f; break;
+                case 2: topStart = 60f; topEnd = 92f; break;
+                case 3: topStart = 92f; topEnd = sourceRect.height; break;
                 default: return null;
             }
 
@@ -995,6 +1460,20 @@ namespace Nyangbingo.UI
             runtimeBossHealthSprite.name = $"{bossId}_health_bar_runtime";
             runtimeBossHealthSpriteId = bossId;
             return runtimeBossHealthSprite;
+        }
+
+        public static int BossHealthArtRow(string bossId)
+        {
+            switch (bossId)
+            {
+                // Unity's Aseprite textureRect exposes the delivered vertical sheet from
+                // bottom to top, so the runtime crop order is the reverse of the source view.
+                case "king_dokkaebi": return 0;
+                case "mother_bulgasari": return 1;
+                case "imugi": return 2;
+                case "gangcheol_boss": return 3;
+                default: return -1;
+            }
         }
 
         private Sprite BossHealthArtSource(string bossId)
@@ -1011,6 +1490,10 @@ namespace Nyangbingo.UI
 
         private void HandleBossStarted(BossDefinition _)
         {
+            bossFleeRollRemaining = 0f;
+            if (bossHealthBarRoot != null) bossHealthBarRoot.transform.localScale = Vector3.one;
+            if (baekjungHudActive) baekjungHudSuppressedForBoss = true;
+            RefreshBaekjungDayCounterFeedback();
             if (bossEntranceArt == null) return;
             bossEntranceArt.sprite = gameplayArtCatalog?.BossWarningLarge ?? gameplayArtCatalog?.BossWarningSmall;
             bossEntranceArt.enabled = bossEntranceArt.sprite != null;
@@ -1022,6 +1505,26 @@ namespace Nyangbingo.UI
         {
             bossEntranceArtRemaining = 0f;
             bossEntranceArtRoot?.SetActive(false);
+            bossFleeRollRemaining = defeated ? 0f : BossFleeRollSeconds;
+            if (defeated && bossHealthBarRoot != null)
+            {
+                bossHealthBarRoot.transform.localScale = Vector3.one;
+                bossHealthBarRoot.SetActive(false);
+            }
+        }
+
+        private void HandleBaekjungStarted()
+        {
+            baekjungHudActive = true;
+            baekjungHudSuppressedForBoss = false;
+            RefreshBaekjungDayCounterFeedback();
+        }
+
+        private void HandleBaekjungEnded()
+        {
+            baekjungHudActive = false;
+            baekjungHudSuppressedForBoss = false;
+            RefreshBaekjungDayCounterFeedback();
         }
 
         private void ResizeBossHealthBar(float ratio)
@@ -1082,6 +1585,7 @@ namespace Nyangbingo.UI
 
         private void OnDestroy()
         {
+            if (activeHud == this) activeHud = null;
             if (inventory != null) inventory.Changed -= RefreshInventory;
             if (playerHealth != null)
             {
@@ -1095,8 +1599,14 @@ namespace Nyangbingo.UI
             }
             if (runtimeBossHealthSprite != null) Destroy(runtimeBossHealthSprite);
             GameEvents.OnSealChanged -= RefreshStatus;
+            GameEvents.OnBaekjungStart -= HandleBaekjungStarted;
+            GameEvents.OnBaekjungEnd -= HandleBaekjungEnded;
+            GameEvents.OnTilePlaced -= HandleSealAffectingPlacement;
+            GameEvents.OnPlacedObjectBuilt -= HandleSealAffectingPlacement;
             if (goalBadgeProgress != null) goalBadgeProgress.Changed -= RefreshGoalBadges;
             if (hudSaveManager != null) hudSaveManager.Saved -= HandleSaved;
+            if (sealLeakMarker != null) Destroy(sealLeakMarker.gameObject);
+            if (sealLeakMarkerMaterial != null) Destroy(sealLeakMarkerMaterial);
         }
     }
 }

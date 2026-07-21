@@ -116,7 +116,11 @@ namespace Nyangbingo.Save
         {
             if (before == null) return false;
             var beforeJson = JsonUtility.ToJson(before);
-            if (!ApplySnapshot(before)) return false;
+            // Round-trip validation must reproduce the captured snapshot byte-for-byte. The
+            // startup player may not have completed its first physics placement yet, so applying
+            // the product safe-spawn repair here would intentionally change the snapshot and make
+            // an otherwise valid serialization round trip fail.
+            if (!ApplySnapshot(before, false, false)) return false;
             var after = CaptureSnapshot();
             if (after == null || beforeJson != JsonUtility.ToJson(after)) return false;
             Debug.Log("[Nyangbingo] MainGameSaveCoordinator: 파일 쓰기 없는 통합 저장·복원 왕복 검증 완료.");
@@ -187,15 +191,32 @@ namespace Nyangbingo.Save
 
         public bool TryApplySnapshot(SaveGame save)
         {
+            return TryApplySnapshotInternal(save, false);
+        }
+
+        public bool TryApplyDemoSnapshot(SaveGame save)
+        {
+            if (!TryApplySnapshotInternal(save, true)) return false;
+            // The title flow copies the official demo into the autosave slot before applying it.
+            // Persist the recalculated surface position so Continue cannot restore the stale,
+            // generator-version-dependent coordinate if the player quits before dawn autosave.
+            saveManager.Save(autoSaveSlot, save);
+            return true;
+        }
+
+        private bool TryApplySnapshotInternal(SaveGame save, bool forceSafeSurfaceSpawn)
+        {
             if (save == null || (!IsInitialized && !Initialize())) return false;
             var rollback = CaptureSnapshot();
             if (rollback == null) return false;
-            if (ApplySnapshot(save)) return true;
-            ApplySnapshot(rollback);
+            if (ApplySnapshot(save, forceSafeSurfaceSpawn, true)) return true;
+            // A rollback must restore the exact captured state, not reinterpret its position.
+            ApplySnapshot(rollback, false, false);
             return false;
         }
 
-        private bool ApplySnapshot(SaveGame save)
+        private bool ApplySnapshot(SaveGame save, bool forceSafeSurfaceSpawn,
+            bool repairUnsafeSavedPosition)
         {
             if (save == null || !encounterCoordinator.BeginRestore()) return false;
             var succeeded = false;
@@ -204,6 +225,7 @@ namespace Nyangbingo.Save
                 save.NormalizeAfterLoad();
                 succeeded = save.timeState.hasValue &&
                 bootstrap.Session.LoadSnapshot(save) &&
+                PreparePlayerSpawnForRestore(save, forceSafeSurfaceSpawn, repairUnsafeSavedPosition) &&
                 PlayerTimeBossSaveAdapter.Restore(save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager) &&
                 ProgressionSaveAdapter.Restore(save, runtimeServices.PlayerInventory,
@@ -236,6 +258,38 @@ namespace Nyangbingo.Save
             {
                 encounterCoordinator.EndRestore(succeeded);
             }
+        }
+
+        public static bool ShouldResolveSafePlayerSpawn(bool forceSafeSurfaceSpawn,
+            bool savedPositionIsSafe) => forceSafeSurfaceSpawn || !savedPositionIsSafe;
+
+        private bool PreparePlayerSpawnForRestore(SaveGame save, bool forceSafeSurfaceSpawn,
+            bool repairUnsafeSavedPosition)
+        {
+            var resolver = bootstrap?.Session?.SafeSpawnResolver;
+            var player = encounterCoordinator?.PlayerTransform;
+            if (save?.playerState == null || !save.playerState.hasValue || resolver == null || player == null)
+                return false;
+
+            var halfExtent = .38f;
+            var circle = player.GetComponent<CircleCollider2D>();
+            if (circle != null)
+                halfExtent = Mathf.Max(.05f, circle.radius * Mathf.Abs(player.lossyScale.y));
+
+            var savedPosition = (Vector2)save.playerState.position;
+            if (!forceSafeSurfaceSpawn && !repairUnsafeSavedPosition) return true;
+            if (!ShouldResolveSafePlayerSpawn(forceSafeSurfaceSpawn,
+                    resolver.IsSafeStandingPosition(savedPosition, halfExtent)))
+                return true;
+
+            var generatedSpawn = bootstrap.Session.LastResult.spawnPoint;
+            if (!resolver.TryResolveSafeSurfaceSpawn(generatedSpawn.x, halfExtent, out var safeSpawn))
+                return false;
+
+            save.playerState.position = new Vector3(safeSpawn.x, safeSpawn.y, 0f);
+            Debug.Log($"[Nyangbingo] Save restore safe surface spawn applied " +
+                      $"(forced={forceSafeSurfaceSpawn}, generated={generatedSpawn}, player={safeSpawn}).");
+            return true;
         }
 
         private Nyangbingo.Data.ItemDefinition FindItem(string id) =>

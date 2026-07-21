@@ -19,6 +19,8 @@ namespace Nyangbingo.World
     [DefaultExecutionOrder(-60)]
     public sealed class MainGameTurretRuntime : MonoBehaviour, IGameSecondsTickable
     {
+        public const bool ProductHudNarrativeTextEnabled = false;
+
         private sealed class TurretEntry
         {
             public string ObjectId;
@@ -411,7 +413,10 @@ namespace Nyangbingo.World
                 rotationDegrees = 0f
             };
             if (!runtimeServices.PlayerInventory.TryRemove(definitionId, 1)) return false;
-            var placed = environmentState.TryPlace(record, barrierActive: false);
+            // MainGameEnvironmentState applies the authoritative seal whitelist internally.
+            // Passing the placement through as a barrier candidate lets insul_wall/door/roof seal,
+            // while lanterns, storage and other non-whitelisted placeables remain non-sealing.
+            var placed = environmentState.TryPlace(record, barrierActive: true);
             var runtimeRegistered = definitionId == TurretItemId
                 ? placed && TryRegisterPlacedTurret(record.objectId, 0, out _)
                 : definitionId == LanternItemId
@@ -605,34 +610,25 @@ namespace Nyangbingo.World
             {
                 var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
                 if (craftingStation != CraftingStation.None)
-                    interactionStatusText.text = $"{ItemName(record.definitionId)}  |  " +
-                                                 $"E {(MainGameCraftingUiController.IsSmeltingStation(craftingStation) ? "제련" : "제작")} 열기" +
-                                                 "  |  Shift+E 회수";
+                    interactionStatusText.text = "E  ·  ⇧E";
                 else if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
-                    interactionStatusText.text = $"도깨비불 등탑 · 연료 {turret.Controller.FuelRemaining:0}초" +
-                                                  "  |  E 석탄 투입  |  Shift+E 회수";
+                    interactionStatusText.text = $"{turret.Controller.FuelRemaining:0}  ·  E  ·  ⇧E";
                 else if (record.definitionId == LanternItemId && lanterns.TryGetValue(record.objectId, out var lantern))
-                    interactionStatusText.text = $"등불 · 연료 {lantern.FuelRemaining:0}초" +
-                                                 "  |  E 석탄 투입  |  Shift+E 회수";
+                    interactionStatusText.text = $"{lantern.FuelRemaining:0}  ·  E  ·  ⇧E";
                 else if (record.definitionId == JangdokStorageRuntime.DefinitionId)
-                    interactionStatusText.text = "장독 창고 · 40슬롯  |  E 보관함 열기  |  Shift+E 회수(비었을 때)";
+                    interactionStatusText.text = "40  ·  E  ·  ⇧E";
                 else if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
                              out var capPercent, out var active))
                 {
-                    var lifetime = float.IsPositiveInfinity(remaining) ? "영구" : $"{remaining:0}초";
-                    var action = record.definitionId == CoolingSourceRuntime.IceJarId
-                        ? "E 얼음 투입"
-                        : "E 상태 확인";
-                    interactionStatusText.text = $"{ItemName(record.definitionId)} · {capPercent:0}% · " +
-                                                 $"{(active ? lifetime : "정지")}  |  {action}  |  Shift+E 회수";
+                    var lifetime = float.IsPositiveInfinity(remaining) ? "∞" : $"{remaining:0}";
+                    interactionStatusText.text = $"{capPercent:0}%  ·  {(active ? lifetime : "0")}  ·  E  ·  ⇧E";
                 }
                 else
-                    interactionStatusText.text = $"{ItemName(record.definitionId)}  |  E 상호작용  |  Shift+E 회수";
+                    interactionStatusText.text = "E  ·  ⇧E";
                 return;
             }
             interactionStatusText.text = IsPlacementPreviewActive
-                ? $"{ItemName(placementDefinitionId)} 설치 · " +
-                  $"{(placementValid ? "설치 가능" : "설치 불가")} · 좌클릭 설치 · ESC/우클릭 취소"
+                ? $"{(placementValid ? "✓  ·  LMB" : "✕")}  ·  ESC/RMB"
                 : string.Empty;
         }
 

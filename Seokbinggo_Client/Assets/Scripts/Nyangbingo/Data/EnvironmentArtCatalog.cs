@@ -42,6 +42,8 @@ namespace Nyangbingo.Data
                                              nightRearClouds != null && nightMountains != null &&
                                              nightFrontClouds != null && moon != null;
         public Sprite TitleBackground => titleBackground;
+        public IReadOnlyList<Sprite> DayCounterScrollFrames => titleFrames ?? Array.Empty<Sprite>();
+        // Serialized under the original delivery name for asset compatibility.
         public IReadOnlyList<Sprite> TitleFrames => titleFrames ?? Array.Empty<Sprite>();
     }
 }
