@@ -51,7 +51,9 @@ namespace Nyangbingo.World
         private static readonly Dictionary<string, int> PlacementHardness = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             { WorldTileTypes.Dirt, 1 }, { WorldTileTypes.Clay, 1 }, { WorldTileTypes.Coal, 1 },
-            { WorldTileTypes.Stone, 2 }, { WorldTileTypes.StoneMid, 2 }, { WorldTileTypes.IronOre, 2 },
+            // The inventory "stone" item is the upper-layer T1 block. Player-placed stone must
+            // remain removable with the default claw just like the natural block it came from.
+            { WorldTileTypes.Stone, 1 }, { WorldTileTypes.StoneMid, 2 }, { WorldTileTypes.IronOre, 2 },
             { WorldTileTypes.CopperOre, 2 }, { WorldTileTypes.IceShard, 2 }, { WorldTileTypes.RuinWall, 2 },
             { WorldTileTypes.StoneDeep, 3 }, { WorldTileTypes.IceSteelOre, 3 }, { WorldTileTypes.FrostEssence, 3 }
         };

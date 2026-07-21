@@ -142,7 +142,7 @@ MonoBehaviour:
   - id: cold_wave_core
     sprite: {fileID: -1163610750929880464, guid: de4a809f2d358584898d4cc33bcf57b6, type: 3}
   - id: water_jar
-    sprite: {fileID: -52303854080169221, guid: f0ff94d9e2aff4940be25ce3c694fb74, type: 3}
+    sprite: {fileID: -3846027468599889998, guid: 5bd09244df74caf4ca71f45cce1e11e4, type: 3}
   - id: ice_jar
     sprite: {fileID: -925931431505757242, guid: 985c539f9f8891a44bb29d5072532220, type: 3}
   - id: straw_insul
@@ -163,3 +163,31 @@ MonoBehaviour:
     sprite: {fileID: 3345930521662676172, guid: af5a1d04c82f0fd47bba9f62011c3dc2, type: 3}
   - id: wallpaper
     sprite: {fileID: -2333506232851026980, guid: 6ec5fd712b9870446be7fca4ea022e7c, type: 3}
+  - id: bare_claw
+    sprite: {fileID: -4789529561072410864, guid: c268b315f63dcf64cab146ea4bb5ea11, type: 3}
+  - id: iron_claw
+    sprite: {fileID: 400087728353702707, guid: b39f7a42ae3d829479c574b92e91277f, type: 3}
+  - id: icesteel_claw
+    sprite: {fileID: 5992795675376696027, guid: 42df9df117f5d324fa6bc3c90ba7e781, type: 3}
+  - id: dokkaebi_club
+    sprite: {fileID: 3472888656369827995, guid: 00be0d59e428c704a98173824278c806, type: 3}
+  - id: cheolseon
+    sprite: {fileID: 4534529900422791100, guid: 539c838e67adff441a321054da9440fb, type: 3}
+  - id: clay
+    sprite: {fileID: 4435367028424857646, guid: 6775af95da65d4e4a8f30fa532210731, type: 3}
+  - id: drought_heart
+    sprite: {fileID: 5068518710447696915, guid: 41158da986d670e4292c2ceaeff209cb, type: 3}
+  - id: frostclaw_gauntlet
+    sprite: {fileID: 4807574650332446396, guid: 7fe98034130b8e940a77443358c0cd17, type: 3}
+  - id: iron_forge_core
+    sprite: {fileID: 2800340530316660160, guid: 241a0dbcdb9f2ff47ba06c0582d1dd50, type: 3}
+  - id: hapjukseon
+    sprite: {fileID: 5273633213175586909, guid: 8107dda757d1a4e4c9ef353600fa903a, type: 3}
+  - id: copper_ingot
+    sprite: {fileID: -6363852529840394261, guid: 9b983dff42815024a8fe03ef13995b69, type: 3}
+  - id: icesteel_ingot
+    sprite: {fileID: -4656049180300360713, guid: 7464b328862155f45ac207f5eee47356, type: 3}
+  - id: iron_ingot
+    sprite: {fileID: 5701617983290330627, guid: dcd35d8604cde464d8407de27ea3f67b, type: 3}
+  - id: stone_mid
+    sprite: {fileID: 3434850802841734024, guid: e77ee64969a386f4ea717460b832c847, type: 3}

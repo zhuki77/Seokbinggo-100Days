@@ -52,6 +52,8 @@ namespace Nyangbingo.UI
         private GameObject storageModeRoot;
         private readonly Text[] storagePlayerLabels = new Text[Nyangbingo.Inventory.Inventory.SlotCount];
         private readonly Text[] storageLabels = new Text[JangdokStorageRuntime.SlotCount];
+        private readonly Image[] storagePlayerIcons = new Image[Nyangbingo.Inventory.Inventory.SlotCount];
+        private readonly Image[] storageIcons = new Image[JangdokStorageRuntime.SlotCount];
         private Text storageHintText;
         private string storageObjectId = string.Empty;
         private readonly Text[] inventoryGridLabels =
@@ -451,7 +453,7 @@ namespace Nyangbingo.UI
                 var capturedIndex = index;
                 var button = CreateButton(inventoryGridRoot.transform,
                     $"InventorySlot_{index + 1:00}", string.Empty, Vector2.zero, grid.cellSize,
-                    () => SelectInventorySlot(capturedIndex));
+                    () => SelectInventorySlot(capturedIndex), false);
                 inventoryGridButtons[index] = button;
                 inventoryGridLabels[index] = button.GetComponentInChildren<Text>();
                 inventoryGridLabels[index].fontSize = 8;
@@ -517,27 +519,41 @@ namespace Nyangbingo.UI
             storageModeRoot = CreateUiObject("JangdokStorageMode", panel.transform,
                 new Vector2(450f, 206f), new Vector2(0f, -2f));
             CreateText(storageModeRoot.transform, "StorageLabel", 9, TextAnchor.MiddleCenter,
-                new Vector2(205f, 16f), new Vector2(-110f, 88f)).text = "장독 창고 · 40슬롯";
+                new Vector2(175f, 16f), new Vector2(-120f, 75f)).text = "장독 창고 · 40슬롯";
             CreateText(storageModeRoot.transform, "PlayerLabel", 9, TextAnchor.MiddleCenter,
-                new Vector2(205f, 16f), new Vector2(110f, 88f)).text = "플레이어 · 50슬롯";
+                new Vector2(215f, 16f), new Vector2(100f, 75f)).text = "플레이어 · 50슬롯";
 
-            BuildTransferGrid(storageModeRoot.transform, "StorageGrid", new Vector2(-110f, -4f),
-                5, 8, storageLabels, TransferStorageSlot);
-            BuildTransferGrid(storageModeRoot.transform, "PlayerGrid", new Vector2(110f, -4f),
-                5, 10, storagePlayerLabels, TransferPlayerSlot);
+            BuildTransferGrid(storageModeRoot.transform, "StorageGrid", new Vector2(-120f, 5f),
+                8, 5, storageLabels, storageIcons, TransferStorageSlot,
+                gameplayArtCatalog?.JangdokStorageGrid, true);
+            BuildTransferGrid(storageModeRoot.transform, "PlayerGrid", new Vector2(100f, 5f),
+                10, 5, storagePlayerLabels, storagePlayerIcons, TransferPlayerSlot,
+                null, false);
             storageHintText = CreateText(storageModeRoot.transform, "Hint", 8, TextAnchor.MiddleCenter,
-                new Vector2(430f, 16f), new Vector2(0f, -96f));
+                new Vector2(430f, 16f), new Vector2(0f, -65f));
             storageHintText.text = "슬롯 클릭: 묶음 이동  |  E 또는 ESC: 닫기";
             storageModeRoot.SetActive(false);
         }
 
-        private static void BuildTransferGrid(Transform parent, string name, Vector2 position, int columns,
-            int rows, Text[] labels, Action<int> clicked)
+        private void BuildTransferGrid(Transform parent, string name, Vector2 position, int columns,
+            int rows, Text[] labels, Image[] icons, Action<int> clicked, Sprite gridArt,
+            bool transparentButtons)
         {
-            var root = CreateUiObject(name, parent, new Vector2(205f, rows * 18f + (rows - 1) * 2f), position);
+            const float scale = 1.5f;
+            const float cellSize = 13f * scale;
+            const float spacing = 1f * scale;
+            const int padding = 3;
+            var size = new Vector2(columns * cellSize + (columns - 1) * spacing + padding * 2f,
+                rows * cellSize + (rows - 1) * spacing + padding * 2f);
+            var root = CreateUiObject(name, parent, size, position);
+            var background = root.AddComponent<Image>();
+            background.sprite = gridArt;
+            background.color = gridArt != null ? Color.white : new Color(.1f, .1f, .14f, 1f);
+            background.raycastTarget = false;
             var grid = root.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(39f, 18f);
-            grid.spacing = new Vector2(2f, 2f);
+            grid.padding = new RectOffset(padding, padding, padding, padding);
+            grid.cellSize = Vector2.one * cellSize;
+            grid.spacing = Vector2.one * spacing;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = columns;
             grid.childAlignment = TextAnchor.UpperLeft;
@@ -545,12 +561,30 @@ namespace Nyangbingo.UI
             {
                 var captured = index;
                 var button = CreateButton(root.transform, $"Slot_{index + 1:00}", string.Empty,
-                    Vector2.zero, grid.cellSize, () => clicked(captured));
+                    Vector2.zero, grid.cellSize, () => clicked(captured), false);
                 var label = button.GetComponentInChildren<Text>();
-                label.fontSize = 6;
-                label.horizontalOverflow = HorizontalWrapMode.Wrap;
-                label.verticalOverflow = VerticalWrapMode.Truncate;
+                label.fontSize = 7;
+                label.fontStyle = FontStyle.Bold;
+                label.alignment = TextAnchor.LowerRight;
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
+                label.raycastTarget = false;
+                label.rectTransform.offsetMin = Vector2.one;
+                label.rectTransform.offsetMax = -Vector2.one;
                 labels[index] = label;
+                var buttonImage = button.targetGraphic as Image;
+                if (buttonImage != null)
+                {
+                    buttonImage.sprite = transparentButtons ? null : gameplayArtCatalog?.InventorySlot;
+                    buttonImage.color = transparentButtons ? Color.clear : Color.white;
+                }
+                var iconObject = CreateUiObject("Icon", button.transform, Vector2.one * 15f, Vector2.zero);
+                var icon = iconObject.AddComponent<Image>();
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                icon.enabled = false;
+                iconObject.transform.SetAsFirstSibling();
+                icons[index] = icon;
             }
         }
 
@@ -612,7 +646,8 @@ namespace Nyangbingo.UI
             {
                 var capturedIndex = index;
                 var button = CreateButton(gridObject.transform, $"CodexCard_{index + 1:00}", "?",
-                    Vector2.zero, grid.cellSize, () => SelectCodexCard(capturedIndex));
+                    Vector2.zero, grid.cellSize, () => SelectCodexCard(capturedIndex), false);
+                RuntimeUiButtonArt.ApplyCodexCard(button, gameplayArtCatalog);
                 var label = button.GetComponentInChildren<Text>();
                 label.fontSize = 8;
                 label.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -652,23 +687,24 @@ namespace Nyangbingo.UI
             var cardObject = CreateUiObject("CodexExpandedCard", codexExpandedBackdrop.transform,
                 YokaiCodexPresentationModel.EnlargedCardSize, Vector2.zero);
             codexExpandedCardBackground = cardObject.AddComponent<Image>();
+            RuntimeUiButtonArt.ApplyCodexCard(codexExpandedCardBackground, gameplayArtCatalog);
             var cardButton = cardObject.AddComponent<Button>();
             cardButton.targetGraphic = codexExpandedCardBackground;
             cardButton.onClick.AddListener(HandleCodexExpandedCardClicked);
 
             codexExpandedTitle = CreateText(cardObject.transform, "Title", 15, TextAnchor.MiddleCenter,
-                new Vector2(176f, 24f), new Vector2(0f, 111f));
+                new Vector2(140f, 18f), new Vector2(0f, 86f));
             var portraitObject = CreateUiObject("Portrait", cardObject.transform,
-                new Vector2(170f, 150f), new Vector2(0f, 20f));
+                new Vector2(116f, 112f), new Vector2(0f, 16f));
             codexExpandedPortrait = portraitObject.AddComponent<Image>();
             codexExpandedPortrait.preserveAspect = true;
             codexExpandedPortrait.raycastTarget = false;
             codexExpandedFrontText = CreateText(cardObject.transform, "Front", 10, TextAnchor.UpperCenter,
-                new Vector2(176f, 54f), new Vector2(0f, -82f));
+                new Vector2(140f, 40f), new Vector2(0f, -61f));
             codexExpandedBackText = CreateText(cardObject.transform, "Back", 10, TextAnchor.UpperLeft,
-                new Vector2(168f, 190f), new Vector2(0f, -2f));
+                new Vector2(140f, 168f), new Vector2(0f, -8f));
             codexExpandedHintText = CreateText(cardObject.transform, "Hint", 8, TextAnchor.MiddleCenter,
-                new Vector2(184f, 16f), new Vector2(0f, -118f));
+                new Vector2(142f, 14f), new Vector2(0f, -113f));
             codexExpandedHintText.color = new Color(.78f, .83f, .86f, 1f);
             codexExpandedBackdrop.SetActive(false);
         }
@@ -1138,11 +1174,12 @@ namespace Nyangbingo.UI
                 SetOpen(false);
                 return;
             }
-            RefreshTransferLabels(storageLabels, storage.Slots);
-            RefreshTransferLabels(storagePlayerLabels, runtimeServices.PlayerInventory.Slots);
+            RefreshTransferSlots(storageLabels, storageIcons, storage.Slots);
+            RefreshTransferSlots(storagePlayerLabels, storagePlayerIcons,
+                runtimeServices.PlayerInventory.Slots);
         }
 
-        private void RefreshTransferLabels(Text[] labels, IReadOnlyList<InventorySlot> slots)
+        private void RefreshTransferSlots(Text[] labels, Image[] icons, IReadOnlyList<InventorySlot> slots)
         {
             for (var index = 0; index < labels.Length; index++)
             {
@@ -1150,7 +1187,13 @@ namespace Nyangbingo.UI
                 if (label == null) continue;
                 var slot = index < slots.Count ? slots[index] : default;
                 var item = string.IsNullOrEmpty(slot.itemId) ? null : gameDataCatalog.FindItem(slot.itemId);
-                label.text = item == null ? "-" : $"{item.DisplayName}\n×{slot.amount}";
+                var icon = index < icons.Length ? icons[index] : null;
+                if (icon != null)
+                {
+                    icon.sprite = item != null ? itemArtCatalog?.FindSprite(item.Id) : null;
+                    icon.enabled = icon.sprite != null;
+                }
+                label.text = item != null && slot.amount > 1 ? slot.amount.ToString() : string.Empty;
             }
         }
 
@@ -1466,7 +1509,9 @@ namespace Nyangbingo.UI
             switch (index)
             {
                 case 0: return selected ? gameplayArtCatalog.ActiveItemSlotSelected : gameplayArtCatalog.ActiveItemSlot;
-                case 1: return selected ? gameplayArtCatalog.InventorySlotSelected : gameplayArtCatalog.EquipmentHeadSlot;
+                case 1: return selected
+                    ? gameplayArtCatalog.EquipmentHeadSlotSelected ?? gameplayArtCatalog.InventorySlotSelected
+                    : gameplayArtCatalog.EquipmentHeadSlot;
                 case 2: return selected ? gameplayArtCatalog.EquipmentBodySlotSelected : gameplayArtCatalog.EquipmentBodySlot;
                 case 3: return selected ? gameplayArtCatalog.EquipmentFeetSlotSelected : gameplayArtCatalog.EquipmentFeetSlot;
                 default: return selected
@@ -1903,8 +1948,8 @@ namespace Nyangbingo.UI
             return image;
         }
 
-        private static Button CreateButton(Transform parent, string name, string label, Vector2 position,
-            Vector2 size, UnityEngine.Events.UnityAction action)
+        private Button CreateButton(Transform parent, string name, string label, Vector2 position,
+            Vector2 size, UnityEngine.Events.UnityAction action, bool applyDeliveredArt = true)
         {
             var buttonObject = CreateUiObject(name, parent, size, position);
             var image = buttonObject.AddComponent<Image>();
@@ -1912,6 +1957,7 @@ namespace Nyangbingo.UI
             var button = buttonObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(action);
+            if (applyDeliveredArt) RuntimeUiButtonArt.Apply(button, gameplayArtCatalog);
             var text = CreateText(buttonObject.transform, "Label", 10, TextAnchor.MiddleCenter, size, Vector2.zero);
             text.text = label;
             text.raycastTarget = false;

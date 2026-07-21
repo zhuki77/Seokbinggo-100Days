@@ -16,6 +16,15 @@ namespace Nyangbingo.UI
         {
             "king_dokkaebi", "mother_bulgasari", "imugi", "gangcheol_boss"
         };
+#if UNITY_EDITOR
+        private static readonly string[] DeliveredInventoryArtTestItemIds =
+        {
+            // bare_claw is an innate body weapon (maxStack 0), so it never belongs in inventory.
+            "iron_claw", "icesteel_claw", "dokkaebi_club", "cheolseon", "clay", "drought_heart",
+            "frostclaw_gauntlet", "iron_forge_core", "hapjukseon", "copper_ingot", "icesteel_ingot",
+            "iron_ingot", "water_jar"
+        };
+#endif
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
@@ -92,7 +101,9 @@ namespace Nyangbingo.UI
 #if UNITY_EDITOR
             if (Input.GetKeyDown(KeyCode.F6))
             {
-                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+                    GrantDeliveredArtItemsForEditorTest();
+                else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
                     TeleportToSelectedCraftingStationForEditorTest();
                 else
                     GrantSelectedSummonMaterialsForEditorTest();
@@ -207,6 +218,27 @@ namespace Nyangbingo.UI
                 return;
             }
             ShowMessage($"F6 테스트 재료 지급: {definition.DisplayName}");
+        }
+
+        private void GrantDeliveredArtItemsForEditorTest()
+        {
+            var granted = 0;
+            var missing = 0;
+            for (var index = 0; index < DeliveredInventoryArtTestItemIds.Length; index++)
+            {
+                var item = gameDataCatalog.FindItem(DeliveredInventoryArtTestItemIds[index]);
+                if (item == null)
+                {
+                    missing++;
+                    continue;
+                }
+                if (runtimeServices.PlayerInventory.TryAdd(item.Id, 1)) granted++;
+            }
+
+            var message = $"Ctrl+F6 신규 아이템 아트 검증 지급: {granted}/{DeliveredInventoryArtTestItemIds.Length}";
+            if (missing > 0) message += $" (정의 누락 {missing})";
+            ShowMessage(message);
+            Debug.Log($"[Nyangbingo] {message}");
         }
 
         private void TeleportToSelectedCraftingStationForEditorTest()

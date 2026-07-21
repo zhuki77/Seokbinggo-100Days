@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: clay
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: -526940562300907098, guid: b26c99d8235ae244dae83b67acc25518, type: 3}
+  m_Sprite: {fileID: -9072958649096168355, guid: 3c35ad971f4611144acf5aa94db91b1c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

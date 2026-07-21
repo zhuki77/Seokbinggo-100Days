@@ -147,6 +147,7 @@ namespace Nyangbingo.UI
             EnsureTitleBackground();
             EnsureTitleLogo();
             if (gameplayArtCatalog == null) return;
+            ApplyDeliveredButtonArt();
             ApplyButtonLabelArt(titleNewGameButton, gameplayArtCatalog.ShellStart);
             ApplyButtonLabelArt(settingsButton, gameplayArtCatalog.ShellSettings);
             ApplyButtonLabelArt(titleQuitButton, gameplayArtCatalog.ShellLeave);
@@ -158,6 +159,30 @@ namespace Nyangbingo.UI
                 bgmSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(bgmSpeakerImage, value));
             if (sfxSlider != null)
                 sfxSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(sfxSpeakerImage, value));
+        }
+
+        private void ApplyDeliveredButtonArt()
+        {
+            RuntimeUiButtonArt.Apply(resumeButton, gameplayArtCatalog);
+            ApplyButtonArray(saveButtons);
+            ApplyButtonArray(loadButtons);
+            RuntimeUiButtonArt.Apply(settingsButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(returnTitleButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(settingsApplyButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(settingsBackButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(confirmButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(cancelButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(titleContinueButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(titleNewGameButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(titleQuitButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(resultTitleButton, gameplayArtCatalog);
+            ApplyButtonArray(demoSaveButtons);
+        }
+
+        private void ApplyButtonArray(IEnumerable<Button> buttons)
+        {
+            if (buttons == null) return;
+            foreach (var button in buttons) RuntimeUiButtonArt.Apply(button, gameplayArtCatalog);
         }
 
         private void EnsureTitleBackground()
