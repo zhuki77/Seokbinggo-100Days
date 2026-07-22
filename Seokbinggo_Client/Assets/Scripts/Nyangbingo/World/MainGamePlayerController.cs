@@ -172,13 +172,7 @@ namespace Nyangbingo.World
             maximumFallSpeed = physics.MaxFallSpeed;
             jumpCutMultiplier = physics.JumpCutMultiplier;
 
-            body.bodyType = RigidbodyType2D.Dynamic;
-            body.gravityScale = 0f;
-            body.freezeRotation = true;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            playerCollider.radius = .38f;
-            playerCollider.isTrigger = false;
+            ConfigurePhysicsBody(body, playerCollider);
             ApplyGeneratedWorldSpawn();
             playerRenderer = GetComponent<SpriteRenderer>();
             var playerArt = characterArtCatalog != null ? characterArtCatalog.Find("player") : null;
@@ -341,9 +335,8 @@ namespace Nyangbingo.World
                 else ResetMiningProgress();
             }
             else CancelMining();
-            // 우클릭: 미개봉 상자 우선(테스트 하니스와 동일) → 없으면 부채 액티브.
-            if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
-                !TryOpenNearbyChest())
+            // 우클릭은 부채 액티브 전용이다. 상자와 설치물의 제품 상호작용은 E로 통합한다.
+            if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1))
                 TryFanAbility();
         }
 
@@ -445,6 +438,20 @@ namespace Nyangbingo.World
             if (float.IsNaN(input) || float.IsInfinity(input) ||
                 float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed)) return 0f;
             return Mathf.Clamp(input, -1f, 1f) * Mathf.Max(0f, moveSpeed);
+        }
+
+        public static void ConfigurePhysicsBody(Rigidbody2D targetBody, CircleCollider2D targetCollider)
+        {
+            if (targetBody == null) throw new System.ArgumentNullException(nameof(targetBody));
+            if (targetCollider == null) throw new System.ArgumentNullException(nameof(targetCollider));
+
+            targetBody.bodyType = RigidbodyType2D.Dynamic;
+            targetBody.gravityScale = 0f;
+            targetBody.freezeRotation = true;
+            targetBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            targetBody.interpolation = RigidbodyInterpolation2D.Interpolate;
+            targetCollider.radius = .38f;
+            targetCollider.isTrigger = false;
         }
 
         public static float ApplyGravity(float currentVelocity, float gravity, float maxFallSpeed,
