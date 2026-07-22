@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Reflection;
+using Nyangbingo.Combat;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.Save;
@@ -29,12 +30,125 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestWorldCellCoordinateContract();
         TestDemoSafeSpawnRestorePolicy();
         TestLatestProductFlowContracts();
+        TestPlayerPhysicsIntegrationContract();
+        TestMeleeArcAttackPhysicsQueryContract();
         TestWorldMobPhysicsContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
         TestCraftAndPlacementActionsRemainIndependent();
         TestRuntimeTileEdgeOverlayWiring();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (17/17).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (19/19).");
+    }
+
+    private static void TestMeleeArcAttackPhysicsQueryContract()
+    {
+        var root = new GameObject("MeleeArcPhysicsQueryContract");
+        try
+        {
+            var attacker = new GameObject("PlayerAttacker", typeof(Health), typeof(MeleeArcAttack));
+            attacker.transform.SetParent(root.transform, false);
+            var attackerHealth = attacker.GetComponent<Health>();
+            attackerHealth.ConfigureForRuntime(100);
+
+            var selfHurtbox = new GameObject("PlayerHurtbox", typeof(BoxCollider2D));
+            selfHurtbox.transform.SetParent(attacker.transform, false);
+            selfHurtbox.transform.localPosition = new Vector3(.25f, 0f, 0f);
+            selfHurtbox.GetComponent<BoxCollider2D>().isTrigger = true;
+
+            var yokai = new GameObject("GroundYokai", typeof(Health), typeof(BoxCollider2D));
+            yokai.transform.SetParent(root.transform, false);
+            yokai.transform.position = new Vector3(.75f, 0f, 0f);
+            var yokaiHealth = yokai.GetComponent<Health>();
+            yokaiHealth.ConfigureForRuntime(100);
+            var yokaiDamageEvents = 0;
+            yokaiHealth.Damaged += (_, __) => yokaiDamageEvents++;
+
+            var yokaiHurtbox = new GameObject("GroundYokaiHurtbox", typeof(BoxCollider2D));
+            yokaiHurtbox.transform.SetParent(yokai.transform, false);
+            yokaiHurtbox.transform.localPosition = new Vector3(.05f, 0f, 0f);
+            yokaiHurtbox.GetComponent<BoxCollider2D>().isTrigger = true;
+
+            var boss = new GameObject("BossTarget", typeof(Health), typeof(CircleCollider2D));
+            boss.transform.SetParent(root.transform, false);
+            boss.transform.position = new Vector3(1.4f, .1f, 0f);
+            var bossHealth = boss.GetComponent<Health>();
+            bossHealth.ConfigureForRuntime(200);
+            var bossDamageEvents = 0;
+            bossHealth.Damaged += (_, __) => bossDamageEvents++;
+
+            var rearTarget = new GameObject("RearTarget", typeof(Health), typeof(BoxCollider2D));
+            rearTarget.transform.SetParent(root.transform, false);
+            rearTarget.transform.position = new Vector3(-.6f, 0f, 0f);
+            var rearHealth = rearTarget.GetComponent<Health>();
+            rearHealth.ConfigureForRuntime(100);
+
+            var distantTarget = new GameObject("DistantTarget", typeof(Health), typeof(BoxCollider2D));
+            distantTarget.transform.SetParent(root.transform, false);
+            distantTarget.transform.position = new Vector3(3f, 0f, 0f);
+            var distantHealth = distantTarget.GetComponent<Health>();
+            distantHealth.ConfigureForRuntime(100);
+
+            var attack = attacker.GetComponent<MeleeArcAttack>();
+            attack.ConfigureForRuntime(attacker.transform, Physics2D.AllLayers,
+                attackRange: 2f, attackArc: 120f, attackDamage: 10, attackKnockback: 0f);
+            Physics2D.SyncTransforms();
+            attack.Strike(Vector2.right);
+
+            Require(attackerHealth.Current == 100 && yokaiHealth.Current == 90 && bossHealth.Current == 190 &&
+                    rearHealth.Current == 100 && distantHealth.Current == 100,
+                "A melee swing must damage only forward in-range yokai and boss targets, never self or excluded targets.");
+            Require(attack.LastHitCount == 2 && yokaiDamageEvents == 1 && bossDamageEvents == 1,
+                "Physical and trigger colliders belonging to one combatant must resolve to exactly one melee hit.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    private static void TestPlayerPhysicsIntegrationContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null,
+            "The product GameDataCatalog must exist for the merged player physics contract.");
+        Require(PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var physics),
+            "The merged player controller must load its jump and gravity values from the product catalog.");
+
+        var playerObject = new GameObject("PlayerPhysicsIntegrationContract",
+            typeof(Rigidbody2D), typeof(CircleCollider2D));
+        try
+        {
+            var body = playerObject.GetComponent<Rigidbody2D>();
+            var playerCollider = playerObject.GetComponent<CircleCollider2D>();
+            MainGamePlayerController.ConfigurePhysicsBody(body, playerCollider);
+
+            Require(body.bodyType == RigidbodyType2D.Dynamic &&
+                    Mathf.Approximately(body.gravityScale, 0f) && body.freezeRotation &&
+                    body.collisionDetectionMode == CollisionDetectionMode2D.Continuous &&
+                    body.interpolation == RigidbodyInterpolation2D.Interpolate &&
+                    !playerCollider.isTrigger && Mathf.Approximately(playerCollider.radius, .38f),
+                "The merged player must retain the official dynamic foreground-physics body contract.");
+
+            const float fixedDeltaSeconds = .02f;
+            var fullPeak = PlayerMovementPhysics.SimulatePeakJumpHeightTiles(physics, fixedDeltaSeconds);
+            var shortPeak = PlayerMovementPhysics.SimulatePeakJumpHeightTiles(
+                physics, fixedDeltaSeconds, holdFrames: 3);
+            Require(fullPeak >= 3.1f && fullPeak <= 3.9f && shortPeak < fullPeak * .65f,
+                "Full and released-early jumps must preserve the catalog-driven Terraria-like height split.");
+
+            var fallingVelocity = 0f;
+            for (var step = 0; step < 240; step++)
+                fallingVelocity = MainGamePlayerController.ApplyGravity(fallingVelocity,
+                    physics.Gravity, physics.MaxFallSpeed, fixedDeltaSeconds);
+            Require(Mathf.Approximately(fallingVelocity, -physics.MaxFallSpeed) &&
+                    Mathf.Approximately(MainGamePlayerController.CalculateHorizontalVelocity(2f, 6f), 6f),
+                "Dynamic player movement must clamp both terminal fall speed and horizontal input.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(playerObject);
+        }
     }
 
     private static void TestRuntimeTileEdgeOverlayWiring()
@@ -141,6 +255,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestWorldMobPhysicsContract()
     {
+        var globalsSource = System.IO.File.ReadAllText("Assets/Data/CSV/globals.csv");
+        Require(!globalsSource.Contains("요괴 점프 추격 없어") &&
+                globalsSource.Contains("지상형 요괴/보스의 1칸 추격 점프"),
+            "Player jump data notes must not contradict the grounded yokai and boss step-jump contract.");
+
         Require(WorldMobPhysicsBody.ForYokai(Nyangbingo.Core.YokaiKind.ClubGoblin) ==
                     WorldMobLocomotion.Grounded &&
                 WorldMobPhysicsBody.ForYokai(Nyangbingo.Core.YokaiKind.Bulgasari) ==
@@ -454,6 +573,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Narrative range-toggle status was reintroduced into the tile palette HUD.");
         Require(playerSource.Contains("MainGameHudController.BlocksWorldPrimaryInput"),
             "Clicking the top-right seal thermometer must block claw attacks and mining input.");
+        Require(playerSource.Contains(": TryOpenNearbyChest() ||") &&
+                !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
+                    @"GetMouseButtonDown\(1\)[\s\S]{0,120}TryOpenNearbyChest"),
+            "Chest interaction must remain on E while right-click stays exclusive to the fan ability.");
     }
 
     private static void TestBossHealthArtMapping()
