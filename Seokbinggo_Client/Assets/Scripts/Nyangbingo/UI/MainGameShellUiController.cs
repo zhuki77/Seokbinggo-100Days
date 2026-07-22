@@ -5,6 +5,7 @@ using Nyangbingo.Data;
 using Nyangbingo.Save;
 using Nyangbingo.World;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.Collections.Generic;
@@ -54,7 +55,9 @@ namespace Nyangbingo.UI
         private Image sfxSpeakerImage;
         private Button pauseSaveButton;
         private Text titleDayCounterText;
+        private RuntimePixelGlyphPresenter titleDayCounterGlyphs;
         private GameObject titlePlayerArtRoot;
+        private RectTransform pauseHoverIndicator;
         private bool demoLoadApplied;
         private static bool enterGameplayAfterReload;
 
@@ -134,7 +137,7 @@ namespace Nyangbingo.UI
             if (shouldEnterGameplay) shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
             else shell.EnterTitle();
             RefreshTitleControls();
-            SetStatus("Esc: 계속하기");
+            SetStatus(string.Empty);
             IsInitialized = true;
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지 4항목·현재 슬롯 저장·설정·타이틀 셸 연결 완료.");
         }
@@ -159,9 +162,29 @@ namespace Nyangbingo.UI
             EnsureTitleStatePresentation();
             if (gameplayArtCatalog == null) return;
             ApplyDeliveredButtonArt();
+            ApplyButtonLabelArt(titleContinueButton, gameplayArtCatalog.ShellContinue);
             ApplyButtonLabelArt(titleNewGameButton, gameplayArtCatalog.ShellStart);
+            ApplyButtonLabelArt(resumeButton, gameplayArtCatalog.ShellResume);
+            ApplyButtonLabelArt(pauseSaveButton, gameplayArtCatalog.ShellSave);
             ApplyButtonLabelArt(settingsButton, gameplayArtCatalog.ShellSettings);
             ApplyButtonLabelArt(titleQuitButton, gameplayArtCatalog.ShellLeave);
+            ApplyButtonLabelArt(returnTitleButton, gameplayArtCatalog.ShellReturnTitle);
+            ApplyButtonLabelArt(resultTitleButton, gameplayArtCatalog.ShellReturnTitle);
+            ApplyButtonLabelArt(settingsApplyButton, gameplayArtCatalog.ShellApply);
+            ApplyButtonLabelArt(settingsBackButton, gameplayArtCatalog.ShellBack);
+            ApplyShellTextArt(resumeButton?.transform.parent?.Find("Title"),
+                gameplayArtCatalog.ShellPauseTitle, "DeliveredPauseTitle");
+            ApplyShellTextArt(bgmSlider?.transform.parent?.Find("Title"),
+                gameplayArtCatalog.ShellSettings, "DeliveredSettingsTitle");
+            ApplyShellTextArt(bgmSlider?.transform.parent?.Find("BgmLabel"),
+                gameplayArtCatalog.ShellBgmLabel, "DeliveredBgmLabel");
+            ApplyShellTextArt(sfxSlider?.transform.parent?.Find("SfxLabel"),
+                gameplayArtCatalog.ShellSfxLabel, "DeliveredSfxLabel");
+            ApplyToggleArt(fullscreenToggle, gameplayArtCatalog.ShellCheckOff,
+                gameplayArtCatalog.ShellCheckOn);
+            ConfigurePauseHoverIndicator(gameplayArtCatalog.ShellPlayIcon);
+            ApplyDecorationArt(resumeButton?.transform.parent?.Find("Title"),
+                gameplayArtCatalog.ShellPauseIcon, "DeliveredPauseIcon", new Vector2(-35f, 0f));
             bgmSpeakerImage = ApplyVolumeSliderArt(bgmSlider);
             sfxSpeakerImage = ApplyVolumeSliderArt(sfxSlider);
             RefreshSpeakerIcon(bgmSpeakerImage, bgmSlider != null ? bgmSlider.value : 0f);
@@ -236,7 +259,8 @@ namespace Nyangbingo.UI
             var titlePanel = titleNewGameButton.transform.parent;
             if (titlePanel == null) return;
             var titleLabel = titlePanel.Find("Title")?.GetComponent<Text>();
-            if (titleLabel != null)
+            var deliveredLogo = gameplayArtCatalog?.ShellTitleLogo;
+            if (titleLabel != null && deliveredLogo == null)
             {
                 titleLabel.gameObject.SetActive(true);
                 titleLabel.text = "100일의 냥빙고";
@@ -248,7 +272,29 @@ namespace Nyangbingo.UI
                 labelRect.sizeDelta = new Vector2(180f, 30f);
             }
             var titleArtTransform = titlePanel.Find("TitleArt") as RectTransform;
-            if (titleArtTransform != null) titleArtTransform.gameObject.SetActive(false);
+            if (deliveredLogo == null)
+            {
+                if (titleArtTransform != null) titleArtTransform.gameObject.SetActive(false);
+                return;
+            }
+            if (titleLabel != null) titleLabel.gameObject.SetActive(false);
+            if (titleArtTransform == null)
+            {
+                var titleArtObject = new GameObject("TitleArt", typeof(RectTransform), typeof(Image));
+                titleArtObject.transform.SetParent(titlePanel, false);
+                titleArtTransform = (RectTransform)titleArtObject.transform;
+            }
+            titleArtTransform.gameObject.SetActive(true);
+            titleArtTransform.anchorMin = titleArtTransform.anchorMax = titleArtTransform.pivot =
+                new Vector2(.5f, .5f);
+            titleArtTransform.anchoredPosition = new Vector2(-112f, 82f);
+            titleArtTransform.sizeDelta = new Vector2(96f, 96f);
+            var titleImage = titleArtTransform.GetComponent<Image>() ??
+                             titleArtTransform.gameObject.AddComponent<Image>();
+            titleImage.sprite = deliveredLogo;
+            titleImage.color = Color.white;
+            titleImage.preserveAspect = true;
+            titleImage.raycastTarget = false;
         }
 
         private void EnsureTitleStatePresentation()
@@ -267,8 +313,8 @@ namespace Nyangbingo.UI
             }
             counterTransform.anchorMin = counterTransform.anchorMax = counterTransform.pivot =
                 new Vector2(.5f, .5f);
-            counterTransform.anchoredPosition = new Vector2(-112f, 56f);
-            counterTransform.sizeDelta = new Vector2(120f, 28f);
+            counterTransform.anchoredPosition = new Vector2(176f, 97f);
+            counterTransform.sizeDelta = new Vector2(84f, 36f);
             titleDayCounterText = counterTransform.GetComponent<Text>();
             var menuLabel = titleNewGameButton.GetComponentInChildren<Text>(true);
             titleDayCounterText.font = menuLabel != null ? menuLabel.font : titleDayCounterText.font;
@@ -277,6 +323,13 @@ namespace Nyangbingo.UI
             titleDayCounterText.alignment = TextAnchor.MiddleCenter;
             titleDayCounterText.color = Color.white;
             titleDayCounterText.raycastTarget = false;
+            if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
+            {
+                titleDayCounterText.text = string.Empty;
+                titleDayCounterGlyphs = counterTransform.GetComponent<RuntimePixelGlyphPresenter>() ??
+                                        counterTransform.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
+                titleDayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs);
+            }
 
             var playerEntry = characterArtCatalog?.Find("player");
             if (playerEntry == null || playerEntry.IdleFrames.Count == 0) return;
@@ -323,6 +376,129 @@ namespace Nyangbingo.UI
             image.color = Color.white;
             image.preserveAspect = true;
             image.raycastTarget = false;
+        }
+
+        private static void ApplyShellTextArt(Transform target, Sprite sprite, string artName)
+        {
+            if (target == null || sprite == null) return;
+            var label = target.GetComponent<Text>();
+            if (label != null) label.enabled = false;
+            var artTransform = target.Find(artName) as RectTransform;
+            if (artTransform == null)
+            {
+                var artObject = new GameObject(artName, typeof(RectTransform), typeof(Image));
+                artObject.transform.SetParent(target, false);
+                artTransform = (RectTransform)artObject.transform;
+            }
+            artTransform.anchorMin = artTransform.anchorMax = artTransform.pivot = new Vector2(.5f, .5f);
+            artTransform.anchoredPosition = Vector2.zero;
+            artTransform.sizeDelta = sprite.rect.size;
+            var image = artTransform.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+
+        private static void ApplyDecorationArt(Transform target, Sprite sprite, string artName, Vector2 position)
+        {
+            if (target == null || sprite == null) return;
+            var artTransform = target.Find(artName) as RectTransform;
+            if (artTransform == null)
+            {
+                var artObject = new GameObject(artName, typeof(RectTransform), typeof(Image));
+                artObject.transform.SetParent(target, false);
+                artTransform = (RectTransform)artObject.transform;
+            }
+            artTransform.anchorMin = artTransform.anchorMax = artTransform.pivot = new Vector2(.5f, .5f);
+            artTransform.anchoredPosition = position;
+            artTransform.sizeDelta = sprite.rect.size;
+            var image = artTransform.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+
+        private static void ApplyToggleArt(Toggle toggle, Sprite offSprite, Sprite onSprite)
+        {
+            if (toggle == null || offSprite == null || onSprite == null) return;
+            var offSize = offSprite.rect.size;
+            if (toggle.targetGraphic is Image background)
+            {
+                background.sprite = offSprite;
+                background.color = Color.white;
+                background.preserveAspect = true;
+                background.rectTransform.sizeDelta = offSize;
+            }
+            if (toggle.graphic is Image checkmark)
+            {
+                checkmark.sprite = onSprite;
+                checkmark.color = Color.white;
+                checkmark.preserveAspect = true;
+                checkmark.rectTransform.anchorMin = checkmark.rectTransform.anchorMax =
+                    checkmark.rectTransform.pivot = new Vector2(.5f, .5f);
+                checkmark.rectTransform.anchoredPosition = Vector2.zero;
+                checkmark.rectTransform.sizeDelta = offSize;
+            }
+        }
+
+        private void ConfigurePauseHoverIndicator(Sprite sprite)
+        {
+            var pausePanel = resumeButton != null ? resumeButton.transform.parent : null;
+            if (pausePanel == null || sprite == null) return;
+
+            pauseHoverIndicator = pausePanel.Find("DeliveredPauseSelectionArrow") as RectTransform;
+            if (pauseHoverIndicator == null)
+            {
+                var indicatorObject = new GameObject("DeliveredPauseSelectionArrow",
+                    typeof(RectTransform), typeof(Image));
+                indicatorObject.transform.SetParent(pausePanel, false);
+                pauseHoverIndicator = (RectTransform)indicatorObject.transform;
+            }
+
+            pauseHoverIndicator.anchorMin = pauseHoverIndicator.anchorMax = pauseHoverIndicator.pivot =
+                new Vector2(.5f, .5f);
+            pauseHoverIndicator.sizeDelta = sprite.rect.size;
+            var indicatorImage = pauseHoverIndicator.GetComponent<Image>();
+            indicatorImage.sprite = sprite;
+            indicatorImage.color = Color.white;
+            indicatorImage.preserveAspect = true;
+            indicatorImage.raycastTarget = false;
+            pauseHoverIndicator.SetAsLastSibling();
+
+            BindPauseHoverTarget(resumeButton);
+            BindPauseHoverTarget(pauseSaveButton);
+            BindPauseHoverTarget(settingsButton);
+            BindPauseHoverTarget(returnTitleButton);
+            MovePauseHoverIndicator(resumeButton);
+        }
+
+        private void BindPauseHoverTarget(Button button)
+        {
+            if (button == null) return;
+            var trigger = button.GetComponent<EventTrigger>() ?? button.gameObject.AddComponent<EventTrigger>();
+            trigger.triggers ??= new List<EventTrigger.Entry>();
+            AddPauseHoverTrigger(trigger, EventTriggerType.PointerEnter, button);
+            AddPauseHoverTrigger(trigger, EventTriggerType.Select, button);
+        }
+
+        private void AddPauseHoverTrigger(EventTrigger trigger, EventTriggerType eventType, Button button)
+        {
+            var entry = new EventTrigger.Entry { eventID = eventType };
+            entry.callback.AddListener(_ => MovePauseHoverIndicator(button));
+            trigger.triggers.Add(entry);
+        }
+
+        private void MovePauseHoverIndicator(Button button)
+        {
+            if (pauseHoverIndicator == null || button == null) return;
+            var buttonRect = button.GetComponent<RectTransform>();
+            if (buttonRect == null) return;
+            pauseHoverIndicator.anchoredPosition = new Vector2(
+                buttonRect.anchoredPosition.x - buttonRect.sizeDelta.x * .5f + 20f,
+                buttonRect.anchoredPosition.y);
+            pauseHoverIndicator.SetAsLastSibling();
         }
 
         private Image ApplyVolumeSliderArt(Slider slider)
@@ -622,6 +798,8 @@ namespace Nyangbingo.UI
         {
             if (pauseSaveButton != null)
                 pauseSaveButton.interactable = bossManager == null || !bossManager.IsBossActive;
+            if (pauseHoverIndicator != null)
+                pauseHoverIndicator.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause);
 
             // Settings is displayed on top of the paused gameplay view, so the pause-only
             // keyboard hint must be hidden until the player returns to the pause card.
@@ -688,8 +866,11 @@ namespace Nyangbingo.UI
 
         private void RefreshTitleControls()
         {
-            if (titleDayCounterText != null)
-                titleDayCounterText.text = GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat);
+            var countdown = GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat);
+            if (titleDayCounterGlyphs != null)
+                titleDayCounterGlyphs.SetText(countdown);
+            else if (titleDayCounterText != null)
+                titleDayCounterText.text = countdown;
             if (titlePlayerArtRoot != null) titlePlayerArtRoot.SetActive(true);
             if (titleContinueButton != null) titleContinueButton.interactable = shell.Title.CanContinue;
             if (titleQuitButton != null) titleQuitButton.gameObject.SetActive(shell.Title.ShowsQuit);

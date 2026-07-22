@@ -395,6 +395,8 @@ namespace Nyangbingo.Editor
                     FindAnimationFrames(artPath, "attack"));
                 SetSpriteArray(entry.FindPropertyRelative("hitFrames"),
                     FindAnimationFrames(artPath, "hit"));
+                SetSpriteArray(entry.FindPropertyRelative("deathFrames"),
+                    FindAnimationFrames(artPath, "die"));
                 SetSpriteArray(entry.FindPropertyRelative("fleeFrames"),
                     FindAnimationFrames(artPath, "flee"));
                 SetSpriteArray(entry.FindPropertyRelative("specialFrames"),
@@ -895,6 +897,7 @@ namespace Nyangbingo.Editor
                     RequireFrames(id, "walk", entry.WalkFrames, 4, failures);
                     RequireFrames(id, "attack", entry.AttackFrames, 2, failures);
                     RequireFrames(id, "hit", entry.HitFrames, 1, failures);
+                    RequireFrames(id, "die", entry.DeathFrames, 2, failures);
                     break;
                 case "club":
                     RequireFrames(id, "idle", entry.IdleFrames, 3, failures);

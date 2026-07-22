@@ -24,6 +24,8 @@ namespace Nyangbingo.World
         private int frameIndex;
         private float frameRemaining;
         private float actionRemaining;
+        private bool holdFinalFrame;
+        private bool deathLocked;
         private bool hasExplicitMovementState;
         private bool explicitlyMoving;
         private bool configured;
@@ -37,6 +39,7 @@ namespace Nyangbingo.World
             singleFrame = entry.Sprite != null ? new[] { entry.Sprite } : System.Array.Empty<Sprite>();
             previousPosition = transform.position;
             configured = true;
+            deathLocked = false;
             if (health != null) health.Damaged += HandleDamaged;
             PlayLoop(entry.IdleFrames);
         }
@@ -56,6 +59,25 @@ namespace Nyangbingo.World
         public void PlayAttack()
         {
             PlayAction(entry?.AttackFrames);
+        }
+
+        public void PlayDeath()
+        {
+            if (!configured || entry == null || entry.DeathFrames.Count == 0) return;
+            deathLocked = true;
+            activeFrames = entry.DeathFrames;
+            frameIndex = 0;
+            frameRemaining = FrameSeconds;
+            actionRemaining = 0f;
+            holdFinalFrame = true;
+            ApplyFrame();
+        }
+
+        public void ResetToIdle()
+        {
+            if (!configured || entry == null) return;
+            deathLocked = false;
+            PlayLoop(entry.IdleFrames);
         }
 
         public void Bind(YokaiBrain brain)
@@ -98,6 +120,12 @@ namespace Nyangbingo.World
             if (!hasExplicitMovementState && Mathf.Abs(delta.x) > Mathf.Epsilon)
                 spriteRenderer.flipX = entry.SourceFacesRight ? delta.x < 0f : delta.x > 0f;
 
+            if (deathLocked)
+            {
+                TickFrames(Time.deltaTime);
+                return;
+            }
+
             if (actionRemaining > 0f)
             {
                 actionRemaining = Mathf.Max(0f, actionRemaining - Time.deltaTime);
@@ -129,16 +157,18 @@ namespace Nyangbingo.World
             activeFrames = frames != null && frames.Count > 0 ? frames : SingleFrame();
             frameIndex = 0;
             frameRemaining = FrameSeconds;
+            holdFinalFrame = false;
             ApplyFrame();
         }
 
         private void PlayAction(IReadOnlyList<Sprite> frames)
         {
-            if (!configured || frames == null || frames.Count == 0) return;
+            if (!configured || deathLocked || frames == null || frames.Count == 0) return;
             activeFrames = frames;
             frameIndex = 0;
             frameRemaining = FrameSeconds;
             actionRemaining = frames.Count * FrameSeconds;
+            holdFinalFrame = false;
             ApplyFrame();
         }
 
@@ -148,7 +178,14 @@ namespace Nyangbingo.World
             frameRemaining -= Mathf.Max(0f, deltaTime);
             while (frameRemaining <= 0f)
             {
-                frameIndex = (frameIndex + 1) % activeFrames.Count;
+                if (holdFinalFrame && frameIndex >= activeFrames.Count - 1)
+                {
+                    frameRemaining = float.PositiveInfinity;
+                    return;
+                }
+                frameIndex = holdFinalFrame
+                    ? Mathf.Min(frameIndex + 1, activeFrames.Count - 1)
+                    : (frameIndex + 1) % activeFrames.Count;
                 frameRemaining += FrameSeconds;
                 ApplyFrame();
             }

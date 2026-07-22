@@ -132,6 +132,164 @@ namespace Nyangbingo.UI
         }
     }
 
+    /// <summary>
+    /// Renders the delivered D-day and clock glyphs without falling back to a system font.
+    /// Catalog order is D, dash, colon, then digits zero through nine.
+    /// </summary>
+    public sealed class RuntimePixelGlyphPresenter : MonoBehaviour
+    {
+        public const int ExpectedGlyphCount = 13;
+        private const float SpacingPixels = 1f;
+
+        private readonly List<Image> images = new List<Image>();
+        private Sprite[] glyphs = Array.Empty<Sprite>();
+        private RectTransform content;
+        private float glyphScale = 1f;
+        private string displayedText = string.Empty;
+
+        public string DisplayedText => displayedText;
+        public int VisibleGlyphCount => images.Count;
+        public float RenderedWidth => content != null ? content.sizeDelta.x : 0f;
+
+        public void ConfigureForRuntime(IReadOnlyList<Sprite> source, float scale = 1f)
+        {
+            glyphs = source != null && source.Count == ExpectedGlyphCount
+                ? Copy(source)
+                : Array.Empty<Sprite>();
+            glyphScale = Mathf.Max(.1f, scale);
+            EnsureContent();
+            RefreshImages();
+        }
+
+        public void SetText(string value)
+        {
+            value ??= string.Empty;
+            if (displayedText == value) return;
+            displayedText = value;
+            RefreshImages();
+        }
+
+        public void SetVisible(bool visible)
+        {
+            EnsureContent();
+            content.gameObject.SetActive(visible && glyphs.Length == ExpectedGlyphCount);
+        }
+
+        public static int GlyphIndex(char character)
+        {
+            if (character == 'D' || character == 'd') return 0;
+            if (character == '-') return 1;
+            if (character == ':' || character == '.') return 2;
+            return character >= '0' && character <= '9' ? 3 + character - '0' : -1;
+        }
+
+        private void EnsureContent()
+        {
+            if (content != null) return;
+            var existing = transform.Find("PixelGlyphs") as RectTransform;
+            if (existing != null)
+            {
+                content = existing;
+                return;
+            }
+            var root = new GameObject("PixelGlyphs", typeof(RectTransform));
+            root.transform.SetParent(transform, false);
+            content = (RectTransform)root.transform;
+            content.anchorMin = content.anchorMax = content.pivot = new Vector2(.5f, .5f);
+            content.anchoredPosition = Vector2.zero;
+        }
+
+        private void RefreshImages()
+        {
+            EnsureContent();
+            foreach (var image in images)
+                if (image != null)
+                {
+                    if (Application.isPlaying) Destroy(image.gameObject);
+                    else DestroyImmediate(image.gameObject);
+                }
+            images.Clear();
+
+            if (glyphs.Length != ExpectedGlyphCount)
+            {
+                content.gameObject.SetActive(false);
+                return;
+            }
+
+            var characters = new List<char>();
+            foreach (var character in displayedText)
+            {
+                var index = GlyphIndex(character);
+                if (character == '/' || character == '.' ||
+                    index >= 0 && index < glyphs.Length && glyphs[index] != null)
+                    characters.Add(character);
+            }
+
+            var width = 0f;
+            for (var index = 0; index < characters.Count; index++)
+            {
+                width += LayoutSize(characters[index]).x;
+                if (index + 1 < characters.Count) width += SpacingPixels * glyphScale;
+            }
+            var cursor = -width * .5f;
+            var maximumHeight = 0f;
+            foreach (var character in characters)
+            {
+                var size = LayoutSize(character);
+                var imageObject = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
+                imageObject.transform.SetParent(content, false);
+                var image = imageObject.GetComponent<Image>();
+                image.color = Color.white;
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+                var rect = image.rectTransform;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = new Vector2(cursor + size.x * .5f, 0f);
+                if (character == '/')
+                {
+                    image.sprite = null;
+                    image.preserveAspect = false;
+                    rect.sizeDelta = new Vector2(1.5f, 11f) * glyphScale;
+                    rect.localRotation = Quaternion.Euler(0f, 0f, -25f);
+                }
+                else if (character == '.')
+                {
+                    image.sprite = null;
+                    image.preserveAspect = false;
+                    rect.sizeDelta = new Vector2(2f, 2f) * glyphScale;
+                    rect.anchoredPosition += Vector2.down * 5.5f * glyphScale;
+                }
+                else
+                {
+                    image.sprite = glyphs[GlyphIndex(character)];
+                    rect.sizeDelta = size;
+                }
+                cursor += size.x + SpacingPixels * glyphScale;
+                maximumHeight = Mathf.Max(maximumHeight, size.y);
+                images.Add(image);
+            }
+            content.sizeDelta = new Vector2(width, maximumHeight);
+            content.gameObject.SetActive(true);
+        }
+
+        private Vector2 LayoutSize(char character)
+        {
+            if (character == '/') return new Vector2(5f, 15f) * glyphScale;
+            if (character == '.') return new Vector2(4f, 15f) * glyphScale;
+            var index = GlyphIndex(character);
+            return index >= 0 && index < glyphs.Length && glyphs[index] != null
+                ? glyphs[index].rect.size * glyphScale
+                : Vector2.zero;
+        }
+
+        private static Sprite[] Copy(IReadOnlyList<Sprite> source)
+        {
+            var result = new Sprite[source.Count];
+            for (var index = 0; index < source.Count; index++) result[index] = source[index];
+            return result;
+        }
+    }
+
     /// <summary>Delivered pixel UI art adapter for runtime-created and scene-authored buttons.</summary>
     public static class RuntimeUiButtonArt
     {

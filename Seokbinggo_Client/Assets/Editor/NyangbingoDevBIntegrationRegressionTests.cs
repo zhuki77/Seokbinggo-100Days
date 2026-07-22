@@ -35,9 +35,138 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestWorldMobPhysicsContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
+        TestPlayerDeathAnimationContract();
+        TestDeliveredShellGlyphArtContract();
         TestCraftAndPlacementActionsRemainIndependent();
         TestRuntimeTileEdgeOverlayWiring();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (19/19).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (21/21).");
+    }
+
+    private static void TestDeliveredShellGlyphArtContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(
+            "Assets/Art/Gameplay/GameplayArtCatalog.asset");
+        var environmentCatalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(
+            "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset");
+        Require(catalog != null &&
+                catalog.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount &&
+                catalog.ShellTitleLogo != null && catalog.ShellContinue != null &&
+                catalog.ShellResume != null && catalog.ShellSave != null &&
+                catalog.ShellReturnTitle != null && catalog.ShellApply != null &&
+                catalog.ShellBack != null && catalog.ShellBgmLabel != null &&
+                catalog.ShellSfxLabel != null && catalog.ShellPauseTitle != null &&
+                catalog.ShellPauseIcon != null && catalog.ShellPlayIcon != null &&
+                catalog.ShellCheckOn != null && catalog.ShellCheckOff != null,
+            "The delivered title, pause, settings, and numeric shell art must be fully catalog-bound.");
+        Require(RuntimePixelGlyphPresenter.GlyphIndex('D') == 0 &&
+                RuntimePixelGlyphPresenter.GlyphIndex('-') == 1 &&
+                RuntimePixelGlyphPresenter.GlyphIndex(':') == 2 &&
+                RuntimePixelGlyphPresenter.GlyphIndex('0') == 3 &&
+                RuntimePixelGlyphPresenter.GlyphIndex('9') == 12,
+            "D-day and clock characters must map to the delivered glyph catalog order.");
+        Require(environmentCatalog != null && environmentCatalog.TitleBackground != null &&
+                environmentCatalog.TitleBackground.texture.width == 1920 &&
+                environmentCatalog.TitleBackground.texture.height == 1080,
+            "The title screen must use the delivered 1920x1080 title key visual.");
+
+        var shellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        Require(shellSource.Contains("ConfigurePauseHoverIndicator") &&
+                shellSource.Contains("EventTriggerType.PointerEnter") &&
+                shellSource.Contains("checkmark.rectTransform.sizeDelta = offSize") &&
+                shellSource.Contains("SetStatus(string.Empty)") &&
+                shellSource.Contains("pauseHoverIndicator.gameObject.SetActive") &&
+                shellSource.Contains("new Vector2(-112f, 82f)") &&
+                shellSource.Contains("new Vector2(96f, 96f)") &&
+                shellSource.Contains("new Vector2(176f, 97f)"),
+            "Pause hover selection, fixed toggle sizing, and removed legacy escape hint must remain wired.");
+
+        var hudSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
+        Require(hudSource.Contains("playerHealthGlyphs.SetText(displayedHealth)") &&
+                hudSource.Contains("playerTemperatureGlyphs.SetText(displayedTemperature)") &&
+                hudSource.Contains("-dayClockGlyphs.RenderedWidth * .5f"),
+            "Player vitals and the day/night icon must stay aligned to the delivered number art.");
+
+        var root = new GameObject("DeliveredShellGlyphContract", typeof(RectTransform),
+            typeof(RuntimePixelGlyphPresenter));
+        try
+        {
+            var presenter = root.GetComponent<RuntimePixelGlyphPresenter>();
+            presenter.ConfigureForRuntime(catalog.ShellNumberGlyphs);
+            presenter.SetText("D-99");
+            Require(presenter.DisplayedText == "D-99" && presenter.VisibleGlyphCount == 4,
+                "The delivered glyph presenter must compose a D-day value without system-font text.");
+            presenter.SetText("08:30");
+            Require(presenter.DisplayedText == "08:30" && presenter.VisibleGlyphCount == 5,
+                "The delivered glyph presenter must compose the day/night clock from the same number set.");
+            presenter.SetText("100/100");
+            Require(presenter.VisibleGlyphCount == 7 && presenter.RenderedWidth > 0f,
+                "Player health must retain its current/maximum separator with delivered number art.");
+            presenter.SetText("38.0");
+            Require(presenter.VisibleGlyphCount == 4,
+                "Player temperature must retain its decimal point with delivered number art.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    private static void TestPlayerDeathAnimationContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(
+            "Assets/Art/Characters/CharacterArtCatalog.asset");
+        var playerEntry = catalog != null ? catalog.Find("player") : null;
+        Require(playerEntry != null && playerEntry.DeathFrames.Count == 2,
+            "The delivered Frostclaw art must bind both frames from the 'die' Aseprite tag.");
+
+        var root = new GameObject("PlayerDeathAnimationContract", typeof(SpriteRenderer),
+            typeof(RuntimeCharacterSpriteAnimator));
+        var idleTexture = new Texture2D(1, 1);
+        var firstDeathTexture = new Texture2D(1, 1);
+        var finalDeathTexture = new Texture2D(1, 1);
+        var idle = Sprite.Create(idleTexture, new Rect(0f, 0f, 1f, 1f), Vector2.zero);
+        var firstDeath = Sprite.Create(firstDeathTexture, new Rect(0f, 0f, 1f, 1f), Vector2.zero);
+        var finalDeath = Sprite.Create(finalDeathTexture, new Rect(0f, 0f, 1f, 1f), Vector2.zero);
+        try
+        {
+            var entry = new CharacterArtCatalog.Entry();
+            typeof(CharacterArtCatalog.Entry).GetField("sprite", InstanceMembers)?.SetValue(entry, idle);
+            typeof(CharacterArtCatalog.Entry).GetField("idleFrames", InstanceMembers)
+                ?.SetValue(entry, new[] { idle });
+            typeof(CharacterArtCatalog.Entry).GetField("deathFrames", InstanceMembers)
+                ?.SetValue(entry, new[] { firstDeath, finalDeath });
+
+            var animator = root.GetComponent<RuntimeCharacterSpriteAnimator>();
+            var renderer = root.GetComponent<SpriteRenderer>();
+            animator.Configure(entry, 0);
+            animator.PlayDeath();
+            Require(renderer.sprite == firstDeath,
+                "Player death playback must start from the first delivered death frame.");
+
+            var tick = typeof(RuntimeCharacterSpriteAnimator).GetMethod("TickFrames", InstanceMembers);
+            tick?.Invoke(animator, new object[] { .11f });
+            Require(renderer.sprite == finalDeath,
+                "Player death playback must advance to the final delivered death frame.");
+            tick?.Invoke(animator, new object[] { 2f });
+            Require(renderer.sprite == finalDeath,
+                "Player death playback must hold its final frame instead of looping back to idle.");
+
+            animator.ResetToIdle();
+            Require(renderer.sprite == idle,
+                "Respawn must restore the player idle frame while the screen is faded out.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+            UnityEngine.Object.DestroyImmediate(idle);
+            UnityEngine.Object.DestroyImmediate(firstDeath);
+            UnityEngine.Object.DestroyImmediate(finalDeath);
+            UnityEngine.Object.DestroyImmediate(idleTexture);
+            UnityEngine.Object.DestroyImmediate(firstDeathTexture);
+            UnityEngine.Object.DestroyImmediate(finalDeathTexture);
+        }
     }
 
     private static void TestMeleeArcAttackPhysicsQueryContract()
