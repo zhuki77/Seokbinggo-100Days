@@ -12142,6 +12142,7 @@ MonoBehaviour:
   temperatureText: {fileID: 1612355752}
   temperatureArt: {fileID: 974410139}
   gameplayArtCatalog: {fileID: 11400000, guid: 11237b8f5160baa4790e27c90f0fe2a4, type: 2}
+  environmentArtCatalog: {fileID: 0}
   sealText: {fileID: 1031446862}
   dayText: {fileID: 1685540121}
   clawText: {fileID: 1665610342}
@@ -12266,6 +12267,7 @@ MonoBehaviour:
   statusText: {fileID: 1756495031}
   environmentArtCatalog: {fileID: 0}
   gameplayArtCatalog: {fileID: 0}
+  characterArtCatalog: {fileID: 0}
 --- !u!114 &1841315027
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12835,9 +12837,6 @@ MonoBehaviour:
   characterArtCatalog: {fileID: 11400000, guid: 7e968a90d25aff1409bf0a16bac4ab91, type: 2}
   gameplayArtCatalog: {fileID: 11400000, guid: 11237b8f5160baa4790e27c90f0fe2a4, type: 2}
   cameraFollowSharpness: 12
-  jumpVelocity: 7
-  gravityAcceleration: 20
-  maximumFallSpeed: 14
 --- !u!212 &1914613481
 SpriteRenderer:
   serializedVersion: 3

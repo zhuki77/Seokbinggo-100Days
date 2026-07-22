@@ -36,7 +36,7 @@ ScriptedImporter:
     spriteMeshType: 1
     alignment: 0
     spritePivot: {x: 0.5, y: 0.5}
-    spritePixelsToUnits: 100
+    spritePixelsToUnits: 16
     spriteBorder: {x: 0, y: 0, z: 0, w: 0}
     spriteGenerateFallbackPhysicsShape: 0
     generateCubemap: 6
@@ -135,8 +135,8 @@ ScriptedImporter:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 36
-      height: 13
+      width: 22
+      height: 15
     spriteID: 8f0a251f944eb584a880dec330238dbf
     spriteBone: []
     spriteOutline: []
@@ -167,8 +167,8 @@ ScriptedImporter:
       cellRect:
         x: 0
         y: 0
-        width: 36
-        height: 13
+        width: 22
+        height: 15
       spriteId: 8f0a251f944eb584a880dec330238dbf
     linkedCells: []
     tileCells: []
@@ -178,5 +178,5 @@ ScriptedImporter:
   platformSettings: []
   generatePhysicsShape: 0
   secondarySpriteTextures: []
-  previousTextureSize: {x: 64, y: 32}
-  canvasSize: {x: 36, y: 13}
+  previousTextureSize: {x: 32, y: 32}
+  canvasSize: {x: 22, y: 15}

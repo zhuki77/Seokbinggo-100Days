@@ -97,6 +97,8 @@ namespace Nyangbingo.UI
         private Image playerVitalsArt;
         private Image playerHealthFill;
         private Image playerTemperatureFill;
+        private RuntimePixelGlyphPresenter playerHealthGlyphs;
+        private RuntimePixelGlyphPresenter playerTemperatureGlyphs;
         private Image tearBalanceArt;
         private Text tearBalanceText;
         private Image fuelGaugeArt;
@@ -111,10 +113,12 @@ namespace Nyangbingo.UI
         private RectTransform dayCounterScrollRect;
         private Vector2 dayCounterScrollDefaultPosition;
         private RuntimeDayCounterScrollPresenter dayCounterScrollPresenter;
+        private RuntimePixelGlyphPresenter dayCounterGlyphs;
         private GameObject baekjungDayCounterBorder;
         private bool baekjungHudActive;
         private bool baekjungHudSuppressedForBoss;
         private Text dayClockText;
+        private RuntimePixelGlyphPresenter dayClockGlyphs;
         private Image dayNightClockArt;
         private GameObject nightSpawnLockRoot;
         private Vector2 dayClockDefaultPosition;
@@ -302,7 +306,11 @@ namespace Nyangbingo.UI
         private void RefreshStatus()
         {
             if (bootstrap == null || runtimeServices == null) return;
-            if (temperatureText != null) temperatureText.text = $"{runtimeServices.PlayerTemperature.Current:0.0}";
+            var displayedTemperature = $"{runtimeServices.PlayerTemperature.Current:0.0}";
+            if (playerTemperatureGlyphs != null)
+                playerTemperatureGlyphs.SetText(displayedTemperature);
+            else if (temperatureText != null)
+                temperatureText.text = displayedTemperature;
             RefreshTemperatureArt();
             if (sealText != null)
             {
@@ -315,16 +323,41 @@ namespace Nyangbingo.UI
                 var displayedDays = dayCounterScrollPresenter != null
                     ? dayCounterScrollPresenter.DisplayedDaysRemaining
                     : bootstrap.TimeService.DaysRemaining;
-                dayText.text = $"D-{displayedDays}";
-                dayText.enabled = dayCounterScrollPresenter == null || dayCounterScrollPresenter.IsFullyOpen;
+                var counterVisible = dayCounterScrollPresenter == null || dayCounterScrollPresenter.IsFullyOpen;
+                if (dayCounterGlyphs != null)
+                {
+                    dayText.text = string.Empty;
+                    dayText.enabled = false;
+                    dayCounterGlyphs.SetText($"D-{displayedDays}");
+                    dayCounterGlyphs.SetVisible(counterVisible);
+                }
+                else
+                {
+                    dayText.text = $"D-{displayedDays}";
+                    dayText.enabled = counterVisible;
+                }
                 if (dayClockText != null)
-                    dayClockText.text = FormatCycleCountdown(bootstrap.TimeService);
+                {
+                    var clock = FormatCycleCountdown(bootstrap.TimeService);
+                    if (dayClockGlyphs != null)
+                    {
+                        dayClockText.text = string.Empty;
+                        dayClockText.enabled = false;
+                        dayClockGlyphs.SetText(clock);
+                    }
+                    else dayClockText.text = clock;
+                }
                 RefreshDayNightClockArt();
                 RefreshBaekjungDayCounterFeedback();
             }
             if (clawText != null) clawText.text = $"T{ResolveClawTier()}";
             if (playerHealthText != null && playerHealth != null)
-                playerHealthText.text = $"{playerHealth.Current}/{playerHealth.MaxHealth}";
+            {
+                var displayedHealth = $"{playerHealth.Current}/{playerHealth.MaxHealth}";
+                if (playerHealthGlyphs != null)
+                    playerHealthGlyphs.SetText(displayedHealth);
+                else playerHealthText.text = displayedHealth;
+            }
             RefreshBossStatus();
             RefreshCraftingProgress();
             RefreshGoalBadges();
@@ -364,7 +397,22 @@ namespace Nyangbingo.UI
             playerVitalsArt = CreateStatusImage(root, "VitalsFrame", null, Vector2.zero, root.sizeDelta);
 
             ReparentStatusText(playerHealthText, root, new Vector2(18f, -11f), new Vector2(38f, 8f), 7);
-            ReparentStatusText(temperatureText, root, new Vector2(18f, -20f), new Vector2(38f, 8f), 7);
+            ReparentStatusText(temperatureText, root, new Vector2(18f, -20f), new Vector2(22f, 8f), 7);
+            if (playerHealthText != null && temperatureText != null &&
+                gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
+            {
+                playerHealthText.text = string.Empty;
+                playerHealthText.enabled = false;
+                playerHealthGlyphs = playerHealthText.GetComponent<RuntimePixelGlyphPresenter>() ??
+                                     playerHealthText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
+                playerHealthGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .45f);
+
+                temperatureText.text = string.Empty;
+                temperatureText.enabled = false;
+                playerTemperatureGlyphs = temperatureText.GetComponent<RuntimePixelGlyphPresenter>() ??
+                                          temperatureText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
+                playerTemperatureGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .45f);
+            }
 
             var tearRoot = CreateStatusRoot(transform, "TearBalance", new Vector2(6f, -52f),
                 new Vector2(31f, 16f));
@@ -1176,6 +1224,16 @@ namespace Nyangbingo.UI
                         break;
                     }
             }
+            if (gameplayArtCatalog == null)
+            {
+                var catalogs = Resources.FindObjectsOfTypeAll<GameplayArtCatalog>();
+                for (var index = 0; index < catalogs.Length; index++)
+                    if (catalogs[index] != null && catalogs[index].name == "GameplayArtCatalog")
+                    {
+                        gameplayArtCatalog = catalogs[index];
+                        break;
+                    }
+            }
             var frames = environmentArtCatalog?.DayCounterScrollFrames;
             if (frames == null || frames.Count == 0) return;
 
@@ -1194,6 +1252,14 @@ namespace Nyangbingo.UI
             scrollObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex());
             dayCounterScrollPresenter = scrollObject.AddComponent<RuntimeDayCounterScrollPresenter>();
             dayCounterScrollPresenter.ConfigureForRuntime(frames, bootstrap.TimeService.DaysRemaining);
+            if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
+            {
+                dayCounterGlyphs = dayText.GetComponent<RuntimePixelGlyphPresenter>() ??
+                                   dayText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
+                dayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs);
+                dayText.text = string.Empty;
+                dayText.enabled = false;
+            }
 
             var clockObject = new GameObject("DayCycleClock", typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(Text));
@@ -1213,6 +1279,13 @@ namespace Nyangbingo.UI
             clockRect.anchoredPosition = dayClockDefaultPosition;
             clockRect.sizeDelta = new Vector2(96f, 10f);
             clockObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
+            if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
+            {
+                dayClockGlyphs = clockObject.AddComponent<RuntimePixelGlyphPresenter>();
+                dayClockGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .6f);
+                dayClockText.text = string.Empty;
+                dayClockText.enabled = false;
+            }
 
             var clockArtObject = new GameObject("DayNightClockArt", typeof(RectTransform), typeof(Image));
             clockArtObject.transform.SetParent(dayText.transform.parent, false);
@@ -1221,7 +1294,7 @@ namespace Nyangbingo.UI
             dayNightClockArt.preserveAspect = true;
             var artRect = dayNightClockArt.rectTransform;
             artRect.anchorMin = artRect.anchorMax = artRect.pivot = new Vector2(.5f, 1f);
-            artRect.anchoredPosition = dayClockDefaultPosition + new Vector2(-19f, 1f);
+            artRect.anchoredPosition = dayClockDefaultPosition + new Vector2(-22f, 0f);
             artRect.sizeDelta = new Vector2(10f, 10f);
             clockArtObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
             nightSpawnLockRoot = BuildNightSpawnLock(artRect);
@@ -1232,6 +1305,12 @@ namespace Nyangbingo.UI
         private void RefreshDayNightClockArt()
         {
             if (dayNightClockArt == null || bootstrap?.TimeService == null) return;
+            if (dayClockGlyphs != null)
+            {
+                var artRect = dayNightClockArt.rectTransform;
+                artRect.anchoredPosition = dayClockDefaultPosition + new Vector2(
+                    -dayClockGlyphs.RenderedWidth * .5f - artRect.sizeDelta.x * .5f - 1f, 0f);
+            }
             var frames = gameplayArtCatalog?.DayNightClockFrames;
             var index = ResolveDayNightClockFrameIndex(bootstrap.TimeService.TimeOfDayGameSeconds,
                 bootstrap.TimeService.CycleLengthSeconds, frames?.Count ?? 0);

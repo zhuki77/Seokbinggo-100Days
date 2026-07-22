@@ -121,6 +121,20 @@ MonoBehaviour:
   button1x6Frames:
   - {fileID: 2271397755962344763, guid: 4cd269f2b060f2e4482a28b4029780ac, type: 3}
   - {fileID: -1702372114011394435, guid: 4cd269f2b060f2e4482a28b4029780ac, type: 3}
+  shellNumberGlyphs:
+  - {fileID: -8901312213406865712, guid: ad4eea44370419544974ddea58678d5b, type: 3}
+  - {fileID: 1517022774214668368, guid: 1a0175f8c29e5af43a6b9332a77c4404, type: 3}
+  - {fileID: -5638896232177226493, guid: ebf991b6256fa41498227efdc1b8a139, type: 3}
+  - {fileID: 5321404311247086901, guid: 424e573a400147644b860e3d4948cae3, type: 3}
+  - {fileID: -2415439991513673297, guid: 1ead890a24f9b9a4c9691773efa49dc6, type: 3}
+  - {fileID: -8981273545866720150, guid: a542c211983457647a7b541b184db690, type: 3}
+  - {fileID: -7731270905622108264, guid: 9131b1b750d6b144e90aa256ba598924, type: 3}
+  - {fileID: 6725018973384928435, guid: 10d6a9b74479dd14cac5ac8006eda57f, type: 3}
+  - {fileID: 2386627099330892419, guid: bf3230206156f824384c164f0741b697, type: 3}
+  - {fileID: 1894344774647018904, guid: 727d531308296504983e0ec3eeaa413e, type: 3}
+  - {fileID: 5231390242638779611, guid: 9ce8681433a897e469aae7db4a9857f1, type: 3}
+  - {fileID: -4108460224007923871, guid: 2fcf25b3e4d71cc4da5e4e90c632d2d5, type: 3}
+  - {fileID: 5472590092209955421, guid: 35de94610bc8d5f408d1c25bcc263a3c, type: 3}
   dangerIcon: {fileID: 1821668838913166679, guid: 5b4488cd45c23944e8c314bfa7e70b4b, type: 3}
   bossWarningLarge: {fileID: -5218591732139051355, guid: be5c714da4f8b324e932ba1c069c442c, type: 3}
   bossWarningSmall: {fileID: 5143714742549247459, guid: b646ba39a938a2e4f99d6ea9d8e39782, type: 3}
@@ -147,9 +161,23 @@ MonoBehaviour:
   tilePaletteSlotSelected: {fileID: -884221672439184897, guid: 7c439f1ae081c934d9dfaea01cde2c38, type: 3}
   jangdokStorageGrid: {fileID: -7257352378360446423, guid: 0c7f5a56b9c5c014aac81a10283ca9b6, type: 3}
   codexCard: {fileID: 7003845439208138208, guid: 93a66700e05f39b4bba9af681c92feb8, type: 3}
+  shellTitleLogo: {fileID: -9140310918973608340, guid: 0ec76bced11c418439a225246dd7576d, type: 3}
   shellStart: {fileID: 2239346518032559643, guid: 7e92f1a6372ca054b9581f94f7c7f471, type: 3}
+  shellContinue: {fileID: 8014484614349245634, guid: 87d2bb806e1899a45aff78ff989fae6d, type: 3}
+  shellResume: {fileID: 528565964620236277, guid: 3ec5e2a10531d0e49a8243a087891d86, type: 3}
+  shellSave: {fileID: 8808350767094171086, guid: 0b0e2a4501730a24cb1aaca8ec1c42e4, type: 3}
   shellSettings: {fileID: -8730528316343547412, guid: 590c1b8a7a4d90946a0930a2aac32051, type: 3}
   shellLeave: {fileID: 4653755586049538878, guid: 3c14f4b52aa727745bd50cdf67377ef0, type: 3}
+  shellReturnTitle: {fileID: -7758343220473460358, guid: 298f8b15647bd374e8936b093a22ea08, type: 3}
+  shellApply: {fileID: -8474330001966436335, guid: ce64bfba936c964488eccd9aab4a7cf1, type: 3}
+  shellBack: {fileID: 7287552965189439514, guid: 6d04b799975a73348a197c795b160bb8, type: 3}
+  shellBgmLabel: {fileID: -1033580188538513707, guid: d72526cdb89bc5d4ca4bc188b03a095e, type: 3}
+  shellSfxLabel: {fileID: -558949159764975304, guid: 5a134bc30ab09904297320cd1c2f6b3d, type: 3}
+  shellPauseTitle: {fileID: 3744757616252135018, guid: 1a5234a28e2bb04478b6b94f5804c39d, type: 3}
+  shellPauseIcon: {fileID: -6958716194236966282, guid: 7a110104112751741b6ef3ff596514ad, type: 3}
+  shellPlayIcon: {fileID: -3964021682079311923, guid: 19b41d455fccdc74f83b2a4fba1f8f36, type: 3}
+  shellCheckOn: {fileID: -5825215157552480828, guid: 69e95f061fe23814cb463ab594cb6f42, type: 3}
+  shellCheckOff: {fileID: -579469246376323762, guid: aab7cd26df1c8394b9f85b0e84169904, type: 3}
   shellSpeakerHigh: {fileID: -7906507130060699669, guid: e2d3a60605ed63a4bbb40f0587429d2c, type: 3}
   shellSpeakerLow: {fileID: 4616436955447740113, guid: 3f7ef16381c99684e9c129fce4a0b41d, type: 3}
   shellSpeakerMuted: {fileID: -8755674810949524588, guid: 86da2f495768235458975a3f8c5eab28, type: 3}

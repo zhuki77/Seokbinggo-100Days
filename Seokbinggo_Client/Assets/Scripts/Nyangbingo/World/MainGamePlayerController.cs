@@ -820,6 +820,7 @@ namespace Nyangbingo.World
             grounded = false;
             airJumpConsumed = false;
             characterAnimator?.SetMoving(false);
+            characterAnimator?.PlayDeath();
             runtimeServices?.NapService?.Wake(NapWakeReason.PlayerDied);
             var dropped = runtimeServices?.DeathTearPouches?.DropTwentyPercent(transform.position) ?? 0;
             if (playerRenderer != null) playerRenderer.color = new Color(.35f, .35f, .4f);
@@ -836,11 +837,7 @@ namespace Nyangbingo.World
             if (deltaSeconds <= 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds)) return;
             deathSequenceElapsed += deltaSeconds;
             if (deathSequenceElapsed <= CollapseSeconds)
-            {
-                var collapse = Mathf.Clamp01(deathSequenceElapsed / CollapseSeconds);
-                transform.rotation = Quaternion.Lerp(aliveRotation, aliveRotation * Quaternion.Euler(0f, 0f, -90f), collapse);
                 return;
-            }
 
             var fadeOutElapsed = deathSequenceElapsed - CollapseSeconds;
             if (fadeOutElapsed < FadeOutSeconds)
@@ -878,6 +875,7 @@ namespace Nyangbingo.World
             grounded = false;
             airJumpConsumed = false;
             transform.rotation = aliveRotation;
+            characterAnimator?.ResetToIdle();
             if (health != null) health.RestoreCurrent(health.MaxHealth);
             var temperature = runtimeServices?.PlayerTemperature;
             if (temperature != null) temperature.Restore(temperature.StartingTemperature);

@@ -108,6 +108,25 @@ public static class NyangbingoArt720Binder
         ("miningCriticalFrames", "Assets/Art/Gameplay/mining_critical.aseprite", 1)
     };
 
+    // Catalog order consumed by RuntimePixelGlyphPresenter:
+    // D, dash, colon, then digits zero through nine.
+    private static readonly string[] ShellNumberGlyphPaths =
+    {
+        "Assets/Art/UI/Shell/glyph_d.aseprite",
+        "Assets/Art/UI/Shell/glyph_dash.aseprite",
+        "Assets/Art/UI/Shell/glyph_colon.aseprite",
+        "Assets/Art/UI/Shell/digit_0.aseprite",
+        "Assets/Art/UI/Shell/digit_1.aseprite",
+        "Assets/Art/UI/Shell/digit_2.aseprite",
+        "Assets/Art/UI/Shell/digit_3.aseprite",
+        "Assets/Art/UI/Shell/digit_4.aseprite",
+        "Assets/Art/UI/Shell/digit_5.aseprite",
+        "Assets/Art/UI/Shell/digit_6.aseprite",
+        "Assets/Art/UI/Shell/digit_7.aseprite",
+        "Assets/Art/UI/Shell/digit_8.aseprite",
+        "Assets/Art/UI/Shell/digit_9.aseprite"
+    };
+
     private static readonly (string property, string path)[] SpriteBindings =
     {
         ("dangerIcon", "Assets/Art/UI/danger_icon.aseprite"),
@@ -136,9 +155,23 @@ public static class NyangbingoArt720Binder
         ("tilePaletteSlotSelected", "Assets/Art/UI/Inventory/tile_palette_slot_selected.aseprite"),
         ("jangdokStorageGrid", "Assets/Art/UI/Inventory/jangdok_storage_grid.aseprite"),
         ("codexCard", "Assets/Art/UI/Common/codex_card.aseprite"),
+        ("shellTitleLogo", "Assets/Art/UI/Shell/title_logo.aseprite"),
         ("shellStart", "Assets/Art/UI/Shell/start.aseprite"),
+        ("shellContinue", "Assets/Art/UI/Shell/continue.aseprite"),
+        ("shellResume", "Assets/Art/UI/Shell/resume.aseprite"),
+        ("shellSave", "Assets/Art/UI/Shell/save.aseprite"),
         ("shellSettings", "Assets/Art/UI/Shell/setting.aseprite"),
         ("shellLeave", "Assets/Art/UI/Shell/leave.aseprite"),
+        ("shellReturnTitle", "Assets/Art/UI/Shell/return_title.aseprite"),
+        ("shellApply", "Assets/Art/UI/Shell/apply.aseprite"),
+        ("shellBack", "Assets/Art/UI/Shell/back.aseprite"),
+        ("shellBgmLabel", "Assets/Art/UI/Shell/bgm_label.aseprite"),
+        ("shellSfxLabel", "Assets/Art/UI/Shell/sfx_label.aseprite"),
+        ("shellPauseTitle", "Assets/Art/UI/Shell/pause_title.aseprite"),
+        ("shellPauseIcon", "Assets/Art/UI/Shell/pause_icon.aseprite"),
+        ("shellPlayIcon", "Assets/Art/UI/Shell/play_icon.aseprite"),
+        ("shellCheckOn", "Assets/Art/UI/Shell/check_on.aseprite"),
+        ("shellCheckOff", "Assets/Art/UI/Shell/check_off.aseprite"),
         ("shellSpeakerHigh", "Assets/Art/UI/Shell/sp1.aseprite"),
         ("shellSpeakerLow", "Assets/Art/UI/Shell/sp2.aseprite"),
         ("shellSpeakerMuted", "Assets/Art/UI/Shell/sp3.aseprite"),
@@ -173,13 +206,14 @@ public static class NyangbingoArt720Binder
         Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyItemArt();
         Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyBuildingArt();
         var importFailures = new List<string>();
-        Nyangbingo.Editor.NyangbingoTileArtIntegrator.ConfigureAsepriteImporter(
-            "Assets/Art/Gameplay/mining_break.aseprite", importFailures);
-        Nyangbingo.Editor.NyangbingoTileArtIntegrator.ConfigureAsepriteImporter(
-            "Assets/Art/Gameplay/mining_critical.aseprite", importFailures);
-        foreach (var binding in EnvironmentBindings)
+        var deliveredPaths = FrameBindings.Select(binding => binding.path)
+            .Concat(SpriteBindings.Select(binding => binding.path))
+            .Concat(ShellNumberGlyphPaths)
+            .Concat(EnvironmentBindings.Select(binding => binding.path))
+            .Distinct(StringComparer.Ordinal);
+        foreach (var path in deliveredPaths)
             Nyangbingo.Editor.NyangbingoTileArtIntegrator.ConfigureAsepriteImporter(
-                binding.path, importFailures);
+                path, importFailures);
         if (importFailures.Count > 0)
         {
             Debug.LogError("[Nyangbingo] Delivered UI/effect art importer configuration failed.\n- " +
@@ -232,6 +266,18 @@ public static class NyangbingoArt720Binder
                     failures.Add($"{binding.property}: expected {binding.expectedFrames} frames, " +
                                  $"actual {property?.arraySize ?? 0}");
             }
+            var numberGlyphs = serialized.FindProperty("shellNumberGlyphs");
+            if (numberGlyphs == null || numberGlyphs.arraySize != ShellNumberGlyphPaths.Length)
+                failures.Add($"shellNumberGlyphs: expected {ShellNumberGlyphPaths.Length} glyphs, " +
+                             $"actual {numberGlyphs?.arraySize ?? 0}");
+            else
+                for (var index = 0; index < ShellNumberGlyphPaths.Length; index++)
+                {
+                    var sprite = numberGlyphs.GetArrayElementAtIndex(index).objectReferenceValue as Sprite;
+                    if (sprite == null || !string.Equals(AssetDatabase.GetAssetPath(sprite),
+                            ShellNumberGlyphPaths[index], StringComparison.Ordinal))
+                        failures.Add($"shellNumberGlyphs[{index}]: expected '{ShellNumberGlyphPaths[index]}'");
+                }
             var codexCard = serialized.FindProperty("codexCard")?.objectReferenceValue as Sprite;
             if (codexCard == null || !string.Equals(AssetDatabase.GetAssetPath(codexCard),
                     "Assets/Art/UI/Common/codex_card.aseprite", StringComparison.Ordinal))
@@ -248,8 +294,11 @@ public static class NyangbingoArt720Binder
                            string.Join("\n- ", failures));
             return;
         }
+        var shellIconCount = SpriteBindings.Count(binding =>
+            binding.path.StartsWith("Assets/Art/UI/Shell/", StringComparison.Ordinal));
         Debug.Log("[Nyangbingo] Shell UI art validation passed: title background 1/1, day-counter scroll 10/10, " +
-                  "shell icons 8/8, buttons 8/8, codex card 1/1.");
+                  $"shell icons {shellIconCount}/{shellIconCount}, number glyphs " +
+                  $"{ShellNumberGlyphPaths.Length}/{ShellNumberGlyphPaths.Length}, buttons 8/8, codex card 1/1.");
     }
 
     private static void BindOnFirstImport()
@@ -279,8 +328,9 @@ public static class NyangbingoArt720Binder
             gameplaySerialized.FindProperty("dayCounterFrames")?.arraySize == 17 &&
             gameplaySerialized.FindProperty("inventorySlot")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellStart")?.objectReferenceValue != null &&
-            gameplaySerialized.FindProperty("shellSettings")?.objectReferenceValue != null &&
-            gameplaySerialized.FindProperty("shellLeave")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("shellNumberGlyphs")?.arraySize == ShellNumberGlyphPaths.Length &&
+            SpriteBindings.Where(binding => binding.path.StartsWith("Assets/Art/UI/Shell/", StringComparison.Ordinal))
+                .All(binding => gameplaySerialized.FindProperty(binding.property)?.objectReferenceValue != null) &&
             gameplaySerialized.FindProperty("shellSpeakerHigh")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellSpeakerLow")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellSpeakerMuted")?.objectReferenceValue != null &&
@@ -349,6 +399,16 @@ public static class NyangbingoArt720Binder
             var property = serialized.FindProperty(binding.property);
             if (sprite == null || property == null) return false;
             property.objectReferenceValue = sprite;
+        }
+
+        var numberGlyphs = serialized.FindProperty("shellNumberGlyphs");
+        if (numberGlyphs == null) return false;
+        numberGlyphs.arraySize = ShellNumberGlyphPaths.Length;
+        for (var index = 0; index < ShellNumberGlyphPaths.Length; index++)
+        {
+            var sprite = LoadFirstSprite(ShellNumberGlyphPaths[index]);
+            if (sprite == null) return false;
+            numberGlyphs.GetArrayElementAtIndex(index).objectReferenceValue = sprite;
         }
 
         serialized.ApplyModifiedPropertiesWithoutUndo();
