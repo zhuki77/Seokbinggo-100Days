@@ -429,38 +429,13 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// Latest art direction no longer requires separate edge sprites. If a scene has no explicit
-        /// edge overlay wiring, create a sibling Tilemap and five reusable 1 px ink-line shapes at
-        /// runtime. Explicit scene/art bindings always win and are never replaced.
+        /// Edge overlays are optional legacy art. The current terrain sprites already contain their
+        /// intended borders, so a scene without an explicitly assigned overlay must stay that way.
+        /// Automatically creating a one-pixel ink overlay here produced black seams around caves.
         /// </summary>
         public void EnsureEdgeOverlayWiring()
         {
-            if (foregroundTilemap == null) return;
-
-            if (edgeOverlayTilemap == null)
-            {
-                runtimeEdgeOverlayObject = new GameObject("RuntimeEdgeOverlay");
-                runtimeEdgeOverlayObject.transform.SetParent(foregroundTilemap.transform.parent, false);
-                runtimeEdgeOverlayObject.transform.localPosition = foregroundTilemap.transform.localPosition;
-                runtimeEdgeOverlayObject.transform.localRotation = foregroundTilemap.transform.localRotation;
-                runtimeEdgeOverlayObject.transform.localScale = foregroundTilemap.transform.localScale;
-
-                edgeOverlayTilemap = runtimeEdgeOverlayObject.AddComponent<Tilemap>();
-                edgeOverlayTilemap.tileAnchor = foregroundTilemap.tileAnchor;
-                edgeOverlayTilemap.orientation = foregroundTilemap.orientation;
-                edgeOverlayTilemap.orientationMatrix = foregroundTilemap.orientationMatrix;
-                edgeOverlayTilemap.animationFrameRate = foregroundTilemap.animationFrameRate;
-
-                var edgeRenderer = runtimeEdgeOverlayObject.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>();
-                var foregroundRenderer = foregroundTilemap.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>();
-                if (foregroundRenderer != null)
-                {
-                    edgeRenderer.sharedMaterial = foregroundRenderer.sharedMaterial;
-                    edgeRenderer.sortingLayerID = foregroundRenderer.sortingLayerID;
-                    edgeRenderer.sortingOrder = foregroundRenderer.sortingOrder + 1;
-                    edgeRenderer.maskInteraction = foregroundRenderer.maskInteraction;
-                }
-            }
+            if (foregroundTilemap == null || edgeOverlayTilemap == null) return;
 
             EnsureRuntimeEdgeShapeTiles();
         }
