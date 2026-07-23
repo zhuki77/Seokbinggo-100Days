@@ -40,7 +40,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestPlayerDeathAnimationContract();
         TestDeliveredShellGlyphArtContract();
         TestCraftAndPlacementActionsRemainIndependent();
-        TestRuntimeTileEdgeOverlayWiring();
+        TestMissingTileEdgeOverlayRemainsDisabled();
         TestDetailedDynamicSaveSchema();
         Debug.Log("[Nyangbingo] Dev B integration regression tests passed (24/24).");
     }
@@ -475,17 +475,15 @@ public static class NyangbingoDevBIntegrationRegressionTests
         }
     }
 
-    private static void TestRuntimeTileEdgeOverlayWiring()
+    private static void TestMissingTileEdgeOverlayRemainsDisabled()
     {
-        var host = new GameObject("RuntimeEdgeOverlayContract", typeof(Grid));
+        var host = new GameObject("NoRuntimeEdgeOverlayContract", typeof(Grid));
         try
         {
             var foregroundObject = new GameObject("Foreground",
                 typeof(UnityEngine.Tilemaps.Tilemap), typeof(UnityEngine.Tilemaps.TilemapRenderer));
             foregroundObject.transform.SetParent(host.transform, false);
             var foreground = foregroundObject.GetComponent<UnityEngine.Tilemaps.Tilemap>();
-            var foregroundRenderer = foregroundObject.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>();
-            foregroundRenderer.sortingOrder = 7;
 
             var worldRenderer = host.AddComponent<Nyangbingo.World.TilemapRenderer>();
             typeof(Nyangbingo.World.TilemapRenderer).GetField("foregroundTilemap", InstanceMembers)
@@ -499,30 +497,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 .GetField("edgeShapeTiles", InstanceMembers)?.GetValue(worldRenderer)
                 as UnityEngine.Tilemaps.TileBase[];
 
-            Require(overlay != null && overlay.transform.parent == foreground.transform.parent,
-                "A scene with empty edge wiring must receive a grid-aligned runtime overlay Tilemap.");
-            Require(overlay.GetComponent<Collider2D>() == null &&
-                    overlay.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder == 8,
-                "The runtime edge overlay must render above terrain without participating in physics.");
+            Require(overlay == null,
+                "A scene with no edge-overlay art must not create a black runtime overlay.");
+            Require(host.transform.Find("RuntimeEdgeOverlay") == null,
+                "Missing edge-overlay wiring must remain disabled instead of adding a Tilemap.");
             Require(shapes != null && shapes.Length == TileEdgeOverlayResolver.ShapeCount,
-                "The runtime edge overlay must provide all five reusable base shapes.");
-
-            for (var index = 0; index < shapes.Length; index++)
-            {
-                var tile = shapes[index] as UnityEngine.Tilemaps.Tile;
-                Require(tile != null && tile.sprite != null &&
-                        tile.colliderType == UnityEngine.Tilemaps.Tile.ColliderType.None,
-                    $"Runtime edge shape {index} must be a visible, non-colliding Tile.");
-            }
-
-            var straightTexture = ((UnityEngine.Tilemaps.Tile)shapes[TileEdgeOverlayResolver.ShapeStraight])
-                .sprite.texture;
-            var pixels = straightTexture.GetPixels32();
-            var ink = pixels[(straightTexture.height - 1) * straightTexture.width];
-            var transparent = pixels[0];
-            Require(ink.r == 0x1A && ink.g == 0x1A && ink.b == 0x24 && ink.a == 0xFF &&
-                    transparent.a == 0,
-                "Runtime exposed-edge art must use the planned #1A1A24 one-pixel ink line.");
+                "The serialized edge-shape slots must keep their stable contract.");
+            Require(Array.TrueForAll(shapes, shape => shape == null),
+                "Disabled edge-overlay wiring must not allocate hidden one-pixel ink sprites.");
         }
         finally
         {
