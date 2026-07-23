@@ -309,6 +309,7 @@ namespace Nyangbingo.UI
         {
             Time.timeScale = resumeTimeScale > 0f ? resumeTimeScale : 1f;
             SetScreen(GameShellScreen.Gameplay);
+            audioService?.EnsureAudiblePlayback(MusicTrack.Day);
         }
 
         private void ShowTitle()
@@ -316,6 +317,8 @@ namespace Nyangbingo.UI
             Time.timeScale = 0f;
             SetScreen(GameShellScreen.Title);
             RefreshTitle();
+            // 메인(타이틀) 화면 전용 BGM.
+            audioService?.EnsureAudiblePlayback(MusicTrack.Title);
         }
 
         private void OpenConfirmation(GameShellConfirmation confirmation)

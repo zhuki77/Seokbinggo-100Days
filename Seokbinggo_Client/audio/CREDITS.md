@@ -1,14 +1,34 @@
 # Audio credits
 
+## Where audio lives (clone checklist)
+
+| What | Path |
+| --- | --- |
+| Audio script | `Assets/Scripts/Nyangbingo/Audio/NyangbingoAudioService.cs` |
+| Title (main menu) BGM | `Assets/Resources/Audio/BGM/Title.wav` |
+| Day / Night / Boss BGM | `Assets/Resources/Audio/BGM/` |
+| SFX | `Assets/Resources/Audio/SFX/` |
+| Credits | `audio/CREDITS.md` |
+
+After pull/clone, open the Unity project at `Seokbinggo_Client/` and wait for import. BGM loads from Resources (`Audio/BGM/Day` 등) and from the `NyangbingoAudioService` component on MainGame.
+
+### Still silent? Checklist
+
+1. Unity **Game** 뷰 오른쪽 위 **Mute Audio** 가 꺼져 있는지 확인
+2. Console에 `[Nyangbingo] BGM playing ...` / `Audio EnsureAudiblePlayback` 로그가 있는지 확인
+3. `Assets/Scripts/Nyangbingo/Audio/NyangbingoAudioService.cs` Missing Script 가 아닌지 확인
+4. 브랜치 `feat/audio-bgm-reupload` (또는 이 커밋이 포함된 브랜치)를 받았는지 확인
+
 Placeholder BGM loops were authored for this project. Kenney SFX are CC0.
 
 Only CC0 audio or audio purchased by a team member may be used. For purchased audio, record the team license owner instead of a CC0 declaration.
 
 | Asset path | Cue or track | Creator | Source URL | License | Changes |
 | --- | --- | --- | --- | --- | --- |
-| `Assets/Resources/Audio/BGM/Day.wav` | Day BGM | Seokbinggo team (placeholder) | in-repo generated ambient loop | Project / CC0-equivalent team asset | Soft pentatonic pad; temporary until final gayageum track |
-| `Assets/Resources/Audio/BGM/Night.wav` | Night BGM | Seokbinggo team (placeholder) | in-repo generated ambient loop | Project / CC0-equivalent team asset | Cooler lower pad; temporary until final daegeum track |
-| `Assets/Resources/Audio/BGM/Boss.wav` | Boss BGM | Seokbinggo team (placeholder) | in-repo generated ambient loop | Project / CC0-equivalent team asset | Tense drone; temporary until final percussion track |
+| `Assets/Resources/Audio/BGM/Title.wav` | Title / main menu BGM | Team-provided `main bgm.wav` | local desktop drop (`main bgm.wav`) | Team project asset | Main title screen only |
+| `Assets/Resources/Audio/BGM/Day.wav` | Day BGM | Team-provided `bgm.wav` | local desktop drop (`bgm.wav`) | Team project asset | Replaced placeholder day loop with provided background BGM |
+| `Assets/Resources/Audio/BGM/Night.wav` | Night BGM | Team-provided `bgm.wav` | local desktop drop (`bgm.wav`) | Team project asset | Same background BGM as day until a dedicated night track exists |
+| `Assets/Resources/Audio/BGM/Boss.wav` | Boss BGM | Team-provided `main bgm.wav` | local desktop drop (`main bgm.wav`) | Team project asset | Same track as title/main menu BGM |
 | `Assets/Resources/Audio/BGM/BaekjungPercussion.wav` | Baekjung percussion layer | Seokbinggo team (placeholder) | in-repo generated ambient loop | Project / CC0-equivalent team asset | Low pulse layer over night BGM |
 
 SFX files load at runtime from `Resources/Audio/SFX/{AudioCue}` via `NyangbingoAudioService`.

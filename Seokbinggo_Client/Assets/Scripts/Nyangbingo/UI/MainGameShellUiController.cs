@@ -139,6 +139,7 @@ namespace Nyangbingo.UI
             }
 
             audioService.Initialize();
+            audioService.EnsureAudiblePlayback(MusicTrack.Title);
             shell.ConfigureForRuntime(saveManager, audioService, timeService, saveCoordinator.CaptureSnapshot(),
                 Application.isMobilePlatform, Debug.isDebugBuild || Application.isEditor);
             shell.NewGameRequested += HandleNewGameRequested;
@@ -1083,6 +1084,7 @@ namespace Nyangbingo.UI
         private void ApplySettings()
         {
             var succeeded = shell.TryApplySettings(bgmSlider.value, sfxSlider.value, fullscreenToggle.isOn);
+            if (succeeded) audioService?.EnsureAudiblePlayback();
             SetStatus(succeeded ? "설정 적용 완료" : "설정 적용 실패");
             if (succeeded) shell.CloseSettings();
         }
