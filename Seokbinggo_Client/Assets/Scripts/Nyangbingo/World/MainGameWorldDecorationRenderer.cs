@@ -24,6 +24,8 @@ namespace Nyangbingo.World
         private int surfaceCoverCount;
         private readonly Dictionary<string, SpriteRenderer> chestRenderers =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
+        private readonly Dictionary<Transform, Vector3Int> decorationSupportCells =
+            new Dictionary<Transform, Vector3Int>();
 
         public int DecorationCount => decorationRoot != null ? decorationRoot.childCount : 0;
         public int ChestCount => chestRenderers.Count;
@@ -105,13 +107,28 @@ namespace Nyangbingo.World
             var dryGrass = artCatalog.Find("grass_dry")?.Sprite;
             if (grass == null || dryGrass == null) return;
 
-            groundCoverRoot = new GameObject("SurfaceGroundCoverGrid", typeof(Grid));
-            groundCoverRoot.transform.SetParent(transform, false);
+            // 월드 전경 Grid와 같은 좌표 공간을 쓰도록 부모를 맞춘다.
+            var worldGrid = bootstrap?.WorldRenderer != null
+                ? bootstrap.WorldRenderer.GetComponentInParent<Grid>()
+                : null;
+            groundCoverRoot = new GameObject("SurfaceGroundCoverGrid");
+            if (worldGrid != null)
+            {
+                groundCoverRoot.transform.SetParent(worldGrid.transform, false);
+            }
+            else
+            {
+                groundCoverRoot.AddComponent<Grid>();
+                groundCoverRoot.transform.SetParent(transform, false);
+            }
+
             var layer = new GameObject("SurfaceGroundCover", typeof(Tilemap),
                 typeof(UnityEngine.Tilemaps.TilemapRenderer));
             layer.transform.SetParent(groundCoverRoot.transform, false);
             var tilemap = layer.GetComponent<Tilemap>();
             surfaceGroundCoverTilemap = tilemap;
+            // 풀 스프라이트 피벗이 하단(0.5,0)이므로 앵커도 하단에 맞춘다.
+            tilemap.tileAnchor = new Vector3(.5f, 0f, 0f);
             layer.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder = 1;
             grassSurfaceTile = CreateRuntimeTile("RuntimeGrassSurface", grass);
             dryGrassSurfaceTile = CreateRuntimeTile("RuntimeDryGrassSurface", dryGrass);
@@ -145,8 +162,37 @@ namespace Nyangbingo.World
 
         private void HandleTileBroken(Vector3Int cell)
         {
+            ClearGroundCoverAt(cell);
+            // 지표 흙을 파면 그 위 공기 칸에 걸쳐 보이던 풀도 같이 제거한다.
+            ClearGroundCoverAt(cell + Vector3Int.up);
+            RemoveDecorationsSupportedBy(cell);
+        }
+
+        private void ClearGroundCoverAt(Vector3Int cell)
+        {
             if (surfaceGroundCoverTilemap == null) return;
+            if (surfaceGroundCoverTilemap.GetTile(cell) == null) return;
             surfaceGroundCoverTilemap.SetTile(cell, null);
+            surfaceGroundCoverTilemap.RefreshTile(cell);
+        }
+
+        private void RemoveDecorationsSupportedBy(Vector3Int supportCell)
+        {
+            if (decorationSupportCells.Count == 0) return;
+            var doomed = new List<Transform>();
+            foreach (var pair in decorationSupportCells)
+            {
+                if (pair.Key == null) continue;
+                if (pair.Value.x == supportCell.x && pair.Value.y == supportCell.y)
+                    doomed.Add(pair.Key);
+            }
+
+            for (var index = 0; index < doomed.Count; index++)
+            {
+                var visual = doomed[index];
+                decorationSupportCells.Remove(visual);
+                if (visual != null) Destroy(visual.gameObject);
+            }
         }
 
         private void PlaceSurfaceDecorations(WorldGenerationResult result, System.Random random)
@@ -200,7 +246,8 @@ namespace Nyangbingo.World
             if (art?.Sprite == null) return;
             var centerY = surfaceY + 1f + art.Sprite.bounds.extents.y;
             if (UsesTreeVegetationOffset(id)) centerY += TreeVegetationVisualOffset;
-            Spawn(id, art, new Vector2(x + .5f, centerY), random.Next(2) == 0);
+            Spawn(id, art, new Vector2(x + .5f, centerY), random.Next(2) == 0,
+                new Vector3Int(x, surfaceY, 0));
             occupiedColumns.Add(x);
         }
 
@@ -237,7 +284,9 @@ namespace Nyangbingo.World
         private void SpawnRuinDecoration(string id, Vector2Int cell, bool flipX)
         {
             var art = artCatalog.Find(id);
-            if (art?.Sprite != null) Spawn(id, art, new Vector2(cell.x + .5f, cell.y + .5f), flipX);
+            if (art?.Sprite != null)
+                Spawn(id, art, new Vector2(cell.x + .5f, cell.y + .5f), flipX,
+                    new Vector3Int(cell.x, cell.y, 0));
         }
 
         private static List<Vector2Int> CollectConnectedRuin(TileData[,] tiles, int startX, int startY,
@@ -272,7 +321,8 @@ namespace Nyangbingo.World
         private static bool IsRuinWall(TileData[,] tiles, int x, int y) =>
             string.Equals(tiles[x, y].elementType, WorldTileTypes.RuinWall, StringComparison.Ordinal);
 
-        private void Spawn(string id, WorldDecorationArtCatalog.Entry art, Vector2 position, bool flipX)
+        private void Spawn(string id, WorldDecorationArtCatalog.Entry art, Vector2 position, bool flipX,
+            Vector3Int supportCell)
         {
             var visual = new GameObject($"Decoration_{id}");
             visual.transform.SetParent(decorationRoot, false);
@@ -283,6 +333,7 @@ namespace Nyangbingo.World
             renderer.sortingOrder = 2;
             if (art.Frames.Count > 1)
                 visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
+            decorationSupportCells[visual.transform] = supportCell;
         }
 
         private static int FindSurface(TileData[,] tiles, int x, int height)
@@ -305,6 +356,7 @@ namespace Nyangbingo.World
             dryGrassSurfaceTile = null;
             surfaceCoverCount = 0;
             chestRenderers.Clear();
+            decorationSupportCells.Clear();
         }
 
         private void OnDestroy()
