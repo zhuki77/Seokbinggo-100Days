@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using UnityEngine;
@@ -207,14 +208,23 @@ namespace Nyangbingo.Audio
 
         private void Start()
         {
-            EnsureClips();
-            EnsureAudioHost();
+            StartCoroutine(BootAudioPlayback());
+        }
+
+        /// <summary>
+        /// 타이틀(timeScale=0)·설정 변경·씬 재진입 후에도 BGM/SFX가 다시 들리도록 강제 복구한다.
+        /// </summary>
+        public void EnsureAudiblePlayback()
+        {
+            Initialize();
+            EnsureListenerAlive();
+            if (BgmVolume <= 0.0001f || SfxVolume <= 0.0001f)
+                TrySetBusVolumes(Mathf.Max(BgmVolume, 1f), Mathf.Max(SfxVolume, 1f));
+            EnsureClips(forceReloadFromResources: false);
+            if (!IsPlayable(ResolveTrackClip(CurrentTrack)))
+                EnsureClips(forceReloadFromResources: true);
             PlayTrackNow(CurrentTrack);
-            Debug.Log(
-                $"[Nyangbingo] Audio BGM status day={(dayMusic != null ? dayMusic.name : "null")} " +
-                $"playing={(musicSources != null && musicSources[activeMusicSource] != null && musicSources[activeMusicSource].isPlaying)} " +
-                $"listener={(FindAnyObjectByType<AudioListener>() != null)} " +
-                $"volume={BgmVolume}");
+            LogAudioStatus("EnsureAudiblePlayback");
         }
 
         private void OnDestroy()
@@ -231,6 +241,7 @@ namespace Nyangbingo.Audio
         {
             if (initialized) return;
             initialized = true;
+            EnsureListenerAlive();
             BuildClipIndex();
             EnsureAudioHost();
             musicSources = new[] { CreateSource(bgmOutput, true), CreateSource(bgmOutput, true) };
@@ -240,7 +251,18 @@ namespace Nyangbingo.Audio
             router.CueRequested += PlayCue;
             router.MusicRequested += RequestMusic;
             router.BaekjungPercussionRequested += SetBaekjungPercussion;
+            TrySetBusVolumes(1f, 1f);
             PlayTrackNow(MusicTrack.Day);
+        }
+
+        private IEnumerator BootAudioPlayback()
+        {
+            // 한 프레임 기다려 오디오 디바이스·리스너가 준비된 뒤 재생한다.
+            yield return null;
+            EnsureAudiblePlayback();
+            yield return null;
+            if (musicSources == null || !musicSources[activeMusicSource].isPlaying)
+                EnsureAudiblePlayback();
         }
 
         public bool TrySetBusVolumes(float bgmNormalized, float sfxNormalized)
@@ -285,41 +307,55 @@ namespace Nyangbingo.Audio
         private void PlayTrackNow(MusicTrack track)
         {
             CurrentTrack = track;
+            EnsureListenerAlive();
             EnsureClips();
             var clip = ResolveTrackClip(track);
-            if (clip == null || musicSources == null)
+            if (!IsPlayable(clip))
+            {
+                EnsureClips(forceReloadFromResources: true);
+                clip = ResolveTrackClip(track);
+            }
+
+            if (!IsPlayable(clip) || musicSources == null)
             {
                 Debug.LogWarning($"[Nyangbingo] BGM clip missing for {track}.");
                 return;
             }
 
             var source = musicSources[activeMusicSource];
+            ConfigureSourceFor2D(source, loop: true);
             source.clip = clip;
-            source.loop = true;
-            source.mute = false;
-            source.enabled = true;
-            source.spatialBlend = 0f;
-            source.volume = BgmVolume;
-            if (!source.isPlaying) source.Play();
+            source.volume = Mathf.Clamp01(BgmVolume);
+            source.pitch = 1f;
+            if (source.isPlaying) source.Stop();
+            source.Play();
             fadeElapsed = CrossfadeSeconds;
-            Debug.Log($"[Nyangbingo] BGM playing {clip.name} on {source.gameObject.name}");
+            Debug.Log(
+                $"[Nyangbingo] BGM playing {clip.name} len={clip.length:0.##}s vol={source.volume} " +
+                $"on {source.gameObject.name}");
         }
 
         private void CrossfadeTo(MusicTrack track)
         {
             CurrentTrack = track;
+            EnsureListenerAlive();
             EnsureClips();
             var clip = ResolveTrackClip(track);
-            if (clip == null || musicSources == null) return;
+            if (!IsPlayable(clip))
+            {
+                EnsureClips(forceReloadFromResources: true);
+                clip = ResolveTrackClip(track);
+            }
+
+            if (!IsPlayable(clip) || musicSources == null) return;
             var current = musicSources[activeMusicSource];
             if (current.clip == clip && current.isPlaying) return;
             activeMusicSource = 1 - activeMusicSource;
             var next = musicSources[activeMusicSource];
+            ConfigureSourceFor2D(next, loop: true);
             next.clip = clip;
-            next.mute = false;
-            next.enabled = true;
-            next.spatialBlend = 0f;
             next.volume = 0f;
+            next.pitch = 1f;
             next.Play();
             fadeElapsed = 0f;
         }
@@ -358,9 +394,10 @@ namespace Nyangbingo.Audio
                 selected = sfxSources[sfxCursor];
                 sfxCursor = (sfxCursor + 1) % sfxSources.Length;
             }
-            selected.spatialBlend = 0f;
-            selected.volume = SfxVolume;
-            selected.PlayOneShot(clip, SfxVolume);
+            ConfigureSourceFor2D(selected, loop: false);
+            selected.volume = Mathf.Clamp01(SfxVolume);
+            selected.pitch = 1f;
+            selected.PlayOneShot(clip, Mathf.Clamp01(SfxVolume));
         }
 
         private void BuildClipIndex()
@@ -382,21 +419,27 @@ namespace Nyangbingo.Audio
             }
         }
 
-        private void EnsureClips()
+        private void EnsureClips(bool forceReloadFromResources = false)
         {
-            if (dayMusic == null) dayMusic = Resources.Load<AudioClip>("Audio/BGM/Day");
-            if (nightMusic == null) nightMusic = Resources.Load<AudioClip>("Audio/BGM/Night");
-            if (bossMusic == null) bossMusic = Resources.Load<AudioClip>("Audio/BGM/Boss");
-            if (baekjungPercussion == null)
+            if (forceReloadFromResources || !IsPlayable(dayMusic))
+                dayMusic = Resources.Load<AudioClip>("Audio/BGM/Day");
+            if (forceReloadFromResources || !IsPlayable(nightMusic))
+                nightMusic = Resources.Load<AudioClip>("Audio/BGM/Night");
+            if (forceReloadFromResources || !IsPlayable(bossMusic))
+                bossMusic = Resources.Load<AudioClip>("Audio/BGM/Boss");
+            if (forceReloadFromResources || !IsPlayable(baekjungPercussion))
                 baekjungPercussion = Resources.Load<AudioClip>("Audio/BGM/BaekjungPercussion");
 
             // Absolute last resort so silence is never caused by missing assets.
-            if (dayMusic == null)
+            if (!IsPlayable(dayMusic))
             {
                 runtimeDayFallback ??= CreateFallbackLoop("RuntimeDayFallback", 261.63f, 329.63f);
                 dayMusic = runtimeDayFallback;
             }
         }
+
+        private static bool IsPlayable(AudioClip clip) =>
+            clip != null && clip.loadState != AudioDataLoadState.Failed && clip.length > 0.01f;
 
         private AudioClip ResolveTrackClip(MusicTrack track)
         {
@@ -411,12 +454,63 @@ namespace Nyangbingo.Audio
         private void EnsureAudioHost()
         {
             if (audioHost != null) return;
+            EnsureListenerAlive();
             var listener = FindAnyObjectByType<AudioListener>();
             var hostObject = new GameObject("NyangbingoAudioHost");
+            // 리스너 자식으로 두면 카메라 이동과 무관하게 2D 재생이 안정적이다.
             if (listener != null) hostObject.transform.SetParent(listener.transform, false);
             else hostObject.transform.SetParent(transform, false);
             hostObject.transform.localPosition = Vector3.zero;
             audioHost = hostObject.transform;
+        }
+
+        private static void EnsureListenerAlive()
+        {
+            AudioListener.pause = false;
+            var listener = FindAnyObjectByType<AudioListener>();
+            if (listener == null)
+            {
+                var camera = Camera.main;
+                if (camera != null) listener = camera.gameObject.AddComponent<AudioListener>();
+            }
+
+            if (listener != null)
+            {
+                listener.enabled = true;
+                if (!listener.gameObject.activeInHierarchy)
+                    Debug.LogWarning("[Nyangbingo] AudioListener GameObject is inactive — audio may be silent.");
+            }
+            else Debug.LogWarning("[Nyangbingo] No AudioListener found in scene.");
+        }
+
+        private void LogAudioStatus(string reason)
+        {
+            var source = musicSources != null ? musicSources[activeMusicSource] : null;
+            var clip = source != null ? source.clip : null;
+            Debug.Log(
+                $"[Nyangbingo] Audio {reason}: day={(IsPlayable(dayMusic) ? dayMusic.name : "null")} " +
+                $"clip={(clip != null ? clip.name : "null")} playing={(source != null && source.isPlaying)} " +
+                $"vol={BgmVolume}/{SfxVolume} listenerPause={AudioListener.pause} " +
+                $"timeScale={Time.timeScale} muteHint=Game뷰 Mute Audio 해제 확인");
+        }
+
+        private static void ConfigureSourceFor2D(AudioSource source, bool loop)
+        {
+            if (source == null) return;
+            source.mute = false;
+            source.enabled = true;
+            source.loop = loop;
+            source.playOnAwake = false;
+            source.ignoreListenerPause = true;
+            source.spatialBlend = 0f;
+            source.dopplerLevel = 0f;
+            source.bypassEffects = true;
+            source.bypassListenerEffects = true;
+            source.bypassReverbZones = true;
+            source.rolloffMode = AudioRolloffMode.Linear;
+            source.minDistance = 1f;
+            source.maxDistance = 500f;
+            source.priority = loop ? 32 : 128;
         }
 
         private void ApplySourceVolumes(float fadeT)
@@ -435,14 +529,9 @@ namespace Nyangbingo.Audio
         {
             EnsureAudioHost();
             var source = audioHost.gameObject.AddComponent<AudioSource>();
+            // Mixer 그룹이 비어 있거나 깨져 있으면 마스터로 직행한다(무음 라우팅 방지).
             source.outputAudioMixerGroup = output;
-            source.playOnAwake = false;
-            source.loop = loop;
-            source.ignoreListenerPause = true;
-            source.spatialBlend = 0f;
-            source.priority = loop ? 32 : 128;
-            source.mute = false;
-            source.enabled = true;
+            ConfigureSourceFor2D(source, loop);
             return source;
         }
 

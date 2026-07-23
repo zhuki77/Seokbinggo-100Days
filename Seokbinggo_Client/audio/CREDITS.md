@@ -11,6 +11,13 @@
 
 After pull/clone, open the Unity project at `Seokbinggo_Client/` and wait for import. BGM loads from Resources (`Audio/BGM/Day` 등) and from the `NyangbingoAudioService` component on MainGame.
 
+### Still silent? Checklist
+
+1. Unity **Game** 뷰 오른쪽 위 **Mute Audio** 가 꺼져 있는지 확인
+2. Console에 `[Nyangbingo] BGM playing ...` / `Audio EnsureAudiblePlayback` 로그가 있는지 확인
+3. `Assets/Scripts/Nyangbingo/Audio/NyangbingoAudioService.cs` Missing Script 가 아닌지 확인
+4. 브랜치 `feat/audio-bgm-reupload` (또는 이 커밋이 포함된 브랜치)를 받았는지 확인
+
 Placeholder BGM loops were authored for this project. Kenney SFX are CC0.
 
 Only CC0 audio or audio purchased by a team member may be used. For purchased audio, record the team license owner instead of a CC0 declaration.

@@ -308,6 +308,7 @@ namespace Nyangbingo.UI
         {
             Time.timeScale = resumeTimeScale > 0f ? resumeTimeScale : 1f;
             SetScreen(GameShellScreen.Gameplay);
+            audioService?.EnsureAudiblePlayback();
         }
 
         private void ShowTitle()
@@ -315,6 +316,8 @@ namespace Nyangbingo.UI
             Time.timeScale = 0f;
             SetScreen(GameShellScreen.Title);
             RefreshTitle();
+            // 타이틀은 timeScale=0이지만 BGM은 계속 들려야 한다.
+            audioService?.EnsureAudiblePlayback();
         }
 
         private void OpenConfirmation(GameShellConfirmation confirmation)
