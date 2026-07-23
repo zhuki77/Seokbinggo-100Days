@@ -525,13 +525,29 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestTreeVegetationVisualOffset()
     {
-        Require(Mathf.Approximately(MainGameWorldDecorationRenderer.TreeVegetationVisualOffset, -.5f),
-            "Tree vegetation must be lowered by half a tile to match the visible foreground surface.");
-        Require(MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("tree_0") &&
-                MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("tree_2") &&
-                !MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("hemp") &&
-                !MainGameWorldDecorationRenderer.UsesTreeVegetationOffset("ruin_pillar"),
-            "The half-tile correction must affect only tree vegetation, not hemp or ruin decorations.");
+        var texture = new Texture2D(4, 8, TextureFormat.RGBA32, false);
+        // Bottom-pivot sprite: feet sit on visible surface (logical top + drop visual offset).
+        var bottomPivot = Sprite.Create(texture, new Rect(0, 0, 4, 8), new Vector2(.5f, 0f), 4f);
+        // Center-pivot sprite: transform rises by extents so the visual foot still matches.
+        var centerPivot = Sprite.Create(texture, new Rect(0, 0, 4, 8), new Vector2(.5f, .5f), 4f);
+        const int surfaceY = 10;
+        var visibleSurface = surfaceY + 1f + MainGameWorldDropRuntime.VisualSurfaceOffset;
+        Require(Mathf.Approximately(
+                MainGameWorldDecorationRenderer.ComputeSurfaceDecorationWorldY(surfaceY, bottomPivot),
+                visibleSurface - bottomPivot.bounds.min.y),
+            "Bottom-pivot vegetation must plant its sprite foot on the visible foreground surface.");
+        Require(Mathf.Approximately(
+                MainGameWorldDecorationRenderer.ComputeSurfaceDecorationWorldY(surfaceY, centerPivot),
+                visibleSurface - centerPivot.bounds.min.y),
+            "Center-pivot vegetation must raise the transform so the sprite foot still matches the surface.");
+        Require(MainGameWorldDecorationRenderer.ComputeSurfaceDecorationWorldY(surfaceY, centerPivot) >
+                MainGameWorldDecorationRenderer.ComputeSurfaceDecorationWorldY(surfaceY, bottomPivot),
+            "Center-pivot plants must sit higher than bottom-pivot plants with the same visual foot line.");
+        var source = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameWorldDecorationRenderer.cs");
+        Require(source.Contains("ComputeSurfaceDecorationWorldY(surfaceY, art.Sprite)") &&
+                !source.Contains("TreeVegetationVisualOffset"),
+            "Surface vegetation must use pivot-aware placement instead of a fixed tree-only sink offset.");
     }
 
     private static void TestWorldDropVisualSurfaceOffset()

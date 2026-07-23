@@ -11,8 +11,6 @@ namespace Nyangbingo.World
     [DefaultExecutionOrder(-50)]
     public sealed class MainGameWorldDecorationRenderer : MonoBehaviour
     {
-        public const float TreeVegetationVisualOffset = -.5f;
-
         private const int DecorationSeedSalt = 0x4E59414E;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private WorldDecorationArtCatalog artCatalog;
@@ -127,8 +125,9 @@ namespace Nyangbingo.World
             layer.transform.SetParent(groundCoverRoot.transform, false);
             var tilemap = layer.GetComponent<Tilemap>();
             surfaceGroundCoverTilemap = tilemap;
-            // 풀 스프라이트 피벗이 하단(0.5,0)이므로 앵커도 하단에 맞춘다.
-            tilemap.tileAnchor = new Vector3(.5f, 0f, 0f);
+            // 전경 타일과 동일한 기본 앵커를 유지한다. (0.5,0으로 바꾸면 풀이 반 칸 내려가 보인다.)
+            if (bootstrap?.WorldRenderer?.Foreground != null)
+                tilemap.tileAnchor = bootstrap.WorldRenderer.Foreground.tileAnchor;
             layer.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder = 1;
             grassSurfaceTile = CreateRuntimeTile("RuntimeGrassSurface", grass);
             dryGrassSurfaceTile = CreateRuntimeTile("RuntimeDryGrassSurface", dryGrass);
@@ -244,15 +243,21 @@ namespace Nyangbingo.World
 
             var art = artCatalog.Find(id);
             if (art?.Sprite == null) return;
-            var centerY = surfaceY + 1f + art.Sprite.bounds.extents.y;
-            if (UsesTreeVegetationOffset(id)) centerY += TreeVegetationVisualOffset;
-            Spawn(id, art, new Vector2(x + .5f, centerY), random.Next(2) == 0,
-                new Vector3Int(x, surfaceY, 0));
+            // 전경 타일 비주얼 윗면(드롭과 동일 +0.5)에 스프라이트 하단(피벗 무관)을 맞춘다.
+            Spawn(id, art, new Vector2(x + .5f, ComputeSurfaceDecorationWorldY(surfaceY, art.Sprite)),
+                random.Next(2) == 0, new Vector3Int(x, surfaceY, 0));
             occupiedColumns.Add(x);
         }
 
-        public static bool UsesTreeVegetationOffset(string id) =>
-            !string.IsNullOrEmpty(id) && id.StartsWith("tree_", StringComparison.Ordinal);
+        /// <summary>
+        /// 표면 식생 Y: 논리 지면 윗변(surfaceY+1) + 전경 비주얼 보정 − bounds.min.y(피벗→하단).
+        /// </summary>
+        public static float ComputeSurfaceDecorationWorldY(int surfaceY, Sprite sprite)
+        {
+            var visibleSurfaceY = surfaceY + 1f + MainGameWorldDropRuntime.VisualSurfaceOffset;
+            if (sprite == null) return visibleSurfaceY;
+            return visibleSurfaceY - sprite.bounds.min.y;
+        }
 
         private void PlaceRuinDecorations(WorldGenerationResult result, System.Random random)
         {
