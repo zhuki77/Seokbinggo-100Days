@@ -18,7 +18,7 @@ MonoBehaviour:
   codexNote: "\uCC28\uC5F4\uBCBD(HP600) \uBC29\uCE58 60\uCD08 \u2014 \uAC1C\uC785
     \uAC15\uC81C\uC120"
   kind: 0
-  hitPoints: 450
+  hitPoints: 270
   moveSpeed: 2
   contactDamage: 8
   contactDamageNoLantern: 8

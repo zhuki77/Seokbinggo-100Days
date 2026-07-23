@@ -7,9 +7,16 @@ namespace Nyangbingo.Save
 {
     public sealed class SaveManager : MonoBehaviour
     {
-        public const int SlotCount = 3;
+        public const int SlotCount = 1;
+        private const int LegacySlotCount = 3;
         private static readonly int[] DemoDays = { 1, 15, 30 };
         public event Action<int> Saved;
+
+        private void Awake()
+        {
+            for (var slot = SlotCount; slot < LegacySlotCount; slot++)
+                DeleteFilesForSlot(slot);
+        }
 
         public void Save(int slot, SaveGame data)
         {
@@ -113,12 +120,25 @@ namespace Nyangbingo.Save
         public void Delete(int slot)
         {
             ValidateSlot(slot);
-            var path = PathFor(slot);
-            if (File.Exists(path)) File.Delete(path);
+            DeleteFilesForSlot(slot);
+        }
+
+        public void DeleteAll()
+        {
+            for (var slot = 0; slot < SlotCount; slot++)
+                Delete(slot);
         }
 
         private static string PathFor(int slot) =>
             Path.Combine(Application.persistentDataPath, $"nyangbingo-save-{slot}.json");
+
+        private static void DeleteFilesForSlot(int slot)
+        {
+            var path = PathFor(slot);
+            if (File.Exists(path)) File.Delete(path);
+            var temporaryPath = path + ".tmp";
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
 
         private static void WriteAtomically(string path, string contents)
         {

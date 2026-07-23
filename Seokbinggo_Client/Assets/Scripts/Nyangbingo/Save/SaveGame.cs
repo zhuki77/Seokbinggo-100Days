@@ -82,6 +82,37 @@ namespace Nyangbingo.Save
     }
 
     [Serializable]
+    public struct WorldDropStateRecord
+    {
+        public string itemId;
+        public int amount;
+        public Vector2 position;
+        public Vector2 velocity;
+        public float pickupDelay;
+    }
+
+    [Serializable]
+    public sealed class YokaiStateRecord
+    {
+        public string instanceId;
+        public string yokaiId;
+        public Vector3 position;
+        public Vector2 velocity;
+        public int currentHealth;
+        public int maxHealth;
+        public bool raid;
+        public int behaviorState;
+        public float sieveStopRemaining;
+        public float sieveCooldownRemaining;
+        public float lanternPauseRemaining;
+        public float bloomCooldownRemaining;
+        public Vector3 dawnFleeDirection;
+        public float contactAttackRemaining;
+        public float frostSlowFraction;
+        public float frostSlowRemaining;
+    }
+
+    [Serializable]
     public struct ChestStateRecord
     {
         public string chestId;
@@ -128,6 +159,10 @@ namespace Nyangbingo.Save
         public bool isNight;
         public bool discardRegularForCurrentNight;
         public List<string> remainingRegularYokaiIds = new List<string>();
+        public bool usesDetailedYokaiState;
+        public List<YokaiStateRecord> activeYokai = new List<YokaiStateRecord>();
+        public List<string> pendingRegularYokaiIds = new List<string>();
+        public List<string> pendingRaidYokaiIds = new List<string>();
     }
 
     [Serializable]
@@ -163,7 +198,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 16;
+        public const int CurrentSchemaVersion = 17;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -176,6 +211,7 @@ namespace Nyangbingo.Save
         public List<JangdokStorageRecord> jangdokStorages = new List<JangdokStorageRecord>();
         public List<CoolingSourceStateRecord> coolingSources = new List<CoolingSourceStateRecord>();
         public List<DeathTearPouchRecord> deathTearPouches = new List<DeathTearPouchRecord>();
+        public List<WorldDropStateRecord> worldDrops = new List<WorldDropStateRecord>();
         public List<TileChangeRecord> tileChanges = new List<TileChangeRecord>();
         /// <summary>A-16: 배경(벽지) 변경 이력. 구버전 세이브에서는 null일 수 있으며 NormalizeAfterLoad가 빈 목록으로 채운다.</summary>
         public List<TileChangeRecord> backgroundChanges = new List<TileChangeRecord>();
@@ -230,6 +266,7 @@ namespace Nyangbingo.Save
             if (jangdokStorages == null) jangdokStorages = new List<JangdokStorageRecord>();
             if (coolingSources == null) coolingSources = new List<CoolingSourceStateRecord>();
             if (deathTearPouches == null) deathTearPouches = new List<DeathTearPouchRecord>();
+            if (worldDrops == null) worldDrops = new List<WorldDropStateRecord>();
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
@@ -253,8 +290,17 @@ namespace Nyangbingo.Save
             if (regularEncounter == null) regularEncounter = new RegularEncounterStateRecord();
             if (regularEncounter.remainingRegularYokaiIds == null)
                 regularEncounter.remainingRegularYokaiIds = new List<string>();
+            if (regularEncounter.activeYokai == null)
+                regularEncounter.activeYokai = new List<YokaiStateRecord>();
+            if (regularEncounter.pendingRegularYokaiIds == null)
+                regularEncounter.pendingRegularYokaiIds = new List<string>();
+            if (regularEncounter.pendingRaidYokaiIds == null)
+                regularEncounter.pendingRaidYokaiIds = new List<string>();
             regularEncounter.day = Math.Max(1, regularEncounter.day);
             regularEncounter.remainingRegularYokaiIds.RemoveAll(string.IsNullOrWhiteSpace);
+            regularEncounter.activeYokai.RemoveAll(record => record == null);
+            regularEncounter.pendingRegularYokaiIds.RemoveAll(string.IsNullOrWhiteSpace);
+            regularEncounter.pendingRaidYokaiIds.RemoveAll(string.IsNullOrWhiteSpace);
             if (baekjungProgress == null) baekjungProgress = new BaekjungSchedulerState();
             if (stats == null) stats = new RunStatsRecord();
             if (goalBadges == null) goalBadges = new GoalBadgeRecord();
@@ -1087,7 +1133,7 @@ namespace Nyangbingo.Save
 #if false // Moved to SaveManager.cs so Unity can serialize the MonoBehaviour by script GUID.
     public sealed class SaveManager : MonoBehaviour
     {
-        public const int SlotCount = 3;
+        public const int SlotCount = 1;
         private static readonly int[] DemoDays = { 1, 15, 30 };
         public void Save(int slot, SaveGame data)
         {
@@ -1539,7 +1585,7 @@ namespace Nyangbingo.Save
         {
             if (save == null || player == null || playerHealth == null || timeSource == null || bossManager == null)
                 return false;
-            if (!IsFinite(player.position) || playerHealth.MaxHealth <= 0 || playerHealth.Current < 0 ||
+            if (!IsFinite(player.position) || playerHealth.MaxHealth <= 0 || playerHealth.Current <= 0 ||
                 playerHealth.Current > playerHealth.MaxHealth || timeSource.Day < 1 ||
                 timeSource.TimeOfDayGameSeconds < 0f || float.IsNaN(timeSource.TimeOfDayGameSeconds) ||
                 float.IsInfinity(timeSource.TimeOfDayGameSeconds)) return false;
@@ -1573,7 +1619,7 @@ namespace Nyangbingo.Save
                 bossManager.IsBossActive) return false;
             save.NormalizeAfterLoad();
             if (!save.playerState.hasValue || !save.timeState.hasValue || save.playerState.maxHealth <= 0 ||
-                save.playerState.currentHealth < 0 || save.playerState.currentHealth > save.playerState.maxHealth ||
+                save.playerState.currentHealth <= 0 || save.playerState.currentHealth > save.playerState.maxHealth ||
                 !IsFinite(save.playerState.position) || save.timeState.day < 1 ||
                 save.timeState.timeOfDayGameSeconds < 0f || float.IsNaN(save.timeState.timeOfDayGameSeconds) ||
                 float.IsInfinity(save.timeState.timeOfDayGameSeconds))

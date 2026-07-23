@@ -15,13 +15,12 @@ MonoBehaviour:
   id: iron_claw
   tier: 2
   hasBasicAttack: 1
-  attackDamage: 8
+  attackDamage: 24
   attacksPerSecond: 1.5
-  damagePerSecond: 12
+  damagePerSecond: 36
   knockbackTiles: 1
   rangeTiles: 1.5
   arcDegrees: 90
   multiTarget: 1
   hitsWalls: 1
-  note: "10\uC77C\uCC28 3\uB9C8\uB9AC 137.5\uCD08(\uC5EC\uC720 74.5%) \u2014 \uB2A5\uB825:
-    \uCC44\uAD74 \uD06C\uB9AC 15%"
+  note: "신규 밸런스 비교표 기준 — 능력: 채굴 크리 15%"

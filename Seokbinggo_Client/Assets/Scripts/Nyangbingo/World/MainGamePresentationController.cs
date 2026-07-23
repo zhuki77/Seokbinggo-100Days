@@ -12,7 +12,7 @@ namespace Nyangbingo.World
     [RequireComponent(typeof(Camera))]
     public sealed class MainGamePresentationController : MonoBehaviour
     {
-        private const int AssetsPixelsPerUnit = 16;
+        private const int AssetsPixelsPerUnit = 32;
         private const int ReferenceWidth = 960;
         private const int ReferenceHeight = 540;
         // Soft day/night ramps in the Stardew/Terraria range: readable nights, warm days,

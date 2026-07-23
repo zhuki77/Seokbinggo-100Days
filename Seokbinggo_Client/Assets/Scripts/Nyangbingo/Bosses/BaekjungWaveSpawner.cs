@@ -49,6 +49,36 @@ namespace Nyangbingo.Bosses
         public int PendingCount => pending.Count;
         public int DiscardedAtDawnCount { get; private set; }
 
+        public List<YokaiKind> CapturePendingKinds()
+        {
+            var result = new List<YokaiKind>(pending.Count);
+            foreach (var request in pending)
+                result.Add(request.Kind);
+            return result;
+        }
+
+        public bool RestorePendingDefinitions(IReadOnlyList<YokaiDefinition> definitions)
+        {
+            if (disposed || definitions == null) return false;
+            if (!scheduler.IsActive)
+                return definitions.Count == 0;
+
+            var activeDefinition = scheduler.ActiveDefinition;
+            var restored = new Queue<PendingSpawn>();
+            for (var index = 0; index < definitions.Count; index++)
+            {
+                var definition = definitions[index];
+                if (definition == null || !ContainsKind(activeDefinition, definition.Kind)) return false;
+                restored.Enqueue(new PendingSpawn(activeDefinition, definition.Kind, -1));
+            }
+
+            pending.Clear();
+            while (restored.Count > 0) pending.Enqueue(restored.Dequeue());
+            acceptingSpawns = true;
+            TryFlushPending();
+            return true;
+        }
+
         public void RetryPending()
         {
             if (!disposed && acceptingSpawns) TryFlushPending();
@@ -130,6 +160,16 @@ namespace Nyangbingo.Bosses
             DiscardedAtDawnCount += pending.Count;
             pending.Clear();
         }
+
+        private static bool ContainsKind(DayEventDefinition definition, YokaiKind kind)
+        {
+            if (definition == null) return false;
+            var composition = definition.Composition;
+            for (var index = 0; index < composition.Length; index++)
+                if (composition[index].kind == kind && composition[index].amount > 0)
+                    return true;
+            return false;
+        }
     }
 
     public sealed class BaekjungRegularSpawnGate : IDisposable
@@ -145,6 +185,11 @@ namespace Nyangbingo.Bosses
             this.regularSpawnController = regularSpawnController ?? throw new ArgumentNullException(nameof(regularSpawnController));
             scheduler.Started += HandleStarted;
             scheduler.Ended += HandleEnded;
+            if (scheduler.IsActive)
+            {
+                regularSpawnController.SetRegularSpawning(false);
+                isPaused = true;
+            }
         }
 
         public void Dispose()

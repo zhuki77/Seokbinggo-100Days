@@ -20,6 +20,7 @@ namespace Nyangbingo.UI
     {
         public const int ShellLoadingFrameCount = 17;
         public const float ShellLoadingDurationSeconds = 2.2f;
+        public const int ShellLoadingSortingOrder = 32700;
 
         private const int ShellLoadingColumns = 5;
         private const int ShellLoadingRows = 4;
@@ -76,9 +77,12 @@ namespace Nyangbingo.UI
         private bool shellLoadingTransitionActive;
         private bool demoLoadApplied;
         private static bool enterGameplayAfterReload;
+        private static bool revealLoadingAfterReload;
+        private static bool discardSaveAfterReload;
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
         public bool IsInitialized { get; private set; }
+        public static bool IsLoadingTransitionActive { get; private set; }
 
         public void ConfigureForScene(GameShellController shellController, MainGameSaveCoordinator coordinator,
             SaveManager saves, NyangbingoAudioService audio, DayNightService clock, MainGameCodexController codexUi,
@@ -118,6 +122,13 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
+            var shouldCreateFreshInitialSave = discardSaveAfterReload;
+            if (shouldCreateFreshInitialSave && saveManager != null)
+            {
+                saveManager.DeleteAll();
+                discardSaveAfterReload = false;
+            }
+
             if (shell == null || saveCoordinator == null || saveManager == null || audioService == null ||
                 timeService == null || !saveCoordinator.Initialize() || saveButtons == null || loadButtons == null ||
                 saveButtons.Length != SaveManager.SlotCount || loadButtons.Length != SaveManager.SlotCount)
@@ -150,13 +161,35 @@ namespace Nyangbingo.UI
             ApplyDeliveredShellArt();
             EnsureShellLoadingOverlay();
             var shouldEnterGameplay = enterGameplayAfterReload;
+            var shouldRevealLoading = revealLoadingAfterReload;
             enterGameplayAfterReload = false;
+            revealLoadingAfterReload = false;
             if (shouldEnterGameplay) shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
             else shell.EnterTitle();
+            if (shouldCreateFreshInitialSave)
+                CreateFreshInitialSave();
             RefreshTitleControls();
             SetStatus(string.Empty);
             IsInitialized = true;
+            if (shouldRevealLoading)
+                StartCoroutine(PlayShellLoadingReveal());
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지 4항목·현재 슬롯 저장·설정·타이틀 셸 연결 완료.");
+        }
+
+        private void CreateFreshInitialSave()
+        {
+            var initialSnapshot = saveCoordinator.CaptureSnapshot();
+            if (initialSnapshot == null)
+            {
+                Debug.LogError("[Nyangbingo] Failed to capture the fresh new-game snapshot.");
+                return;
+            }
+
+            saveManager.DeleteAll();
+            saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot);
+            shell.RefreshTitle();
+            Debug.Log($"[Nyangbingo] Fresh new-game save created " +
+                      $"(seed={initialSnapshot.seed}, day={initialSnapshot.day}).");
         }
 
         private void ResolveShellArtCatalogs()
@@ -242,13 +275,17 @@ namespace Nyangbingo.UI
                 shellLoadingFrames[index].name = $"ShellLoading_{index:00}";
             }
 
-            shellLoadingOverlay = new GameObject("ShellLoadingOverlay", typeof(RectTransform));
+            shellLoadingOverlay = new GameObject("ShellLoadingOverlay", typeof(RectTransform),
+                typeof(Canvas), typeof(GraphicRaycaster));
             shellLoadingOverlay.transform.SetParent(transform, false);
             var rectTransform = (RectTransform)shellLoadingOverlay.transform;
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
             rectTransform.offsetMin = Vector2.zero;
             rectTransform.offsetMax = Vector2.zero;
+            var overlayCanvas = shellLoadingOverlay.GetComponent<Canvas>();
+            overlayCanvas.overrideSorting = true;
+            overlayCanvas.sortingOrder = ShellLoadingSortingOrder;
             var canvasGroup = shellLoadingOverlay.AddComponent<CanvasGroup>();
             canvasGroup.blocksRaycasts = true;
             canvasGroup.interactable = true;
@@ -268,12 +305,41 @@ namespace Nyangbingo.UI
                 completion?.Invoke();
                 return;
             }
+            StabilizeGameplayCamera();
             StartCoroutine(PlayShellLoadingTransition(completion));
+        }
+
+        private static void StabilizeGameplayCamera()
+        {
+            FindAnyObjectByType<MainGamePlayerController>()?.SnapCameraToPlayer();
         }
 
         private IEnumerator PlayShellLoadingTransition(Action completion)
         {
             shellLoadingTransitionActive = true;
+            IsLoadingTransitionActive = true;
+            Time.timeScale = 0f;
+            shellLoadingOverlay.transform.SetAsLastSibling();
+            shellLoadingOverlay.SetActive(true);
+            shellLoadingImage.sprite = shellLoadingFrames[0];
+
+            // Render the intact loading screen once, then keep that exact frame frozen while loading.
+            yield return null;
+            completion?.Invoke();
+            if (this == null) yield break;
+
+            Time.timeScale = 0f;
+            StabilizeGameplayCamera();
+            yield return null;
+            if (this == null) yield break;
+
+            yield return PlayShellLoadingReveal();
+        }
+
+        private IEnumerator PlayShellLoadingReveal()
+        {
+            shellLoadingTransitionActive = true;
+            IsLoadingTransitionActive = true;
             Time.timeScale = 0f;
             shellLoadingOverlay.transform.SetAsLastSibling();
             shellLoadingOverlay.SetActive(true);
@@ -282,9 +348,11 @@ namespace Nyangbingo.UI
                 shellLoadingImage.sprite = shellLoadingFrames[index];
                 yield return new WaitForSecondsRealtime(ShellLoadingFrameDurations[index]);
             }
+
             shellLoadingOverlay.SetActive(false);
             shellLoadingTransitionActive = false;
-            completion?.Invoke();
+            IsLoadingTransitionActive = false;
+            shell.RestoreTimeScaleAfterLoading();
         }
 
         private void ApplyDeliveredButtonArt()
@@ -711,7 +779,8 @@ namespace Nyangbingo.UI
             settingsBackButton.onClick.AddListener(() => shell.CloseSettings());
             confirmButton.onClick.AddListener(ConfirmPendingAction);
             cancelButton.onClick.AddListener(() => shell.CancelConfirmation());
-            titleContinueButton.onClick.AddListener(() => SetStatus(shell.TryContinue() ? "불러오기 완료" : "저장 파일이 없습니다."));
+            titleContinueButton.onClick.AddListener(() =>
+                SetStatus(shell.TryContinue() ? "불러오는 중..." : "저장 파일이 없습니다."));
             titleNewGameButton.onClick.AddListener(() => shell.RequestNewGame());
             titleQuitButton.onClick.AddListener(() => shell.RequestQuit());
             resultTitleButton.onClick.AddListener(() => shell.ReturnFromResultToTitle());
@@ -720,6 +789,7 @@ namespace Nyangbingo.UI
         private void ConfigurePauseMenuLayout()
         {
             pauseSaveButton = saveButtons[0];
+            RemoveLegacySaveSlotObjects();
             SetButtonLabel(resumeButton, "계속");
             SetButtonLabel(pauseSaveButton, "저장");
             SetButtonLabel(settingsButton, "설정");
@@ -735,6 +805,20 @@ namespace Nyangbingo.UI
                 if (saveButtons[index] != null) saveButtons[index].gameObject.SetActive(false);
             for (var index = 0; index < loadButtons.Length; index++)
                 if (loadButtons[index] != null) loadButtons[index].gameObject.SetActive(false);
+        }
+
+        private void RemoveLegacySaveSlotObjects()
+        {
+            var pausePanel = pauseSaveButton != null ? pauseSaveButton.transform.parent : null;
+            if (pausePanel == null) return;
+            var legacyNames = new[] { "Save_2", "Save_3", "Load_2", "Load_3" };
+            for (var index = 0; index < legacyNames.Length; index++)
+            {
+                var legacy = pausePanel.Find(legacyNames[index]);
+                if (legacy == null) continue;
+                legacy.gameObject.SetActive(false);
+                Destroy(legacy.gameObject);
+            }
         }
 
         private static void ConfigurePauseButton(Button button, float y)
@@ -1003,21 +1087,37 @@ namespace Nyangbingo.UI
             if (succeeded) shell.CloseSettings();
         }
 
-        private void HandleNewGameRequested(int slot)
+        private void HandleNewGameRequested(int _)
         {
             BeginShellLoadingTransition(() =>
             {
-                if (saveManager.HasSave(slot)) saveManager.Delete(slot);
+                var previousSeed = FindAnyObjectByType<MainGameBootstrap>()?.Session?.Seed ?? 0;
+                if (saveManager.TryLoad(GameShellController.AutoSaveSlot, out var previousSave))
+                    previousSeed = previousSave.seed;
+                saveManager.DeleteAll();
                 enterGameplayAfterReload = true;
+                revealLoadingAfterReload = true;
+                discardSaveAfterReload = true;
+                MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed);
                 Time.timeScale = 1f;
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
             });
         }
 
-        private void HandleContinueRequested(int slot, SaveGame _) =>
+        private void HandleContinueRequested(int slot, SaveGame loadedSave) =>
             BeginShellLoadingTransition(() =>
             {
-                saveCoordinator.TryLoad(slot);
+                if (!saveCoordinator.TryLoad(slot))
+                {
+                    Time.timeScale = 0f;
+                    shell.EnterTitle();
+                    shell.RefreshTitle();
+                    RefreshTitleControls();
+                    SetStatus("저장 데이터 복원에 실패했습니다.");
+                    return;
+                }
+
+                shell.EnterGameplay(loadedSave);
                 Time.timeScale = 1f;
             });
 
@@ -1025,6 +1125,8 @@ namespace Nyangbingo.UI
             BeginShellLoadingTransition(() =>
             {
                 demoLoadApplied = saveCoordinator.TryApplyDemoSnapshot(demo);
+                if (demoLoadApplied) shell.EnterGameplay(demo);
+                else shell.EnterTitle();
                 Time.timeScale = 1f;
             });
 
@@ -1137,15 +1239,18 @@ namespace Nyangbingo.UI
         {
             BeginShellLoadingTransition(() =>
             {
-                Time.timeScale = 0f;
-                shell.RefreshTitle();
-                RefreshTitleControls();
+                enterGameplayAfterReload = false;
+                revealLoadingAfterReload = true;
+                discardSaveAfterReload = false;
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
             });
         }
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
 
         private void OnDestroy()
         {
+            IsLoadingTransitionActive = false;
             if (shell != null)
             {
                 shell.NewGameRequested -= HandleNewGameRequested;

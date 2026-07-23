@@ -36,11 +36,111 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestWorldMobPhysicsContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
+        TestBossPausedYokaiVisibilityContract();
         TestPlayerDeathAnimationContract();
         TestDeliveredShellGlyphArtContract();
         TestCraftAndPlacementActionsRemainIndependent();
         TestRuntimeTileEdgeOverlayWiring();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (22/22).");
+        TestDetailedDynamicSaveSchema();
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (24/24).");
+    }
+
+    private static void TestBossPausedYokaiVisibilityContract()
+    {
+        var root = new GameObject("BossPausedYokaiVisibility", typeof(SpriteRenderer));
+        try
+        {
+            var renderer = root.GetComponent<SpriteRenderer>();
+            var original = new Color(.2f, .4f, .6f, .7f);
+            renderer.color = original;
+            var brain = root.AddComponent<Nyangbingo.Yokai.YokaiBrain>();
+
+            Require(brain.SetBossEncounterPaused(true) && Mathf.Approximately(renderer.color.a, 0f),
+                "Field yokai paused by a boss encounter must be completely invisible.");
+            Require(brain.SetBossEncounterPaused(false) && renderer.color == original,
+                "Field yokai visibility and tint must be restored exactly after the boss encounter.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    private static void TestDetailedDynamicSaveSchema()
+    {
+        var save = new SaveGame
+        {
+            sealPct = 73.5f,
+            baekjungTearRemainder = .5f,
+            regularEncounter = new RegularEncounterStateRecord
+            {
+                hasValue = true,
+                day = 15,
+                isNight = true,
+                usesDetailedYokaiState = true,
+                activeYokai = new System.Collections.Generic.List<YokaiStateRecord>
+                {
+                    new YokaiStateRecord
+                    {
+                        instanceId = "yokai_7",
+                        yokaiId = "club",
+                        position = new Vector3(12.5f, 8.5f, 0f),
+                        velocity = new Vector2(1.5f, -2f),
+                        currentHealth = 17,
+                        maxHealth = 30,
+                        raid = true,
+                        behaviorState = 2,
+                        contactAttackRemaining = .4f,
+                        frostSlowFraction = .25f,
+                        frostSlowRemaining = 2f
+                    }
+                },
+                pendingRegularYokaiIds = new System.Collections.Generic.List<string> { "club" },
+                pendingRaidYokaiIds = new System.Collections.Generic.List<string> { "club" }
+            },
+            worldDrops = new System.Collections.Generic.List<WorldDropStateRecord>
+            {
+                new WorldDropStateRecord
+                {
+                    itemId = "stone",
+                    amount = 3,
+                    position = new Vector2(4.25f, 6.5f),
+                    velocity = new Vector2(-1f, 2f),
+                    pickupDelay = .2f
+                }
+            }
+        };
+
+        Require(SaveManager.TryDeserialize(JsonUtility.ToJson(save), out var loaded),
+            "Detailed dynamic save JSON must deserialize.");
+        Require(loaded.schemaVersion == 17 && loaded.regularEncounter.usesDetailedYokaiState &&
+                loaded.regularEncounter.activeYokai.Count == 1 &&
+                loaded.regularEncounter.activeYokai[0].instanceId == "yokai_7" &&
+                loaded.regularEncounter.activeYokai[0].position == new Vector3(12.5f, 8.5f, 0f) &&
+                loaded.regularEncounter.activeYokai[0].velocity == new Vector2(1.5f, -2f) &&
+                loaded.regularEncounter.activeYokai[0].currentHealth == 17 &&
+                loaded.regularEncounter.activeYokai[0].raid &&
+                loaded.regularEncounter.pendingRegularYokaiIds.Count == 1 &&
+                loaded.regularEncounter.pendingRaidYokaiIds.Count == 1,
+            "Detailed yokai identity, position, HP, track, and queues must survive JSON.");
+        Require(loaded.worldDrops.Count == 1 && loaded.worldDrops[0].itemId == "stone" &&
+                loaded.worldDrops[0].amount == 3 &&
+                loaded.worldDrops[0].position == new Vector2(4.25f, 6.5f) &&
+                loaded.worldDrops[0].velocity == new Vector2(-1f, 2f) &&
+                Mathf.Approximately(loaded.worldDrops[0].pickupDelay, .2f),
+            "World-drop item, amount, transform, velocity, and pickup delay must survive JSON.");
+        Require(Mathf.Approximately(loaded.sealPct, 73.5f) &&
+                Mathf.Approximately(loaded.baekjungTearRemainder, .5f),
+            "Seal percentage and Baekjung reward remainder must survive JSON.");
+        Require(SaveManager.TryDeserialize("{\"schemaVersion\":16}", out var legacy) &&
+                legacy.schemaVersion == SaveGame.CurrentSchemaVersion &&
+                legacy.worldDrops != null && legacy.worldDrops.Count == 0 &&
+                legacy.regularEncounter != null &&
+                !legacy.regularEncounter.usesDetailedYokaiState &&
+                legacy.regularEncounter.activeYokai != null &&
+                legacy.regularEncounter.pendingRegularYokaiIds != null &&
+                legacy.regularEncounter.pendingRaidYokaiIds != null,
+            "Schema 16 saves must migrate to empty dynamic lists and the legacy encounter fallback.");
     }
 
     private static void TestSurfaceCameraCompositionContract()
@@ -66,10 +166,19 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     undergroundThreshold, undergroundThreshold, orthographicSize),
                 0f),
             "Underground camera framing must remain centered on the player.");
+
+        var playerControllerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        Require(playerControllerSource.Contains("SnapCameraToPlayer();") &&
+                playerControllerSource.Contains("Time.deltaTime") &&
+                !playerControllerSource.Contains("cameraFollowSharpness * Time.unscaledDeltaTime"),
+            "The camera must snap to its initial gameplay target and remain frozen during paused loading.");
     }
 
     private static void TestDeliveredShellGlyphArtContract()
     {
+        Require(SaveManager.SlotCount == 1,
+            "The product shell must expose exactly one save slot.");
         var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(
             "Assets/Art/Gameplay/GameplayArtCatalog.asset");
         var environmentCatalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(
@@ -96,6 +205,18 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(Mathf.Approximately(loadingDuration,
                 MainGameShellUiController.ShellLoadingDurationSeconds),
             "The shell loading frame timings must add up to the declared transition duration.");
+        Require(Mathf.Approximately(
+                    GameShellController.ResolveTimeScaleAfterLoading(GameShellScreen.Gameplay), 1f) &&
+                Mathf.Approximately(
+                    GameShellController.ResolveTimeScaleAfterLoading(GameShellScreen.Title), 0f),
+            "Loading completion must always resume gameplay and keep title screens paused.");
+        var gameShellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/GameShellController.cs");
+        Require(!gameShellSource.Contains("ReplaceSlotOne") &&
+                !gameShellSource.Contains("HasSave(AutoSaveSlot)") &&
+                !gameShellSource.Contains("ShowGameplay();\n            ContinueRequested") &&
+                gameShellSource.Contains("NewGameRequested?.Invoke(AutoSaveSlot)"),
+            "The single-slot Start button must immediately request a clean new game.");
         Require(RuntimePixelGlyphPresenter.GlyphIndex('D') == 0 &&
                 RuntimePixelGlyphPresenter.GlyphIndex('-') == 1 &&
                 RuntimePixelGlyphPresenter.GlyphIndex(':') == 2 &&
@@ -115,11 +236,28 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("SetStatus(string.Empty)") &&
                 shellSource.Contains("pauseHoverIndicator.gameObject.SetActive") &&
                 shellSource.Contains("BeginShellLoadingTransition") &&
+                shellSource.Contains("StabilizeGameplayCamera();") &&
+                shellSource.Contains("shellLoadingImage.sprite = shellLoadingFrames[0]") &&
+                shellSource.Contains("yield return PlayShellLoadingReveal()") &&
+                shellSource.Contains("revealLoadingAfterReload = true") &&
+                shellSource.Contains("shell.RestoreTimeScaleAfterLoading()") &&
+                shellSource.Contains("saveManager.DeleteAll()") &&
+                shellSource.Contains("discardSaveAfterReload = true") &&
+                shellSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed)") &&
+                shellSource.Contains("CreateFreshInitialSave()") &&
+                shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
+                shellSource.Contains("LoadScene(SceneManager.GetActiveScene().name)") &&
+                shellSource.IndexOf("completion?.Invoke();", shellSource.IndexOf(
+                    "private IEnumerator PlayShellLoadingTransition", StringComparison.Ordinal),
+                    StringComparison.Ordinal) <
+                shellSource.IndexOf("shellLoadingOverlay.SetActive(false);", shellSource.IndexOf(
+                    "private IEnumerator PlayShellLoadingTransition", StringComparison.Ordinal),
+                    StringComparison.Ordinal) &&
                 shellSource.Contains("WaitForSecondsRealtime") &&
                 shellSource.Contains("new Vector2(-112f, 82f)") &&
                 shellSource.Contains("new Vector2(96f, 96f)") &&
                 shellSource.Contains("new Vector2(176f, 97f)"),
-            "Pause hover selection, fixed toggle sizing, and removed legacy escape hint must remain wired.");
+            "Shell art and loading must remain wired, with loading frozen before the post-load tear reveal.");
 
         var hudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
@@ -196,6 +334,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
             animator.ResetToIdle();
             Require(renderer.sprite == idle,
                 "Respawn must restore the player idle frame while the screen is faded out.");
+
+            var playerSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+            Require(playerSource.Contains("ResolveSafeSurfaceRespawn(preferredRespawnPosition)") &&
+                    playerSource.Contains("resolver.TryResolveSafeSurfaceSpawn(preferredCellX"),
+                "Death respawn must resolve the nest or initial spawn column onto a safe world surface.");
         }
         finally
         {
@@ -645,6 +789,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(shellSource.Contains("pauseSaveButton = saveButtons[0]") &&
                 shellSource.Contains("pauseSaveButton.onClick.AddListener(SaveCurrentProgress)") &&
                 shellSource.Contains("pauseSaveButton.interactable = bossManager == null || !bossManager.IsBossActive") &&
+                shellSource.Contains("RemoveLegacySaveSlotObjects()") &&
                 shellSource.Contains("loadButtons[index].gameObject.SetActive(false)"),
             "Pause must expose one current-slot save action, hide legacy load slots, and lock saving during bosses.");
 
@@ -663,8 +808,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameSaveCoordinator.ShouldResolveSafePlayerSpawn(true, false),
             "Official demo restore must always recalculate the shared safe surface spawn.");
         Require(!MainGameSaveCoordinator.ShouldResolveSafePlayerSpawn(false, true) &&
-                MainGameSaveCoordinator.ShouldResolveSafePlayerSpawn(false, false),
-            "Regular saves must retain valid positions and recover only invalid positions.");
+                !MainGameSaveCoordinator.ShouldResolveSafePlayerSpawn(false, false),
+            "Regular saves must retain their exact positions, including airborne or non-standing positions.");
         var shellSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(shellSource.Contains("saveCoordinator.TryApplyDemoSnapshot(demo)"),
@@ -783,9 +928,33 @@ public static class NyangbingoDevBIntegrationRegressionTests
     private static void TestBossHealthArtMapping()
     {
         Require(!MainGameHudController.ProductBossHealthTextEnabled &&
-                MainGameHudController.BossHealthBarBelowClockY <
-                    -(MainGameHudController.DayCounterExpandedHeight + MainGameHudController.DayCounterClockGap),
-            "Only the illustrated boss health bar must appear directly below the fixed clock.");
+                MainGameHudController.BossHealthBarBelowClockY < 0f &&
+                MainGameHudController.BossHealthBarBelowClockY >
+                    -(MainGameHudController.DayCounterClockHeight +
+                      MainGameHudController.DayCounterExpandedHeight) &&
+                Mathf.Approximately(MainGameHudController.BossHealthBarWidth, 192f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthBarHeight, 48f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthSegmentHeight, 7.5f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthValueGlyphScale, .5f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthValueVerticalNudge, -.5f) &&
+                MainGameHudController.FormatBossCurrentHealth(13800) == "13800" &&
+                MainGameHudController.FormatBossCurrentHealth(-1) == "0" &&
+                Mathf.Approximately(MainGameHudController.BossHealthContentVerticalOffset("king_dokkaebi"),
+                    -4.125f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthContentVerticalOffset("mother_bulgasari"),
+                    -6.75f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthContentVerticalOffset("imugi"), -6f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthContentVerticalOffset("gangcheol_boss"),
+                    -7.5f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthValueScale("imugi"), .85f) &&
+                Mathf.Approximately(MainGameHudController.BossHealthValueScale("king_dokkaebi"), 1f),
+            "The illustrated boss health bar must use the enlarged upper-center HUD layout.");
+        var worldHealthBarSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(!worldHealthBarSource.Contains("new GameObject(\"Value\")") &&
+                !worldHealthBarSource.Contains("TextMesh valueText") &&
+                !worldHealthBarSource.Contains("TextMesh valueShadow"),
+            "Regular yokai health bars must not render current-health text.");
         Require(MainGameHudController.BossHealthArtRow("king_dokkaebi") == 0,
             "King Dokkaebi must use the first Unity texture row of the boss health sheet.");
         Require(MainGameHudController.BossHealthArtRow("mother_bulgasari") == 1,
@@ -899,8 +1068,16 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The day-counter scroll must be reduced from delivered pixel size without PPU inflation.");
         Require(MainGameHudController.DayCounterFontSize > MainGameHudController.DayCounterClockFontSize &&
                 MainGameHudController.DayCounterExpandedHeight > 0f &&
+                MainGameHudController.DayCounterClockHeight > 0f &&
                 MainGameHudController.DayCounterClockGap >= 0f,
-            "The D-day number must stay inside the scroll while the clock sits immediately below it.");
+            "The clock and D-day scroll stack must retain valid delivered-art dimensions.");
+        var clockPosition = Vector2.zero;
+        var dayCounterPosition = MainGameHudController.ResolveDayCounterPositionBelowClock(clockPosition);
+        Require(dayCounterPosition.y < clockPosition.y &&
+                Mathf.Approximately(dayCounterPosition.y,
+                    -(MainGameHudController.DayCounterClockHeight +
+                      MainGameHudController.DayCounterClockGap)),
+            "The clock must sit at the top with the D-day scroll immediately below it.");
         Require(MainGameHudController.SealDiagnosticHoldSeconds >= .5f &&
                 MainGameHudController.FormatSealDelta(.4f) == "+0.4%" &&
                 MainGameHudController.FormatSealDelta(-.4f) == "-0.4%",
@@ -927,8 +1104,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The six-frame day/night clock and narrative-free night spawn lock must follow runtime state.");
         var presenterSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/RuntimeUiSpriteAnimator.cs");
-        Require(presenterSource.Contains("IsFullyOpen => phase == PlaybackPhase.Holding"),
-            "The D-day number must only be visible while the scroll is fully open.");
+        var hudSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
+        Require(presenterSource.Contains("IsFullyOpen => phase == PlaybackPhase.Holding") &&
+                presenterSource.Contains("PlayDayChange(int daysRemaining)") &&
+                presenterSource.Contains("PresentationCompleted?.Invoke()") &&
+                hudSource.Contains("TimeService.Dawn += HandleDayCounterDawn") &&
+                hudSource.Contains("scrollObject.SetActive(false)"),
+            "The D-day scroll must stay hidden and play one open/show/close cycle only at dawn.");
         var shellSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(!shellSource.Contains("animator.ConfigureForScene(environmentArtCatalog.TitleFrames"),
@@ -1016,9 +1199,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var paletteSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
         Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot)") &&
-                paletteSource.Contains("CollectHotbarSlotItemIds()") &&
-                paletteSource.Contains("SelectEmptySlot(slotIndex)"),
+                 paletteSource.Contains("CollectHotbarSlotItemIds()") &&
+                 paletteSource.Contains("SelectEmptySlot(slotIndex)"),
             "Number keys 1-8 must select inventory hotbar slots, including empty slots.");
+        Require(!paletteSource.Contains("!MainGameShellUiController.IsLoadingTransitionActive"),
+            "The tile palette must remain in the gameplay HUD beneath the shell loading overlay.");
+        var shellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        Require(MainGameShellUiController.ShellLoadingSortingOrder == 32700 &&
+                shellSource.Contains("overlayCanvas.overrideSorting = true") &&
+                shellSource.Contains("overlayCanvas.sortingOrder = ShellLoadingSortingOrder"),
+            "The shell loading transition must use a dedicated topmost canvas independent of HUD creation order.");
         Require(TileService.SupportsForegroundPlacement(WorldTileTypes.Dirt) &&
                 TileService.SupportsForegroundPlacement(WorldTileTypes.Stone) &&
                 TileService.SupportsForegroundPlacement("insul_wall") &&

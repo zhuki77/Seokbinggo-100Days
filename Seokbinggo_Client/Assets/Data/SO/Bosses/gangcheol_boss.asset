@@ -15,8 +15,8 @@ MonoBehaviour:
   id: gangcheol_boss
   displayName: "\uAC15\uCCA0\uC774(\uC7AC\uC18C\uD658)"
   kind: 3
-  hitPoints: 2000
-  expectedCombatSeconds: 47.6
+  hitPoints: 16000
+  expectedCombatSeconds: 219
   summonItem: {fileID: 11400000, guid: f545925680a3c6b4caa7e63f8c46fe2b, type: 2}
   summonMaterials:
   - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
