@@ -188,3 +188,4 @@ MonoBehaviour:
   shellSpeakerMuted: {fileID: -8755674810949524588, guid: 86da2f495768235458975a3f8c5eab28, type: 3}
   shellVolumeBar: {fileID: -660143756152508030, guid: 4c6020117435dd44f8538d9390e5d094, type: 3}
   shellVolumeHandle: {fileID: -1994049694246509457, guid: e2539f35a13707c4a91cf1cc8eb94e9e, type: 3}
+  shellLoadingSheet: {fileID: 21300000, guid: 2546db2d1f054414a684ac26a528f1f3, type: 3}
