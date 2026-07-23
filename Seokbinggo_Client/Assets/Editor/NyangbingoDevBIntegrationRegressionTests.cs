@@ -860,8 +860,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var paletteSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
         Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot)") &&
-                paletteSource.Contains("SelectPaletteItem(paletteItemIds[slotIndex])"),
-            "A tile-palette number shortcut must use the same selection and placement path as clicking its slot.");
+                paletteSource.Contains("CollectHotbarSlotItemIds()") &&
+                paletteSource.Contains("SelectEmptySlot(slotIndex)"),
+            "Number keys 1-8 must select inventory hotbar slots, including empty slots.");
         Require(TileService.SupportsForegroundPlacement(WorldTileTypes.Dirt) &&
                 TileService.SupportsForegroundPlacement(WorldTileTypes.Stone) &&
                 TileService.SupportsForegroundPlacement("insul_wall") &&

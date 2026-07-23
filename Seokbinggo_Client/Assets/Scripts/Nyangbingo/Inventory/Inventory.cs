@@ -293,8 +293,37 @@ namespace Nyangbingo.Inventory
 
         public bool Toggle()
         {
-            if (!HasEquippedItem) return false;
+            // 장착물이 없어도 이미 맨 발톱(빈손) 상태이므로 성공으로 처리한다.
+            if (!HasEquippedItem)
+            {
+                usingEquippedItem = false;
+                Changed?.Invoke();
+                return true;
+            }
+
             usingEquippedItem = !usingEquippedItem;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// 무기·도구를 쓰지 않는 빈손(맨 발톱) 상태로 만든다.
+        /// 장착물은 유지한 채 비활성만 한다(인벤이 가득 차도 실패하지 않음).
+        /// </summary>
+        public bool SelectBareHands()
+        {
+            if (!HasEquippedItem)
+            {
+                if (usingEquippedItem)
+                {
+                    usingEquippedItem = false;
+                    Changed?.Invoke();
+                }
+                return true;
+            }
+
+            if (!usingEquippedItem) return true;
+            usingEquippedItem = false;
             Changed?.Invoke();
             return true;
         }

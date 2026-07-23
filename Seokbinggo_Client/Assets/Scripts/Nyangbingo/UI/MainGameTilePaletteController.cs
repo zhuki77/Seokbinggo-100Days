@@ -10,9 +10,8 @@ using UnityEngine.UI;
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// v29 하단 타일 팔레트. 50칸 인벤토리는 보관 전용이며, 보유 중인 설치 가능 항목만
-    /// 화면 하단의 동적 가로 목록으로 노출한다. 전경 타일·설치물·벽지 배치를 한 팔레트에서
-    /// 처리하고, 벽지는 오른쪽 끝에 고정한다.
+    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 8칸(키 1–8)을 고정 슬롯으로 보여 주며,
+    /// 빈 칸도 선택 가능하다. 전경 타일·설치물·벽지 배치를 같은 슬롯에서 처리한다.
     /// </summary>
     [DefaultExecutionOrder(-50)]
     public sealed class MainGameTilePaletteController : MonoBehaviour
@@ -21,6 +20,7 @@ namespace Nyangbingo.UI
 
         private sealed class SlotView
         {
+            public int SlotIndex;
             public string ItemId;
             public Button Button;
             public Image Icon;
@@ -59,6 +59,7 @@ namespace Nyangbingo.UI
         private Text rangeToggleStatusText;
         private SpriteRenderer foregroundPreview;
         private string selectedItemId = string.Empty;
+        private int selectedSlotIndex = -1;
         private string foregroundPlacementItemId = string.Empty;
         private Vector3Int foregroundPlacementCell;
         private bool foregroundPlacementValid;
@@ -70,8 +71,9 @@ namespace Nyangbingo.UI
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsInitialized => initialized;
         public bool IsForegroundPlacementActive => foregroundPreview != null;
-        public int VisibleSlotCount => paletteItemIds.Count;
+        public int VisibleSlotCount => ShortcutSlotCount;
         public string SelectedItemId => selectedItemId;
+        public int SelectedSlotIndex => selectedSlotIndex;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, MainGameTurretRuntime productPlacement,
@@ -117,16 +119,44 @@ namespace Nyangbingo.UI
                 }
                 CancelForegroundPlacement(clearSelection: false);
             }
+
+            if (selectedSlotIndex < 0 || selectedSlotIndex >= paletteItemIds.Count ||
+                !string.Equals(paletteItemIds[selectedSlotIndex], itemId, StringComparison.Ordinal))
+            {
+                for (var index = 0; index < paletteItemIds.Count; index++)
+                {
+                    if (!string.Equals(paletteItemIds[index], itemId, StringComparison.Ordinal)) continue;
+                    selectedSlotIndex = index;
+                    break;
+                }
+            }
+
             RefreshSlotVisuals();
             return true;
         }
 
         public bool TrySelectPaletteSlot(int slotIndex)
         {
-            if (!initialized || slotIndex < 0 || slotIndex >= ShortcutSlotCount ||
-                slotIndex >= paletteItemIds.Count) return false;
-            SelectPaletteItem(paletteItemIds[slotIndex]);
-            return string.Equals(selectedItemId, paletteItemIds[slotIndex], StringComparison.Ordinal);
+            if (!initialized || slotIndex < 0 || slotIndex >= ShortcutSlotCount) return false;
+            RefreshHotbarSlotIds();
+            selectedSlotIndex = slotIndex;
+            var itemId = paletteItemIds[slotIndex];
+            if (string.IsNullOrEmpty(itemId))
+            {
+                SelectEmptySlot(slotIndex);
+                return selectedSlotIndex == slotIndex;
+            }
+
+            if (TryBeginPlacement(itemId))
+            {
+                selectedSlotIndex = slotIndex;
+                RefreshSlotVisuals();
+                return true;
+            }
+
+            // 설치 불가 아이템이거나 배치 실패여도 해당 칸 선택은 유지한다(빈손 배치).
+            SelectEmptySlot(slotIndex);
+            return selectedSlotIndex == slotIndex;
         }
 
         public static KeyCode ShortcutKeyForSlot(int slotIndex)
@@ -170,7 +200,7 @@ namespace Nyangbingo.UI
             runtimeServices.PlayerInventory.Changed += RefreshPalette;
             initialized = true;
             RefreshPalette();
-            Debug.Log("[Nyangbingo] 하단 타일 팔레트 연결 완료: 동적 보유 슬롯·설치물 미리보기·전경 블록 설치.");
+            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–8칸·빈 칸 선택·설치물 미리보기·전경 블록 설치.");
         }
 
         private void Update()
@@ -300,44 +330,62 @@ namespace Nyangbingo.UI
         private void RefreshPalette()
         {
             if (content == null || runtimeServices?.PlayerInventory == null) return;
-            var nextIds = CollectOwnedPaletteItemIds();
-            var structureChanged = nextIds.Count != paletteItemIds.Count;
-            if (!structureChanged)
-                for (var index = 0; index < nextIds.Count; index++)
-                    if (!string.Equals(nextIds[index], paletteItemIds[index], StringComparison.Ordinal))
-                    {
-                        structureChanged = true;
-                        break;
-                    }
-
-            if (structureChanged)
+            var nextIds = CollectHotbarSlotItemIds();
+            paletteItemIds.Clear();
+            paletteItemIds.AddRange(nextIds);
+            if (slotViews.Count != ShortcutSlotCount) RebuildSlots();
+            else
             {
-                paletteItemIds.Clear();
-                paletteItemIds.AddRange(nextIds);
-                RebuildSlots();
+                for (var index = 0; index < slotViews.Count; index++)
+                    slotViews[index].ItemId = paletteItemIds[index];
+                RefreshSlotVisuals();
             }
-            else RefreshSlotVisuals();
+
+            if (selectedSlotIndex >= 0 && selectedSlotIndex < paletteItemIds.Count &&
+                !string.IsNullOrEmpty(selectedItemId) &&
+                !string.Equals(paletteItemIds[selectedSlotIndex], selectedItemId, StringComparison.Ordinal))
+            {
+                selectedItemId = string.Empty;
+                placementRuntime?.CancelPlacementPreview();
+                CancelForegroundPlacement(clearSelection: false);
+            }
 
             if (!string.IsNullOrEmpty(foregroundPlacementItemId) &&
                 runtimeServices.PlayerInventory.Count(foregroundPlacementItemId) <= 0)
                 CancelForegroundPlacement();
         }
 
-        private List<string> CollectOwnedPaletteItemIds()
+        private void RefreshHotbarSlotIds()
         {
-            var results = new List<string>();
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var slot in runtimeServices.PlayerInventory.Slots)
+            var nextIds = CollectHotbarSlotItemIds();
+            if (paletteItemIds.Count != nextIds.Count)
             {
-                if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 || !seen.Add(slot.itemId)) continue;
-                var item = gameDataCatalog.FindItem(slot.itemId);
-                if (item == null || item.MvpScope == ItemMvpScope.B) continue;
-                var foreground = SupportsPalettePlacement(item.Id);
-                var product = MainGameCraftingUiController.IsInventoryItemPlaceable(item, gameDataCatalog.Recipes);
-                if (foreground || product) results.Add(item.Id);
+                paletteItemIds.Clear();
+                paletteItemIds.AddRange(nextIds);
             }
-            // 기획 v26: 벽지는 기존 배경 타일 팔레트의 오른쪽 끝 아이콘이다.
-            if (results.Remove(WallpaperItemId)) results.Add(WallpaperItemId);
+            else
+                for (var index = 0; index < nextIds.Count; index++)
+                    paletteItemIds[index] = nextIds[index];
+        }
+
+        private List<string> CollectHotbarSlotItemIds()
+        {
+            var results = new List<string>(ShortcutSlotCount);
+            var slots = runtimeServices.PlayerInventory.Slots;
+            for (var index = 0; index < ShortcutSlotCount; index++)
+            {
+                if (index >= slots.Count)
+                {
+                    results.Add(string.Empty);
+                    continue;
+                }
+
+                var slot = slots[index];
+                results.Add(string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0
+                    ? string.Empty
+                    : slot.itemId);
+            }
+
             return results;
         }
 
@@ -346,17 +394,18 @@ namespace Nyangbingo.UI
             foreach (var view in slotViews)
                 if (view?.Button != null) Destroy(view.Button.gameObject);
             slotViews.Clear();
-            for (var slotIndex = 0; slotIndex < paletteItemIds.Count; slotIndex++)
+            for (var slotIndex = 0; slotIndex < ShortcutSlotCount; slotIndex++)
             {
-                var itemId = paletteItemIds[slotIndex];
-                var capturedId = itemId;
-                var slotObject = new GameObject($"Slot_{itemId}", typeof(RectTransform), typeof(Image), typeof(Button));
+                var itemId = slotIndex < paletteItemIds.Count ? paletteItemIds[slotIndex] : string.Empty;
+                var capturedIndex = slotIndex;
+                var slotObject = new GameObject($"Slot_{slotIndex + 1}",
+                    typeof(RectTransform), typeof(Image), typeof(Button));
                 slotObject.transform.SetParent(content, false);
                 ((RectTransform)slotObject.transform).sizeDelta = new Vector2(SlotPixelSize, SlotPixelSize);
                 var background = slotObject.GetComponent<Image>();
                 var button = slotObject.GetComponent<Button>();
                 button.targetGraphic = background;
-                button.onClick.AddListener(() => SelectPaletteItem(capturedId));
+                button.onClick.AddListener(() => TrySelectPaletteSlot(capturedIndex));
 
                 var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
                 iconObject.transform.SetParent(slotObject.transform, false);
@@ -405,7 +454,14 @@ namespace Nyangbingo.UI
                 }
 
                 slotViews.Add(new SlotView
-                    { ItemId = itemId, Button = button, Icon = icon, Amount = amount, Shortcut = shortcut });
+                {
+                    SlotIndex = slotIndex,
+                    ItemId = itemId,
+                    Button = button,
+                    Icon = icon,
+                    Amount = amount,
+                    Shortcut = shortcut
+                });
             }
             RefreshSlotVisuals();
         }
@@ -422,10 +478,13 @@ namespace Nyangbingo.UI
 
         private void RefreshSlotVisuals()
         {
-            foreach (var view in slotViews)
+            for (var index = 0; index < slotViews.Count; index++)
             {
+                var view = slotViews[index];
                 if (view?.Button == null) continue;
-                var selected = string.Equals(view.ItemId, selectedItemId, StringComparison.Ordinal);
+                if (index < paletteItemIds.Count) view.ItemId = paletteItemIds[index];
+                var isEmpty = string.IsNullOrEmpty(view.ItemId);
+                var selected = view.SlotIndex == selectedSlotIndex;
                 var background = view.Button.targetGraphic as Image;
                 if (background != null)
                 {
@@ -436,18 +495,49 @@ namespace Nyangbingo.UI
                         ? Color.white
                         : selected ? new Color(.24f, .55f, .8f, 1f) : new Color(.12f, .17f, .25f, 1f);
                 }
+
+                if (isEmpty)
+                {
+                    view.Icon.sprite = null;
+                    view.Icon.enabled = false;
+                    if (view.Amount != null) view.Amount.text = string.Empty;
+                    continue;
+                }
+
                 view.Icon.sprite = itemArtCatalog?.FindSprite(view.ItemId);
                 view.Icon.enabled = view.Icon.sprite != null;
                 view.Icon.color = IsWallpaper(view.ItemId) && IsWallpaperCoverageComplete()
                     ? new Color(.45f, .9f, 1f, 1f)
                     : Color.white;
-                view.Amount.text = runtimeServices.PlayerInventory.Count(view.ItemId).ToString();
+                if (view.Amount != null)
+                {
+                    view.Amount.alignment = TextAnchor.LowerRight;
+                    view.Amount.fontSize = 8;
+                    var slots = runtimeServices.PlayerInventory.Slots;
+                    view.Amount.text = view.SlotIndex < slots.Count
+                        ? slots[view.SlotIndex].amount.ToString()
+                        : "0";
+                }
             }
         }
 
-        private void SelectPaletteItem(string itemId)
+        private void SelectEmptySlot(int slotIndex)
         {
-            TryBeginPlacement(itemId);
+            placementRuntime?.CancelPlacementPreview();
+            CancelForegroundPlacement(clearSelection: false);
+            selectedSlotIndex = slotIndex;
+            selectedItemId = string.Empty;
+            runtimeServices?.ActiveSlot?.SelectBareHands();
+            RefreshSlotVisuals();
+        }
+
+        public void SelectBareHands()
+        {
+            placementRuntime?.CancelPlacementPreview();
+            CancelForegroundPlacement(clearSelection: false);
+            selectedItemId = string.Empty;
+            runtimeServices?.ActiveSlot?.SelectBareHands();
+            RefreshSlotVisuals();
         }
 
         private void BeginForegroundPlacement(string itemId)

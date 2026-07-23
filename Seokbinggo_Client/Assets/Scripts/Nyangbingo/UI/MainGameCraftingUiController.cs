@@ -911,6 +911,15 @@ namespace Nyangbingo.UI
                 index >= runtimeServices.PlayerInventory.Slots.Count) return;
             selectedIndex = index;
             message = string.Empty;
+            var slot = runtimeServices.PlayerInventory.Slots[index];
+            if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0)
+            {
+                // 빈 인벤 칸 = 빈손(맨 발톱) 선택.
+                if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
+                tilePalette?.SelectBareHands();
+                runtimeServices.ActiveSlot?.SelectBareHands();
+                message = "빈손(맨 발톱)을 선택했습니다.";
+            }
             Refresh();
         }
 
@@ -1155,12 +1164,11 @@ namespace Nyangbingo.UI
 
         private void ToggleActiveSlotFromEquipmentPage()
         {
-            if (!open || page != Page.Equipment || runtimeServices?.ActiveSlot == null ||
-                !runtimeServices.ActiveSlot.HasEquippedItem) return;
+            if (!open || page != Page.Equipment || runtimeServices?.ActiveSlot == null) return;
             if (!runtimeServices.ActiveSlot.Toggle()) return;
             ShowMessage(runtimeServices.ActiveSlot.IsUsingEquippedItem
                 ? "활성 슬롯: 장착한 무기·도구"
-                : "활성 슬롯: 맨 발톱");
+                : "활성 슬롯: 맨 발톱(빈손)");
             Refresh();
         }
 
@@ -1511,6 +1519,9 @@ namespace Nyangbingo.UI
                            (MainGameTilePaletteController.SupportsPalettePlacement(selectedItem.Id)
                                ? tilePalette != null
                                : turretRuntime != null);
+            titleText.text = selectedItem == null
+                ? $"소지품 10×5 · {inventory.Capacity}슬롯"
+                : $"소지품 10×5 · {selectedItem.DisplayName} ×{inventory.Count(selectedItem.Id)}";
             primaryButton.GetComponentInChildren<Text>().text = summonBoss != null
                 ? canSummon ? $"E · {selectedItem.DisplayName} 사용" : summonReason
                 : canPlace ? $"E · {selectedItem.DisplayName} 설치 미리보기"
@@ -1524,7 +1535,7 @@ namespace Nyangbingo.UI
                     ? $"사용 시 {summonBoss.DisplayName} 소환 확인창이 열립니다."
                     : summonReason;
             }
-            titleText.text = $"채집 · 소지품 10×5 = {inventory.Capacity}슬롯";
+
             for (var index = 0; index < inventoryGridLabels.Length; index++)
             {
                 var label = inventoryGridLabels[index];
@@ -1561,9 +1572,6 @@ namespace Nyangbingo.UI
                     icon.color = dayLockedSummon ? new Color(.35f, .35f, .4f, .58f) : Color.white;
                 }
             }
-            titleText.text = selectedItem == null
-                ? $"소지품 10×5 · {inventory.Capacity}슬롯"
-                : $"소지품 10×5 · {selectedItem.DisplayName} ×{inventory.Count(selectedItem.Id)}";
         }
 
         private ItemDefinition CurrentInventoryItem()
@@ -1917,14 +1925,20 @@ namespace Nyangbingo.UI
             selectedIndex = count > 0 ? Mathf.Clamp(selectedIndex, 0, count - 1) : 0;
         }
 
-        private ItemDefinition CurrentActiveSlotItem() => selectedIndex >= 0 && selectedIndex < activeSlotItems.Count
-            ? activeSlotItems[selectedIndex]
-            : null;
+        private ItemDefinition CurrentActiveSlotItem()
+        {
+            return selectedIndex >= 0 && selectedIndex < activeSlotItems.Count
+                ? activeSlotItems[selectedIndex]
+                : null;
+        }
 
-        private EquipmentDefinition CurrentEquipment() => ownedEquipment.Count == 0 ||
-                                                           selectedIndex < activeSlotItems.Count
-            ? null
-            : ownedEquipment[Mathf.Clamp(selectedIndex - activeSlotItems.Count, 0, ownedEquipment.Count - 1)];
+        private EquipmentDefinition CurrentEquipment()
+        {
+            var equipmentIndex = selectedIndex - activeSlotItems.Count;
+            if (ownedEquipment.Count == 0 || equipmentIndex < 0 || equipmentIndex >= ownedEquipment.Count)
+                return null;
+            return ownedEquipment[equipmentIndex];
+        }
 
         private int CurrentEquipmentEntryCount() => activeSlotItems.Count + ownedEquipment.Count;
 
