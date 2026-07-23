@@ -28,7 +28,7 @@ namespace Nyangbingo.Audio
         GoalBadgeCompleted
     }
 
-    public enum MusicTrack { Day, Night, Boss }
+    public enum MusicTrack { Day, Night, Boss, Title }
 
     [Serializable]
     public struct AudioCueClip
@@ -185,6 +185,7 @@ namespace Nyangbingo.Audio
         [SerializeField] private AudioClip dayMusic;
         [SerializeField] private AudioClip nightMusic;
         [SerializeField] private AudioClip bossMusic;
+        [SerializeField] private AudioClip titleMusic;
         [SerializeField] private AudioClip baekjungPercussion;
         [SerializeField] private AudioCueClip[] sfxClips = Array.Empty<AudioCueClip>();
 
@@ -200,7 +201,7 @@ namespace Nyangbingo.Audio
         private bool initialized;
         private AudioClip runtimeDayFallback;
 
-        public MusicTrack CurrentTrack { get; private set; } = MusicTrack.Day;
+        public MusicTrack CurrentTrack { get; private set; } = MusicTrack.Title;
         public float BgmVolume { get; private set; } = 1f;
         public float SfxVolume { get; private set; } = 1f;
 
@@ -214,16 +215,18 @@ namespace Nyangbingo.Audio
         /// <summary>
         /// 타이틀(timeScale=0)·설정 변경·씬 재진입 후에도 BGM/SFX가 다시 들리도록 강제 복구한다.
         /// </summary>
-        public void EnsureAudiblePlayback()
+        public void EnsureAudiblePlayback() => EnsureAudiblePlayback(CurrentTrack);
+
+        public void EnsureAudiblePlayback(MusicTrack track)
         {
             Initialize();
             EnsureListenerAlive();
             if (BgmVolume <= 0.0001f || SfxVolume <= 0.0001f)
                 TrySetBusVolumes(Mathf.Max(BgmVolume, 1f), Mathf.Max(SfxVolume, 1f));
             EnsureClips(forceReloadFromResources: false);
-            if (!IsPlayable(ResolveTrackClip(CurrentTrack)))
+            if (!IsPlayable(ResolveTrackClip(track)))
                 EnsureClips(forceReloadFromResources: true);
-            PlayTrackNow(CurrentTrack);
+            PlayTrackNow(track);
             LogAudioStatus("EnsureAudiblePlayback");
         }
 
@@ -252,7 +255,7 @@ namespace Nyangbingo.Audio
             router.MusicRequested += RequestMusic;
             router.BaekjungPercussionRequested += SetBaekjungPercussion;
             TrySetBusVolumes(1f, 1f);
-            PlayTrackNow(MusicTrack.Day);
+            PlayTrackNow(MusicTrack.Title);
         }
 
         private IEnumerator BootAudioPlayback()
@@ -427,6 +430,8 @@ namespace Nyangbingo.Audio
                 nightMusic = Resources.Load<AudioClip>("Audio/BGM/Night");
             if (forceReloadFromResources || !IsPlayable(bossMusic))
                 bossMusic = Resources.Load<AudioClip>("Audio/BGM/Boss");
+            if (forceReloadFromResources || !IsPlayable(titleMusic))
+                titleMusic = Resources.Load<AudioClip>("Audio/BGM/Title");
             if (forceReloadFromResources || !IsPlayable(baekjungPercussion))
                 baekjungPercussion = Resources.Load<AudioClip>("Audio/BGM/BaekjungPercussion");
 
@@ -436,6 +441,8 @@ namespace Nyangbingo.Audio
                 runtimeDayFallback ??= CreateFallbackLoop("RuntimeDayFallback", 261.63f, 329.63f);
                 dayMusic = runtimeDayFallback;
             }
+
+            if (!IsPlayable(titleMusic)) titleMusic = dayMusic;
         }
 
         private static bool IsPlayable(AudioClip clip) =>
@@ -445,8 +452,9 @@ namespace Nyangbingo.Audio
         {
             switch (track)
             {
-                case MusicTrack.Night: return nightMusic != null ? nightMusic : dayMusic;
-                case MusicTrack.Boss: return bossMusic != null ? bossMusic : dayMusic;
+                case MusicTrack.Title: return IsPlayable(titleMusic) ? titleMusic : dayMusic;
+                case MusicTrack.Night: return IsPlayable(nightMusic) ? nightMusic : dayMusic;
+                case MusicTrack.Boss: return IsPlayable(bossMusic) ? bossMusic : dayMusic;
                 default: return dayMusic;
             }
         }

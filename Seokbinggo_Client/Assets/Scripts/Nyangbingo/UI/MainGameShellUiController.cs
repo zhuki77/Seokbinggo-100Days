@@ -112,7 +112,7 @@ namespace Nyangbingo.UI
             }
 
             audioService.Initialize();
-            audioService.EnsureAudiblePlayback();
+            audioService.EnsureAudiblePlayback(MusicTrack.Title);
             shell.ConfigureForRuntime(saveManager, audioService, timeService, saveCoordinator.CaptureSnapshot(),
                 Application.isMobilePlatform, Debug.isDebugBuild || Application.isEditor);
             shell.NewGameRequested += HandleNewGameRequested;
