@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Nyangbingo.Audio;
 using Nyangbingo.Bosses;
 using Nyangbingo.Data;
@@ -17,6 +18,17 @@ namespace Nyangbingo.UI
     [DefaultExecutionOrder(-55)]
     public sealed class MainGameShellUiController : MonoBehaviour
     {
+        public const int ShellLoadingFrameCount = 17;
+        public const float ShellLoadingDurationSeconds = 2.2f;
+
+        private const int ShellLoadingColumns = 5;
+        private const int ShellLoadingRows = 4;
+        private static readonly float[] ShellLoadingFrameDurations =
+        {
+            .05f, .05f, .05f, .5f, .05f, .05f, .05f, .5f,
+            .1f, .1f, .1f, .1f, .1f, .1f, .1f, .1f, .1f
+        };
+
         [SerializeField] private GameShellController shell;
         [SerializeField] private MainGameSaveCoordinator saveCoordinator;
         [SerializeField] private SaveManager saveManager;
@@ -58,6 +70,10 @@ namespace Nyangbingo.UI
         private RuntimePixelGlyphPresenter titleDayCounterGlyphs;
         private GameObject titlePlayerArtRoot;
         private RectTransform pauseHoverIndicator;
+        private GameObject shellLoadingOverlay;
+        private Image shellLoadingImage;
+        private Sprite[] shellLoadingFrames = Array.Empty<Sprite>();
+        private bool shellLoadingTransitionActive;
         private bool demoLoadApplied;
         private static bool enterGameplayAfterReload;
 
@@ -132,6 +148,7 @@ namespace Nyangbingo.UI
             fullscreenToggle.isOn = Screen.fullScreen;
             ResolveShellArtCatalogs();
             ApplyDeliveredShellArt();
+            EnsureShellLoadingOverlay();
             var shouldEnterGameplay = enterGameplayAfterReload;
             enterGameplayAfterReload = false;
             if (shouldEnterGameplay) shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
@@ -193,6 +210,81 @@ namespace Nyangbingo.UI
                 bgmSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(bgmSpeakerImage, value));
             if (sfxSlider != null)
                 sfxSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(sfxSpeakerImage, value));
+        }
+
+        public static float ShellLoadingFrameDurationSeconds(int frameIndex) =>
+            frameIndex >= 0 && frameIndex < ShellLoadingFrameDurations.Length
+                ? ShellLoadingFrameDurations[frameIndex]
+                : 0f;
+
+        private void EnsureShellLoadingOverlay()
+        {
+            if (shellLoadingOverlay != null || gameplayArtCatalog?.ShellLoadingSheet == null) return;
+            var texture = gameplayArtCatalog.ShellLoadingSheet.texture;
+            if (texture == null || texture.width % ShellLoadingColumns != 0 ||
+                texture.height % ShellLoadingRows != 0)
+            {
+                Debug.LogError("[Nyangbingo] Shell loading sheet must use a 5x4 frame grid.");
+                return;
+            }
+
+            var frameWidth = texture.width / ShellLoadingColumns;
+            var frameHeight = texture.height / ShellLoadingRows;
+            shellLoadingFrames = new Sprite[ShellLoadingFrameCount];
+            for (var index = 0; index < shellLoadingFrames.Length; index++)
+            {
+                var column = index % ShellLoadingColumns;
+                var rowFromTop = index / ShellLoadingColumns;
+                var rect = new Rect(column * frameWidth,
+                    texture.height - (rowFromTop + 1) * frameHeight, frameWidth, frameHeight);
+                shellLoadingFrames[index] = Sprite.Create(texture, rect, new Vector2(.5f, .5f),
+                    100f, 0, SpriteMeshType.FullRect);
+                shellLoadingFrames[index].name = $"ShellLoading_{index:00}";
+            }
+
+            shellLoadingOverlay = new GameObject("ShellLoadingOverlay", typeof(RectTransform));
+            shellLoadingOverlay.transform.SetParent(transform, false);
+            var rectTransform = (RectTransform)shellLoadingOverlay.transform;
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
+            var canvasGroup = shellLoadingOverlay.AddComponent<CanvasGroup>();
+            canvasGroup.blocksRaycasts = true;
+            canvasGroup.interactable = true;
+            shellLoadingImage = shellLoadingOverlay.AddComponent<Image>();
+            shellLoadingImage.sprite = shellLoadingFrames[0];
+            shellLoadingImage.color = Color.white;
+            shellLoadingImage.preserveAspect = false;
+            shellLoadingImage.raycastTarget = true;
+            shellLoadingOverlay.SetActive(false);
+        }
+
+        private void BeginShellLoadingTransition(Action completion)
+        {
+            if (shellLoadingTransitionActive) return;
+            if (shellLoadingOverlay == null || shellLoadingFrames.Length != ShellLoadingFrameCount)
+            {
+                completion?.Invoke();
+                return;
+            }
+            StartCoroutine(PlayShellLoadingTransition(completion));
+        }
+
+        private IEnumerator PlayShellLoadingTransition(Action completion)
+        {
+            shellLoadingTransitionActive = true;
+            Time.timeScale = 0f;
+            shellLoadingOverlay.transform.SetAsLastSibling();
+            shellLoadingOverlay.SetActive(true);
+            for (var index = 0; index < shellLoadingFrames.Length; index++)
+            {
+                shellLoadingImage.sprite = shellLoadingFrames[index];
+                yield return new WaitForSecondsRealtime(ShellLoadingFrameDurations[index]);
+            }
+            shellLoadingOverlay.SetActive(false);
+            shellLoadingTransitionActive = false;
+            completion?.Invoke();
         }
 
         private void ApplyDeliveredButtonArt()
@@ -913,15 +1005,28 @@ namespace Nyangbingo.UI
 
         private void HandleNewGameRequested(int slot)
         {
-            if (saveManager.HasSave(slot)) saveManager.Delete(slot);
-            enterGameplayAfterReload = true;
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            BeginShellLoadingTransition(() =>
+            {
+                if (saveManager.HasSave(slot)) saveManager.Delete(slot);
+                enterGameplayAfterReload = true;
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            });
         }
 
-        private void HandleContinueRequested(int slot, SaveGame _) => saveCoordinator.TryLoad(slot);
+        private void HandleContinueRequested(int slot, SaveGame _) =>
+            BeginShellLoadingTransition(() =>
+            {
+                saveCoordinator.TryLoad(slot);
+                Time.timeScale = 1f;
+            });
+
         private void HandleDemoSaveRequested(SaveGame demo) =>
-            demoLoadApplied = saveCoordinator.TryApplyDemoSnapshot(demo);
+            BeginShellLoadingTransition(() =>
+            {
+                demoLoadApplied = saveCoordinator.TryApplyDemoSnapshot(demo);
+                Time.timeScale = 1f;
+            });
 
         private void HandleMvpDawn()
         {
@@ -1030,9 +1135,12 @@ namespace Nyangbingo.UI
 
         private void HandleTitleRequested()
         {
-            Time.timeScale = 0f;
-            shell.RefreshTitle();
-            RefreshTitleControls();
+            BeginShellLoadingTransition(() =>
+            {
+                Time.timeScale = 0f;
+                shell.RefreshTitle();
+                RefreshTitleControls();
+            });
         }
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
 
@@ -1046,6 +1154,8 @@ namespace Nyangbingo.UI
                 shell.TitleRequested -= HandleTitleRequested;
             }
             if (timeService != null) timeService.Dawn -= HandleMvpDawn;
+            for (var index = 0; index < shellLoadingFrames.Length; index++)
+                if (shellLoadingFrames[index] != null) Destroy(shellLoadingFrames[index]);
             Time.timeScale = 1f;
         }
     }

@@ -75,6 +75,7 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite shellSpeakerMuted;
         [SerializeField] private Sprite shellVolumeBar;
         [SerializeField] private Sprite shellVolumeHandle;
+        [SerializeField] private Sprite shellLoadingSheet;
 
         public IReadOnlyList<Sprite> TemperatureFrames => temperatureFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerAttackFrames => playerAttackFrames ?? Array.Empty<Sprite>();
@@ -145,5 +146,6 @@ namespace Nyangbingo.Data
         public Sprite ShellSpeakerMuted => shellSpeakerMuted;
         public Sprite ShellVolumeBar => shellVolumeBar;
         public Sprite ShellVolumeHandle => shellVolumeHandle;
+        public Sprite ShellLoadingSheet => shellLoadingSheet;
     }
 }

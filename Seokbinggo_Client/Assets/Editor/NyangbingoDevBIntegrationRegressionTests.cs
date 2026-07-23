@@ -84,6 +84,18 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 catalog.ShellPauseIcon != null && catalog.ShellPlayIcon != null &&
                 catalog.ShellCheckOn != null && catalog.ShellCheckOff != null,
             "The delivered title, pause, settings, and numeric shell art must be fully catalog-bound.");
+        Require(catalog.ShellLoadingSheet != null &&
+                catalog.ShellLoadingSheet.texture.width == 3200 &&
+                catalog.ShellLoadingSheet.texture.height == 1440 &&
+                MainGameShellUiController.ShellLoadingFrameCount == 17 &&
+                Mathf.Approximately(MainGameShellUiController.ShellLoadingDurationSeconds, 2.2f),
+            "The delivered logo tear loading animation must keep its optimized 5x4 sheet and timing.");
+        var loadingDuration = 0f;
+        for (var index = 0; index < MainGameShellUiController.ShellLoadingFrameCount; index++)
+            loadingDuration += MainGameShellUiController.ShellLoadingFrameDurationSeconds(index);
+        Require(Mathf.Approximately(loadingDuration,
+                MainGameShellUiController.ShellLoadingDurationSeconds),
+            "The shell loading frame timings must add up to the declared transition duration.");
         Require(RuntimePixelGlyphPresenter.GlyphIndex('D') == 0 &&
                 RuntimePixelGlyphPresenter.GlyphIndex('-') == 1 &&
                 RuntimePixelGlyphPresenter.GlyphIndex(':') == 2 &&
@@ -102,6 +114,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("checkmark.rectTransform.sizeDelta = offSize") &&
                 shellSource.Contains("SetStatus(string.Empty)") &&
                 shellSource.Contains("pauseHoverIndicator.gameObject.SetActive") &&
+                shellSource.Contains("BeginShellLoadingTransition") &&
+                shellSource.Contains("WaitForSecondsRealtime") &&
                 shellSource.Contains("new Vector2(-112f, 82f)") &&
                 shellSource.Contains("new Vector2(96f, 96f)") &&
                 shellSource.Contains("new Vector2(176f, 97f)"),
