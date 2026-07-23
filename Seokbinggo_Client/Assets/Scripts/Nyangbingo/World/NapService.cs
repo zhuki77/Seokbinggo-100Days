@@ -76,6 +76,17 @@ namespace Nyangbingo.World
             return true;
         }
 
+        public void ResetForSaveRestore()
+        {
+            if (disposed) return;
+            if (IsNapping) Wake(NapWakeReason.Manual);
+            IsNapping = false;
+            ActiveTemperatureMultiplier = 1f;
+            previousTimeScale = 1f;
+            setTemperatureRecoveryMultiplier(1f);
+            clock.TimeScale = 1f;
+        }
+
         private void HandleNightStarted() => Wake(NapWakeReason.NightStarted);
 
         public void Dispose()

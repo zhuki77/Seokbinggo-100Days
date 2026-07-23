@@ -15,9 +15,9 @@ MonoBehaviour:
   id: frostclaw_gauntlet
   tier: W2
   hasBasicAttack: 1
-  attackDamage: 28
+  attackDamage: 60
   attacksPerSecond: 1.5
-  damagePerSecond: 42
+  damagePerSecond: 90
   knockbackTiles: 1.5
   rangeTiles: 2
   arcDegrees: 120

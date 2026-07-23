@@ -41,6 +41,7 @@ namespace Nyangbingo.World
         private BaekjungTimeBinding baekjungTimeBinding;
         private BaekjungWaveSpawner baekjungWaveSpawner;
         private BaekjungRegularSpawnGate baekjungRegularSpawnGate;
+        private BaekjungRewardRules baekjungRewardRules;
         private DayCurveDefinition currentDayCurve;
         private bool regularSpawningEnabled = true;
         private bool discardRegularForCurrentNight;
@@ -48,6 +49,7 @@ namespace Nyangbingo.World
         private bool activeBossIsForcedInvasion;
         private bool initialized;
         private bool restoringSnapshot;
+        private bool restoredDetailedEncounterDuringTransaction;
         private RegularEncounterStateRecord restoredRegularEncounter;
         private int spawnSequence;
         private int debugBossIndex;
@@ -57,6 +59,7 @@ namespace Nyangbingo.World
 
         private sealed class SpawnedYokai
         {
+            public string instanceId;
             public Health health;
             public YokaiBrain brain;
             public bool raid;
@@ -207,6 +210,7 @@ namespace Nyangbingo.World
 
             bossManager.ConfigureForRuntime(bootstrap.TimeService, this);
             baekjungScheduler = new BaekjungScheduler(gameDataCatalog.DayEvents);
+            baekjungScheduler.Started += HandleBaekjungStarted;
             baekjungWaveSpawner = new BaekjungWaveSpawner(baekjungScheduler, this);
             baekjungRegularSpawnGate = new BaekjungRegularSpawnGate(baekjungScheduler, this);
             baekjungTimeBinding = new BaekjungTimeBinding(bootstrap.TimeService, baekjungScheduler);
@@ -409,8 +413,11 @@ namespace Nyangbingo.World
             if (save == null || !CanSerializeProgress || baekjungScheduler == null ||
                 forcedBossDefinitions.Count != forcedBossBindings.Count) return false;
             save.activeBoss = new ActiveBossStateRecord();
-            save.regularEncounter = CaptureRegularEncounterState();
+            var encounterState = CaptureRegularEncounterState();
+            if (encounterState == null) return false;
+            save.regularEncounter = encounterState;
             save.baekjungProgress = baekjungScheduler.CaptureState();
+            save.baekjungTearRemainder = baekjungRewardRules?.TearRemainder ?? 0f;
             for (var index = 0; index < forcedBossBindings.Count; index++)
                 ForcedBossEncounterSaveAdapter.Capture(
                     save, forcedBossDefinitions[index], forcedBossBindings[index]);
@@ -421,6 +428,7 @@ namespace Nyangbingo.World
         {
             if (!CanSerializeProgress) return false;
             restoringSnapshot = true;
+            restoredDetailedEncounterDuringTransaction = false;
             restoredRegularEncounter = null;
             pendingRegular.Clear();
             ClearSpawnedYokai();
@@ -436,8 +444,18 @@ namespace Nyangbingo.World
                         save, forcedBossDefinitions[index], forcedBossBindings[index]))
                     return false;
             if (!baekjungScheduler.RestoreState(save.baekjungProgress)) return false;
+            if (float.IsNaN(save.baekjungTearRemainder) || float.IsInfinity(save.baekjungTearRemainder) ||
+                save.baekjungTearRemainder < 0f || save.baekjungTearRemainder >= 1f)
+                return false;
             if (!TryStageRegularEncounterRestore(save.regularEncounter)) return false;
             RebuildBaekjungBindings();
+            RestoreBaekjungRewardRules(save.baekjungTearRemainder);
+            if (bootstrap.TimeService.IsNight && restoredRegularEncounter?.usesDetailedYokaiState == true)
+            {
+                if (!RestoreRegularEncounter(restoredRegularEncounter)) return false;
+                restoredRegularEncounter = null;
+                restoredDetailedEncounterDuringTransaction = true;
+            }
             return true;
         }
 
@@ -445,9 +463,16 @@ namespace Nyangbingo.World
         {
             if (!restoringSnapshot) return;
             restoringSnapshot = false;
+            var detailedRestored = restoredDetailedEncounterDuringTransaction;
+            restoredDetailedEncounterDuringTransaction = false;
             var regularEncounter = restoredRegularEncounter;
             restoredRegularEncounter = null;
-            if (!succeeded || !bootstrap.TimeService.IsNight) return;
+            if (!succeeded)
+            {
+                if (detailedRestored) ClearSpawnedYokai();
+                return;
+            }
+            if (!bootstrap.TimeService.IsNight || detailedRestored) return;
             if (regularEncounter != null && regularEncounter.hasValue)
                 RestoreRegularEncounter(regularEncounter);
             else
@@ -463,7 +488,8 @@ namespace Nyangbingo.World
                 hasValue = true,
                 day = bootstrap.TimeService.Day,
                 isNight = bootstrap.TimeService.IsNight,
-                discardRegularForCurrentNight = discardRegularForCurrentNight
+                discardRegularForCurrentNight = discardRegularForCurrentNight,
+                usesDetailedYokaiState = true
             };
             if (!state.isNight) return state;
 
@@ -471,11 +497,34 @@ namespace Nyangbingo.World
             {
                 var entry = spawnedYokai[index];
                 var definition = entry?.brain?.Definition;
-                if (!entry.raid && IsAlive(entry) && definition != null)
-                    state.remainingRegularYokaiIds.Add(definition.Id);
+                if (!IsAlive(entry) || definition == null) continue;
+                var record = new YokaiStateRecord
+                {
+                    instanceId = entry.instanceId,
+                    yokaiId = definition.Id,
+                    position = entry.health.transform.position,
+                    velocity = entry.health.GetComponent<Rigidbody2D>()?.linearVelocity ?? Vector2.zero,
+                    currentHealth = entry.health.Current,
+                    maxHealth = entry.health.MaxHealth,
+                    raid = entry.raid
+                };
+                entry.brain.CaptureSaveState(record);
+                state.activeYokai.Add(record);
+                if (!entry.raid) state.remainingRegularYokaiIds.Add(definition.Id);
             }
             foreach (var definition in pendingRegular)
-                if (definition != null) state.remainingRegularYokaiIds.Add(definition.Id);
+                if (definition != null)
+                {
+                    state.remainingRegularYokaiIds.Add(definition.Id);
+                    state.pendingRegularYokaiIds.Add(definition.Id);
+                }
+            if (baekjungWaveSpawner != null)
+                foreach (var kind in baekjungWaveSpawner.CapturePendingKinds())
+                {
+                    var definition = FindRaidYokai(kind);
+                    if (definition == null) return null;
+                    state.pendingRaidYokaiIds.Add(definition.Id);
+                }
             return state;
         }
 
@@ -488,6 +537,41 @@ namespace Nyangbingo.World
             }
             if (state.day != bootstrap.TimeService.Day || state.isNight != bootstrap.TimeService.IsNight)
                 return false;
+            if (state.usesDetailedYokaiState)
+            {
+                if (!state.isNight && (state.activeYokai.Count > 0 ||
+                    state.pendingRegularYokaiIds.Count > 0 || state.pendingRaidYokaiIds.Count > 0))
+                    return false;
+                var instanceIds = new HashSet<string>(StringComparer.Ordinal);
+                for (var index = 0; index < state.activeYokai.Count; index++)
+                {
+                    var record = state.activeYokai[index];
+                    var definition = gameDataCatalog.FindYokai(record.yokaiId);
+                    if (definition == null || !definition.SupportsSpawnTrack(YokaiSpawnTrack.Raid) ||
+                        string.IsNullOrWhiteSpace(record.instanceId) || !instanceIds.Add(record.instanceId) ||
+                        !IsFinite(record.position) || !IsFinite(record.velocity) ||
+                        record.maxHealth <= 0 || record.currentHealth <= 0 ||
+                        record.currentHealth > record.maxHealth)
+                        return false;
+                    if (!ValidateYokaiBrainState(record)) return false;
+                }
+                for (var index = 0; index < state.pendingRegularYokaiIds.Count; index++)
+                {
+                    var definition = gameDataCatalog.FindYokai(state.pendingRegularYokaiIds[index]);
+                    if (definition == null || !definition.SupportsSpawnTrack(YokaiSpawnTrack.Raid))
+                        return false;
+                }
+                if (state.pendingRaidYokaiIds.Count > 0 && baekjungScheduler?.IsActive != true)
+                    return false;
+                for (var index = 0; index < state.pendingRaidYokaiIds.Count; index++)
+                {
+                    var definition = gameDataCatalog.FindYokai(state.pendingRaidYokaiIds[index]);
+                    if (definition == null || !definition.SupportsSpawnTrack(YokaiSpawnTrack.Raid))
+                        return false;
+                }
+                restoredRegularEncounter = state;
+                return true;
+            }
             for (var index = 0; index < state.remainingRegularYokaiIds.Count; index++)
             {
                 var definition = gameDataCatalog.FindYokai(state.remainingRegularYokaiIds[index]);
@@ -497,12 +581,41 @@ namespace Nyangbingo.World
             return true;
         }
 
-        private void RestoreRegularEncounter(RegularEncounterStateRecord state)
+        private bool RestoreRegularEncounter(RegularEncounterStateRecord state)
         {
             pendingRegular.Clear();
             currentDayCurve = gameDataCatalog.FindDayCurve(bootstrap.TimeService.Day);
             discardRegularForCurrentNight = state.discardRegularForCurrentNight;
             regularSpawningEnabled = !discardRegularForCurrentNight && baekjungScheduler?.IsActive != true;
+            if (state.usesDetailedYokaiState)
+            {
+                for (var index = 0; index < state.activeYokai.Count; index++)
+                    if (SpawnSavedYokai(state.activeYokai[index]) == null)
+                    {
+                        Debug.LogError("[Nyangbingo] MainGameEncounterCoordinator: detailed yokai restore failed.");
+                        ClearSpawnedYokai();
+                        return false;
+                    }
+                if (regularSpawningEnabled)
+                    for (var index = 0; index < state.pendingRegularYokaiIds.Count; index++)
+                        pendingRegular.Enqueue(gameDataCatalog.FindYokai(state.pendingRegularYokaiIds[index]));
+
+                var pendingRaid = new List<YokaiDefinition>(state.pendingRaidYokaiIds.Count);
+                for (var index = 0; index < state.pendingRaidYokaiIds.Count; index++)
+                    pendingRaid.Add(gameDataCatalog.FindYokai(state.pendingRaidYokaiIds[index]));
+                if (baekjungWaveSpawner == null ||
+                    !baekjungWaveSpawner.RestorePendingDefinitions(pendingRaid))
+                {
+                    Debug.LogError("[Nyangbingo] MainGameEncounterCoordinator: Baekjung pending restore failed.");
+                    ClearSpawnedYokai();
+                    return false;
+                }
+                TryFillRegularSlots();
+                Debug.Log($"[Nyangbingo] MainGameEncounterCoordinator: detailed encounter restored " +
+                          $"(active={state.activeYokai.Count}, pendingRegular={state.pendingRegularYokaiIds.Count}, " +
+                          $"pendingRaid={state.pendingRaidYokaiIds.Count}).");
+                return true;
+            }
             if (regularSpawningEnabled)
             {
                 for (var index = 0; index < state.remainingRegularYokaiIds.Count; index++)
@@ -511,6 +624,7 @@ namespace Nyangbingo.World
             }
             Debug.Log($"[Nyangbingo] MainGameEncounterCoordinator: saved regular encounter restored " +
                       $"(discard={discardRegularForCurrentNight}, remaining={state.remainingRegularYokaiIds.Count}).");
+            return true;
         }
 
         private void HandleWorldReady()
@@ -634,7 +748,51 @@ namespace Nyangbingo.World
         private YokaiBrain SpawnYokai(YokaiDefinition definition, bool raid)
         {
             if (definition == null || raidTarget == null || !TryGetSpawnPosition(out var position)) return null;
-            var yokaiObject = new GameObject($"Yokai_{definition.Id}_{spawnSequence++}");
+            return SpawnYokaiAt(definition, raid, position, null);
+        }
+
+        private YokaiBrain SpawnSavedYokai(YokaiStateRecord record)
+        {
+            if (record == null) return null;
+            var definition = gameDataCatalog.FindYokai(record.yokaiId);
+            var brain = SpawnYokaiAt(definition, record.raid, record.position, record.instanceId);
+            if (brain == null) return null;
+            var health = brain.GetComponent<Health>();
+            var restoredHealth = Mathf.Clamp(
+                Mathf.RoundToInt(record.currentHealth * health.MaxHealth / (float)record.maxHealth),
+                1, health.MaxHealth);
+            if (!health.RestoreCurrent(restoredHealth) || !brain.RestoreSaveState(record))
+            {
+                var entry = spawnedYokai.FirstOrDefault(candidate => candidate.brain == brain);
+                if (entry != null) spawnedYokai.Remove(entry);
+                runtimeServices.Unregister(brain);
+                Destroy(brain.gameObject);
+                return null;
+            }
+            var body = brain.GetComponent<Rigidbody2D>();
+            if (body != null) body.linearVelocity = record.velocity;
+            return brain;
+        }
+
+        private YokaiBrain SpawnYokaiAt(YokaiDefinition definition, bool raid, Vector3 position,
+            string restoredInstanceId)
+        {
+            if (definition == null || raidTarget == null || !IsFinite(position)) return null;
+            string instanceId;
+            if (string.IsNullOrWhiteSpace(restoredInstanceId))
+            {
+                do instanceId = $"yokai_{spawnSequence++}";
+                while (spawnedYokai.Any(entry =>
+                    string.Equals(entry.instanceId, instanceId, StringComparison.Ordinal)));
+            }
+            else
+            {
+                instanceId = restoredInstanceId;
+                if (instanceId.StartsWith("yokai_", StringComparison.Ordinal) &&
+                    int.TryParse(instanceId.Substring("yokai_".Length), out var restoredSequence))
+                    spawnSequence = Math.Max(spawnSequence, restoredSequence + 1);
+            }
+            var yokaiObject = new GameObject($"Yokai_{definition.Id}_{instanceId}");
             yokaiObject.transform.SetParent(transform, false);
             yokaiObject.transform.position = position;
             var health = yokaiObject.AddComponent<Health>();
@@ -664,7 +822,9 @@ namespace Nyangbingo.World
                 characterAnimator.Bind(brain);
             }
             var loot = yokaiObject.AddComponent<YokaiLoot>();
-            loot.ConfigureForRuntime(definition);
+            loot.ConfigureForRuntime(definition, rewards: raid && baekjungScheduler?.IsActive == true
+                ? baekjungRewardRules
+                : null);
             var counters = placedObjectRuntime != null
                 ? new CounterAuraSensor(yokaiObject.transform, placedObjectRuntime.ActiveCounterAuras)
                 : null;
@@ -678,7 +838,8 @@ namespace Nyangbingo.World
             healthBar.ConfigureForRuntime(health, yokaiRenderer, usesEoduksiniPresentation ? 2f : 1f);
             health.Died += () => HandleYokaiEnded(health);
             brain.FledOffscreen += ignored => HandleYokaiEnded(health);
-            spawnedYokai.Add(new SpawnedYokai { health = health, brain = brain, raid = raid });
+            spawnedYokai.Add(new SpawnedYokai
+                { instanceId = instanceId, health = health, brain = brain, raid = raid });
             runtimeServices.Register(brain);
             return brain;
         }
@@ -736,6 +897,47 @@ namespace Nyangbingo.World
             runtimeServices.Register(baekjungTimeBinding);
         }
 
+        private void HandleBaekjungStarted(DayEventDefinition definition)
+        {
+            baekjungRewardRules = definition != null ? new BaekjungRewardRules(definition) : null;
+        }
+
+        private void RestoreBaekjungRewardRules(float tearRemainder)
+        {
+            var definition = baekjungScheduler?.ActiveDefinition;
+            baekjungRewardRules = definition != null ? new BaekjungRewardRules(definition) : null;
+            baekjungRewardRules?.RestoreTearRemainder(tearRemainder);
+        }
+
+        private YokaiDefinition FindRaidYokai(YokaiKind kind) =>
+            gameDataCatalog.Yokai.FirstOrDefault(candidate =>
+                candidate != null && candidate.Kind == kind &&
+                candidate.SupportsSpawnTrack(YokaiSpawnTrack.Raid));
+
+        private static bool ValidateYokaiBrainState(YokaiStateRecord record) =>
+            record.behaviorState >= 0 && record.behaviorState <= 4 &&
+            IsFinite(record.dawnFleeDirection) &&
+            IsFiniteNonNegative(record.sieveStopRemaining) &&
+            IsFiniteNonNegative(record.sieveCooldownRemaining) &&
+            IsFiniteNonNegative(record.lanternPauseRemaining) &&
+            IsFiniteNonNegative(record.bloomCooldownRemaining) &&
+            IsFiniteNonNegative(record.contactAttackRemaining) &&
+            IsFiniteNonNegative(record.frostSlowRemaining) &&
+            !float.IsNaN(record.frostSlowFraction) && !float.IsInfinity(record.frostSlowFraction) &&
+            record.frostSlowFraction >= 0f && record.frostSlowFraction <= 1f;
+
+        private static bool IsFinite(Vector3 value) =>
+            !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+            !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
+            !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+
+        private static bool IsFinite(Vector2 value) =>
+            !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+            !float.IsNaN(value.y) && !float.IsInfinity(value.y);
+
+        private static bool IsFiniteNonNegative(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
+
         private void ClearSpawnedYokai()
         {
             for (var index = spawnedYokai.Count - 1; index >= 0; index--)
@@ -755,6 +957,8 @@ namespace Nyangbingo.World
             if (bootstrap != null) bootstrap.WorldReady -= HandleWorldReady;
             if (bossManager != null) bossManager.BossStarted -= HandleBossStarted;
             if (bossManager != null) bossManager.BossEnded -= HandleBossEnded;
+            if (baekjungScheduler != null)
+                baekjungScheduler.Started -= HandleBaekjungStarted;
             if (activeBossCombat != null)
             {
                 runtimeServices?.Unregister(activeBossCombat);
@@ -785,8 +989,6 @@ namespace Nyangbingo.World
         private Health health;
         private Transform barRoot;
         private SpriteRenderer fillRenderer;
-        private TextMesh valueText;
-        private TextMesh valueShadow;
 
         public float FillRatio => health == null || health.MaxHealth <= 0
             ? 0f
@@ -824,32 +1026,6 @@ namespace Nyangbingo.World
             fillObject.transform.SetParent(barRoot, false);
             fillRenderer = fillObject.AddComponent<SpriteRenderer>();
             RuntimePlaceholderVisual.Configure(fillRenderer, new Color(.85f, .18f, .12f, 1f), 1f, 31);
-
-            var textObject = new GameObject("Value");
-            textObject.transform.SetParent(barRoot, false);
-            textObject.transform.localPosition = new Vector3(0f, .2f, 0f);
-            valueText = textObject.AddComponent<TextMesh>();
-            valueText.anchor = TextAnchor.LowerCenter;
-            valueText.alignment = TextAlignment.Center;
-            valueText.fontSize = MainGameEffectPresenter.WorldPopupFontSize;
-            valueText.characterSize = MainGameEffectPresenter.WorldPopupCharacterSize;
-            valueText.fontStyle = FontStyle.Bold;
-            valueText.color = Color.white;
-            var textRenderer = valueText.GetComponent<MeshRenderer>();
-            if (textRenderer != null) textRenderer.sortingOrder = 33;
-
-            var shadowObject = new GameObject("Shadow");
-            shadowObject.transform.SetParent(textObject.transform, false);
-            shadowObject.transform.localPosition = new Vector3(.018f, -.018f, .01f);
-            valueShadow = shadowObject.AddComponent<TextMesh>();
-            valueShadow.anchor = valueText.anchor;
-            valueShadow.alignment = valueText.alignment;
-            valueShadow.fontSize = valueText.fontSize;
-            valueShadow.characterSize = valueText.characterSize;
-            valueShadow.fontStyle = valueText.fontStyle;
-            valueShadow.color = new Color(0f, 0f, 0f, .9f);
-            var shadowRenderer = valueShadow.GetComponent<MeshRenderer>();
-            if (shadowRenderer != null) shadowRenderer.sortingOrder = 32;
         }
 
         private void HandleDamaged(DamageTag _, int __) => Refresh();
@@ -868,9 +1044,6 @@ namespace Nyangbingo.World
                         ? new Color(1f, .65f, .12f, 1f)
                         : new Color(.9f, .16f, .12f, 1f);
             }
-            var value = health.Current.ToString();
-            if (valueText != null) valueText.text = value;
-            if (valueShadow != null) valueShadow.text = value;
         }
 
         private void Unbind()
@@ -879,8 +1052,6 @@ namespace Nyangbingo.World
             if (barRoot != null) Destroy(barRoot.gameObject);
             barRoot = null;
             fillRenderer = null;
-            valueText = null;
-            valueShadow = null;
         }
 
         private void OnDestroy()

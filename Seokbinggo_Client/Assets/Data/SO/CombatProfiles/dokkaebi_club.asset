@@ -15,9 +15,9 @@ MonoBehaviour:
   id: dokkaebi_club
   tier: W1
   hasBasicAttack: 1
-  attackDamage: 7
+  attackDamage: 20
   attacksPerSecond: 1.5
-  damagePerSecond: 10.5
+  damagePerSecond: 30
   knockbackTiles: 2
   rangeTiles: 2
   arcDegrees: 90

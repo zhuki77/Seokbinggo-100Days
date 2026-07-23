@@ -15,17 +15,12 @@ MonoBehaviour:
   id: cheolseon
   tier: E1
   hasBasicAttack: 1
-  attackDamage: 6
+  attackDamage: 18
   attacksPerSecond: 1.5
-  damagePerSecond: 9
+  damagePerSecond: 27
   knockbackTiles: 1.5
   rangeTiles: 2
   arcDegrees: 90
   multiTarget: 1
   hitsWalls: 0
-  note: "\uD569\uC8FD\uC120 \uC9C4\uD654(\uD654\uB85CT2)\xB7\uD1B5\uC81C\uD615 \uCD5C\uC800DPS9<\uBC29\uB9DD\uC77410.5
-    / \uAE30\uBCF8\uB109\uBC311.5<2.0 / \uC561\uD2F0\uBE0C \uBC00\uCE58\uAE30 2\uD0C0\uC77C\xB7\uB3804\xB7\uCFE83\uCD08(\uC9C0\uC18DDPS<=10.33)
-    / \uBCF4\uC2A4\uB109\uBC31\uBB34\uD6A8\xB7\uB51C\uC801\uC6A9\xB7\uCC44\uAD74\uBD88\uAC00
-    / v24: \uC0AC\uAC70\uB9AC 2.0\xB7\uBCBD \uD0C0\uACA9 \u2715 \uD655\uC815(\uBD80\uCC44
-    \uD310\uC815 = \uD569\uC8FD\uC120 \uACF5\uC720). \uAD6C U2 \uC911\uBCF5\uD589
-    \uC0AD\uC81C \u2014 E1\uC774 \uC815\uBCF8 id"
+  note: "합죽선 진화(화로T2)·통제형 DPS27<방망이30 / 기본넉백1.5<2.0 / 액티브 밀치기 2타일·뎀4·쿨3초(지속DPS<=28.33) / 보스넉백무효·딜적용·채굴불가 / v24: 사거리 2.0·벽 타격 ✕ 확정(부채 판정 = 합죽선 공유). 구 U2 중복행 삭제 — E1이 정본 id"

@@ -1,6 +1,7 @@
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Save;
 using Nyangbingo.World;
 using UnityEngine;
 
@@ -117,6 +118,51 @@ namespace Nyangbingo.Yokai
             }
             ResetGameSecondsSample();
         }
+
+        public void CaptureSaveState(YokaiStateRecord record)
+        {
+            if (record == null) throw new System.ArgumentNullException(nameof(record));
+            record.behaviorState = (int)state;
+            record.sieveStopRemaining = sieveStopRemaining;
+            record.sieveCooldownRemaining = sieveCooldownRemaining;
+            record.lanternPauseRemaining = lanternPauseRemaining;
+            record.bloomCooldownRemaining = bloomCooldownRemaining;
+            record.dawnFleeDirection = dawnFleeDirection;
+            record.contactAttackRemaining = contactAttackRemaining;
+            record.frostSlowFraction = frostSlowFraction;
+            record.frostSlowRemaining = frostSlowRemaining;
+        }
+
+        public bool RestoreSaveState(YokaiStateRecord record)
+        {
+            if (record == null || record.behaviorState < (int)State.Approach ||
+                record.behaviorState > (int)State.DawnFlee ||
+                !IsFinite(record.dawnFleeDirection) ||
+                !IsFiniteNonNegative(record.sieveStopRemaining) ||
+                !IsFiniteNonNegative(record.sieveCooldownRemaining) ||
+                !IsFiniteNonNegative(record.lanternPauseRemaining) ||
+                !IsFiniteNonNegative(record.bloomCooldownRemaining) ||
+                !IsFiniteNonNegative(record.contactAttackRemaining) ||
+                !IsFiniteNonNegative(record.frostSlowRemaining) ||
+                float.IsNaN(record.frostSlowFraction) || float.IsInfinity(record.frostSlowFraction) ||
+                record.frostSlowFraction < 0f || record.frostSlowFraction > 1f)
+                return false;
+
+            state = (State)record.behaviorState;
+            sieveStopRemaining = record.sieveStopRemaining;
+            sieveCooldownRemaining = record.sieveCooldownRemaining;
+            lanternPauseRemaining = record.lanternPauseRemaining;
+            bloomCooldownRemaining = record.bloomCooldownRemaining;
+            dawnFleeDirection = record.dawnFleeDirection;
+            contactAttackRemaining = record.contactAttackRemaining;
+            frostSlowFraction = record.frostSlowFraction;
+            frostSlowRemaining = record.frostSlowRemaining;
+            hasFledOffscreen = false;
+            SetBossEncounterPaused(false);
+            SetAnimationMoving(state != State.AttackWall);
+            ResetGameSecondsSample();
+            return true;
+        }
         public void BeginRetreat()
         {
             if (state != State.DawnFlee) state = State.Retreat;
@@ -169,7 +215,7 @@ namespace Nyangbingo.Yokai
                     if (renderer == null) continue;
                     pausedRendererColors[index] = renderer.color;
                     var color = renderer.color;
-                    color.a *= .45f;
+                    color.a = 0f;
                     renderer.color = color;
                 }
             }
@@ -478,6 +524,9 @@ namespace Nyangbingo.Yokai
                    !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
                    !float.IsNaN(value.z) && !float.IsInfinity(value.z);
         }
+
+        private static bool IsFiniteNonNegative(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
 
         private void ResetGameSecondsSample()
         {

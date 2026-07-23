@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Nyangbingo.UI
 {
     public enum GameShellScreen { Title, Gameplay, Pause, Settings, Result, Confirmation }
-    public enum GameShellConfirmation { None, ReplaceSlotOne, ReturnToTitle, LoadDemoSave }
+    public enum GameShellConfirmation { None, ReturnToTitle, LoadDemoSave }
 
     public sealed class TitleShellState
     {
@@ -107,6 +107,19 @@ namespace Nyangbingo.UI
 
         public void EnterTitle() => ShowTitle();
 
+        public static float ResolveTimeScaleAfterLoading(GameShellScreen screen) =>
+            screen == GameShellScreen.Gameplay ? 1f : 0f;
+
+        public void RestoreTimeScaleAfterLoading()
+        {
+            if (Screen == GameShellScreen.Gameplay)
+            {
+                resumeTimeScale = 1f;
+            }
+
+            Time.timeScale = ResolveTimeScaleAfterLoading(Screen);
+        }
+
         public void RefreshTitle()
         {
             Title.ShowsDemoSaves = developmentMenu;
@@ -126,7 +139,6 @@ namespace Nyangbingo.UI
             if (saveManager == null || !saveManager.TryLoadLatest(out var slot, out var loaded)) return false;
             ActiveSaveSlot = slot;
             activeSave = loaded;
-            ShowGameplay();
             ContinueRequested?.Invoke(slot, loaded);
             return true;
         }
@@ -134,11 +146,6 @@ namespace Nyangbingo.UI
         public void RequestNewGame()
         {
             if (Screen != GameShellScreen.Title) return;
-            if (saveManager != null && saveManager.HasSave(AutoSaveSlot))
-            {
-                OpenConfirmation(GameShellConfirmation.ReplaceSlotOne);
-                return;
-            }
             BeginNewGame();
         }
 
@@ -200,10 +207,6 @@ namespace Nyangbingo.UI
         {
             switch (PendingConfirmation)
             {
-                case GameShellConfirmation.ReplaceSlotOne:
-                    ClearConfirmation();
-                    BeginNewGame();
-                    return true;
                 case GameShellConfirmation.ReturnToTitle:
                     ClearConfirmation();
                     ShowTitle();
@@ -219,7 +222,6 @@ namespace Nyangbingo.UI
                     }
                     ActiveSaveSlot = AutoSaveSlot;
                     activeSave = demo;
-                    ShowGameplay();
                     DemoSaveRequested?.Invoke(demo);
                     return true;
                 default: return false;
@@ -300,7 +302,6 @@ namespace Nyangbingo.UI
         {
             ActiveSaveSlot = AutoSaveSlot;
             activeSave = new SaveGame { day = 1 };
-            ShowGameplay();
             NewGameRequested?.Invoke(AutoSaveSlot);
         }
 

@@ -77,7 +77,7 @@ namespace Nyangbingo.World
         private const float RetargetSeconds = .2f;
         private const float FireSeconds = 1f;
         private const float AttackRange = 8f;
-        private const int AttackDamage = 4;
+        private const int AttackDamage = 10;
         private const float FuelSecondsPerUnit = 270f;
         private const float InstalledLanternRadius = 6f;
         private const string EoduksiniBloomPauseKey = "eoduksini_bloom_pause_sec";

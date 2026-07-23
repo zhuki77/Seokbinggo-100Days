@@ -3538,7 +3538,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &648665768
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5143,7 +5143,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &879648577
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6336,7 +6336,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &980304886
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7532,7 +7532,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1161904163
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12305,12 +12305,8 @@ MonoBehaviour:
   resumeButton: {fileID: 1172956238}
   saveButtons:
   - {fileID: 1105066031}
-  - {fileID: 648665771}
-  - {fileID: 879648580}
   loadButtons:
   - {fileID: 300368637}
-  - {fileID: 980304889}
-  - {fileID: 1161904166}
   settingsButton: {fileID: 826287294}
   returnTitleButton: {fileID: 1469400791}
   settingsApplyButton: {fileID: 1121399989}

@@ -11,7 +11,7 @@ haetae_statue,placeable,해태 석상,furnace,"stone:20,copper_ingot:3,yokai_tea
 nest_bed,placeable,보금자리,workbench,"wood:6,hemp_stalk:4",1,10,A,냥잠(v6)
 magpie_nest,placeable,까치 둥지,workbench,"wood:8,hemp_stalk:6",1,10,A,까치 벗 입주(v6)
 dokkaebi_club,weapon,도깨비 방망이,workbench,"club_shard:3,wood:4",1,30,A,넉백 2.0타일 특화
-frostclaw_gauntlet,weapon,서리발톱 장갑,ice_anvil,"gangcheol_scale:1,frost_essence:6,icesteel_ingot:4,yokai_tear:25,shadow_shard:5",1,120,A,엔드 무기 DPS 42
+frostclaw_gauntlet,weapon,서리발톱 장갑,ice_anvil,"gangcheol_scale:1,frost_essence:6,icesteel_ingot:4,yokai_tear:25,shadow_shard:5",1,120,A,엔드 무기 DPS 90
 iron_insul_wall,wall,무쇠 차열벽,furnace,"iron_scale:2,iron_ingot:2,stone:2",1,20,A,HP900·불가사리 면역
 cold_device,device,냉기 장치,ice_anvil,"yokai_tear:40,frost_essence:2,ice_shard:10,copper_ingot:2",1,60,A,눈물 주 소비처
 insul_wall,module,차열벽,workbench,"stone:2,dirt:1",1,5,A,HP600 기본 방벽
@@ -23,7 +23,7 @@ ssireum_satba,summon,씨름 샅바,workbench,"club_shard:1,hemp_stalk:10,wood:5"
 iron_bait_pile,summon,무쇠 미끼 더미,furnace,"iron_ingot:10,iron_scale:3,coal:5",1,30,B,어미 불가사리 소환
 ice_altar_offering,summon,얼음 제단 봉헌,ice_anvil,"icesteel_ingot:2,frost_essence:2,ice_shard:10",1,30,B,이무기 소환(심층 제단 전용)
 drought_talisman,summon,가뭄 부적,ice_anvil,"yokai_tear:30,shadow_shard:2,hemp_stalk:5",1,30,A,강철이 재소환(최초 격퇴 후 해금)
-dokkaebi_fire_tower,turret,도깨비불 등탑,workbench,"dokkaebi_fire_essence:1,wood:10,stone:10,coal:5",1,60,A,DPS4 유도·반경 8타일
+dokkaebi_fire_tower,turret,도깨비불 등탑,workbench,"dokkaebi_fire_essence:1,wood:10,stone:10,coal:5",1,60,A,DPS10 유도·반경 8타일
 singijeon_cart,turret,신기전 화차,furnace,"iron_forge_core:1,iron_ingot:7,wood:20,coal:5",1,60,B,DPS6 직선 관통·10타일
 ice_crystal_cooler,cooling,빙정 냉각로,ice_anvil,"yeouiju:1,icesteel_ingot:5,copper_ingot:3",1,60,B,내부 체온 회복x2+얼음 용해 방지
 cold_wave_core,cooling,한파 코어,ice_anvil,"drought_heart:1,icesteel_ingot:6,frost_essence:4",1,60,A,더위 단계 -1 상쇄(전역 1기)
@@ -31,7 +31,7 @@ straw_insul,insulation,짚 단열재,workbench,"hemp_stalk:3,wood:1",1,5,A,벽 1
 clay_plaster,insulation,점토 미장,workbench,"clay:2,dirt:2",1,5,A,차열벽 HP 600→750
 munpungji,insulation,문풍지,workbench,"hemp_stalk:4,wood:2",1,10,A,단열 문 개방 중 체온 손실 0
 hapjukseon,util,합죽선,workbench,"hemp_stalk:6,wood:3",1,10,A,밀치기 2타일·뎀0·쿨3초 — 보스 무효
-cheolseon,evo,철선,furnace,"hapjukseon:1,iron_ingot:2,iron_scale:1",1,30,A,물리 부채 무기·원본 소모 — DPS9·기본넉백1.5·밀치기 뎀4/2타일/쿨3초·보스넉백무효·채굴불가(6-14)
+cheolseon,evo,철선,furnace,"hapjukseon:1,iron_ingot:2,iron_scale:1",1,30,A,물리 부채 무기·원본 소모 — DPS27·기본넉백1.5·밀치기 뎀4/2타일/쿨3초·보스넉백무효·채굴불가(6-14)
 iron_bell_rope,evo,쇠 방울 금줄,furnace,"bell_rope:1,iron_ingot:1",1,20,A,경보(반경10 유지)+진입 요괴 감속 1회 — 원석 철2
 iron_sieve,evo,무쇠 체,furnace,"sieve:1,iron_ingot:1,iron_scale:1",1,20,A,야광귀 정지·피해배수·쿨 강화 — 원석 철2+무쇠 비늘1
 frost_lantern,evo,서리 등불,ice_anvil,"lantern:1,icesteel_ingot:1,frost_essence:1",1,30,A,연료 석탄→서리정수·장시간 점등·반경6 불변 — 후반 잉여 서리정수 소비처

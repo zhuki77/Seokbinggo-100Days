@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.World;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace Nyangbingo.Save
         [SerializeField] private MainGameEnvironmentState environmentState;
         [SerializeField] private MainGameTurretRuntime turretRuntime;
         [SerializeField] private MainGameEncounterCoordinator encounterCoordinator;
+        [SerializeField] private MainGameWorldDropRuntime worldDropRuntime;
         [SerializeField] private DayNightService timeService;
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private DawnAutoSave dawnAutoSave;
@@ -66,6 +68,7 @@ namespace Nyangbingo.Save
             environmentState ??= GetComponent<MainGameEnvironmentState>();
             turretRuntime ??= GetComponent<MainGameTurretRuntime>();
             encounterCoordinator ??= GetComponent<MainGameEncounterCoordinator>();
+            worldDropRuntime ??= FindAnyObjectByType<MainGameWorldDropRuntime>();
             timeService ??= GetComponent<DayNightService>();
             saveManager ??= GetComponent<SaveManager>();
             dawnAutoSave ??= GetComponent<DawnAutoSave>();
@@ -120,11 +123,44 @@ namespace Nyangbingo.Save
             // startup player may not have completed its first physics placement yet, so applying
             // the product safe-spawn repair here would intentionally change the snapshot and make
             // an otherwise valid serialization round trip fail.
-            if (!ApplySnapshot(before, false, false)) return false;
+            if (!ApplySnapshot(before, false))
+            {
+                Debug.LogError("[Nyangbingo] MainGameSaveCoordinator: editor round-trip apply stage failed.");
+                return false;
+            }
             var after = CaptureSnapshot();
-            if (after == null || beforeJson != JsonUtility.ToJson(after)) return false;
+            if (after == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameSaveCoordinator: editor round-trip recapture stage failed.");
+                return false;
+            }
+            var afterJson = JsonUtility.ToJson(after);
+            if (beforeJson != afterJson)
+            {
+                var difference = FirstDifferenceIndex(beforeJson, afterJson);
+                Debug.LogError($"[Nyangbingo] MainGameSaveCoordinator: editor round-trip JSON mismatch " +
+                               $"(index={difference}, before={JsonContext(beforeJson, difference)}, " +
+                               $"after={JsonContext(afterJson, difference)}).");
+                return false;
+            }
             Debug.Log("[Nyangbingo] MainGameSaveCoordinator: 파일 쓰기 없는 통합 저장·복원 왕복 검증 완료.");
             return true;
+        }
+
+        private static int FirstDifferenceIndex(string left, string right)
+        {
+            var count = Math.Min(left?.Length ?? 0, right?.Length ?? 0);
+            for (var index = 0; index < count; index++)
+                if (left[index] != right[index]) return index;
+            return count;
+        }
+
+        private static string JsonContext(string json, int index)
+        {
+            if (string.IsNullOrEmpty(json)) return "<empty>";
+            var start = Mathf.Clamp(index - 40, 0, json.Length);
+            var length = Mathf.Min(100, json.Length - start);
+            return json.Substring(start, length);
         }
 
         public SaveGame CaptureSnapshot()
@@ -146,6 +182,8 @@ namespace Nyangbingo.Save
             save.coolingSources = environmentState.ExportCoolingSources();
             save.jangdokStorages = runtimeServices.JangdokStorage.Export();
             save.deathTearPouches = runtimeServices.DeathTearPouches.Export();
+            save.worldDrops = ResolveWorldDropRuntime()?.Export() ?? new List<WorldDropStateRecord>();
+            save.sealPct = Mathf.Clamp01(bootstrap.SealSystem.SealPercent) * 100f;
             if (!turretRuntime.CaptureProgress(save)) return null;
             if (!PlayerTimeBossSaveAdapter.Capture(save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager))
@@ -209,25 +247,26 @@ namespace Nyangbingo.Save
             if (save == null || (!IsInitialized && !Initialize())) return false;
             var rollback = CaptureSnapshot();
             if (rollback == null) return false;
-            if (ApplySnapshot(save, forceSafeSurfaceSpawn, true)) return true;
+            if (ApplySnapshot(save, forceSafeSurfaceSpawn)) return true;
             // A rollback must restore the exact captured state, not reinterpret its position.
-            ApplySnapshot(rollback, false, false);
+            ApplySnapshot(rollback, false);
             return false;
         }
 
-        private bool ApplySnapshot(SaveGame save, bool forceSafeSurfaceSpawn,
-            bool repairUnsafeSavedPosition)
+        private bool ApplySnapshot(SaveGame save, bool forceSafeSurfaceSpawn)
         {
             if (save == null || !encounterCoordinator.BeginRestore()) return false;
             var succeeded = false;
             try
             {
                 save.NormalizeAfterLoad();
+                runtimeServices.NapService?.ResetForSaveRestore();
                 succeeded = save.timeState.hasValue &&
                 bootstrap.Session.LoadSnapshot(save) &&
-                PreparePlayerSpawnForRestore(save, forceSafeSurfaceSpawn, repairUnsafeSavedPosition) &&
+                PreparePlayerSpawnForRestore(save, forceSafeSurfaceSpawn) &&
                 PlayerTimeBossSaveAdapter.Restore(save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager) &&
+                ResetPlayerTransientState() &&
                 ProgressionSaveAdapter.Restore(save, runtimeServices.PlayerInventory,
                     runtimeServices.EquipmentSystem, FindEquipment,
                     FurnaceStationId, runtimeServices.Furnace, FindSmelting, FindItem) &&
@@ -245,6 +284,7 @@ namespace Nyangbingo.Save
                 (!save.playerState.hasTemperature ||
                  runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
                 runtimeServices.DeathTearPouches.Restore(save.deathTearPouches) &&
+                RestoreWorldDrops(save.worldDrops) &&
                 encounterCoordinator.RestoreProgress(save) &&
                  environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources) &&
                  runtimeServices.JangdokStorage.TryRestore(save.jangdokStorages,
@@ -261,15 +301,27 @@ namespace Nyangbingo.Save
         }
 
         public static bool ShouldResolveSafePlayerSpawn(bool forceSafeSurfaceSpawn,
-            bool savedPositionIsSafe) => forceSafeSurfaceSpawn || !savedPositionIsSafe;
+            bool savedPositionIsSafe) => forceSafeSurfaceSpawn;
 
-        private bool PreparePlayerSpawnForRestore(SaveGame save, bool forceSafeSurfaceSpawn,
-            bool repairUnsafeSavedPosition)
+        private bool PreparePlayerSpawnForRestore(SaveGame save, bool forceSafeSurfaceSpawn)
         {
             var resolver = bootstrap?.Session?.SafeSpawnResolver;
             var player = encounterCoordinator?.PlayerTransform;
             if (save?.playerState == null || !save.playerState.hasValue || resolver == null || player == null)
                 return false;
+
+            // A regular save contains the authoritative player position. "Standing safely" is
+            // intentionally stricter than "a valid saved position": a player can save while
+            // airborne, on a slope, beside a mined tile, or at a collider sub-pixel offset.
+            // Reinterpreting those valid coordinates as unsafe used to replace them with the
+            // generated world's initial surface spawn. Only imported demo snapshots require
+            // generator-version-dependent surface repair.
+            if (!forceSafeSurfaceSpawn)
+            {
+                Debug.Log($"[Nyangbingo] Save restore preserving exact player position " +
+                          $"({save.playerState.position}).");
+                return true;
+            }
 
             var halfExtent = .38f;
             var circle = player.GetComponent<CircleCollider2D>();
@@ -277,7 +329,6 @@ namespace Nyangbingo.Save
                 halfExtent = Mathf.Max(.05f, circle.radius * Mathf.Abs(player.lossyScale.y));
 
             var savedPosition = (Vector2)save.playerState.position;
-            if (!forceSafeSurfaceSpawn && !repairUnsafeSavedPosition) return true;
             if (!ShouldResolveSafePlayerSpawn(forceSafeSurfaceSpawn,
                     resolver.IsSafeStandingPosition(savedPosition, halfExtent)))
                 return true;
@@ -294,6 +345,25 @@ namespace Nyangbingo.Save
 
         private Nyangbingo.Data.ItemDefinition FindItem(string id) =>
             GetCatalog()?.FindItem(id);
+
+        private MainGameWorldDropRuntime ResolveWorldDropRuntime()
+        {
+            worldDropRuntime ??= FindAnyObjectByType<MainGameWorldDropRuntime>();
+            return worldDropRuntime;
+        }
+
+        private bool RestoreWorldDrops(IReadOnlyList<WorldDropStateRecord> records)
+        {
+            var runtime = ResolveWorldDropRuntime();
+            return runtime != null ? runtime.Restore(records, FindItem) : records != null && records.Count == 0;
+        }
+
+        private bool ResetPlayerTransientState()
+        {
+            var player = encounterCoordinator?.PlayerTransform;
+            var controller = player != null ? player.GetComponent<MainGamePlayerController>() : null;
+            return controller == null || controller.ResetTransientStateAfterSaveRestore();
+        }
         private Nyangbingo.Data.EquipmentDefinition FindEquipment(string id) =>
             GetCatalog()?.FindEquipment(id);
         private Nyangbingo.Data.RecipeDefinition FindRecipe(string id) =>

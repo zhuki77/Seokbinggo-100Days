@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
+using Nyangbingo.Save;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -58,6 +59,59 @@ namespace Nyangbingo.World
         private PhysicsMaterial2D dropMaterial;
 
         public int ActiveDropCount => drops.Count;
+
+        public List<WorldDropStateRecord> Export()
+        {
+            var result = new List<WorldDropStateRecord>(drops.Count);
+            for (var index = 0; index < drops.Count; index++)
+            {
+                var entry = drops[index];
+                if (entry?.Item == null || entry.Root == null) continue;
+                result.Add(new WorldDropStateRecord
+                {
+                    itemId = entry.Item.Id,
+                    amount = entry.Amount,
+                    position = entry.Root.transform.position,
+                    velocity = entry.Body != null ? entry.Body.linearVelocity : Vector2.zero,
+                    pickupDelay = entry.PickupDelay
+                });
+            }
+            return result;
+        }
+
+        public bool Restore(IEnumerable<WorldDropStateRecord> records,
+            Func<string, ItemDefinition> findItem)
+        {
+            if (records == null || findItem == null) return false;
+            var validated = new List<(WorldDropStateRecord record, ItemDefinition item)>();
+            foreach (var record in records)
+            {
+                var item = findItem(record.itemId);
+                if (item == null || record.amount <= 0 || record.amount > item.MaxStack ||
+                    !IsFinite(record.position) ||
+                    !IsFinite(record.velocity) || !IsFiniteNonNegative(record.pickupDelay))
+                    return false;
+                validated.Add((record, item));
+            }
+
+            ClearDrops();
+            for (var index = 0; index < validated.Count; index++)
+            {
+                var pair = validated[index];
+                var entry = SpawnSingle(pair.item, pair.record.position, 0, 1);
+                if (entry == null)
+                {
+                    ClearDrops();
+                    return false;
+                }
+                entry.Amount = pair.record.amount;
+                entry.Root.transform.position = pair.record.position;
+                entry.PickupDelay = pair.record.pickupDelay;
+                if (entry.Body != null) entry.Body.linearVelocity = pair.record.velocity;
+            }
+            Physics2D.SyncTransforms();
+            return true;
+        }
 
         public void ConfigureForRuntime(Transform playerTransform, Nyangbingo.Inventory.Inventory playerInventory,
             ItemArtCatalog artCatalog, TileService worldTileService)
@@ -124,8 +178,9 @@ namespace Nyangbingo.World
             for (var index = 0; index < amount; index++) SpawnSingle(item, position, index, amount);
         }
 
-        private void SpawnSingle(ItemDefinition item, Vector2 position, int batchIndex, int batchCount)
+        private Entry SpawnSingle(ItemDefinition item, Vector2 position, int batchIndex, int batchCount)
         {
+            if (item == null) return null;
             var root = new GameObject($"WorldDrop_{item.Id}");
             root.transform.SetParent(transform, false);
             var direction = CalculateLaunchDirection(batchIndex, batchCount);
@@ -168,7 +223,7 @@ namespace Nyangbingo.World
                 RuntimePlaceholderVisual.Configure(renderer, new Color(.85f, .92f, 1f, 1f), .42f, 32);
             visual.transform.localPosition += Vector3.up * VisualSurfaceOffset;
 
-            drops.Add(new Entry
+            var entry = new Entry
             {
                 Item = item,
                 Amount = 1,
@@ -176,7 +231,9 @@ namespace Nyangbingo.World
                 Body = body,
                 Collider = dropCollider,
                 PickupDelay = InitialPickupDelay
-            });
+            };
+            drops.Add(entry);
+            return entry;
         }
 
         private void IgnoreCollisionWithExistingDrops(Collider2D newDropCollider)
@@ -216,14 +273,30 @@ namespace Nyangbingo.World
             return gravity > Mathf.Epsilon ? Gravity / gravity : 0f;
         }
 
-        private void OnDestroy()
+        private static bool IsFinite(Vector2 value) =>
+            !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+            !float.IsNaN(value.y) && !float.IsInfinity(value.y);
+
+        private static bool IsFiniteNonNegative(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
+
+        private void ClearDrops()
         {
             foreach (var entry in drops)
             {
                 if (entry?.Collider != null) ActiveDropColliders.Remove(entry.Collider);
-                if (entry?.Root != null) Destroy(entry.Root);
+                if (entry?.Root != null)
+                {
+                    entry.Root.SetActive(false);
+                    Destroy(entry.Root);
+                }
             }
             drops.Clear();
+        }
+
+        private void OnDestroy()
+        {
+            ClearDrops();
             if (dropMaterial != null) Destroy(dropMaterial);
         }
     }

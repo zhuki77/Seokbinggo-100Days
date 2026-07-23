@@ -15,8 +15,8 @@ MonoBehaviour:
   id: mother_bulgasari
   displayName: "\uC5B4\uBBF8 \uBD88\uAC00\uC0AC\uB9AC"
   kind: 1
-  hitPoints: 3000
-  expectedCombatSeconds: 285.7
+  hitPoints: 6500
+  expectedCombatSeconds: 180.6
   summonItem: {fileID: 11400000, guid: ef2da80e2e710484b9cf6a333fd185ef, type: 2}
   summonMaterials:
   - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
@@ -49,7 +49,7 @@ MonoBehaviour:
   specialDamagePerHit: 10
   specialDurationSeconds: 2
   specialTickSeconds: 1
-  specialKnockbackTiles: 4
+  specialKnockbackTiles: 0
   specialCooldownSeconds: 6
   specialHasFireTag: 1
   specialAimLocks: 1

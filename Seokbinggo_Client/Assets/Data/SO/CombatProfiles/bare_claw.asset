@@ -15,13 +15,12 @@ MonoBehaviour:
   id: bare_claw
   tier: 1
   hasBasicAttack: 1
-  attackDamage: 5
+  attackDamage: 15
   attacksPerSecond: 1.5
-  damagePerSecond: 7.5
+  damagePerSecond: 22.5
   knockbackTiles: 0.5
   rangeTiles: 1.5
   arcDegrees: 90
   multiTarget: 1
   hitsWalls: 1
-  note: "1\uC77C\uCC28 \uBC29\uB9DD\uC774 \uB3C4\uAE68\uBE44 1\uB9C8\uB9AC 60\uCD08(\uC5EC\uC720
-    88.9%)"
+  note: "1일차 방망이 도깨비 1마리 24초"

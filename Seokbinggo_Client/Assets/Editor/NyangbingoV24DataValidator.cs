@@ -45,6 +45,29 @@ public static class NyangbingoV24DataValidator
         var itemIds = BuildIdSet(items, "items.csv", "id");
         var bossIds = BuildIdSet(bosses, "bosses.csv", "id");
         var yokaiIds = BuildIdSet(yokai, "yokai-stats.csv", "id");
+        var officialBossIds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "king_dokkaebi",
+            "mother_bulgasari",
+            "imugi",
+            "gangcheol_boss"
+        };
+        var officialYokaiIds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "club",
+            "bulgasari",
+            "yakwang",
+            "eoduksini",
+            "gangcheol"
+        };
+        if (!bossIds.SetEquals(officialBossIds))
+            throw new InvalidDataException(
+                "bosses.csv must contain the four official bosses, including 'imugi'.");
+        if (!yokaiIds.SetEquals(officialYokaiIds))
+            throw new InvalidDataException(
+                "yokai-stats.csv must contain only the five official regular yokai; 'imugi' is a boss.");
+        if (bossIds.Overlaps(yokaiIds))
+            throw new InvalidDataException("Boss and regular yokai IDs must not overlap.");
         var craftingById = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
         var hasOutputCount = crafting.Count > 0 && crafting[0].ContainsKey("output_count");
         var totalOutputCount = 0;

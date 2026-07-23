@@ -31,6 +31,8 @@ namespace Nyangbingo.World
 
         private WorldSessionController session;
         private bool servicesInitialized;
+        private static bool freshWorldRequested;
+        private static int freshWorldSeed;
 
         public WorldSessionController Session => session;
         public TileService TileService => session?.TileService;
@@ -70,7 +72,25 @@ namespace Nyangbingo.World
         private void Start()
         {
             if (startWorldOnStart && !IsWorldReady)
-                StartNewWorld(initialSeed);
+                StartNewWorld(ConsumeStartupSeed());
+        }
+
+        public static void RequestFreshWorldForNextScene(int previousSeed)
+        {
+            freshWorldRequested = true;
+            do
+            {
+                freshWorldSeed = Guid.NewGuid().GetHashCode() & int.MaxValue;
+            } while (freshWorldSeed == 0 || freshWorldSeed == previousSeed);
+        }
+
+        private int ConsumeStartupSeed()
+        {
+            if (!freshWorldRequested) return initialSeed;
+            freshWorldRequested = false;
+            var seed = freshWorldSeed;
+            freshWorldSeed = 0;
+            return seed;
         }
 
         /// <summary>

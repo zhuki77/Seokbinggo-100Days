@@ -19,11 +19,17 @@ namespace Nyangbingo.UI
         public const int LegacyInventoryBarSlotCount = 12;
         public const bool ProductHudNarrativeTextEnabled = false;
         public const bool ProductBossHealthTextEnabled = false;
-        public const float BossHealthBarBelowClockY = -50f;
+        public const float BossHealthBarBelowClockY = -18f;
+        public const float BossHealthBarWidth = 192f;
+        public const float BossHealthBarHeight = 48f;
+        public const float BossHealthSegmentHeight = 7.5f;
+        public const float BossHealthValueGlyphScale = .5f;
+        public const float BossHealthValueVerticalNudge = -.5f;
         public const float BossFleeRollSeconds = .45f;
         public const int DayCounterFontSize = 12;
         public const int DayCounterClockFontSize = 7;
         public const float DayCounterExpandedHeight = 32f;
+        public const float DayCounterClockHeight = 10f;
         public const float DayCounterClockGap = 1f;
         public const float BaekjungDayCounterBorderPixels = 1f;
         public const float SealDiagnosticHoldSeconds = .6f;
@@ -59,6 +65,9 @@ namespace Nyangbingo.UI
         private readonly List<float> bossHealthSegmentWidths = new List<float>();
         private readonly List<RectTransform> bossHealthSegmentRects = new List<RectTransform>();
         private Image bossHealthPortrait;
+        private Text bossHealthValueText;
+        private RuntimePixelGlyphPresenter bossHealthValueGlyphs;
+        private RectTransform bossHealthValueRect;
         private Sprite runtimeBossHealthSprite;
         private string runtimeBossHealthSpriteId;
         private GameObject bossEntranceArtRoot;
@@ -145,6 +154,9 @@ namespace Nyangbingo.UI
         public bool HasCraftingProgressBindings => craftingProgressPanel != null && craftingProgressText != null &&
                                                    craftingProgressFill != null;
         public static bool BlocksWorldPrimaryInput => activeHud != null && activeHud.IsPointerOverSealGauge();
+
+        public static Vector2 ResolveDayCounterPositionBelowClock(Vector2 clockPosition) =>
+            clockPosition + Vector2.down * (DayCounterClockHeight + DayCounterClockGap);
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, Text temperature, Text seal, Text day, Text claw, Text healthText,
@@ -246,6 +258,7 @@ namespace Nyangbingo.UI
                 hasDayTextDefaultPosition = true;
             }
             BuildDayCounterScroll();
+            bootstrap.TimeService.Dawn += HandleDayCounterDawn;
             encounterCoordinator = FindAnyObjectByType<MainGameEncounterCoordinator>();
             baekjungHudActive = encounterCoordinator?.BaekjungScheduler?.IsActive == true;
             baekjungHudSuppressedForBoss = bossManager?.IsBossActive == true;
@@ -319,7 +332,6 @@ namespace Nyangbingo.UI
             }
             if (dayText != null)
             {
-                dayCounterScrollPresenter?.SetDaysRemaining(bootstrap.TimeService.DaysRemaining);
                 var displayedDays = dayCounterScrollPresenter != null
                     ? dayCounterScrollPresenter.DisplayedDaysRemaining
                     : bootstrap.TimeService.DaysRemaining;
@@ -1161,8 +1173,13 @@ namespace Nyangbingo.UI
             }
             ConfigureBossHealthVerticalLayout(definition.Id);
             ResizeBossHealthBar(CalculateHealthRatio(health.Current, health.MaxHealth));
+            var displayedBossHealth = FormatBossCurrentHealth(health.Current);
+            if (bossHealthValueGlyphs != null)
+                bossHealthValueGlyphs.SetText(displayedBossHealth);
+            else if (bossHealthValueText != null)
+                bossHealthValueText.text = displayedBossHealth;
 
-            // The illustrated segmented bar communicates health without a separate number label.
+            // Current HP is rendered inside the illustrated bar; keep the legacy external label empty.
             bossStatusText.text = string.Empty;
 #if UNITY_EDITOR
             // Test controls are listed in the F5 debug shortcut popup.
@@ -1171,6 +1188,8 @@ namespace Nyangbingo.UI
 
         public static float CalculateHealthRatio(int current, int maximum) =>
             maximum <= 0 ? 0f : Mathf.Clamp01((float)current / maximum);
+
+        public static string FormatBossCurrentHealth(int current) => Mathf.Max(0, current).ToString();
 
         public static float CalculateBossFleeRollScale(float remainingSeconds, float durationSeconds) =>
             durationSeconds <= 0f ? 0f : Mathf.SmoothStep(0f, 1f,
@@ -1242,7 +1261,10 @@ namespace Nyangbingo.UI
             dayCounterScrollRect = (RectTransform)scrollObject.transform;
             dayCounterScrollRect.anchorMin = dayCounterScrollRect.anchorMax = dayCounterScrollRect.pivot =
                 new Vector2(.5f, 1f);
-            dayCounterScrollDefaultPosition = dayTextDefaultPosition;
+            dayClockDefaultPosition = dayTextDefaultPosition;
+            dayCounterScrollDefaultPosition = ResolveDayCounterPositionBelowClock(dayClockDefaultPosition);
+            dayTextDefaultPosition = dayCounterScrollDefaultPosition;
+            dayText.rectTransform.anchoredPosition = dayTextDefaultPosition;
             dayCounterScrollRect.anchoredPosition = dayCounterScrollDefaultPosition;
             var image = scrollObject.GetComponent<Image>();
             image.raycastTarget = false;
@@ -1252,6 +1274,7 @@ namespace Nyangbingo.UI
             scrollObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex());
             dayCounterScrollPresenter = scrollObject.AddComponent<RuntimeDayCounterScrollPresenter>();
             dayCounterScrollPresenter.ConfigureForRuntime(frames, bootstrap.TimeService.DaysRemaining);
+            dayCounterScrollPresenter.PresentationCompleted += HandleDayCounterPresentationCompleted;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
                 dayCounterGlyphs = dayText.GetComponent<RuntimePixelGlyphPresenter>() ??
@@ -1274,10 +1297,8 @@ namespace Nyangbingo.UI
             dayClockText.verticalOverflow = VerticalWrapMode.Overflow;
             var clockRect = dayClockText.rectTransform;
             clockRect.anchorMin = clockRect.anchorMax = clockRect.pivot = new Vector2(.5f, 1f);
-            dayClockDefaultPosition = dayCounterScrollDefaultPosition +
-                                      Vector2.down * (DayCounterExpandedHeight + DayCounterClockGap);
             clockRect.anchoredPosition = dayClockDefaultPosition;
-            clockRect.sizeDelta = new Vector2(96f, 10f);
+            clockRect.sizeDelta = new Vector2(96f, DayCounterClockHeight);
             clockObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
@@ -1300,6 +1321,24 @@ namespace Nyangbingo.UI
             nightSpawnLockRoot = BuildNightSpawnLock(artRect);
             nightSpawnLockRoot.SetActive(false);
             RefreshDayNightClockArt();
+            dayText.gameObject.SetActive(false);
+            scrollObject.SetActive(false);
+        }
+
+        private void HandleDayCounterDawn()
+        {
+            if (dayCounterScrollPresenter == null || dayText == null || bootstrap?.TimeService == null) return;
+            dayCounterScrollRect.gameObject.SetActive(true);
+            dayText.gameObject.SetActive(true);
+            dayCounterScrollPresenter.PlayDayChange(bootstrap.TimeService.DaysRemaining);
+            RefreshStatus();
+        }
+
+        private void HandleDayCounterPresentationCompleted()
+        {
+            if (dayCounterGlyphs != null) dayCounterGlyphs.SetVisible(false);
+            if (dayText != null) dayText.gameObject.SetActive(false);
+            if (dayCounterScrollRect != null) dayCounterScrollRect.gameObject.SetActive(false);
         }
 
         private void RefreshDayNightClockArt()
@@ -1420,10 +1459,10 @@ namespace Nyangbingo.UI
             rootRect.SetParent(nativeRoot, false);
             rootRect.anchorMin = rootRect.anchorMax = rootRect.pivot = new Vector2(.5f, 1f);
             rootRect.anchoredPosition = new Vector2(0f, BossHealthBarBelowClockY);
-            rootRect.sizeDelta = new Vector2(128f, 32f);
+            rootRect.sizeDelta = new Vector2(BossHealthBarWidth, BossHealthBarHeight);
 
-            var segmentStarts = new[] { 13f, 32f, 51f, 80f, 99f };
-            var segmentWidths = new[] { 16f, 16f, 26f, 16f, 16f };
+            var segmentStarts = new[] { 19.5f, 48f, 76.5f, 120f, 148.5f };
+            var segmentWidths = new[] { 24f, 24f, 39f, 24f, 24f };
             for (var index = 0; index < segmentStarts.Length; index++)
                 BuildBossHealthSegment(rootRect, index, segmentStarts[index], segmentWidths[index]);
             var portraitObject = new GameObject("BossArt", typeof(RectTransform));
@@ -1434,7 +1473,36 @@ namespace Nyangbingo.UI
             var portraitRect = bossHealthPortrait.rectTransform;
             portraitRect.anchorMin = portraitRect.anchorMax = portraitRect.pivot = new Vector2(.5f, .5f);
             portraitRect.anchoredPosition = Vector2.zero;
-            portraitRect.sizeDelta = new Vector2(118f, 32f);
+            portraitRect.sizeDelta = new Vector2(177f, BossHealthBarHeight);
+
+            var valueObject = new GameObject("CurrentHealth", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Text), typeof(Outline));
+            valueObject.transform.SetParent(rootRect, false);
+            bossHealthValueText = valueObject.GetComponent<Text>();
+            bossHealthValueText.font = dayText != null ? dayText.font : bossStatusText.font;
+            bossHealthValueText.fontSize = 7;
+            bossHealthValueText.fontStyle = FontStyle.Bold;
+            bossHealthValueText.alignment = TextAnchor.MiddleCenter;
+            bossHealthValueText.color = Color.white;
+            bossHealthValueText.raycastTarget = false;
+            bossHealthValueText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            bossHealthValueText.verticalOverflow = VerticalWrapMode.Overflow;
+            bossHealthValueRect = bossHealthValueText.rectTransform;
+            bossHealthValueRect.anchorMin = bossHealthValueRect.anchorMax = bossHealthValueRect.pivot =
+                new Vector2(.5f, .5f);
+            bossHealthValueRect.anchoredPosition = Vector2.zero;
+            bossHealthValueRect.sizeDelta = new Vector2(96f, 16f);
+            var valueOutline = valueObject.GetComponent<Outline>();
+            valueOutline.effectColor = new Color(0f, 0f, 0f, .9f);
+            valueOutline.effectDistance = new Vector2(1f, -1f);
+            if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
+            {
+                bossHealthValueText.text = string.Empty;
+                bossHealthValueText.enabled = false;
+                bossHealthValueGlyphs = valueObject.AddComponent<RuntimePixelGlyphPresenter>();
+                bossHealthValueGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs,
+                    BossHealthValueGlyphScale);
+            }
 
             ResizeBossHealthBar(1f);
             bossHealthBarRoot.SetActive(false);
@@ -1482,28 +1550,39 @@ namespace Nyangbingo.UI
         private static void ConfigureBossHealthSegmentRect(RectTransform rect, float start, float width)
         {
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, .5f);
-            rect.anchoredPosition = new Vector2(start, -1.5f);
-            rect.sizeDelta = new Vector2(width, 5f);
+            rect.anchoredPosition = new Vector2(start, -2.25f);
+            rect.sizeDelta = new Vector2(width, BossHealthSegmentHeight);
         }
 
         private void ConfigureBossHealthVerticalLayout(string bossId)
         {
-            var verticalOffset = bossId switch
-            {
-                "mother_bulgasari" => -4.5f,
-                // These offsets follow the delivered frame artwork. After correcting the
-                // Gangcheol/King row mapping, their previously calibrated offsets swap too.
-                "king_dokkaebi" => -2.75f,
-                "gangcheol_boss" => -5f,
-                "imugi" => -4f,
-                _ => -2.5f
-            };
+            var verticalOffset = BossHealthContentVerticalOffset(bossId);
             for (var index = 0; index < bossHealthSegmentRects.Count; index++)
             {
                 var rect = bossHealthSegmentRects[index];
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, verticalOffset);
             }
+            if (bossHealthValueRect != null)
+            {
+                bossHealthValueRect.anchoredPosition =
+                    new Vector2(0f, verticalOffset + BossHealthValueVerticalNudge);
+                bossHealthValueRect.localScale = Vector3.one * BossHealthValueScale(bossId);
+            }
         }
+
+        public static float BossHealthValueScale(string bossId) => bossId == "imugi" ? .85f : 1f;
+
+        public static float BossHealthContentVerticalOffset(string bossId) =>
+            bossId switch
+            {
+                "mother_bulgasari" => -6.75f,
+                // These offsets follow the delivered frame artwork. After correcting the
+                // Gangcheol/King row mapping, their previously calibrated offsets swap too.
+                "king_dokkaebi" => -4.125f,
+                "gangcheol_boss" => -7.5f,
+                "imugi" => -6f,
+                _ => -3.75f
+            };
 
         private Sprite ResolveBossHealthArt(string bossId)
         {
@@ -1620,7 +1699,7 @@ namespace Nyangbingo.UI
                 var visibleWidth = Mathf.Clamp(remainingWidth, 0f, segmentWidth);
                 var fill = bossHealthBarFills[index];
                 var fillRect = fill.rectTransform;
-                fillRect.sizeDelta = new Vector2(visibleWidth, 5f);
+                fillRect.sizeDelta = new Vector2(visibleWidth, BossHealthSegmentHeight);
                 fill.enabled = visibleWidth > 0f;
                 remainingWidth -= segmentWidth;
             }
@@ -1677,6 +1756,9 @@ namespace Nyangbingo.UI
                 bossManager.BossEnded -= HandleBossEnded;
             }
             if (runtimeBossHealthSprite != null) Destroy(runtimeBossHealthSprite);
+            if (bootstrap?.TimeService != null) bootstrap.TimeService.Dawn -= HandleDayCounterDawn;
+            if (dayCounterScrollPresenter != null)
+                dayCounterScrollPresenter.PresentationCompleted -= HandleDayCounterPresentationCompleted;
             GameEvents.OnSealChanged -= RefreshStatus;
             GameEvents.OnBaekjungStart -= HandleBaekjungStarted;
             GameEvents.OnBaekjungEnd -= HandleBaekjungEnded;

@@ -1015,6 +1015,10 @@ namespace Nyangbingo.Debugging
             valid &= time.RestoreTimeState(4, 0f, false) && nap.TryStart(true, true) &&
                      nap.Wake(NapWakeReason.WallDamaged) &&
                      nap.LastWakeReason == NapWakeReason.WallDamaged;
+            valid &= time.RestoreTimeState(5, 0f, false) && nap.TryStart(true, true);
+            nap.ResetForSaveRestore();
+            valid &= !nap.IsNapping && Mathf.Approximately(time.TimeScale, 1f) &&
+                     Mathf.Approximately(recoveryMultiplier, 1f);
             nap.Dispose();
             Destroy(timeObject);
 
@@ -1502,9 +1506,9 @@ namespace Nyangbingo.Debugging
                 FanItemIds.Cheolseon, "frostclaw_gauntlet", FanItemIds.Hapjukseon
             };
             var tiers = new[] { "1", "2", "3", "W1", "E1", "W2", "U1" };
-            var damages = new[] { 5, 8, 20, 7, 6, 28, 0 };
+            var damages = new[] { 15, 24, 42, 20, 18, 60, 0 };
             var attacksPerSecond = new[] { 1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 0f };
-            var dps = new[] { 7.5f, 12f, 30f, 10.5f, 9f, 42f, 0f };
+            var dps = new[] { 22.5f, 36f, 63f, 30f, 27f, 90f, 0f };
             var knockbacks = new[] { .5f, 1f, 1.5f, 2f, 1.5f, 1.5f, 2f };
             var ranges = new[] { 1.5f, 1.5f, 2f, 2f, 2f, 2f, 2f };
             var arcs = new[] { 90f, 90f, 120f, 90f, 90f, 120f, 90f };
@@ -1530,33 +1534,33 @@ namespace Nyangbingo.Debugging
             firstTarget.transform.position = Vector3.right;
             firstTarget.AddComponent<BoxCollider2D>();
             var firstHealth = firstTarget.AddComponent<Health>();
-            firstHealth.ConfigureForRuntime(10);
+            firstHealth.ConfigureForRuntime(100);
             var secondTarget = new GameObject("TemporaryImportedCombatProfileTargetB");
             secondTarget.transform.position = new Vector3(1.5f, .2f, 0f);
             secondTarget.AddComponent<BoxCollider2D>();
             var secondHealth = secondTarget.AddComponent<Health>();
-            secondHealth.ConfigureForRuntime(10);
+            secondHealth.ConfigureForRuntime(100);
             Physics2D.SyncTransforms();
 
             var hapjukseonConfigured = attack.ConfigureForRuntime(attacker.transform, Physics2D.AllLayers,
                 gameDataCatalog.FindCombatProfile(FanItemIds.Hapjukseon));
             attack.Strike(Vector2.right);
-            var noBasicAttack = firstHealth.Current == 10 && secondHealth.Current == 10 && !attack.HitsWalls;
+            var noBasicAttack = firstHealth.Current == 100 && secondHealth.Current == 100 && !attack.HitsWalls;
             var cheolseonConfigured = attack.ConfigureForRuntime(attacker.transform, Physics2D.AllLayers,
                 gameDataCatalog.FindCombatProfile(FanItemIds.Cheolseon));
             attack.Strike(Vector2.right);
-            var cheolseonSwing = firstHealth.Current == 4 && secondHealth.Current == 4 && !attack.HitsWalls;
+            var cheolseonSwing = firstHealth.Current == 82 && secondHealth.Current == 82 && !attack.HitsWalls;
 
-            firstHealth.RestoreCurrent(10);
-            secondHealth.RestoreCurrent(10);
+            firstHealth.RestoreCurrent(100);
+            secondHealth.RestoreCurrent(100);
             var emptyMaskFallbackConfigured = attack.ConfigureForRuntime(attacker.transform, default,
                 gameDataCatalog.FindCombatProfile("bare_claw"));
             attack.Strike(Vector2.right);
-            var emptyMaskFallbackDamaged = firstHealth.Current == 5 && secondHealth.Current == 5 &&
+            var emptyMaskFallbackDamaged = firstHealth.Current == 85 && secondHealth.Current == 85 &&
                                            attack.LastHitCount == 2;
             var healthBar = firstTarget.AddComponent<RuntimeWorldHealthBar>();
             healthBar.ConfigureForRuntime(firstHealth, null);
-            var healthBarMatches = Mathf.Approximately(healthBar.FillRatio, .5f) &&
+            var healthBarMatches = Mathf.Approximately(healthBar.FillRatio, .85f) &&
                                    firstTarget.transform.Find("HealthBar") != null;
             var bossHealthRatioMatches =
                 Mathf.Approximately(MainGameHudController.CalculateHealthRatio(450, 900), .5f) &&
@@ -1671,12 +1675,22 @@ namespace Nyangbingo.Debugging
                                Mathf.Approximately(brain.FrostSpeedMultiplier, .7f);
             brain.Tick(1f);
             frostApplied &= Mathf.Approximately(brain.FrostSlowRemaining, 1f);
+            var brainRecord = new YokaiStateRecord();
+            brain.CaptureSaveState(brainRecord);
+            var restoredTarget = new GameObject("TemporaryRestoredIceSteelClawTarget");
+            restoredTarget.AddComponent<Health>();
+            var restoredBrain = restoredTarget.AddComponent<YokaiBrain>();
+            restoredBrain.ConfigureForRuntime(definition, null);
+            var brainStateRestored = restoredBrain.RestoreSaveState(brainRecord) &&
+                                     Mathf.Approximately(restoredBrain.FrostSlowRemaining, 1f) &&
+                                     Mathf.Approximately(restoredBrain.FrostSpeedMultiplier, .7f);
 
             Destroy(attacker);
             Destroy(target);
+            Destroy(restoredTarget);
             Destroy(definition);
 
-            if (slowConfigured && frostMathMatches && wideMiningMatches && frostApplied)
+            if (slowConfigured && frostMathMatches && wideMiningMatches && frostApplied && brainStateRestored)
                 Debug.Log("[Nyangbingo] T3 ice-steel claw applies 30% frost slow for 2 seconds and mines two vertical tiles in one-tile time.");
             else Debug.LogError("[Nyangbingo] T3 ice-steel claw ability contract failed.");
         }
@@ -1857,25 +1871,25 @@ namespace Nyangbingo.Debugging
             var imugi = gameDataCatalog.FindBoss("imugi");
             var gangcheori = gameDataCatalog.FindBoss("gangcheol_boss");
 
-            var valid = MatchesBossDefinition(goblinChief, BossKind.GoblinChief, 2400, 200f,
+            var valid = MatchesBossDefinition(goblinChief, BossKind.GoblinChief, 13800, 383.3f,
                             "ssireum_satba", CraftingStation.Workbench, false, 0,
                             20f, 20f, 20f, 12, 0.75f, BossSpecialShape.Box, 3.25f, 0f, 12, 0f, 0f, 4f, 8f,
                             false, true, ItemMvpScope.A,
                             new[] { "club_shard:1", "hemp_stalk:10", "wood:5" },
                             "yokai_tear:3", "dokkaebi_fire_essence:1", "club_shard:2") &&
-                        MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 3000, 285.7f,
+                        MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 6500, 216.7f,
                             "iron_bait_pile", CraftingStation.Furnace, false, 0,
                             24f, 48f, 0f, 14, 1f, BossSpecialShape.Cone, 4f, 60f, 10, 2f, 1f, 4f, 6f,
                             true, true, ItemMvpScope.B,
                             new[] { "iron_ingot:10", "iron_scale:3", "coal:5" },
                             "yokai_tear:4", "iron_forge_core:1", "iron_scale:4") &&
-                        MatchesBossDefinition(imugi, BossKind.Imugi, 6600, 220f,
+                        MatchesBossDefinition(imugi, BossKind.Imugi, 11000, 174.6f,
                             "ice_altar_offering", CraftingStation.IceAnvil, true, 0,
                             30f, 30f, 30f, 16, 1.5f, BossSpecialShape.Box, 4f, 0f, 18, 0f, 0f, 3f, 12f,
                             false, true, ItemMvpScope.B,
                             new[] { "icesteel_ingot:2", "frost_essence:2", "ice_shard:10" },
                             "yokai_tear:8", "yeouiju:1") &&
-                        MatchesBossDefinition(gangcheori, BossKind.Gangcheori, 2000, 47.6f,
+                        MatchesBossDefinition(gangcheori, BossKind.Gangcheori, 2000, 22.2f,
                             "drought_talisman", CraftingStation.IceAnvil, false, 30,
                             40f, 40f, 40f, 18, 1f, BossSpecialShape.Cone, 5f, 60f, 12, 3f, 1f, 0f, 5f,
                             true, true, ItemMvpScope.A,
@@ -2862,12 +2876,10 @@ namespace Nyangbingo.Debugging
             var newGameSlot = -1;
             shell.NewGameRequested += slot => newGameSlot = slot;
             shell.RequestNewGame();
-            var replaceConfirmation = shell.Screen == GameShellScreen.Confirmation &&
-                                      shell.PendingConfirmation == GameShellConfirmation.ReplaceSlotOne;
-            var cancelToTitle = shell.CancelConfirmation() && shell.Screen == GameShellScreen.Title;
-            shell.RequestNewGame();
-            var newGameStarted = shell.Confirm() && shell.Screen == GameShellScreen.Gameplay &&
-                                 newGameSlot == GameShellController.AutoSaveSlot;
+            var newGameRequested = shell.Screen == GameShellScreen.Title &&
+                                   newGameSlot == GameShellController.AutoSaveSlot;
+            shell.EnterGameplay(new SaveGame { day = 1 });
+            var newGameStarted = newGameRequested && shell.Screen == GameShellScreen.Gameplay;
 
             var paused = shell.OpenPause() && shell.Screen == GameShellScreen.Pause &&
                          Mathf.Approximately(Time.timeScale, 0f);
@@ -2887,7 +2899,6 @@ namespace Nyangbingo.Debugging
             var gameplayStarted = shell.TryContinue();
             shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
             shell.RequestNewGame();
-            shell.Confirm();
             shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
             shell.TryContinue();
             shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
@@ -2916,8 +2927,8 @@ namespace Nyangbingo.Debugging
             Screen.fullScreen = originalFullscreen;
             Destroy(shellObject);
 
-            if (statsTracked && statsSaved && titleMatches && replaceConfirmation && cancelToTitle &&
-                newGameStarted && paused && settingsOpened && settingsApplied && settingsClosed &&
+            if (statsTracked && statsSaved && titleMatches && newGameStarted &&
+                paused && settingsOpened && settingsApplied && settingsClosed &&
                 returnWarning && cancelToPause && resumed && gameplayStarted && endingPolicy && resultMatches &&
                 resultSingleExit && demoGuard && desktopQuit)
                 Debug.Log("[Nyangbingo] Game shell title, pause, settings, confirmation, and D30 result flow completed.");
@@ -3946,6 +3957,7 @@ namespace Nyangbingo.Debugging
             var dawnController = new DevBTestBaekjungSpawnController();
             var dawnScheduler = new BaekjungScheduler(new[] { importedBaekjungEvent });
             var dawnWaveSpawner = new BaekjungWaveSpawner(dawnScheduler, dawnController);
+            BaekjungWaveSpawner restoredQueueSpawner = null;
             try
             {
                 var started = scheduler.TryStartNight(importedBaekjungEvent.Day);
@@ -3985,6 +3997,34 @@ namespace Nyangbingo.Debugging
                 var maxActiveRespected = capController.ActiveRaidCount == importedBaekjungEvent.MaxActive &&
                     capController.ResidentCount == 50 && capController.Records.Count == 1 &&
                     cappedWaveSpawner.PendingCount == firstWaveCount - 1;
+                var capturedPendingKinds = cappedWaveSpawner.CapturePendingKinds();
+                var restoredQueueScheduler = new BaekjungScheduler(new[] { importedBaekjungEvent });
+                var restoredQueueController = new DevBTestBaekjungSpawnController();
+                restoredQueueController.SeedActive(importedBaekjungEvent.MaxActive);
+                var schedulerStateRestored =
+                    restoredQueueScheduler.RestoreState(capScheduler.CaptureState());
+                restoredQueueSpawner = new BaekjungWaveSpawner(
+                    restoredQueueScheduler, restoredQueueController);
+                var pendingDefinitions = new System.Collections.Generic.List<YokaiDefinition>();
+                for (var pendingIndex = 0; pendingIndex < capturedPendingKinds.Count; pendingIndex++)
+                {
+                    var pendingKind = capturedPendingKinds[pendingIndex];
+                    YokaiDefinition pendingDefinition = null;
+                    for (var yokaiIndex = 0; yokaiIndex < gameDataCatalog.Yokai.Count; yokaiIndex++)
+                    {
+                        var candidate = gameDataCatalog.Yokai[yokaiIndex];
+                        if (candidate != null && candidate.Kind == pendingKind)
+                        {
+                            pendingDefinition = candidate;
+                            break;
+                        }
+                    }
+                    pendingDefinitions.Add(pendingDefinition);
+                }
+                var pendingQueueRestored = schedulerStateRestored &&
+                    restoredQueueSpawner.RestorePendingDefinitions(pendingDefinitions) &&
+                    restoredQueueSpawner.PendingCount == capturedPendingKinds.Count &&
+                    restoredQueueController.Records.Count == 0;
                 capController.DefeatRaid(1);
                 var singleSlotRetriedAutomatically = capController.ActiveRaidCount == importedBaekjungEvent.MaxActive &&
                     capController.Records.Count == 2 && cappedWaveSpawner.PendingCount == firstWaveCount - 2;
@@ -4009,7 +4049,8 @@ namespace Nyangbingo.Debugging
                 var dawnEnded = dawnScheduler.TryEndAtDawn();
 
                 if (started && scheduler.IsScheduleComplete && allWavesMatch && cappedStarted && maxActiveRespected &&
-                    singleSlotRetriedAutomatically && overflowRetriedWithoutDuplicates && dawnStarted &&
+                    pendingQueueRestored && singleSlotRetriedAutomatically &&
+                    overflowRetriedWithoutDuplicates && dawnStarted &&
                     queuedBeforeDawn && discardedAtFleeTime && noSpawnAfterDawnWarning && dawnEnded)
                     Debug.Log("[Nyangbingo] Baekjung raid-only cap, automatic overflow queue, and dawn discard completed.");
                 else Debug.LogError("[Nyangbingo] Baekjung wave spawn request test failed.");
@@ -4019,6 +4060,7 @@ namespace Nyangbingo.Debugging
                 waveSpawner.Dispose();
                 cappedWaveSpawner.Dispose();
                 dawnWaveSpawner.Dispose();
+                restoredQueueSpawner?.Dispose();
             }
         }
 
@@ -4033,6 +4075,8 @@ namespace Nyangbingo.Debugging
             var regularSpawnController = gameObject.AddComponent<DevBTestSpawnController>();
             var scheduler = new BaekjungScheduler(new[] { importedBaekjungEvent });
             var gate = new BaekjungRegularSpawnGate(scheduler, regularSpawnController);
+            var restoredRegularController = gameObject.AddComponent<DevBTestSpawnController>();
+            BaekjungRegularSpawnGate restoredGate = null;
             var endedCount = 0;
             System.Action<DayEventDefinition> onEnded = _ => endedCount++;
             scheduler.Ended += onEnded;
@@ -4042,13 +4086,21 @@ namespace Nyangbingo.Debugging
                     regularSpawnController.IsRegularSpawning;
                 var started = scheduler.TryStartNight(importedBaekjungEvent.Day);
                 var pausedAtStart = !regularSpawnController.IsRegularSpawning && scheduler.IsActive;
+                var restoredScheduler = new BaekjungScheduler(new[] { importedBaekjungEvent });
+                var restoredActiveState = restoredScheduler.RestoreState(scheduler.CaptureState());
+                restoredGate = new BaekjungRegularSpawnGate(restoredScheduler, restoredRegularController);
+                var restoredGatePaused = restoredActiveState &&
+                    !restoredRegularController.IsRegularSpawning;
+                var restoredGateResumed = restoredScheduler.TryEndAtDawn() &&
+                    restoredRegularController.IsRegularSpawning;
                 var ended = scheduler.TryEndAtDawn();
                 var resumedAtDawn = regularSpawnController.IsRegularSpawning && scheduler.HasEnded && !scheduler.IsActive;
                 var duplicateEndRejected = !scheduler.TryEndAtDawn();
                 scheduler.Tick(300f);
                 var noWavesAfterDawn = scheduler.DispatchedWaveCount == 1;
 
-                if (wrongDayRejected && started && pausedAtStart && ended && resumedAtDawn && duplicateEndRejected &&
+                if (wrongDayRejected && started && pausedAtStart && restoredGatePaused &&
+                    restoredGateResumed && ended && resumedAtDawn && duplicateEndRejected &&
                     endedCount == 1 && noWavesAfterDawn)
                     Debug.Log("[Nyangbingo] Baekjung regular spawn pause and dawn resume completed.");
                 else Debug.LogError("[Nyangbingo] Baekjung regular spawn gate test failed.");
@@ -4057,7 +4109,9 @@ namespace Nyangbingo.Debugging
             {
                 scheduler.Ended -= onEnded;
                 gate.Dispose();
+                restoredGate?.Dispose();
                 Destroy(regularSpawnController);
+                Destroy(restoredRegularController);
             }
         }
 
@@ -4727,8 +4781,11 @@ namespace Nyangbingo.Debugging
                     Mathf.Approximately(restoredTimeSource.TimeOfDayGameSeconds, 222f);
                 var bossOmitted = !serialized.Contains("\"activeBoss\"") && !loaded.activeBoss.active &&
                                   !restoredBossManager.IsBossActive && restoredSpawnController.IsRegularSpawning;
+                playerHealth.ApplyDamage(int.MaxValue, DamageTag.Melee);
+                var deadCaptureRejected = !PlayerTimeBossSaveAdapter.Capture(
+                    new SaveGame(), playerObject.transform, playerHealth, timeSource, bossManager);
 
-                if (captured && restored && playerMatches && timeMatches && bossOmitted)
+                if (captured && restored && playerMatches && timeMatches && bossOmitted && deadCaptureRejected)
                     Debug.Log("[Nyangbingo] Player/time save omits active boss and restores without boss spawn completed.");
                 else Debug.LogError("[Nyangbingo] Active boss no-serialize capture or restore test failed.");
             }
@@ -4795,7 +4852,7 @@ namespace Nyangbingo.Debugging
             bossHealth.ConfigureForRuntime(10);
             var bossStarted = bossManager.TryStart(bossDefinition, bossHealth);
             var saveManager = gameObject.AddComponent<SaveManager>();
-            const int testSlot = 2;
+            const int testSlot = 0;
             saveManager.Delete(testSlot);
             var snapshot = new SaveGame { seed = 913 };
             var manualBlocked = !saveManager.TrySaveManual(testSlot, snapshot, bossManager) &&

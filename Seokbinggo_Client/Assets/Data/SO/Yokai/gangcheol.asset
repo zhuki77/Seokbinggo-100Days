@@ -18,7 +18,7 @@ MonoBehaviour:
   codexNote: "\uBE0C\uB808\uC2A4 \uB300\uC778 12/\uCD08\xD73\uCD08\xB7\uCFE85\uCD08\xB7\uBD80\uCC44\uAF34
     5\uD0C0\uC77C \u2014 \uD574\uD0DC \uBC18\uACBD -50%"
   kind: 4
-  hitPoints: 2000
+  hitPoints: 16000
   moveSpeed: 1.2
   contactDamage: 18
   contactDamageNoLantern: 18

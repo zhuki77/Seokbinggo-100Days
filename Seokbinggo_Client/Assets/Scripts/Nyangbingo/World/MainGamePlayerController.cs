@@ -252,8 +252,11 @@ namespace Nyangbingo.World
             grounded = IsStandingOnForeground();
             initialized = activeProfile != null;
             if (initialized)
+            {
+                SnapCameraToPlayer();
                 Debug.Log($"[Nyangbingo] MainGamePlayerController: 이동·체력·근접 공격·카메라 연결 완료 " +
                           $"(speed={currentMoveSpeed:0.##}, profile={ActiveCombatProfileId}).");
+            }
             return initialized;
         }
 
@@ -549,19 +552,65 @@ namespace Nyangbingo.World
             return orthographicSize * SurfaceCameraOffsetRatio * surfaceBlend;
         }
 
-        private void LateUpdate()
+        public void SnapCameraToPlayer()
         {
-            if (!initialized || followCamera == null) return;
+            followCamera ??= Camera.main;
+            if (followCamera == null) return;
+            if (followCamera.orthographic)
+                followCamera.orthographicSize = GameplayCameraOrthographicSize;
+            followCamera.transform.position = ResolveCameraTargetPosition();
+        }
+
+        public bool ResetTransientStateAfterSaveRestore()
+        {
+            // MainGameSaveCoordinator performs its editor round-trip validation before this
+            // component's normal Start/Initialize pass. There is no transient motion or death
+            // state to clear yet in that phase, so it is already a valid reset.
+            if (!initialized) return true;
+            dead = false;
+            respawnApplied = false;
+            deathSequenceElapsed = 0f;
+            movementInput = Vector2.zero;
+            verticalVelocity = 0f;
+            bossKnockbackHorizontalVelocity = 0f;
+            bossKnockbackRemainingSeconds = 0f;
+            attackCooldown = 0f;
+            grounded = false;
+            airJumpConsumed = false;
+            if (body != null)
+            {
+                body.position = transform.position;
+                body.linearVelocity = Vector2.zero;
+                body.angularVelocity = 0f;
+            }
+            if (playerCollider != null) playerCollider.enabled = true;
+            if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
+            transform.rotation = aliveRotation;
+            characterAnimator?.ResetToIdle();
+            SetDeathFadeAlpha(0f);
+            SnapCameraToPlayer();
+            return true;
+        }
+
+        private Vector3 ResolveCameraTargetPosition()
+        {
             var current = followCamera.transform.position;
             parallaxBackground ??= followCamera.GetComponent<MainGameParallaxBackground>();
             var verticalOffset = parallaxBackground != null && followCamera.orthographic
                 ? CalculateSurfaceCameraVerticalOffset(transform.position.y,
                     parallaxBackground.UndergroundThreshold, followCamera.orthographicSize)
                 : 0f;
-            var target = new Vector3(transform.position.x, transform.position.y + verticalOffset, current.z);
+            return new Vector3(transform.position.x, transform.position.y + verticalOffset, current.z);
+        }
+
+        private void LateUpdate()
+        {
+            if (!initialized || followCamera == null) return;
+            var current = followCamera.transform.position;
+            var target = ResolveCameraTargetPosition();
             var factor = cameraFollowSharpness <= 0f
                 ? 1f
-                : 1f - Mathf.Exp(-cameraFollowSharpness * Time.unscaledDeltaTime);
+                : 1f - Mathf.Exp(-cameraFollowSharpness * Time.deltaTime);
             followCamera.transform.position = Vector3.Lerp(current, target, factor);
         }
 
@@ -960,10 +1009,11 @@ namespace Nyangbingo.World
         private void ApplyRespawn()
         {
             respawnApplied = true;
-            var respawnPosition = initialSpawnPosition;
+            var preferredRespawnPosition = initialSpawnPosition;
             if (environmentState != null &&
                 environmentState.TryGetNearestPlacedObjectPosition(NestBedId, transform.position, out var nestPosition))
-                respawnPosition = nestPosition;
+                preferredRespawnPosition = nestPosition;
+            var respawnPosition = ResolveSafeSurfaceRespawn(preferredRespawnPosition);
             transform.position = respawnPosition;
             if (body != null) body.position = respawnPosition;
             verticalVelocity = 0f;
@@ -977,6 +1027,40 @@ namespace Nyangbingo.World
             var temperature = runtimeServices?.PlayerTemperature;
             if (temperature != null) temperature.Restore(temperature.StartingTemperature);
             if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
+        }
+
+        private Vector2 ResolveSafeSurfaceRespawn(Vector2 preferredPosition)
+        {
+            var session = bootstrap?.Session;
+            var resolver = session?.SafeSpawnResolver;
+            var halfExtent = playerCollider != null
+                ? Mathf.Max(.05f, playerCollider.radius * Mathf.Abs(transform.lossyScale.y))
+                : .38f;
+            var preferredCellX = Mathf.FloorToInt(preferredPosition.x);
+
+            if (resolver != null &&
+                resolver.TryResolveSafeSurfaceSpawn(preferredCellX, halfExtent, out var safeSpawn))
+            {
+                Debug.Log($"[Nyangbingo] MainGamePlayerController: death respawn resolved to safe surface " +
+                          $"(preferred={preferredPosition}, player={safeSpawn}).");
+                return safeSpawn;
+            }
+
+            var generatedSpawn = session != null
+                ? session.LastResult.spawnPoint
+                : default(Vector2Int);
+            if (resolver != null && generatedSpawn.x != preferredCellX &&
+                resolver.TryResolveSafeSurfaceSpawn(generatedSpawn.x, halfExtent, out safeSpawn))
+            {
+                Debug.LogWarning($"[Nyangbingo] MainGamePlayerController: preferred death respawn column was unsafe; " +
+                                 $"using generated safe surface spawn (preferred={preferredPosition}, " +
+                                 $"generated={generatedSpawn}, player={safeSpawn}).");
+                return safeSpawn;
+            }
+
+            Debug.LogError($"[Nyangbingo] MainGamePlayerController: failed to resolve a safe surface death respawn; " +
+                           $"falling back to initial spawn ({initialSpawnPosition}).");
+            return initialSpawnPosition;
         }
 
         private void EnsureDeathFade()
