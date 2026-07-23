@@ -9222,10 +9222,10 @@ MonoBehaviour:
   audioMixer: {fileID: 0}
   bgmOutput: {fileID: 0}
   sfxOutput: {fileID: 0}
-  dayMusic: {fileID: 0}
-  nightMusic: {fileID: 0}
-  bossMusic: {fileID: 0}
-  baekjungPercussion: {fileID: 0}
+  dayMusic: {fileID: 8300000, guid: 92859d73bb4eb324b8c52cb8c2804d29, type: 3}
+  nightMusic: {fileID: 8300000, guid: f2a38f14988977547abea7a85aebb185, type: 3}
+  bossMusic: {fileID: 8300000, guid: fa311dd0dbf8d134fbcf64b4b69a151d, type: 3}
+  baekjungPercussion: {fileID: 8300000, guid: b869017c42c6c1c4887c35e69b816171, type: 3}
   sfxClips: []
 --- !u!114 &1401646107
 MonoBehaviour:
