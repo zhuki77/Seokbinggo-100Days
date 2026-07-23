@@ -457,6 +457,7 @@ namespace Nyangbingo.World
             EnsureOnboardingResourcesNearSpawn(grid, surfaceHeights, structures.spawnPoint, config);
             // A-18: 스폰 발밑 최종 보강
             ReinforceSafeSpawnFooting(grid, surfaceHeights, structures.spawnPoint, config);
+            PopulateNaturalCaveBackgrounds(grid, surfaceHeights, config);
 
             return new WorldGenerationResult
             {
@@ -876,6 +877,34 @@ namespace Nyangbingo.World
             WorldLayer.Middle => WorldTileTypes.BackgroundStone,
             _ => WorldTileTypes.BackgroundDeep
         };
+
+        /// <summary>
+        /// 생성 과정에서 뚫린 지하 공기 칸에 지층별 자연 배경을 채운다.
+        /// 기존 배경과 지상 공기는 유지하며, 채굴 후 남는 자연 배경과 같은 데이터를 사용한다.
+        /// </summary>
+        private static void PopulateNaturalCaveBackgrounds(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config)
+        {
+            var width = grid.GetLength(0);
+            var height = grid.GetLength(1);
+
+            for (var x = 0; x < width; x++)
+            {
+                var surfaceY = surfaceHeights[x];
+                for (var y = config.BedrockThickness; y < height; y++)
+                {
+                    var tile = grid[x, y];
+                    if (!tile.IsAir || tile.HasBackground || tile.HasNaturalBackground)
+                        continue;
+
+                    var layer = ClassifyLayer(y, surfaceY, config);
+                    if (layer == WorldLayer.Surface || layer == WorldLayer.Bedrock)
+                        continue;
+
+                    grid[x, y] = TileData.CreateCaveAir(BackgroundElementFor(layer));
+                }
+            }
+        }
 
         /// <summary>
         /// 연결 통로(Pass 4b) 굴착 금지. 다음이면 절대 Air로 파지 않는다.

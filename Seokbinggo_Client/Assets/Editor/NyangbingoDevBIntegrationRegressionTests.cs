@@ -31,6 +31,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestDemoSafeSpawnRestorePolicy();
         TestLatestProductFlowContracts();
         TestPlayerPhysicsIntegrationContract();
+        TestSurfaceCameraCompositionContract();
         TestMeleeArcAttackPhysicsQueryContract();
         TestWorldMobPhysicsContract();
         TestWorldDropVisualSurfaceOffset();
@@ -39,7 +40,32 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestDeliveredShellGlyphArtContract();
         TestCraftAndPlacementActionsRemainIndependent();
         TestRuntimeTileEdgeOverlayWiring();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (21/21).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (22/22).");
+    }
+
+    private static void TestSurfaceCameraCompositionContract()
+    {
+        const float undergroundThreshold = 123.2f;
+        const float orthographicSize = MainGamePlayerController.GameplayCameraOrthographicSize;
+
+        Require(Mathf.Approximately(orthographicSize, 8f),
+            "The runtime gameplay camera must keep the requested close-up framing.");
+        Require(Mathf.Approximately(
+                MainGamePlayerController.CalculateSurfaceCameraVerticalOffset(
+                    undergroundThreshold + 8f, undergroundThreshold, orthographicSize),
+                4f),
+            "At the surface, the camera must move up by half its orthographic size so terrain " +
+            "occupies one quarter rather than one half of the viewport.");
+        Require(Mathf.Approximately(
+                MainGamePlayerController.CalculateSurfaceCameraVerticalOffset(
+                    undergroundThreshold + 4f, undergroundThreshold, orthographicSize),
+                2f),
+            "The surface camera offset must blend out smoothly through the eight-tile transition.");
+        Require(Mathf.Approximately(
+                MainGamePlayerController.CalculateSurfaceCameraVerticalOffset(
+                    undergroundThreshold, undergroundThreshold, orthographicSize),
+                0f),
+            "Underground camera framing must remain centered on the player.");
     }
 
     private static void TestDeliveredShellGlyphArtContract()
@@ -199,11 +225,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
             var boss = new GameObject("BossTarget", typeof(Health), typeof(CircleCollider2D));
             boss.transform.SetParent(root.transform, false);
-            boss.transform.position = new Vector3(1.4f, .1f, 0f);
+            boss.transform.position = new Vector3(2.8f, .1f, 0f);
+            boss.GetComponent<CircleCollider2D>().radius = .2f;
             var bossHealth = boss.GetComponent<Health>();
             bossHealth.ConfigureForRuntime(200);
             var bossDamageEvents = 0;
             bossHealth.Damaged += (_, __) => bossDamageEvents++;
+            var bossSpriteEdge = new GameObject("BossSpriteEdgeHurtbox", typeof(BoxCollider2D));
+            bossSpriteEdge.transform.SetParent(boss.transform, false);
+            bossSpriteEdge.transform.localPosition = new Vector3(-1f, 0f, 0f);
+            bossSpriteEdge.GetComponent<BoxCollider2D>().size = new Vector2(.4f, 1f);
+            bossSpriteEdge.GetComponent<BoxCollider2D>().isTrigger = true;
 
             var rearTarget = new GameObject("RearTarget", typeof(Health), typeof(BoxCollider2D));
             rearTarget.transform.SetParent(root.transform, false);
@@ -227,7 +259,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     rearHealth.Current == 100 && distantHealth.Current == 100,
                 "A melee swing must damage only forward in-range yokai and boss targets, never self or excluded targets.");
             Require(attack.LastHitCount == 2 && yokaiDamageEvents == 1 && bossDamageEvents == 1,
-                "Physical and trigger colliders belonging to one combatant must resolve to exactly one melee hit.");
+                "A boss sprite edge hurtbox must take one melee hit even when its movement core is out of range.");
         }
         finally
         {
@@ -265,6 +297,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 physics, fixedDeltaSeconds, holdFrames: 3);
             Require(fullPeak >= 3.1f && fullPeak <= 3.9f && shortPeak < fullPeak * .65f,
                 "Full and released-early jumps must preserve the catalog-driven Terraria-like height split.");
+            var airborneVelocity =
+                MainGamePlayerController.CalculateBossAirborneVelocity(2f, physics.Gravity);
+            var airbornePeak = airborneVelocity * airborneVelocity / (2f * physics.Gravity);
+            Require(Mathf.Abs(airbornePeak - 2f) <= .001f,
+                "A two-tile boss airborne request must resolve to a two-tile player launch apex.");
 
             var fallingVelocity = 0f;
             for (var step = 0; step < 240; step++)
@@ -412,10 +449,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 WorldMobPhysicsBody.PhysicalRadiusForBoss(Nyangbingo.Core.BossKind.Imugi) < .4f &&
                 WorldMobPhysicsBody.PhysicalRadiusForBoss(Nyangbingo.Core.BossKind.Gangcheori) < .4f,
             "Flying bosses need a narrow movement core for one-cell passages while ground bosses retain their body radius.");
-        Require(Mathf.Approximately(WorldMobPhysicsBody.GroundBossColliderVerticalOffset, .15f) &&
+        Require(Mathf.Approximately(
+                    WorldMobPhysicsBody.ColliderVerticalOffsetForBoss(
+                        Nyangbingo.Core.BossKind.GoblinChief),
+                    WorldMobPhysicsBody.PhysicalRadiusForBoss(
+                        Nyangbingo.Core.BossKind.GoblinChief)) &&
+                Mathf.Approximately(
+                    WorldMobPhysicsBody.ColliderVerticalOffsetForBoss(
+                        Nyangbingo.Core.BossKind.Imugi), 0f) &&
                 WorldMobPhysicsBody.StepJumpVelocityForCollider(.65f) >
                 WorldMobPhysicsBody.StepJumpVelocityForCollider(.42f),
-            "Ground bosses must align their feet to the surface and use a stronger one-tile step jump than ordinary yokai.");
+            "Ground bosses must align their bottom-pivot art to the surface while flying bosses retain a centered movement core.");
 
         var groundObject = new GameObject("GroundMobPhysicsContract", typeof(CircleCollider2D),
             typeof(Rigidbody2D), typeof(WorldMobPhysicsBody));
@@ -519,7 +563,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     encounterSource.Contains("WorldMobPhysicsBody.ForYokai(definition.Kind)") &&
                     encounterSource.Contains("WorldMobPhysicsBody.ForBoss(definition.Kind)") &&
                     encounterSource.Contains("bootstrap.TileService") &&
-                    encounterSource.Contains("new GameObject(\"BossHurtbox\")"),
+                    encounterSource.Contains("new GameObject(\"BossHurtbox\")") &&
+                    encounterSource.Contains(
+                        "locomotion == WorldMobLocomotion.Flying ? BossScale : 1f") &&
+                    encounterSource.Contains("ConfigureDetachedHurtboxBody"),
                 "MainGame encounter spawning must attach the shared world physics body to yokai and bosses.");
             var animatorSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
@@ -536,6 +583,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
             Require(animatorSource.Contains("ResolveFacingDirection") &&
                     animatorSource.Contains("targetOffset.magnitude > 1.5f"),
                 "A distant moving target must own horizontal facing so temporary detours do not visibly flip yokai every frame.");
+            var imugiBodySource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/RuntimeImugiBodyVisual.cs");
+            Require(imugiBodySource.Contains("RigidbodyType2D.Kinematic") &&
+                    imugiBodySource.Contains("EnsureDetachedBody") &&
+                    imugiBodySource.Contains("segmentWorldPositions") &&
+                    imugiBodySource.Contains("currentDistance > desiredDistance") &&
+                    imugiBodySource.Contains("facing = Vector2.right"),
+                "Imugi body hurtboxes must use detached kinematic bodies and follow the prior world-space trail instead of flipping instantly.");
+            Require(encounterSource.Contains("definition.Kind == BossKind.Imugi") &&
+                    encounterSource.Contains("characterAnimator.SetFacing(Vector2.right)"),
+                "Imugi must spawn facing right with its body initialized behind the head.");
         }
         finally
         {
@@ -724,6 +782,90 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Gangcheol must use the fourth Unity texture row of the boss health sheet.");
         Require(MainGameHudController.BossHealthArtRow("unknown") == -1,
             "Unknown bosses must not inherit another boss health frame.");
+
+        var characterCatalog = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(
+            "Assets/Art/Characters/CharacterArtCatalog.asset");
+        var kingEntry = characterCatalog != null ? characterCatalog.Find("king_dokkaebi") : null;
+        Require(kingEntry != null && kingEntry.SpecialFrames.Count == 5 &&
+                kingEntry.SpecialFrames[0] != null && kingEntry.SpecialFrames[0].name == "Frame_12" &&
+                kingEntry.SpecialFrames[1] != null && kingEntry.SpecialFrames[1].name == "Frame_13" &&
+                kingEntry.SpecialFrames[2] != null && kingEntry.SpecialFrames[2].name == "Frame_14" &&
+                kingEntry.SpecialFrames[3] != null && kingEntry.SpecialFrames[3].name == "Frame_15" &&
+                kingEntry.SpecialFrames[4] != null && kingEntry.SpecialFrames[4].name == "Frame_16",
+            "King Dokkaebi special attacks must play the delivered Frame_12 through Frame_16 sequence.");
+
+        var animatorObject =
+            new GameObject("KingSpecialAnimationPriority", typeof(SpriteRenderer),
+                typeof(RuntimeCharacterSpriteAnimator));
+        try
+        {
+            var animator = animatorObject.GetComponent<RuntimeCharacterSpriteAnimator>();
+            var renderer = animatorObject.GetComponent<SpriteRenderer>();
+            animator.Configure(kingEntry, 0);
+            typeof(RuntimeCharacterSpriteAnimator).GetMethod("PlaySpecial", InstanceMembers)
+                ?.Invoke(animator, null);
+            var specialOpeningFrame = renderer.sprite;
+            animator.PlayAttack();
+            Require(specialOpeningFrame != null && renderer.sprite == specialOpeningFrame &&
+                    renderer.sprite.name == "Frame_12",
+                "A contact attack event must not overwrite King Dokkaebi's active special animation.");
+            animator.AlignActionImpactFrame(3);
+            Require(renderer.sprite != null && renderer.sprite.name == "Frame_15",
+                "King Dokkaebi's damaging special frame must align exactly with Frame_15.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(animatorObject);
+        }
+
+        var motherEntry =
+            characterCatalog != null ? characterCatalog.Find("mother_bulgasari") : null;
+        var motherAnimatorObject =
+            new GameObject("MotherSpecialAttackImpact", typeof(SpriteRenderer),
+                typeof(RuntimeCharacterSpriteAnimator));
+        try
+        {
+            Require(motherEntry != null && motherEntry.AttackFrames.Count == 2 &&
+                    motherEntry.AttackFrames[1] != null &&
+                    motherEntry.AttackFrames[1].name == "Frame_8",
+                "Mother Bulgasari's raised-nose attack pose must remain bound to Frame_8.");
+            var animator = motherAnimatorObject.GetComponent<RuntimeCharacterSpriteAnimator>();
+            var renderer = motherAnimatorObject.GetComponent<SpriteRenderer>();
+            animator.Configure(motherEntry, 0);
+            animator.PlayAttack();
+            animator.AlignActionImpactFrame(1);
+            Require(renderer.sprite != null && renderer.sprite.name == "Frame_8",
+                "Each Mother Bulgasari special damage tick must align with the raised-nose frame.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(motherAnimatorObject);
+        }
+
+        var gangcheoriBody =
+            characterCatalog != null ? characterCatalog.FindSprite("gangcheol_body") : null;
+        Require(gangcheoriBody != null &&
+                AssetDatabase.GetAssetPath(gangcheoriBody) ==
+                "Assets/Art/Characters/gangcheol_body.png" &&
+                gangcheoriBody.texture.width == 8 && gangcheoriBody.texture.height == 8,
+            "Gangcheori must bind the delivered 8x8 body art from the latest resource package.");
+        var encounterSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(encounterSource.Contains("RuntimeGangcheoriBodyVisual") &&
+                encounterSource.Contains("FindSprite(\"gangcheol_body\")"),
+            "The Gangcheori boss must compose its delivered body segments behind the head.");
+        var gameplayCatalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(
+            "Assets/Art/Gameplay/GameplayArtCatalog.asset");
+        Require(gameplayCatalog != null &&
+                gameplayCatalog.GangcheoriSpecialFireFrames.Count == 4,
+            "Gangcheori must bind all four delivered 0.1-second fire effect frames.");
+        var bossCombatSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossCombatController.cs");
+        Require(bossCombatSource.Contains(
+                    "SetTelegraphVisible(definition.Kind != BossKind.Gangcheori)") &&
+                bossCombatSource.Contains(
+                    "SetSpecialEffectVisible(definition.Kind == BossKind.Gangcheori)"),
+            "Gangcheori's warning must hand off directly to the active fire effect.");
     }
 
     private static void TestDayNightCountdownFormatting()

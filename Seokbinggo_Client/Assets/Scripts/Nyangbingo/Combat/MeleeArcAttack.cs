@@ -131,9 +131,14 @@ namespace Nyangbingo.Combat
             foreach (var hit in overlapHits)
             {
                 if (hit == null) continue;
-                var toTarget = (Vector2)hit.transform.position - center;
-                if (toTarget.sqrMagnitude <= Mathf.Epsilon) continue;
-                if (Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
+                var attackOriginInsideTarget = hit.OverlapPoint(center);
+                var hitPoint = hit.ClosestPoint(center);
+                var toTarget = hitPoint - center;
+                if (toTarget.sqrMagnitude <= Mathf.Epsilon)
+                    toTarget = (Vector2)hit.bounds.center - center;
+                if (toTarget.sqrMagnitude <= Mathf.Epsilon) toTarget = direction;
+                if (!attackOriginInsideTarget &&
+                    Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
                 var health = hit.GetComponentInParent<Health>();
                 if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
                 var healthBeforeDamage = health.Current;

@@ -194,7 +194,7 @@ public static class NyangbingoMainGameSceneCreator
 
         var camera = cameraObject.AddComponent<Camera>();
         camera.orthographic = true;
-        camera.orthographicSize = 18f;
+        camera.orthographicSize = MainGamePlayerController.GameplayCameraOrthographicSize;
         camera.backgroundColor = new Color(0.035f, 0.045f, 0.07f, 1f);
         camera.clearFlags = CameraClearFlags.SolidColor;
         cameraObject.AddComponent<AudioListener>();
@@ -661,6 +661,9 @@ public static class NyangbingoMainGameSceneCreator
             playerController.GetComponent<Health>(), Object.FindAnyObjectByType<BossManager>(), bossStatus,
             deathPanel, slots, slotIcons, itemArtCatalog, temperatureArt, gameplayArtCatalog,
             craftingProgressPanel, craftingText, craftingFill, environmentArtCatalog);
+        titlePanel.SetActive(false);
+        inventoryPanel.SetActive(false);
+        turretBuildOpen.gameObject.SetActive(false);
         EditorUtility.SetDirty(codexController);
         EditorUtility.SetDirty(shell);
         EditorUtility.SetDirty(shellUi);

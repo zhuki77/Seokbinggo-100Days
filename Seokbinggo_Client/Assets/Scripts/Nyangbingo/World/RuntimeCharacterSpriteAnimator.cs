@@ -26,6 +26,7 @@ namespace Nyangbingo.World
         private float actionRemaining;
         private bool holdFinalFrame;
         private bool deathLocked;
+        private bool specialActionPlaying;
         private bool hasExplicitMovementState;
         private bool explicitlyMoving;
         private bool configured;
@@ -40,6 +41,7 @@ namespace Nyangbingo.World
             previousPosition = transform.position;
             configured = true;
             deathLocked = false;
+            specialActionPlaying = false;
             if (health != null) health.Damaged += HandleDamaged;
             PlayLoop(entry.IdleFrames);
         }
@@ -58,6 +60,7 @@ namespace Nyangbingo.World
 
         public void PlayAttack()
         {
+            if (specialActionPlaying) return;
             PlayAction(entry?.AttackFrames);
         }
 
@@ -65,6 +68,7 @@ namespace Nyangbingo.World
         {
             if (!configured || entry == null || entry.DeathFrames.Count == 0) return;
             deathLocked = true;
+            specialActionPlaying = false;
             activeFrames = entry.DeathFrames;
             frameIndex = 0;
             frameRemaining = FrameSeconds;
@@ -77,6 +81,7 @@ namespace Nyangbingo.World
         {
             if (!configured || entry == null) return;
             deathLocked = false;
+            specialActionPlaying = false;
             PlayLoop(entry.IdleFrames);
         }
 
@@ -92,20 +97,30 @@ namespace Nyangbingo.World
             if (bossCombat != null)
             {
                 bossCombat.Attacked -= PlayAttack;
-                bossCombat.SpecialStarted -= PlaySpecial;
+                bossCombat.SpecialAnimationStarted -= PlaySpecial;
             }
             bossCombat = combat;
             if (bossCombat != null)
             {
                 bossCombat.Attacked += PlayAttack;
-                bossCombat.SpecialStarted += PlaySpecial;
+                bossCombat.SpecialAnimationStarted += PlaySpecial;
             }
+        }
+
+        public void AlignActionImpactFrame(int index)
+        {
+            if (!configured || deathLocked || actionRemaining <= 0f || activeFrames == null ||
+                activeFrames.Count == 0) return;
+            frameIndex = Mathf.Clamp(index, 0, activeFrames.Count - 1);
+            frameRemaining = FrameSeconds;
+            ApplyFrame();
         }
 
         private void PlaySpecial()
         {
             var frames = entry?.SpecialFrames;
-            PlayAction(frames != null && frames.Count > 0 ? frames : entry?.AttackFrames);
+            specialActionPlaying =
+                PlayAction(frames != null && frames.Count > 0 ? frames : entry?.AttackFrames);
         }
 
         private void Update()
@@ -130,6 +145,7 @@ namespace Nyangbingo.World
             {
                 actionRemaining = Mathf.Max(0f, actionRemaining - Time.deltaTime);
                 TickFrames(Time.deltaTime);
+                if (actionRemaining <= 0f) specialActionPlaying = false;
                 return;
             }
 
@@ -161,15 +177,16 @@ namespace Nyangbingo.World
             ApplyFrame();
         }
 
-        private void PlayAction(IReadOnlyList<Sprite> frames)
+        private bool PlayAction(IReadOnlyList<Sprite> frames)
         {
-            if (!configured || deathLocked || frames == null || frames.Count == 0) return;
+            if (!configured || deathLocked || frames == null || frames.Count == 0) return false;
             activeFrames = frames;
             frameIndex = 0;
             frameRemaining = FrameSeconds;
             actionRemaining = frames.Count * FrameSeconds;
             holdFinalFrame = false;
             ApplyFrame();
+            return true;
         }
 
         private void TickFrames(float deltaTime)
@@ -199,7 +216,7 @@ namespace Nyangbingo.World
 
         private void HandleDamaged(Nyangbingo.Core.DamageTag tag, int amount)
         {
-            if (amount > 0) PlayAction(entry?.HitFrames);
+            if (amount > 0 && !specialActionPlaying) PlayAction(entry?.HitFrames);
         }
 
         private void OnDestroy()
@@ -209,7 +226,7 @@ namespace Nyangbingo.World
             if (bossCombat != null)
             {
                 bossCombat.Attacked -= PlayAttack;
-                bossCombat.SpecialStarted -= PlaySpecial;
+                bossCombat.SpecialAnimationStarted -= PlaySpecial;
             }
         }
     }

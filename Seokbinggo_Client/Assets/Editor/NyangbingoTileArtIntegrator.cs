@@ -73,6 +73,7 @@ namespace Nyangbingo.Editor
                 ["yakwang"] = "yakwang.aseprite",
                 ["eoduksini"] = "eoduksini.aseprite",
                 ["gangcheol"] = "gangcheol.aseprite",
+                ["gangcheol_body"] = "gangcheol_body.png",
                 ["king_dokkaebi"] = "king_dokkaebi.aseprite",
                 ["mother_bulgasari"] = "mother_bulgasari.aseprite",
                 ["gangcheol_boss"] = "gangcheol.aseprite",
@@ -624,6 +625,7 @@ namespace Nyangbingo.Editor
             var napPath = $"{GameplayArtFolder}/zzz.aseprite";
             var miningPath = $"{GameplayArtFolder}/mining_crack.aseprite";
             var warningPath = $"{GameplayArtFolder}/boss_warning.aseprite";
+            var gangcheoriFirePath = $"{GameplayArtFolder}/gangcheori_special_fire.png";
             var projectilePath = $"{GameplayArtFolder}/blue_projectile.aseprite";
             ConfigureAsepriteImporter(temperaturePath, failures);
             ConfigureAsepriteImporter(attackPath, failures);
@@ -636,6 +638,10 @@ namespace Nyangbingo.Editor
             var napFrames = FindLongestAnimationFrames(napPath);
             var miningFrames = FindLongestAnimationFrames(miningPath);
             var warningFrames = FindLongestAnimationFrames(warningPath);
+            var gangcheoriFireFrames = AssetDatabase.LoadAllAssetsAtPath(gangcheoriFirePath)
+                .OfType<Sprite>()
+                .OrderBy(sprite => sprite.name, StringComparer.Ordinal)
+                .ToArray();
             var projectileFrames = FindLongestAnimationFrames(projectilePath);
             if (temperatureFrames.Count == 0) failures.Add("온도 HUD Sprite 프레임이 없습니다.");
             if (attackFrames.Count == 0) failures.Add("서리발톱 공격 이펙트 Sprite 프레임이 없습니다.");
@@ -643,6 +649,8 @@ namespace Nyangbingo.Editor
             if (miningFrames.Count == 0) failures.Add("채굴 균열 Sprite 프레임이 없습니다.");
             if (warningFrames.Count == 0) failures.Add("보스 경고 Sprite 프레임이 없습니다.");
             if (projectileFrames.Count == 0) failures.Add("파란 투사체 Sprite 프레임이 없습니다.");
+            if (gangcheoriFireFrames.Length == 0)
+                failures.Add("Gangcheori special fire effect frames are missing.");
             if (failures.Count > 0)
             {
                 Debug.LogError("[Nyangbingo] Combat/temperature art integration failed.\n- " +
@@ -662,6 +670,8 @@ namespace Nyangbingo.Editor
             SetSpriteArray(serializedCatalog.FindProperty("napFrames"), napFrames);
             SetSpriteArray(serializedCatalog.FindProperty("miningCrackFrames"), miningFrames);
             SetSpriteArray(serializedCatalog.FindProperty("bossWarningFrames"), warningFrames);
+            SetSpriteArray(serializedCatalog.FindProperty("gangcheoriSpecialFireFrames"),
+                gangcheoriFireFrames);
             SetSpriteArray(serializedCatalog.FindProperty("blueProjectileFrames"), projectileFrames);
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);

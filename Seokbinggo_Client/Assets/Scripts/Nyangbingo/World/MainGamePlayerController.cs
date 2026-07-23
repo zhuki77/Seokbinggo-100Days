@@ -16,6 +16,8 @@ namespace Nyangbingo.World
     [RequireComponent(typeof(MeleeArcAttack), typeof(SpriteRenderer))]
     public sealed class MainGamePlayerController : MonoBehaviour
     {
+        public const float GameplayCameraOrthographicSize = 8f;
+
         private const string MoveSpeedKey = "player_move_speed";
         private const string BareClawId = "bare_claw";
         private const string HapjukseonId = "hapjukseon";
@@ -38,6 +40,12 @@ namespace Nyangbingo.World
         private const float CollapseSeconds = 1.5f;
         private const float FadeOutSeconds = 1.75f;
         private const float FadeInSeconds = 1.75f;
+        private const float BossKnockbackTravelSpeed = 12f;
+        private const float BossKnockbackMinimumSeconds = .15f;
+        private const float BossKnockbackMaximumSeconds = .6f;
+        private const float BossKnockbackArcVelocityRatio = .7f;
+        private const float SurfaceCameraOffsetRatio = .5f;
+        private const float SurfaceCameraTransitionDepthTiles = 8f;
 
         [SerializeField] private GameDataCatalog catalog;
         [SerializeField] private MainGameBootstrap bootstrap;
@@ -65,6 +73,8 @@ namespace Nyangbingo.World
         private Vector2 facing = Vector2.down;
         private Vector2 horizontalFacing = Vector2.right;
         private float verticalVelocity;
+        private float bossKnockbackHorizontalVelocity;
+        private float bossKnockbackRemainingSeconds;
         private bool grounded;
         private bool airJumpConsumed;
         private bool miningAllowedByLastSwing;
@@ -106,6 +116,7 @@ namespace Nyangbingo.World
         private MainGameEncounterCoordinator encounterCoordinator;
         private MainGameWorldDropRuntime worldDropRuntime;
         private Nyangbingo.UI.MainGameBossSummonUiController interactionMessages;
+        private MainGameParallaxBackground parallaxBackground;
 
         public bool IsInitialized => initialized;
         public string ActiveCombatProfileId => activeProfile != null ? activeProfile.Id : string.Empty;
@@ -149,6 +160,11 @@ namespace Nyangbingo.World
             encounterCoordinator = GetComponentInParent<MainGameEncounterCoordinator>();
             interactionMessages = FindAnyObjectByType<Nyangbingo.UI.MainGameBossSummonUiController>();
             followCamera ??= Camera.main;
+            if (followCamera != null && followCamera.orthographic)
+                followCamera.orthographicSize = GameplayCameraOrthographicSize;
+            parallaxBackground = followCamera != null
+                ? followCamera.GetComponent<MainGameParallaxBackground>()
+                : null;
 
             var moveSpeedDefinition = catalog != null ? catalog.FindGlobal(MoveSpeedKey) : null;
             var defaultProfile = catalog != null ? catalog.FindCombatProfile(BareClawId) : null;
@@ -350,13 +366,60 @@ namespace Nyangbingo.World
                 verticalVelocity = 0f;
                 airJumpConsumed = false;
             }
-            var jumpHeld = IsJumpPressed();
+            var jumpHeld = bossKnockbackRemainingSeconds > 0f || IsJumpPressed();
             verticalVelocity = PlayerMovementPhysics.ApplyJumpCutWhileAscending(
                 verticalVelocity, jumpHeld, jumpCutMultiplier);
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
+            var horizontalVelocity = CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed);
+            if (bossKnockbackRemainingSeconds > 0f)
+            {
+                horizontalVelocity = bossKnockbackHorizontalVelocity;
+                bossKnockbackRemainingSeconds =
+                    Mathf.Max(0f, bossKnockbackRemainingSeconds - deltaSeconds);
+                if (bossKnockbackRemainingSeconds <= 0f)
+                    bossKnockbackHorizontalVelocity = 0f;
+            }
             body.linearVelocity = new Vector2(
-                CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed),
+                horizontalVelocity,
                 verticalVelocity);
+        }
+
+        public bool TryApplyBossKnockback(Vector2 displacement)
+        {
+            if (!initialized || dead || body == null ||
+                float.IsNaN(displacement.x) || float.IsInfinity(displacement.x) ||
+                float.IsNaN(displacement.y) || float.IsInfinity(displacement.y) ||
+                displacement.sqrMagnitude <= Mathf.Epsilon)
+                return false;
+
+            var horizontalDistance = Mathf.Abs(displacement.x);
+            if (horizontalDistance > Mathf.Epsilon)
+            {
+                var duration = Mathf.Clamp(
+                    horizontalDistance / BossKnockbackTravelSpeed,
+                    BossKnockbackMinimumSeconds,
+                    BossKnockbackMaximumSeconds);
+                bossKnockbackHorizontalVelocity = displacement.x / duration;
+                bossKnockbackRemainingSeconds = duration;
+            }
+
+            var horizontalArcVelocity = horizontalDistance > Mathf.Epsilon
+                ? jumpVelocity * BossKnockbackArcVelocityRatio
+                : 0f;
+            var airborneVelocity = CalculateBossAirborneVelocity(
+                Mathf.Max(0f, displacement.y), gravityAcceleration);
+            if (airborneVelocity > Mathf.Epsilon && gravityAcceleration > Mathf.Epsilon)
+            {
+                var ascentSeconds = airborneVelocity / gravityAcceleration;
+                bossKnockbackRemainingSeconds =
+                    Mathf.Max(bossKnockbackRemainingSeconds, ascentSeconds);
+            }
+
+            verticalVelocity = Mathf.Max(
+                verticalVelocity,
+                Mathf.Max(horizontalArcVelocity, airborneVelocity));
+            grounded = false;
+            return true;
         }
 
         private void ApplyGeneratedWorldSpawn()
@@ -461,11 +524,39 @@ namespace Nyangbingo.World
         public static float CalculateJumpVelocityForHeightRatio(float baseJumpVelocity, float heightRatio) =>
             PlayerMovementPhysics.CalculateJumpVelocityForHeightRatio(baseJumpVelocity, heightRatio);
 
+        public static float CalculateBossAirborneVelocity(float heightTiles, float gravity)
+        {
+            if (float.IsNaN(heightTiles) || float.IsInfinity(heightTiles) ||
+                float.IsNaN(gravity) || float.IsInfinity(gravity) ||
+                heightTiles <= 0f || gravity <= 0f)
+                return 0f;
+            return Mathf.Sqrt(2f * gravity * heightTiles);
+        }
+
+        public static float CalculateSurfaceCameraVerticalOffset(float playerWorldY,
+            float undergroundThreshold, float orthographicSize)
+        {
+            if (float.IsNaN(playerWorldY) || float.IsInfinity(playerWorldY) ||
+                float.IsNaN(undergroundThreshold) || float.IsInfinity(undergroundThreshold) ||
+                float.IsNaN(orthographicSize) || float.IsInfinity(orthographicSize) ||
+                orthographicSize <= 0f)
+                return 0f;
+
+            var surfaceBlend = Mathf.Clamp01(
+                (playerWorldY - undergroundThreshold) / SurfaceCameraTransitionDepthTiles);
+            return orthographicSize * SurfaceCameraOffsetRatio * surfaceBlend;
+        }
+
         private void LateUpdate()
         {
             if (!initialized || followCamera == null) return;
             var current = followCamera.transform.position;
-            var target = new Vector3(transform.position.x, transform.position.y, current.z);
+            parallaxBackground ??= followCamera.GetComponent<MainGameParallaxBackground>();
+            var verticalOffset = parallaxBackground != null && followCamera.orthographic
+                ? CalculateSurfaceCameraVerticalOffset(transform.position.y,
+                    parallaxBackground.UndergroundThreshold, followCamera.orthographicSize)
+                : 0f;
+            var target = new Vector3(transform.position.x, transform.position.y + verticalOffset, current.z);
             var factor = cameraFollowSharpness <= 0f
                 ? 1f
                 : 1f - Mathf.Exp(-cameraFollowSharpness * Time.unscaledDeltaTime);
@@ -813,6 +904,8 @@ namespace Nyangbingo.World
         {
             if (dead || !initialized) return;
             dead = true;
+            bossKnockbackHorizontalVelocity = 0f;
+            bossKnockbackRemainingSeconds = 0f;
             respawnApplied = false;
             deathSequenceElapsed = 0f;
             movementInput = Vector2.zero;
@@ -872,6 +965,8 @@ namespace Nyangbingo.World
             transform.position = respawnPosition;
             if (body != null) body.position = respawnPosition;
             verticalVelocity = 0f;
+            bossKnockbackHorizontalVelocity = 0f;
+            bossKnockbackRemainingSeconds = 0f;
             grounded = false;
             airJumpConsumed = false;
             transform.rotation = aliveRotation;
