@@ -661,10 +661,11 @@ namespace Nyangbingo.World
             runtimeRoot.transform.SetParent(visual.transform, false);
             var light = runtimeRoot.AddComponent<Light2D>();
             light.lightType = Light2D.LightType.Point;
-            light.pointLightInnerRadius = InstalledLanternRadius * .45f;
-            light.pointLightOuterRadius = InstalledLanternRadius;
-            light.intensity = .9f;
-            light.color = new Color(1f, .72f, .36f, 1f);
+            light.pointLightInnerRadius = InstalledLanternRadius * .35f;
+            light.pointLightOuterRadius = InstalledLanternRadius * 1.15f;
+            light.falloffIntensity = .45f;
+            light.intensity = 1.15f;
+            light.color = new Color(1f, .78f, .42f, 1f);
 
             var aura = runtimeRoot.AddComponent<CounterAura>();
             var eoduksini = gameDataCatalog?.FindYokai("eoduksini");

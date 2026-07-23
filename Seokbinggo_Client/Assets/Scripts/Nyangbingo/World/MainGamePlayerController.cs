@@ -201,10 +201,12 @@ namespace Nyangbingo.World
             lanternLightObject.transform.SetParent(transform, false);
             portableLanternLight = lanternLightObject.AddComponent<Light2D>();
             portableLanternLight.lightType = Light2D.LightType.Point;
-            portableLanternLight.pointLightInnerRadius = runtimeServices.PortableLantern.RadiusTiles * .45f;
-            portableLanternLight.pointLightOuterRadius = runtimeServices.PortableLantern.RadiusTiles;
-            portableLanternLight.intensity = .9f;
-            portableLanternLight.color = new Color(1f, .72f, .36f, 1f);
+            portableLanternLight.pointLightInnerRadius = runtimeServices.PortableLantern.RadiusTiles * .35f;
+            portableLanternLight.pointLightOuterRadius = runtimeServices.PortableLantern.RadiusTiles * 1.15f;
+            portableLanternLight.falloffIntensity = .45f;
+            portableLanternLight.intensity = 1.15f;
+            // Warm torch tone close to Terraria/Stardew lantern pools.
+            portableLanternLight.color = new Color(1f, .78f, .42f, 1f);
             RefreshPortableLanternLight();
 
             worldDropRuntime = GetComponentInParent<MainGameWorldDropRuntime>();

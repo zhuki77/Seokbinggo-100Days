@@ -15,14 +15,16 @@ namespace Nyangbingo.World
         private const int AssetsPixelsPerUnit = 16;
         private const int ReferenceWidth = 960;
         private const int ReferenceHeight = 540;
-        private const float TransitionSeconds = 60f;
+        // Soft day/night ramps in the Stardew/Terraria range: readable nights, warm days,
+        // and a dimmer underground ambient so portable lanterns actually matter.
+        private const float TransitionSeconds = 90f;
 
-        private static readonly Color DayStage1Color = HtmlColor("#FFF3E0");
-        private static readonly Color DayStage2Color = HtmlColor("#FFD0A0");
-        private static readonly Color DayStage3Color = HtmlColor("#FFB080");
-        private static readonly Color NightColor = HtmlColor("#8098C0");
-        private static readonly Color UndergroundColor = HtmlColor("#607080");
-        private static readonly Color BaekjungNightColor = HtmlColor("#9080C0");
+        private static readonly Color DayStage1Color = HtmlColor("#FFF6E8");
+        private static readonly Color DayStage2Color = HtmlColor("#FFE2B8");
+        private static readonly Color DayStage3Color = HtmlColor("#FFC994");
+        private static readonly Color NightColor = HtmlColor("#6B7FA8");
+        private static readonly Color UndergroundColor = HtmlColor("#3E4A5C");
+        private static readonly Color BaekjungNightColor = HtmlColor("#7A6BA8");
 
         [SerializeField] private DayNightService timeService;
         [SerializeField] private MainGameParallaxBackground background;
@@ -63,7 +65,7 @@ namespace Nyangbingo.World
             ApplyLighting();
             Debug.Log("[Nyangbingo] MainGame presentation ready " +
                       $"(camera={ReferenceWidth}x{ReferenceHeight}, ppu={AssetsPixelsPerUnit}, " +
-                      "globalLight=day/night/underground, transition=60 game seconds).");
+                      "globalLight=day/night/underground, transition=90 game seconds).");
             return true;
         }
 
@@ -114,22 +116,22 @@ namespace Nyangbingo.World
 
         public static (Color color, float intensity) EvaluateLighting(DayNightService clock, bool underground)
         {
-            if (underground) return (UndergroundColor, .35f);
-            if (clock == null) return (NightColor, .55f);
+            if (underground) return (UndergroundColor, .22f);
+            if (clock == null) return (NightColor, .62f);
 
             var dayState = DayLighting(clock.CurrentDayCurve?.HeatStage ?? 1);
             var nightState = IsBaekjungNight(clock)
-                ? (BaekjungNightColor, .55f)
-                : (NightColor, .55f);
+                ? (BaekjungNightColor, .58f)
+                : (NightColor, .62f);
 
             if (clock.IsNight) return nightState;
 
             var elapsed = Mathf.Max(0f, clock.TimeOfDayGameSeconds);
             var remaining = Mathf.Max(0f, clock.DayDurationSeconds - elapsed);
             if (elapsed < TransitionSeconds)
-                return Lerp(nightState, dayState, elapsed / TransitionSeconds);
+                return Lerp(nightState, dayState, SmoothStep(elapsed / TransitionSeconds));
             if (remaining < TransitionSeconds)
-                return Lerp(dayState, nightState, 1f - remaining / TransitionSeconds);
+                return Lerp(dayState, nightState, SmoothStep(1f - remaining / TransitionSeconds));
             return dayState;
         }
 
@@ -137,10 +139,16 @@ namespace Nyangbingo.World
         {
             switch (Mathf.Clamp(heatStage, 1, 3))
             {
-                case 2: return (DayStage2Color, 1.1f);
+                case 2: return (DayStage2Color, 1.12f);
                 case 3: return (DayStage3Color, 1.2f);
-                default: return (DayStage1Color, 1f);
+                default: return (DayStage1Color, 1.05f);
             }
+        }
+
+        private static float SmoothStep(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * (3f - 2f * t);
         }
 
         private static bool IsBaekjungNight(DayNightService clock) =>
