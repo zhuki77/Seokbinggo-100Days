@@ -79,6 +79,7 @@ namespace Nyangbingo.Debugging
             TestGameDataCatalogInvalidEntryRejection();
             TestImportedBossDefinitions();
             TestBossCombatRuntime();
+            TestMotherBulgasariAirborneSpecialRuntime();
             TestBossStartValidation();
             TestBossSummonPaymentTransaction();
             TestBossSummonAndForcedEncounterRules();
@@ -1858,13 +1859,13 @@ namespace Nyangbingo.Debugging
 
             var valid = MatchesBossDefinition(goblinChief, BossKind.GoblinChief, 2400, 200f,
                             "ssireum_satba", CraftingStation.Workbench, false, 0,
-                            20f, 20f, 20f, 12, 0.75f, BossSpecialShape.Box, 2f, 0f, 12, 0f, 0f, 4f, 8f,
+                            20f, 20f, 20f, 12, 0.75f, BossSpecialShape.Box, 3.25f, 0f, 12, 0f, 0f, 4f, 8f,
                             false, true, ItemMvpScope.A,
                             new[] { "club_shard:1", "hemp_stalk:10", "wood:5" },
                             "yokai_tear:3", "dokkaebi_fire_essence:1", "club_shard:2") &&
                         MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 3000, 285.7f,
                             "iron_bait_pile", CraftingStation.Furnace, false, 0,
-                            24f, 48f, 0f, 14, 1f, BossSpecialShape.Cone, 4f, 60f, 10, 2f, 1f, 0f, 6f,
+                            24f, 48f, 0f, 14, 1f, BossSpecialShape.Cone, 4f, 60f, 10, 2f, 1f, 4f, 6f,
                             true, true, ItemMvpScope.B,
                             new[] { "iron_ingot:10", "iron_scale:3", "coal:5" },
                             "yokai_tear:4", "iron_forge_core:1", "iron_scale:4") &&
@@ -1912,24 +1913,92 @@ namespace Nyangbingo.Debugging
                 var approached = Mathf.Approximately(bossObject.transform.position.x, 1.25f) &&
                                  targetHealth.Current == 100;
 
+                var expandedContactPosition = (Vector2)bossObject.transform.position + Vector2.right * 2f;
+                targetBody.position = expandedContactPosition;
+                targetObject.transform.position = expandedContactPosition;
+                combat.Tick(.01f);
+                var expandedContactHit = definition != null &&
+                                         targetHealth.Current == 100 - definition.ContactDamage;
+
                 var nearPosition = (Vector2)bossObject.transform.position + Vector2.right;
                 targetBody.position = nearPosition;
                 targetObject.transform.position = nearPosition;
                 combat.Tick(definition != null ? definition.SpecialCooldownSeconds : 0f);
                 var telegraphed = combat.IsTelegraphing;
                 combat.Tick(definition != null ? definition.TelegraphSeconds : 0f);
-                var expectedKnockbackX = nearPosition.x + (definition != null ? definition.SpecialKnockbackTiles : 0f);
-                var specialHit = definition != null && targetHealth.Current == 100 - definition.SpecialDamagePerHit &&
+                var expectedKnockbackX = nearPosition.x - (definition != null ? definition.SpecialKnockbackTiles : 0f);
+                var specialHit = definition != null &&
+                                 targetHealth.Current ==
+                                 100 - definition.ContactDamage - definition.SpecialDamagePerHit &&
                                  !combat.IsTelegraphing && !combat.IsSpecialActive &&
                                  combat.SpecialCooldownRemaining > 0f &&
                                  Mathf.Abs(targetBody.position.x - expectedKnockbackX) <= .001f;
 
-                if (configured && approached && telegraphed && specialHit)
-                    Debug.Log("[Nyangbingo] Boss combat approach, exact telegraph, CSV special damage, knockback, and cooldown completed.");
+                if (configured && approached && expandedContactHit && telegraphed && specialHit)
+                    Debug.Log("[Nyangbingo] Boss combat approach, scaled contact range, exact telegraph, CSV special damage, knockback, and cooldown completed.");
                 else Debug.LogError($"[Nyangbingo] Boss combat runtime test failed: configured={configured}, " +
-                                    $"approached={approached}, telegraphed={telegraphed}, specialHit={specialHit}, " +
+                                    $"approached={approached}, expandedContactHit={expandedContactHit}, " +
+                                    $"telegraphed={telegraphed}, specialHit={specialHit}, " +
                                     $"hp={targetHealth.Current}, bodyX={targetBody.position.x:0.###}, " +
                                     $"expectedX={expectedKnockbackX:0.###}.");
+            }
+            finally
+            {
+                Destroy(bossObject);
+                Destroy(targetObject);
+            }
+        }
+
+        private void TestMotherBulgasariAirborneSpecialRuntime()
+        {
+            var definition = gameDataCatalog != null
+                ? gameDataCatalog.FindBoss("mother_bulgasari")
+                : null;
+            var bossObject = new GameObject("TemporaryMotherBulgasariCombatRuntime");
+            var targetObject = new GameObject("TemporaryMotherBulgasariCombatTarget");
+            try
+            {
+                var bossHealth = bossObject.AddComponent<Health>();
+                bossHealth.ConfigureForRuntime(definition != null ? definition.HitPoints : 1);
+                var targetBody = targetObject.AddComponent<Rigidbody2D>();
+                targetBody.bodyType = RigidbodyType2D.Kinematic;
+                targetBody.gravityScale = 0f;
+                var targetCollider = targetObject.AddComponent<BoxCollider2D>();
+                targetCollider.size = Vector2.one;
+                var targetHealth = targetObject.AddComponent<Health>();
+                targetHealth.ConfigureForRuntime(100);
+                var target = targetObject.AddComponent<MainGameRaidTarget>();
+                var combat = bossObject.AddComponent<BossCombatController>();
+
+                bossObject.transform.position = Vector3.zero;
+                targetBody.position = Vector2.right * 2f;
+                targetObject.transform.position = targetBody.position;
+                var configured = combat.ConfigureForRuntime(definition, target);
+                combat.Tick(.01f);
+                var expandedContactHit = definition != null &&
+                                         targetHealth.Current == 100 - definition.ContactDamage;
+
+                targetBody.position = Vector2.right * 4.25f;
+                targetObject.transform.position = targetBody.position;
+                combat.Tick(definition != null ? definition.SpecialCooldownSeconds : 0f);
+                var recognizedAtSpecialRange = combat.IsTelegraphing;
+                combat.Tick(definition != null ? definition.TelegraphSeconds : 0f);
+                combat.Tick(definition != null ? definition.SpecialTickSeconds : 0f);
+
+                var airborneHit = definition != null &&
+                                  targetHealth.Current ==
+                                  100 - definition.ContactDamage - definition.SpecialDamagePerHit &&
+                                  Mathf.Approximately(targetBody.position.x, 4.25f) &&
+                                  Mathf.Approximately(targetBody.position.y,
+                                      definition.SpecialKnockbackTiles);
+                if (configured && expandedContactHit && recognizedAtSpecialRange && airborneHit)
+                    Debug.Log("[Nyangbingo] Mother Bulgasari scaled contact range, special recognition range, " +
+                              "and airborne knockback completed.");
+                else
+                    Debug.LogError($"[Nyangbingo] Mother Bulgasari airborne test failed: " +
+                                   $"configured={configured}, expandedContactHit={expandedContactHit}, " +
+                                   $"recognizedAtSpecialRange={recognizedAtSpecialRange}, hp={targetHealth.Current}, " +
+                                   $"position={targetBody.position}.");
             }
             finally
             {

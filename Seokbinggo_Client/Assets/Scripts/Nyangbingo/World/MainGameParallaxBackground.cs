@@ -27,6 +27,7 @@ namespace Nyangbingo.World
                                         (artCatalog.HasDayNightSurfaceSet ||
                                          artCatalog.DistantView != null && artCatalog.Clouds != null);
         public bool IsUnderground => transform.position.y < undergroundThreshold;
+        public float UndergroundThreshold => undergroundThreshold;
 
         public void ConfigureForScene(EnvironmentArtCatalog catalog, float undergroundWorldY)
         {

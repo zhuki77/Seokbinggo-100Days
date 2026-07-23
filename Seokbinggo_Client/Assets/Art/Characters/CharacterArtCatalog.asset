@@ -134,12 +134,11 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames:
+    - {fileID: -3373430570893990710, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
+    - {fileID: 8678152964797191650, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
     - {fileID: 322764757033391488, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
     - {fileID: 511589522609010797, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
     - {fileID: 2266001021589297501, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
-    - {fileID: -8086088424034166014, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
-    - {fileID: 2957305657440506205, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
-    - {fileID: 1716467948179537371, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
     sourceFacesRight: 0
   - id: mother_bulgasari
     sprite: {fileID: -9083124521055712037, guid: 7b8547daa5496714a9dd23099ecf832e, type: 3}
@@ -162,6 +161,16 @@ MonoBehaviour:
     sourceFacesRight: 1
   - id: gangcheol_boss
     sprite: {fileID: 800245743277379290, guid: 123e2ec28b6723b4296d439d9743def4, type: 3}
+    idleFrames: []
+    walkFrames: []
+    attackFrames: []
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    sourceFacesRight: 0
+  - id: gangcheol_body
+    sprite: {fileID: 21300000, guid: 6f31c47a2d3b4e0aa12876bd9c6e5f41, type: 3}
     idleFrames: []
     walkFrames: []
     attackFrames: []

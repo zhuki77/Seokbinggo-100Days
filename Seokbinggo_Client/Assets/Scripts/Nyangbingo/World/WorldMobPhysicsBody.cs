@@ -24,7 +24,6 @@ namespace Nyangbingo.World
         private const float GroundProbeDepth = .12f;
         private const float StepJumpVelocity = 8.5f;
         public const float GroundBossStepJumpVelocity = 10.5f;
-        public const float GroundBossColliderVerticalOffset = .15f;
         private const float StepJumpCooldownSeconds = .35f;
         private const float NavigationReversalHoldSeconds = .5f;
         private const float DirectPathConfirmationSeconds = .2f;
@@ -315,6 +314,9 @@ namespace Nyangbingo.World
 
         public static float PhysicalRadiusForBoss(BossKind kind) =>
             ForBoss(kind) == WorldMobLocomotion.Flying ? .34f : .65f;
+
+        public static float ColliderVerticalOffsetForBoss(BossKind kind) =>
+            ForBoss(kind) == WorldMobLocomotion.Grounded ? PhysicalRadiusForBoss(kind) : 0f;
 
         private void RebuildPath(Vector3Int start, Vector3Int target)
         {
