@@ -20,6 +20,9 @@ namespace Nyangbingo.World
     public sealed class MainGameEncounterCoordinator : MonoBehaviour,
         IRegularSpawnController, IForcedBossSpawnController, IBaekjungSpawnController
     {
+        private const float BossScale = 2f;
+        private const float GroundBossVisualLift = .5f;
+
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
@@ -250,13 +253,19 @@ namespace Nyangbingo.World
             if (definition == null || !TryGetSpawnPosition(out var position)) return null;
             var bossObject = new GameObject($"Boss_{definition.Id}");
             bossObject.transform.SetParent(transform, false);
+            bossObject.transform.localScale = Vector3.one * BossScale;
             bossObject.transform.position = position;
             var health = bossObject.AddComponent<Health>();
             var collider = bossObject.AddComponent<CircleCollider2D>();
-            collider.radius = WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind);
             var locomotion = WorldMobPhysicsBody.ForBoss(definition.Kind);
-            if (locomotion == WorldMobLocomotion.Grounded)
-                collider.offset = Vector2.up * WorldMobPhysicsBody.GroundBossColliderVerticalOffset;
+            var movementColliderScale =
+                locomotion == WorldMobLocomotion.Flying ? BossScale : 1f;
+            collider.radius =
+                WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind) /
+                movementColliderScale;
+            collider.offset =
+                Vector2.up * (WorldMobPhysicsBody.ColliderVerticalOffsetForBoss(definition.Kind) /
+                              movementColliderScale);
             bossObject.AddComponent<Rigidbody2D>();
             var physicsBody = bossObject.AddComponent<WorldMobPhysicsBody>();
             physicsBody.ConfigureForRuntime(locomotion, bootstrap.TileService);
@@ -268,10 +277,15 @@ namespace Nyangbingo.World
                 var hurtbox = hurtboxObject.AddComponent<CircleCollider2D>();
                 hurtbox.radius = .65f;
                 hurtbox.isTrigger = true;
+                ConfigureDetachedHurtboxBody(hurtboxObject.AddComponent<Rigidbody2D>());
             }
             var visualObject = new GameObject("Visual");
             visualObject.transform.SetParent(bossObject.transform, false);
+            if (locomotion == WorldMobLocomotion.Grounded)
+                visualObject.transform.localPosition =
+                    Vector3.up * (GroundBossVisualLift / BossScale);
             var bossRenderer = visualObject.AddComponent<SpriteRenderer>();
+            visualObject.AddComponent<RuntimeSpriteBoundsHurtbox>().Configure(bossRenderer);
             var bossArt = characterArtCatalog != null ? characterArtCatalog.Find(definition.Id) : null;
             if (bossArt?.Sprite == null)
                 RuntimePlaceholderVisual.Configure(bossRenderer, new Color(1f, .25f, .2f), 1.3f, 15);
@@ -289,6 +303,9 @@ namespace Nyangbingo.World
             {
                 var characterAnimator = visualObject.AddComponent<RuntimeCharacterSpriteAnimator>();
                 characterAnimator.Configure(bossArt, 15);
+                if (definition.Kind == BossKind.Imugi)
+                    characterAnimator.SetFacing(Vector2.right);
+                combat.BindCharacterAnimator(characterAnimator);
                 characterAnimator.Bind(combat);
             }
             if (string.Equals(definition.Id, "imugi", StringComparison.Ordinal))
@@ -297,10 +314,28 @@ namespace Nyangbingo.World
                 if (bodySprite != null)
                     bossObject.AddComponent<RuntimeImugiBodyVisual>().Configure(bodySprite, 14);
             }
+            else if (definition.Kind == BossKind.Gangcheori)
+            {
+                var bodySprite = characterArtCatalog?.FindSprite("gangcheol_body");
+                if (bodySprite != null)
+                    bossObject.AddComponent<RuntimeGangcheoriBodyVisual>()
+                        .Configure(bodySprite, bossRenderer, 14);
+            }
             activeBossCombat = combat;
             activeBossIsForcedInvasion = forcedInvasion;
             forcedBossSpawnPending = forcedInvasion;
             return health;
+        }
+
+        private static void ConfigureDetachedHurtboxBody(Rigidbody2D body)
+        {
+            if (body == null) return;
+            body.bodyType = RigidbodyType2D.Kinematic;
+            body.simulated = true;
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Discrete;
+            body.interpolation = RigidbodyInterpolation2D.None;
         }
 
         public bool TryStartPlayerSummonedBoss(BossDefinition definition, IBossSummonSite summonSite)

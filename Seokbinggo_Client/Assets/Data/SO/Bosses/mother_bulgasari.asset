@@ -49,7 +49,7 @@ MonoBehaviour:
   specialDamagePerHit: 10
   specialDurationSeconds: 2
   specialTickSeconds: 1
-  specialKnockbackTiles: 0
+  specialKnockbackTiles: 4
   specialCooldownSeconds: 6
   specialHasFireTag: 1
   specialAimLocks: 1

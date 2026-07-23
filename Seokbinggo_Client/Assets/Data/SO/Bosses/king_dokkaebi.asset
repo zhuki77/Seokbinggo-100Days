@@ -44,7 +44,7 @@ MonoBehaviour:
     12\uD53C\uD574+\uB109\uBC314\xB7\uCFE88\uCD08"
   telegraphSeconds: 0.75
   specialShape: 0
-  specialRangeTiles: 2
+  specialRangeTiles: 3.25
   specialArcDegrees: 0
   specialDamagePerHit: 12
   specialDurationSeconds: 0

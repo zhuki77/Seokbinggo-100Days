@@ -50,6 +50,11 @@ MonoBehaviour:
   - {fileID: 561205347486940968, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
   - {fileID: 4699966602189482013, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
   - {fileID: 2350356796563014357, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
+  gangcheoriSpecialFireFrames:
+  - {fileID: 640100000000000001, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
+  - {fileID: 640100000000000002, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
+  - {fileID: 640100000000000003, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
+  - {fileID: 640100000000000004, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
   blueProjectileFrames:
   - {fileID: 4082674624207476099, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
   - {fileID: -245658596771386416, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}

@@ -50,11 +50,15 @@ namespace Nyangbingo.World
             if (health.Current >= before) return false;
             if (knockback.sqrMagnitude > Mathf.Epsilon)
             {
-                var body = GetComponent<Rigidbody2D>();
-                if (body != null && body.bodyType == RigidbodyType2D.Kinematic)
-                    body.position += knockback;
-                else
-                    health.TryApplyKnockback(knockback);
+                var playerController = GetComponent<MainGamePlayerController>();
+                if (playerController == null || !playerController.TryApplyBossKnockback(knockback))
+                {
+                    var body = GetComponent<Rigidbody2D>();
+                    if (body != null && body.bodyType == RigidbodyType2D.Kinematic)
+                        body.position += knockback;
+                    else
+                        health.TryApplyKnockback(knockback);
+                }
             }
             Nyangbingo.Core.GameEvents.RaisePlayerDamaged();
             return true;

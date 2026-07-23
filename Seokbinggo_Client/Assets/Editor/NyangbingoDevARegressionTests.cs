@@ -1041,8 +1041,8 @@ public static class NyangbingoDevARegressionTests
 
         // 1) 지하 자연 지형은 전경+자연 배경을 함께 가진다.
         var solidFound = false;
-        var caveEmptyFound = false;
-        for (var x = 0; x < result.width && !(solidFound && caveEmptyFound); x++)
+        var caveBackgroundFound = false;
+        for (var x = 0; x < result.width; x++)
         {
             var surfaceY = result.surfaceHeights[x];
             for (var y = config.BedrockThickness; y <= surfaceY; y++)
@@ -1055,14 +1055,28 @@ public static class NyangbingoDevARegressionTests
                     solidFound = true;
                 }
                 else if (tile.IsAir && string.Equals(tile.elementType, WorldTileTypes.Air, StringComparison.Ordinal) &&
-                         !tile.HasBackground && !tile.HasNaturalBackground && y < surfaceY)
+                         y < surfaceY)
                 {
-                    caveEmptyFound = true; // 동굴: 전경·배경 모두 비움
+                    var upperBottom = surfaceY - config.UpperLayerThickness + 1;
+                    var middleBottom = upperBottom - config.MiddleLayerThickness;
+                    var expectedBackground = y >= upperBottom
+                        ? WorldTileTypes.BackgroundDirt
+                        : y >= middleBottom
+                            ? WorldTileTypes.BackgroundStone
+                            : WorldTileTypes.BackgroundDeep;
+
+                    Assert(tile.HasBackground && tile.HasNaturalBackground,
+                        $"지하 동굴에 자연 배경이 없음 @({x},{y})");
+                    Assert(TileIdAlias.EqualsCanonical(tile.backgroundElementType, expectedBackground) &&
+                           TileIdAlias.EqualsCanonical(tile.naturalBackgroundElementType, expectedBackground),
+                        $"지하 동굴 배경 지층 불일치 @({x},{y}): expected={expectedBackground}, " +
+                        $"actual={tile.backgroundElementType}/{tile.naturalBackgroundElementType}");
+                    caveBackgroundFound = true;
                 }
             }
         }
         Assert(solidFound, "지하 자연 고체 샘플을 찾지 못함");
-        Assert(caveEmptyFound, "전경·배경이 모두 빈 동굴 샘플을 찾지 못함");
+        Assert(caveBackgroundFound, "자연 배경이 채워진 지하 동굴 샘플을 찾지 못함");
 
         // 3) 채굴은 전경만 제거하고 배경 유지
         var hostGo = new GameObject("DevA_BackgroundWallpaperTest");
@@ -1959,7 +1973,7 @@ public static class NyangbingoDevARegressionTests
         for (var x = 0; x < result.width; x++)
         {
             var surfaceY = result.surfaceHeights[x];
-            for (var y = surfaceY - 1; y >= 5; y--)
+            for (var y = surfaceY + 1; y < result.height; y++)
             {
                 var cell = new Vector3Int(x, y, 0);
                 var tile = tileService.GetTile(cell);
