@@ -21,10 +21,10 @@ MonoBehaviour:
   paceMineralTier: 2
   maxActive: 5
   spawnComposition:
-  - kind: 2
-    amount: 3
   - kind: 1
     amount: 1
+  - kind: 2
+    amount: 3
   - kind: 3
     amount: 1
   spawnMultiplier: 1

@@ -10,6 +10,11 @@ temp_max,100,gauge,체온 열사병
 temp_start,40,gauge,시작 체온
 temp_rise_per_stage,0.10,per_sec,낮 지상 노출 상승/초 x 더위단계(낮 15분 반영해 완화)
 temp_fall_safe,0.15,per_sec,밤/그늘/지하 하강/초
+hp_regen_delay,10,sec,자연 재생 대기 — 마지막 피격 후 게임초. 피격마다 리셋 (v31)
+hp_regen_rate,1,per_sec,자연 재생 HP/게임초 — 0→100 = 100게임초 (v31 · v31.1 냥잠 폐지 보상 상향)
+catnip_heal,25,hp,캣닢 사용 시 즉시 회복량 (v31)
+catnip_spawn_per_100tiles,6,count,캣닢 자연 스폰 밀도 — 상층·폐허 (v31)
+catnip_respawn_days,2,day,캣닢 채집 후 재생 일수 (v31)
 heatstroke_threshold,80,gauge,이상 시 열사병
 safe_threshold,40,gauge,이하 안전
 yokai_cap,8,count,밤 도깨비 상한(정본 가안)
@@ -20,8 +25,6 @@ team_dev,2,person,개발 2명(오너확정)
 team_art,2,person,아트 2명(오너확정)
 team_design,1,person,기획 1명=오너(확정)
 baekjung_day,15,day,백중날 밤 이벤트(v6 — 요괴 급증·드랍 강화, 데모 세이브 15일차와 일치)
-nap_timescale,4,mult,냥잠 낮 시간 가속(v6)
-nap_temp_mult,3,mult,냥잠 체온 하강 배수(자연 0.15/게임초 기준 — v6)
 ice_shard_temp_relief,10,gauge,얼음 조각 1개 즉시 체온 -10(v6 신규 정의)
 baekjung_spawn_cap,12,count,백중날 밤 한정 스폰 상한(공식값x3)
 baekjung_spawn_mult,3,mult,백중날 스폰 배율
@@ -40,7 +43,7 @@ eoduksini_bloom_pause_sec,6,sec,어둑시니 꽃구경 — 만개(등불 반경 
 eoduksini_rebloom_cd_sec,12,sec,어둑시니 재개화 쿨(개체당) — 밀어내기 반복 어뷰징 상한
 portable_lantern_radius,3,tile,휴대(활성 슬롯) 등불 광원 — 어둑시니 판정 태그 불참(4-7·설치 전용)
 portable_lantern_fuel_rule,active_slot_only,rule,활성 슬롯에 든 동안만 연료 소모 — 석탄 1=270초(설치와 동일 타이머 재사용)
-dev_speed_mult,8,mult,개발빌드 전용 시연 배속 토글(냥잠 x4와 별개 값) — 지상 노출 중 사용 금지(시연 대본)
+dev_speed_mult,8,mult,개발빌드 전용 시연 배속 토글 — 지상 노출 중 사용 금지(시연 대본). 구 냥잠 타임스케일 파이프라인 승계(v31.1)
 badge_wall_count,1,count,목표 배지 ② 차열벽 판정 — 첫 1장 설치(수량 압박은 밀폐도 게이지 승계)
 badge_window_days,3,day,목표 배지 HUD 기간 — min(3배지 전부 달성·3일차 밤 종료) 소멸
 ice_tile_hp,600,hp,얼음 계열 타일 HP(신규 등재 — 불가사리 얼음 32DPS·확장 용해 대상. 차열벽 600 동급)
@@ -53,7 +56,7 @@ seal_penalty_start_day,4,day,6-3/6-6 판정 개시 일차 — 코어 실제 하�
 cold_source_required,1,bool,온도 상승 조건 — 냉기원(4-1 4종) 최소 1개 가동 중일 것(v17 오너 지시). 0이면 게이트 무효(구 동작). 코드 1줄
 muldanji_duration,180,sec,물단지 지속 [가안] — 소모형 냉기원. 1일차 온도계 공백 메움(초반 쉬움). 등불 석탄 타이머 1벌 재사용
 icejar_fuel_sec,300,sec,얼음 항아리 얼음 조각 1개당 지속 [가안] — 연료형 냉기원. 등불 연료 슬롯·잔량 아이콘 재사용
-jukbuin_nap_mult,1.5,mult,죽부인 — 보금자리 반경 2타일 내 설치 시 냥잠 체온 회복 배수 [가안]. 6-10 회복 수정자 1개
+jukbuin_regen_mult,1.5,mult,죽부인 — 보금자리 반경 2타일 내 설치 시 자연 재생(HP) 배수 [가안·B]. v31.1 냥잠 폐지로 수정자 이관
 daebal_flame_cut,0.25,pct,대발 — 반경 4타일 낮 화염 경감 [가안]. 해태 석상(8타일·0.50)의 저가 약화판. 4-7 화염 태그 재사용
 daebal_radius,4,tile,대발 반경 [가안]
 muldanji_mat,점토2+돌2,recipe,물단지 재료(v20 balance 확정) — 전부 상층 T1·맨발톱·채굴 4.4초. 구 '얼음 조각1+흙2'는 항아리와 게이트가 같아 캡슐이 사장됐다. 점토2+흙2는 점토 미장과 레시피 충돌이라 돌2
@@ -63,10 +66,6 @@ cold_cap_icejar,50,pct,얼음 항아리 온도 상한 — day15 백중 권장 50
 cold_cap_icestorage,100,pct,얼음 저장고(코어) 온도 상한 — 완공 모듈이자 온도 축 종착
 cold_cap_frostcooler,100,pct,빙정 냉각로 온도 상한 — 보스 보상. 차별점은 기존 체온 회복 x2
 player_move_speed,3.0,tile_per_sec,플레이어 이동 속도(v22 정본화) — 6-7 요괴 이속이 강제: 야광귀3.5보다 느려야 체가 카운터로 성립·어둑시니2.5보다 빨라야 심층 탈출 가능. balance 추정 4.0은 야광귀를 따라잡아 체를 무의미하게 만들어 기각
-player_jump_height_tiles,3.5,tile,플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·지상형 요괴/보스의 1칸 추격 점프는 별도 WorldMobPhysicsBody 계약 적용
-player_gravity,32,tile_per_sec2,플레이어 중력(가안 v7) — jump_height와 조합해 v0=sqrt(2gh)
-player_max_fall_speed,12,tile_per_sec,최대 낙하 속도(가안 v7) — 테라리아 체감 낙하 상한
-player_jump_cut,0.5,ratio,점프 키 뗄 때 상승 속도 배율(가안 v7) — 테라리아식 가변 점프(매 틱 적용)
 surface_y,20,tile,지표 평균선(맵 상단 기준) — 1D 펄린 진폭 +-6. 위 20타일은 하늘·지상 건설 여유(밀폐 창 RY12 상단 d=-7 수용)
 layer_t1_depth,45,tile,상층 T1 하단 깊이(지표 기준) — balance 검증치 강제: 중층 왕복 145초=계단굴착 90타일=수직45. 변경 금지
 layer_t2_depth,90,tile,중층 T2 하단 깊이 — 얼음 조각·철·구리
@@ -77,18 +76,26 @@ boss_save_policy,no_serialize,rule,보스전 중 수동 저장 잠금 + 활성 �
 boss_night_spawn,discard,rule,보스 소환 시 그날 밤 잔여 일반 스폰 폐기·격퇴/도주 후에도 재개 없음(v23) — 보스 밤은 보스가 주인공. 눈물 수급은 보스 확정 동봉이 대체(6-9)
 baekjung_wave_overflow,queue_until_dawn,rule,백중 웨이브 초과분 처리(v23 A안) — 대기열 보관 후 자리 나면 스폰. 새벽 도주 시점에 잔여 폐기. 총12·조합 보장이 눈물 경제와 까치 조건의 전제
 magpie_nest_limit,1,count,까치 둥지 맵당 1개 제한(v23) — 까치 1마리·보관함 1개라 복수 둥지는 무의미. 철거 시 까치 비활성·재설치 시 다음 아침 복귀(획득 플래그는 영구 저장)
-crafting_b_ui,hidden,rule,MVP 범위 B 레시피(crafting-tree.mvp_scope=B)는 제작 UI 미노출 — 데이터 로드만 한다. 오너 확정(v23 2026-07-16): MVP 보스 = 도깨비 대장·강철이 2종. B 사슬(무쇠 미끼 더미·얼음 제단 봉헌·신기전 화차·빙정 냉각로)은 31일~ 확장에서 승격
+crafting_b_ui,hidden,rule,MVP 범위 B 레시피(crafting-tree.mvp_scope=B)는 제작 UI 미노출 — 데이터 로드만 한다. 오너 확정(v23 2026-07-16): MVP 보스 = 도깨비 대장·이무기 2종. B 사슬(무쇠 미끼 더미·신기전 화차)은 31일~ 확장에서 승격 (얼음 제단 봉헌·빙정 냉각로는 v34 이무기 최종보스 소환·보상으로 A 승격)
 baekjung_wave_size,4,count,백중 웨이브 1회 스폰 수 — 4마리 x 3웨이브(GDD 6-10)
 baekjung_wave_times_sec,0/150/300,sec,백중 웨이브 시작 시각(일몰 기준) — 총 12마리·조합은 day-curve d15 spawn_composition이 정본
-invasion_boss_in_cap,1,rule,내습 보스(30일차 강철이 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 강철이 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 금지 — 내습은 일반 요괴와 공존하고, 소환은 일반 스폰을 정지시킨다
+invasion_boss_in_cap,1,rule,내습 보스(30일차 이무기 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 이무기 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 금지 — 내습은 일반 요괴와 공존하고, 소환은 일반 스폰을 정지시킨다
 crafting_material_format,item_id:count,rule,crafting-tree/bosses/chests의 재료 표기 규칙(v24) — 콤마 구분. id는 items.csv가 유일 정본
 item_id_rule,snake_case,rule,아이템 id 명명(v24) — 일반 명사는 의미 영어(iron_ore·stone·lantern) 한국 고유 문화어는 로마자 음차(hapjukseon·haetae_statue·yeouiju). 전부 snake_case. 한번 정한 id는 세이브 호환 때문에 변경 금지
 wallpaper_coverage,100,pct,벽지 효과 발동에 필요한 밀폐 구역 도포율(v26) — 100% = '전부 아니면 0'. 회의의 95% 안은 기각: 플레이어가 남은 칸을 세게 만들고 밀폐 판정(100% 폐쇄 요구)과도 어긋난다. 지하 자연 배경벽(t_bg_*)이 이미 있는 칸은 덮인 것으로 계수한다
 wallpaper_coldsource_bonus,25,pct,벽지 100% 도포 시 그 구역 냉기원 지속시간 증가(v26) — 물단지 180→225초·얼음 항아리 얼음1당 300→375초. 온도 상한(cold_cap_*)은 불변이라 냉기원 계단 25/50/100 유지. ⚠️ 얼음 저장고·빙정 냉각로는 연료 없는 영구 설치물이라 지속시간 개념이 없다 — 적용 대상 아님(회의의 '얼음 저장고 480초' 는 정본에 없는 창작 수치라 기각)
 wallpaper_remove_rule,restore_original,rule,벽지 제거 시 그 칸은 '원래 있던 것'으로 돌아간다(v26) — 지하(원래 자연 배경벽 자리)=자연 배경벽 복원 / 지상(원래 하늘)=빈 칸. 회의에서 '자연벽 복원'과 '빈 칸' 두 안이 충돌했으나 각각 다른 상황을 본 것이라 통합 규칙 하나로 해소
-boss_field_yokai,freeze_resume,rule,소환 보스 등장 시 이미 필드에 있던 일반 요괴 처리(v27) — 행동 정지+반투명 표시 후 보스전 종료 시 이동 방향·속도 유지한 채 재개. 새 스폰은 그 밤 없음(boss_night_spawn=discard 유지). 내습 보스(30일차 강철이)는 invasion_boss_in_cap=1로 공존이라 이 규칙 대상이 아니다
-cave_max_height,12,tile,동굴 공동 하나의 최대 세로 길이 [가안] — 지표(surface_y=20) 관통 금지용. 개발 A가 실측으로 튜닝한 뒤 확정값을 globals에 반영한다
-furniture_mvp_scope,B,scope,기능 가구 2종(죽부인·대발)의 MVP 범위(v27 확정) — B는 제작 UI 미노출·데이터만 유지. 확장 승격 시 id·레시피·아트를 함께 신설한다
-inventory_slots,50,count,플레이어 인벤토리 10×5 그리드(v29 확정) — 테라리아 본체 인벤 동일 규격이며 최상단 행 핫바는 도입하지 않는다. 기존 12슬롯 세이브는 뒤를 빈 칸으로 패딩한다
-active_slot_rule,weapon_or_tool_1,rule,활성 슬롯(v28 확정) = 장비 탭 무기·도구 1칸. 방망이·합죽선·철선·서리발톱 장갑·휴대 등불 중 1개를 장착하며 빈 슬롯은 맨 발톱이다. PC Q키로 발톱과 장착물을 토글하고 휴대 등불은 활성 중에만 연료를 소모한다
-jangdok_storage_slots,40,count,장독 창고 보관 슬롯 수(v29 확정) — 구 12슬롯에서 40슬롯으로 확장하며 아이템·레시피·아트는 유지한다
+boss_field_yokai,freeze_resume,rule,소환 보스 등장 시 이미 필드에 있던 일반 요괴 처리(v27) — 행동 정지+반투명 표시 후 보스전 종료 시 이동 방향·속도 유지한 채 재개. 새 스폰은 그 밤 없음(boss_night_spawn=discard 유지). ⚠️ 내습 보스(30일차 이무기)는 invasion_boss_in_cap=1로 공존이라 이 규칙 대상이 아니다
+cave_max_height,12,tile,동굴 공동 하나의 최대 세로 길이 [가안] — 지표(surface_y=20) 관통 금지용. 2D 펄린 공동이 세로 연결돼 맵 중앙에 거대 수직 구멍이 생기는 것을 막는다(v27·개발 실측). 개발 A가 튜닝 후 확정값 확정
+furniture_mvp_scope,B,scope,기능 가구 2종(죽부인·대발)의 MVP 범위(v27 확정) — B = 제작 UI 미노출·데이터만 유지. jukbuin_regen_mult·daebal_flame_cut·daebal_radius 수치는 남기되 items.csv 미등재·레시피 없음·아트 발주 없음. 확장(31일~) 승격 시 id·레시피·도트 2장을 함께 신설한다
+inventory_slots,50,count,플레이어 인벤토리 10×5 그리드(GDD 5장 ③ v29 — 테라리아 본체 인벤 동일 규격·핫바 미도입. 구 12슬롯에서 7/20 오너 확정 확장). 장독 창고와 별개
+jangdok_storage_slots,40,count,장독 창고(보관 상자) 슬롯 수(GDD 6-5 v29 — 7/20 오너 확정, 구 12슬롯). 인벤 50과의 역전 해소·평범한 상자 역할. modules.csv jangdok의 보관 UI 용량. 아트·재료·시간 불변
+active_slot_rule,weapon_or_tool_1,rule,활성 슬롯(v28) = 장비 탭 무기·도구 칸 1개 — 방망이/합죽선/철선/장갑/휴대 등불 중 1개 장착. 빈 슬롯 = 맨 발톱(신체 기본). PC Q키 토글·모바일 팔레트 좌측 끝 인라인 아이콘. 휴대 등불 연료는 이 슬롯에 든 동안만 소모(3-5)
+fall_damage_threshold_tiles,7,tile,낙하 피해 발동 최소 높이 — 6타일 이하 무피해·7타일부터 적용(v34 오너 지시 2026-07-24)
+fall_damage_per_tile,0.5,hp,낙하 피해 = 낙하 타일수 × 0.5 [가안] — 높이 비례(발동 시 전체 낙하 높이에 곱). 7타일=3.5·10=5·20=10 (HP100 기준). 점프 높이·중력은 개발 A 물리 소관(GDD 4-10·물리 노트)
+resident_max_per_species,1,count,v34.1 상주 엘리트 종별 동시 생존 상한
+resident_spawn_at,day_dawn,rule,v34.1 플레이어의 심층 진입 여부와 무관하게 해당 일차 새벽에 최초 생성
+resident_respawn_rule,next_day_dawn,rule,v34.1 처치한 상주 엘리트는 다음 날 새벽부터 재생성 가능
+resident_min_player_distance,24,tile,v34.1 상주 엘리트 생성 지점과 플레이어의 최소 거리
+resident_min_between_distance,12,tile,v34.1 어둑시니와 강철이 생성 지점 사이의 최소 거리
+resident_save_policy,last_killed_day,rule,v34.1 개체 위치 HP 상태를 저장하지 않고 종별 마지막 처치 일차만 저장

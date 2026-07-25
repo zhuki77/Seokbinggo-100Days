@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: catnip_spawn_per_100tiles
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: catnip_spawn_per_100tiles
+  value: 6
+  unit: count
+  note: "\uCEA3\uB2E2 \uC790\uC5F0 \uC2A4\uD3F0 \uBC00\uB3C4 \u2014 \uC0C1\uCE35\xB7\uD3D0\uD5C8
+    (v31)"

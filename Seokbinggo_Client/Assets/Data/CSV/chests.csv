@@ -1,5 +1,5 @@
 pool,count,accessory_pool,bonus_items,note
-지상 폐허,4,wind_daenggi|dokkaebi_gamtu,"rebar:4,hemp_stalk:6",밤 지상 탐색 보상
-상층,6,bell_norigae|bokjumeoni,"coal:4,clay:5",석탄 이중 수요 완충
+지상 폐허,4,wind_daenggi|dokkaebi_gamtu,"rebar:4,hemp_stalk:6,catnip:2",밤 지상 탐색 보상 + 캣닢(v31)
+상층,6,bell_norigae|bokjumeoni,"coal:4,clay:5,catnip:3",석탄 이중 수요 완충 + 캣닢(v31)
 중층,6,wind_daenggi|bokjumeoni|ice_heart_norigae|tiger_eye_bead,"iron_ore:5,ice_shard:4",T2 왕복 보상
 심층,4,tiger_eye_bead|ice_heart_norigae|bell_norigae|dokkaebi_gamtu,"icesteel_ore:2,frost_essence:1",고위험 보상 — 요괴 눈물 미동봉

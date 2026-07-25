@@ -29,8 +29,8 @@ MonoBehaviour:
     amount: 1
   - kind: 3
     amount: 2
-  - kind: 4
+  - kind: 6
     amount: 1
   spawnMultiplier: 1
   dropMultiplier: 1
-  eventId: gangcheol_boss
+  eventId: imugi_boss

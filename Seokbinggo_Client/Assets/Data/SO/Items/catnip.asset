@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: catnip
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: catnip
+  displayName: "\uCEA3\uB2E2"
+  maxStack: 99
+  category: 1
+  mvpScope: 1
+  note: "\uC0C1\uCE35\xB7\uD3D0\uD5C8 \uC790\uC5F0 \uC2A4\uD3F0 \uAD70\uB77D(6/100\uD0C0\uC77C\xB7\uCC44\uC9D1
+    2\uC77C \uC7AC\uC0DD)+\uBCF4\uBB3C \uC0C1\uC790 \u2014 \uC0AC\uC6A9 \uC2DC HP+25
+    \uC989\uC2DC. \uC5BC\uC74C \uC870\uAC01(\uCCB4\uC628 \uC751\uAE09)\uC758 HP \uB300\uC751\uBB3C
+    (v31)"

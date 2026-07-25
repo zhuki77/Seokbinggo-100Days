@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: resident_respawn_rule
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: resident_respawn_rule
+  value: next_day_dawn
+  unit: rule
+  note: "v34.1 \uCC98\uCE58\uD55C \uC0C1\uC8FC \uC5D8\uB9AC\uD2B8\uB294 \uB2E4\uC74C
+    \uB0A0 \uC0C8\uBCBD\uBD80\uD130 \uC7AC\uC0DD\uC131 \uAC00\uB2A5"

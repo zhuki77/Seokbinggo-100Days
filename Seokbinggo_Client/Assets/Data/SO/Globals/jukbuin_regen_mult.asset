@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: jukbuin_regen_mult
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: jukbuin_regen_mult
+  value: 1.5
+  unit: mult
+  note: "\uC8FD\uBD80\uC778 \u2014 \uBCF4\uAE08\uC790\uB9AC \uBC18\uACBD 2\uD0C0\uC77C
+    \uB0B4 \uC124\uCE58 \uC2DC \uC790\uC5F0 \uC7AC\uC0DD(HP) \uBC30\uC218 [\uAC00\uC548\xB7B].
+    v31.1 \uB0E5\uC7A0 \uD3D0\uC9C0\uB85C \uC218\uC815\uC790 \uC774\uAD00"

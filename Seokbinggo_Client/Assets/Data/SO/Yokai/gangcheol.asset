@@ -14,25 +14,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.YokaiDefinition
   id: gangcheol
   displayName: "\uAC15\uCCA0\uC774"
-  appearanceHint: "30\uC77C\uCC28 \uBC24 \uACE0\uC815 1(\uBCF4\uC2A4)"
-  codexNote: "\uBE0C\uB808\uC2A4 \uB300\uC778 12/\uCD08\xD73\uCD08\xB7\uCFE85\uCD08\xB7\uBD80\uCC44\uAF34
-    5\uD0C0\uC77C \u2014 \uD574\uD0DC \uBC18\uACBD -50%"
+  appearanceHint: "18\uC77C\uCC28~ \uC2EC\uCE35 \uC0C1\uC8FC(\uC815\uC608)"
+  codexNote: "\uC815\uC608 \uBAB9(v34.1 \uC774\uBB34\uAE30\uC640 \uAD50\uCCB4\xB7\uBCF4\uC2A4\u2192\uACA9\uD558)
+    \u2014 \uCD95\uC18C\uD310 \uC5F4\uAE30 \uBE0C\uB808\uC2A4 \uC608\uACE01.5\uCD08\xB7\uBD80\uCC44\uAF34
+    3\uD0C0\uC77C\xB7\uC989\uC2DC 18 \uD53C\uD574 1\uD68C\xB7\uD654\uC5FC \uD0DC\uADF8+\uB109\uBC312\xB7\uCFE812\uCD08.
+    \uC2EC\uCE35 \uCC44\uAD74 \uC704\uD611(\uBCBD \uC548 \uCE68). \uC5ED\uB9B0\xB7\uAC00\uBB44
+    \uC2EC\uC7A5\u2192\uC11C\uB9AC\uBC1C\uD1B1 \uC7A5\uAC11\xB7\uD55C\uD30C \uCF54\uC5B4
+    \uC7AC\uB8CC(\uC2EC\uCE35 \uC815\uC608 \uD30C\uBC0D). \uB208\uBB3C \uC6D0\uC7A5
+    \uBC16(resident \uC120\uD0DD \uC870\uC6B0)"
   kind: 4
-  hitPoints: 16000
-  moveSpeed: 1.2
-  contactDamage: 18
-  contactDamageNoLantern: 18
-  wallDamageDefault: 40
-  wallDamageIce: 40
-  wallDamageIronWall: 40
+  hitPoints: 2800
+  moveSpeed: 1.8
+  contactDamage: 16
+  contactDamageNoLantern: 16
+  wallDamageDefault: 0
+  wallDamageIce: 0
+  wallDamageIronWall: 0
   damageTakenMultiplier: 1
   damageTakenCondition: 0
   stealSlots: 0
   stealMaxItems: 0
   tearItem: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
-  tearDrop: 8
+  tearDrop: 4
+  tearBonus: 0
   signatureItem: {fileID: 11400000, guid: c5639627f57385e49815b1d0195a494e, type: 2}
   signatureChance: 1
-  spawnTracks: 1
-  raidFleesAtDawn: 1
+  signatureCondition: 0
+  spawnTracks: 2
+  raidFleesAtDawn: 0
   drops: []

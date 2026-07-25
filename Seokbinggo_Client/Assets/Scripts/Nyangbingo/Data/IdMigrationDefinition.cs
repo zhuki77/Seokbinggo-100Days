@@ -98,7 +98,7 @@ namespace Nyangbingo.Data
     public static class IdMigrationRuntime
     {
         private const string ResourcePath = "Nyangbingo/IdMigrationManifest";
-        private const int OfficialRuleCount = 27;
+        private const int OfficialRuleCount = 26;
 
         public static IdMigrationPolicy LoadOfficial()
         {

@@ -1,0 +1,3 @@
+id,type,item_ko,station_id,materials,craft_time_sec,scope,note
+seolpungseon,evo2,설풍선,ice_anvil,"cheolseon:1,icesteel_ingot:2,frost_essence:1",30,ext,확장 31일~ 한정(MVP 제외) — 뎀18·DPS27·넉백1.5 철선 동일(v30.1)·액티브 밀치기(2타일·뎀4·쿨3초)에만 서리 서림 30%/2초·보스 넉백/감속 무효(뎀4만)·지속DPS≤28.33 캡 내
+frost_bell_rope,evo2,서리 금줄,ice_anvil,"iron_bell_rope:1,icesteel_ingot:2",20,ext,확장 31일~ 한정 — 경보(반경10·쿨4초) 유지+진입 요괴 서리 서림 30%/4초(개체 재적용 12초=어둑시니 재개화 상수 재사용)·체 하드CC 위계 불침범·보스 무효

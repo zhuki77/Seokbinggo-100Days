@@ -7,6 +7,7 @@ namespace Nyangbingo.Data
     public enum YokaiSpawnTrack { None = 0, Raid = 1, Resident = 2 }
     public enum YokaiWallMaterial { Default, Ice, IronHeatWall }
     public enum YokaiDamageTakenCondition { None, LanternRadius, StealOnly }
+    public enum YokaiSignatureCondition { None, StealSuccess }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Yokai")]
     public sealed class YokaiDefinition : ScriptableObject
@@ -29,8 +30,10 @@ namespace Nyangbingo.Data
         [Min(0)][SerializeField] private int stealMaxItems;
         [SerializeField] private ItemDefinition tearItem;
         [Min(0)][SerializeField] private int tearDrop;
+        [Min(0)][SerializeField] private int tearBonus;
         [SerializeField] private ItemDefinition signatureItem;
         [Range(0f, 1f)][SerializeField] private float signatureChance;
+        [SerializeField] private YokaiSignatureCondition signatureCondition;
         [SerializeField] private YokaiSpawnTrack spawnTracks = YokaiSpawnTrack.Raid;
         [SerializeField] private bool raidFleesAtDawn = true;
         [SerializeField] private ItemAmount[] drops;
@@ -52,8 +55,10 @@ namespace Nyangbingo.Data
         public int StealMaxItems => stealMaxItems;
         public ItemDefinition TearItem => tearItem;
         public int TearDrop => tearDrop;
+        public int TearBonus => tearBonus;
         public ItemDefinition SignatureItem => signatureItem;
         public float SignatureChance => signatureChance;
+        public YokaiSignatureCondition SignatureCondition => signatureCondition;
         public YokaiSpawnTrack SpawnTracks => spawnTracks;
         public bool RaidFleesAtDawn => raidFleesAtDawn;
         public ItemAmount[] Drops => drops ?? System.Array.Empty<ItemAmount>();
@@ -84,7 +89,9 @@ namespace Nyangbingo.Data
             int noLanternContact = -1, float takenMultiplier = 1f,
             YokaiDamageTakenCondition takenCondition = YokaiDamageTakenCondition.None,
             int inventoryStealSlots = 0, int inventoryStealMaxItems = 0,
-            YokaiSpawnTrack allowedSpawnTracks = YokaiSpawnTrack.Raid, bool fleeAtDawn = true)
+            YokaiSpawnTrack allowedSpawnTracks = YokaiSpawnTrack.Raid, bool fleeAtDawn = true,
+            int successfulTheftTearBonus = 0,
+            YokaiSignatureCondition signatureDropCondition = YokaiSignatureCondition.None)
         {
             var definition = CreateInstance<YokaiDefinition>();
             definition.id = value.ToString();
@@ -98,6 +105,8 @@ namespace Nyangbingo.Data
             definition.damageTakenCondition = takenCondition;
             definition.stealSlots = inventoryStealSlots;
             definition.stealMaxItems = inventoryStealMaxItems;
+            definition.tearBonus = successfulTheftTearBonus;
+            definition.signatureCondition = signatureDropCondition;
             definition.spawnTracks = allowedSpawnTracks;
             definition.raidFleesAtDawn = fleeAtDawn;
             definition.drops = loot;
