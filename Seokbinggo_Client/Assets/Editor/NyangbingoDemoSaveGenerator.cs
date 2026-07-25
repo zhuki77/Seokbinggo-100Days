@@ -114,7 +114,7 @@ namespace Nyangbingo.Editor
                 baekjungProgress = new BaekjungSchedulerState(),
                 forcedBossEncounters = new List<ForcedBossEncounterRecord>
                 {
-                    new ForcedBossEncounterRecord { bossId = "gangcheol_boss", triggered = false }
+                    new ForcedBossEncounterRecord { bossId = "imugi_boss", triggered = false }
                 },
                 chests = world.chests.Select(chest => new ChestStateRecord
                 {
@@ -289,7 +289,8 @@ namespace Nyangbingo.Editor
             var tileService = new TileService(validationWorld.tiles, null, catalog, save.seed);
             if (!tileService.RestoreTileChanges(save.tileChanges))
                 throw new InvalidOperationException($"Demo day {profile.Day}: tile changes cannot be replayed.");
-            if (!WorldSaveAdapter.RestoreChests(save, validationGenerator, new ChestProgress()))
+            if (!WorldSaveAdapter.RestoreChests(save, validationGenerator,
+                    new ChestProgress(catalog.FindItem)))
                 throw new InvalidOperationException($"Demo day {profile.Day}: chest state cannot be replayed.");
 
             IWorldSafeSpawnResolver spawnResolver = tileService;
