@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using Nyangbingo.Combat;
+using Nyangbingo.Bosses;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.Save;
 using Nyangbingo.World;
 using UnityEngine;
@@ -10,6 +13,7 @@ namespace Nyangbingo.Yokai
     public interface IYokaiTarget { Transform TargetTransform { get; } void DamageWall(float amount); }
     public interface IYokaiCombatTarget { bool TryApplyContactDamage(int amount); }
     public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxSlots, int maxAmount); }
+    public interface IYokaiTheftReceiptSource { IReadOnlyList<ItemAmount> TakeStolenItems(); }
     public interface IWallMaterialTarget { YokaiWallMaterial WallMaterial { get; } }
 
     [RequireComponent(typeof(Health))]
@@ -17,7 +21,16 @@ namespace Nyangbingo.Yokai
     {
         private const float ContactAttackIntervalGameSeconds = 1f;
         private const float AttackRangeTolerance = .05f;
+        public const float GaekgwiTelegraphSeconds = 1f;
+        public const float GaekgwiDashDistanceTiles = 3f;
+        public const float GaekgwiDashSpeedMultiplier = 2.5f;
+        public const int GaekgwiDashAnimationFrameCount = 5;
+        public const float GaekgwiCooldownSeconds = 12f;
+        public const int GaekgwiWailDamage = 8;
+        public const float GaekgwiWailKnockbackTiles = 1f;
+        public const float GaekgwiWailHalfExtentTiles = 1.5f;
         private enum State { Approach, AttackWall, StealLoot, Retreat, DawnFlee }
+        private enum GaekgwiPatternState { Cooldown, Telegraph, Dash }
         [SerializeField] private YokaiDefinition definition;
         [SerializeField] private MonoBehaviour gameSecondsSourceComponent;
         [SerializeField] private Renderer visibilityRenderer;
@@ -44,6 +57,13 @@ namespace Nyangbingo.Yokai
         private bool bossEncounterPaused;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
+        private GaekgwiPatternState gaekgwiPatternState;
+        private float gaekgwiCooldownRemaining;
+        private float gaekgwiTelegraphRemaining;
+        private float gaekgwiDashRemaining;
+        private float gaekgwiDashElapsed;
+        private Vector2 gaekgwiDashDirection;
+        private GangcheoriBreathController gangcheoriBreath;
         private SpriteRenderer[] pausedRenderers = System.Array.Empty<SpriteRenderer>();
         private Color[] pausedRendererColors = System.Array.Empty<Color>();
         public YokaiDefinition Definition => definition;
@@ -57,8 +77,25 @@ namespace Nyangbingo.Yokai
         public float FrostSlowRemaining => frostSlowRemaining;
         public float FrostSpeedMultiplier => CalculateFrostSpeedMultiplier(frostSlowFraction, frostSlowRemaining);
         public bool IsBossEncounterPaused => bossEncounterPaused;
+        public float GaekgwiCooldownRemaining => gaekgwiCooldownRemaining;
+        public float GaekgwiTelegraphRemaining => gaekgwiTelegraphRemaining;
+        public float GaekgwiDashRemaining => gaekgwiDashRemaining;
+        public float GaekgwiDashNormalizedTime
+        {
+            get
+            {
+                var duration = ResolveGaekgwiDashDuration();
+                return duration > Mathf.Epsilon
+                    ? Mathf.Clamp01(gaekgwiDashElapsed / duration)
+                    : 1f;
+            }
+        }
+        public bool IsGaekgwiPatternActive => gaekgwiPatternState != GaekgwiPatternState.Cooldown;
         public event System.Action Bloomed;
         public event System.Action Attacked;
+        public event System.Action GaekgwiTelegraphStarted;
+        public event System.Action GaekgwiDashStarted;
+        public event System.Action GaekgwiWailTriggered;
         public event System.Action<YokaiDefinition> DawnFleeStarted;
         public event System.Action<YokaiDefinition> FledOffscreen;
 
@@ -67,6 +104,7 @@ namespace Nyangbingo.Yokai
             health = GetComponent<Health>();
             physicsBody = GetComponent<WorldMobPhysicsBody>();
             characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+            gangcheoriBreath = GetComponent<GangcheoriBreathController>();
             gameSecondsSource = gameSecondsSourceComponent as IGameSecondsSource;
             if (visibilityRenderer == null) visibilityRenderer = GetComponentInChildren<Renderer>();
         }
@@ -107,10 +145,12 @@ namespace Nyangbingo.Yokai
             contactAttackRemaining = 0f;
             frostSlowFraction = 0f;
             frostSlowRemaining = 0f;
+            ResetGaekgwiPattern();
             SetBossEncounterPaused(false);
             health = GetComponent<Health>();
             physicsBody = GetComponent<WorldMobPhysicsBody>();
             characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+            gangcheoriBreath = GetComponent<GangcheoriBreathController>();
             if (health != null)
             {
                 if (definition != null) health.ConfigureForRuntime(definition.HitPoints);
@@ -118,6 +158,9 @@ namespace Nyangbingo.Yokai
             }
             ResetGameSecondsSample();
         }
+
+        public void BindGangcheoriBreath(GangcheoriBreathController controller) =>
+            gangcheoriBreath = controller;
 
         public void CaptureSaveState(YokaiStateRecord record)
         {
@@ -131,6 +174,15 @@ namespace Nyangbingo.Yokai
             record.contactAttackRemaining = contactAttackRemaining;
             record.frostSlowFraction = frostSlowFraction;
             record.frostSlowRemaining = frostSlowRemaining;
+            record.gaekgwiPatternInitialized = definition != null &&
+                                               definition.Kind == YokaiKind.Gaekgwi;
+            record.gaekgwiPatternState = (int)gaekgwiPatternState;
+            record.gaekgwiCooldownRemaining = gaekgwiCooldownRemaining;
+            record.gaekgwiTelegraphRemaining = gaekgwiTelegraphRemaining;
+            record.gaekgwiDashRemaining = gaekgwiDashRemaining;
+            record.gaekgwiDashDirection = gaekgwiDashDirection;
+            record.stolenItems = GetComponent<YokaiLoot>()?.CaptureStolenItems() ??
+                                 new List<InventorySlot>();
         }
 
         public bool RestoreSaveState(YokaiStateRecord record)
@@ -145,7 +197,15 @@ namespace Nyangbingo.Yokai
                 !IsFiniteNonNegative(record.contactAttackRemaining) ||
                 !IsFiniteNonNegative(record.frostSlowRemaining) ||
                 float.IsNaN(record.frostSlowFraction) || float.IsInfinity(record.frostSlowFraction) ||
-                record.frostSlowFraction < 0f || record.frostSlowFraction > 1f)
+                record.frostSlowFraction < 0f || record.frostSlowFraction > 1f ||
+                record.gaekgwiPatternInitialized &&
+                (record.gaekgwiPatternState < (int)GaekgwiPatternState.Cooldown ||
+                 record.gaekgwiPatternState > (int)GaekgwiPatternState.Dash ||
+                 !IsFiniteNonNegative(record.gaekgwiCooldownRemaining) ||
+                 !IsFiniteNonNegative(record.gaekgwiTelegraphRemaining) ||
+                 !IsFiniteNonNegative(record.gaekgwiDashRemaining) ||
+                 record.gaekgwiDashRemaining > GaekgwiDashDistanceTiles + .0001f ||
+                 !IsFinite(record.gaekgwiDashDirection)))
                 return false;
 
             state = (State)record.behaviorState;
@@ -157,9 +217,32 @@ namespace Nyangbingo.Yokai
             contactAttackRemaining = record.contactAttackRemaining;
             frostSlowFraction = record.frostSlowFraction;
             frostSlowRemaining = record.frostSlowRemaining;
+            if (definition != null && definition.Kind == YokaiKind.Gaekgwi &&
+                record.gaekgwiPatternInitialized)
+            {
+                gaekgwiPatternState = (GaekgwiPatternState)record.gaekgwiPatternState;
+                gaekgwiCooldownRemaining = record.gaekgwiCooldownRemaining;
+                gaekgwiTelegraphRemaining = record.gaekgwiTelegraphRemaining;
+                gaekgwiDashRemaining = record.gaekgwiDashRemaining;
+                gaekgwiDashDirection = record.gaekgwiDashDirection;
+                gaekgwiDashElapsed = gaekgwiPatternState == GaekgwiPatternState.Dash
+                    ? ResolveGaekgwiDashDuration() *
+                      CalculateGaekgwiDashNormalizedTimeFromProgress(
+                          1f - Mathf.Clamp01(
+                              gaekgwiDashRemaining / GaekgwiDashDistanceTiles))
+                    : 0f;
+            }
+            else ResetGaekgwiPattern();
             hasFledOffscreen = false;
             SetBossEncounterPaused(false);
             SetAnimationMoving(state != State.AttackWall);
+            if (definition != null && definition.Kind == YokaiKind.Gaekgwi)
+            {
+                if (gaekgwiPatternState == GaekgwiPatternState.Telegraph)
+                    GaekgwiTelegraphStarted?.Invoke();
+                else if (gaekgwiPatternState == GaekgwiPatternState.Dash)
+                    GaekgwiDashStarted?.Invoke();
+            }
             ResetGameSecondsSample();
             return true;
         }
@@ -187,7 +270,10 @@ namespace Nyangbingo.Yokai
 
         public bool TryDespawnIfOffscreen(bool isVisible)
         {
-            if (state != State.DawnFlee || isVisible || hasFledOffscreen) return false;
+            var theftFlee = state == State.Retreat &&
+                             definition?.Kind == YokaiKind.Yagwanggwi;
+            if (state != State.DawnFlee && !theftFlee ||
+                isVisible || hasFledOffscreen) return false;
             hasFledOffscreen = true;
             FledOffscreen?.Invoke(definition);
             Destroy(gameObject);
@@ -244,7 +330,9 @@ namespace Nyangbingo.Yokai
         private void Update()
         {
             TickFromGameClock();
-            if (state != State.DawnFlee) return;
+            if (state != State.DawnFlee &&
+                (state != State.Retreat || definition?.Kind != YokaiKind.Yagwanggwi))
+                return;
             if (visibilityRenderer == null) visibilityRenderer = GetComponentInChildren<Renderer>();
             if (visibilityRenderer != null) TryDespawnIfOffscreen(visibilityRenderer.isVisible);
         }
@@ -283,7 +371,7 @@ namespace Nyangbingo.Yokai
             }
             if (state == State.DawnFlee)
             {
-                MoveRetreat(dawnFleeDirection, actionSeconds);
+                MoveRetreat(dawnFleeDirection, actionSeconds, true);
                 return;
             }
             if (target == null || target.TargetTransform == null) return;
@@ -352,6 +440,12 @@ namespace Nyangbingo.Yokai
                     if (lanternPauseRemaining > 0f || actionSeconds <= .0001f) return;
                 }
             }
+            if (definition.Kind == YokaiKind.Gangcheori &&
+                gangcheoriBreath != null &&
+                gangcheoriBreath.Tick(actionSeconds))
+                return;
+            if (definition.Kind == YokaiKind.Gaekgwi && TickGaekgwiPattern(actionSeconds))
+                return;
             var targetPosition = target.TargetTransform.position;
             var currentPosition = transform.position;
             if (!IsFinite(currentPosition) || !IsFinite(targetPosition)) return;
@@ -388,6 +482,9 @@ namespace Nyangbingo.Yokai
                             definition.StealSlots > 0 && definition.StealMaxItems > 0)
                             stoleLoot = lootTarget?.TryStealInventory(
                                 definition.StealSlots, definition.StealMaxItems) == true;
+                        if (stoleLoot && lootTarget is IYokaiTheftReceiptSource receiptSource)
+                            GetComponent<YokaiLoot>()?.RecordStolenItems(
+                                receiptSource.TakeStolenItems());
                         state = stoleLoot ? State.Retreat : State.Approach;
                     }
                     break;
@@ -430,15 +527,19 @@ namespace Nyangbingo.Yokai
                     }
                     break;
                 case State.Retreat:
-                    MoveRetreat(-direction, actionSeconds);
+                    MoveRetreat(-direction, actionSeconds, false);
                     break;
             }
         }
 
-        private void MoveRetreat(Vector3 direction, float actionSeconds)
+        private void MoveRetreat(Vector3 direction, float actionSeconds, bool dawnFlee)
         {
             var moveSpeed = definition.MoveSpeed;
-            var retreatMultiplier = retreatSpeedMultiplier;
+            var retreatMultiplier = dawnFlee
+                ? .5f
+                : definition.Kind == YokaiKind.Yagwanggwi
+                    ? 1f
+                    : retreatSpeedMultiplier;
             if (moveSpeed <= 0f || retreatMultiplier <= 0f || float.IsNaN(moveSpeed) ||
                 float.IsInfinity(moveSpeed) || float.IsNaN(retreatMultiplier) ||
                 float.IsInfinity(retreatMultiplier) || !IsFinite(direction)) return;
@@ -478,6 +579,177 @@ namespace Nyangbingo.Yokai
                 characterAnimator?.SetMoving(true);
             }
             return movedDistance;
+        }
+
+        private bool TickGaekgwiPattern(float actionSeconds)
+        {
+            var remaining = Mathf.Max(0f, actionSeconds);
+            if (gaekgwiPatternState == GaekgwiPatternState.Cooldown)
+            {
+                if (gaekgwiCooldownRemaining > 0f)
+                {
+                    gaekgwiCooldownRemaining = Mathf.Max(0f, gaekgwiCooldownRemaining - remaining);
+                    return false;
+                }
+                BeginGaekgwiTelegraph();
+            }
+
+            if (gaekgwiPatternState == GaekgwiPatternState.Telegraph)
+            {
+                var elapsed = Mathf.Min(gaekgwiTelegraphRemaining, remaining);
+                gaekgwiTelegraphRemaining = Mathf.Max(0f, gaekgwiTelegraphRemaining - elapsed);
+                remaining = Mathf.Max(0f, remaining - elapsed);
+                if (gaekgwiTelegraphRemaining > .0001f) return true;
+                BeginGaekgwiDash();
+            }
+
+            if (gaekgwiPatternState != GaekgwiPatternState.Dash) return true;
+            var dashDuration = ResolveGaekgwiDashDuration();
+            if (dashDuration <= Mathf.Epsilon)
+            {
+                TriggerGaekgwiWail();
+                return true;
+            }
+
+            var previousNormalizedTime = Mathf.Clamp01(gaekgwiDashElapsed / dashDuration);
+            gaekgwiDashElapsed = Mathf.Min(
+                dashDuration, gaekgwiDashElapsed + remaining);
+            var normalizedTime = Mathf.Clamp01(gaekgwiDashElapsed / dashDuration);
+            var previousProgress =
+                CalculateGaekgwiDashProgress(previousNormalizedTime);
+            var progress = CalculateGaekgwiDashProgress(normalizedTime);
+            var requestedDistance = Mathf.Min(
+                gaekgwiDashRemaining,
+                GaekgwiDashDistanceTiles * Mathf.Max(0f, progress - previousProgress));
+            if (requestedDistance > .0001f)
+            {
+                var movedDistance = MoveBy(gaekgwiDashDirection * requestedDistance);
+                gaekgwiDashRemaining =
+                    Mathf.Max(0f, gaekgwiDashRemaining - movedDistance);
+                if (movedDistance + .0001f < requestedDistance)
+                {
+                    TriggerGaekgwiWail();
+                    return true;
+                }
+            }
+            if (gaekgwiDashElapsed >= dashDuration - .0001f)
+                TriggerGaekgwiWail();
+            return true;
+        }
+
+        private void BeginGaekgwiTelegraph()
+        {
+            var targetOffset = target.TargetTransform.position - transform.position;
+            var horizontal = Mathf.Abs(targetOffset.x) > .0001f ? Mathf.Sign(targetOffset.x) : 1f;
+            gaekgwiDashDirection = new Vector2(horizontal, 0f);
+            gaekgwiPatternState = GaekgwiPatternState.Telegraph;
+            gaekgwiCooldownRemaining = 0f;
+            gaekgwiTelegraphRemaining = GaekgwiTelegraphSeconds;
+            gaekgwiDashRemaining = CalculateGaekgwiDashDistance();
+            gaekgwiDashElapsed = 0f;
+            characterAnimator?.SetFacing(gaekgwiDashDirection);
+            GaekgwiTelegraphStarted?.Invoke();
+        }
+
+        private void BeginGaekgwiDash()
+        {
+            gaekgwiPatternState = GaekgwiPatternState.Dash;
+            gaekgwiTelegraphRemaining = 0f;
+            characterAnimator?.SetFacing(gaekgwiDashDirection);
+            GaekgwiDashStarted?.Invoke();
+            if (gaekgwiDashRemaining <= .0001f) TriggerGaekgwiWail();
+        }
+
+        private void TriggerGaekgwiWail()
+        {
+            gaekgwiPatternState = GaekgwiPatternState.Cooldown;
+            gaekgwiCooldownRemaining = GaekgwiCooldownSeconds;
+            gaekgwiTelegraphRemaining = 0f;
+            gaekgwiDashRemaining = 0f;
+            gaekgwiDashElapsed = 0f;
+            GaekgwiWailTriggered?.Invoke();
+            Attacked?.Invoke();
+
+            var offset = target.TargetTransform.position - transform.position;
+            if (Mathf.Abs(offset.x) > GaekgwiWailHalfExtentTiles ||
+                Mathf.Abs(offset.y) > GaekgwiWailHalfExtentTiles ||
+                target is not IBossCombatTarget combatTarget) return;
+            var horizontal = Mathf.Abs(offset.x) > .0001f
+                ? Mathf.Sign(offset.x)
+                : gaekgwiDashDirection.x;
+            combatTarget.TryApplyBossSpecialDamage(GaekgwiWailDamage, DamageTag.Ice,
+                new Vector2(horizontal * GaekgwiWailKnockbackTiles, 0f));
+        }
+
+        private void ResetGaekgwiPattern()
+        {
+            gaekgwiPatternState = GaekgwiPatternState.Cooldown;
+            gaekgwiCooldownRemaining = GaekgwiCooldownSeconds;
+            gaekgwiTelegraphRemaining = 0f;
+            gaekgwiDashRemaining = 0f;
+            gaekgwiDashElapsed = 0f;
+            gaekgwiDashDirection = Vector2.right;
+        }
+
+        public static float CalculateGaekgwiDashDistance() => GaekgwiDashDistanceTiles;
+
+        public static float CalculateGaekgwiDashProgress(float normalizedTime)
+        {
+            // Delivered 96 px canvas frame centers:
+            // 15, 45, 71.5, 80, 83.5 px. Normalize their 68.5 px displacement
+            // so the runtime root follows the same ease-out curve over exactly 3 tiles.
+            var time = Mathf.Clamp01(normalizedTime);
+            var scaled = time * GaekgwiDashAnimationFrameCount;
+            var frame = Mathf.Min(
+                Mathf.FloorToInt(scaled),
+                GaekgwiDashAnimationFrameCount - 1);
+            var frameFraction = scaled - frame;
+            var start = GaekgwiDashFrameProgress(frame);
+            var end = frame >= GaekgwiDashAnimationFrameCount - 1
+                ? 1f
+                : GaekgwiDashFrameProgress(frame + 1);
+            return Mathf.Lerp(start, end, frameFraction);
+        }
+
+        private static float GaekgwiDashFrameProgress(int frame)
+        {
+            return frame switch
+            {
+                <= 0 => 0f,
+                1 => 30f / 68.5f,
+                2 => 56.5f / 68.5f,
+                3 => 65f / 68.5f,
+                _ => 1f
+            };
+        }
+
+        private static float CalculateGaekgwiDashNormalizedTimeFromProgress(float progress)
+        {
+            var clamped = Mathf.Clamp01(progress);
+            for (var frame = 0; frame < GaekgwiDashAnimationFrameCount; frame++)
+            {
+                var start = GaekgwiDashFrameProgress(frame);
+                var end = frame >= GaekgwiDashAnimationFrameCount - 1
+                    ? 1f
+                    : GaekgwiDashFrameProgress(frame + 1);
+                if (clamped > end && frame < GaekgwiDashAnimationFrameCount - 1)
+                    continue;
+                var fraction = end > start + Mathf.Epsilon
+                    ? Mathf.InverseLerp(start, end, clamped)
+                    : 0f;
+                return (frame + fraction) / GaekgwiDashAnimationFrameCount;
+            }
+            return 1f;
+        }
+
+        private float ResolveGaekgwiDashDuration()
+        {
+            var speed = definition != null
+                ? definition.MoveSpeed * GaekgwiDashSpeedMultiplier
+                : 0f;
+            return speed > Mathf.Epsilon && !float.IsNaN(speed) && !float.IsInfinity(speed)
+                ? GaekgwiDashDistanceTiles / speed
+                : 0f;
         }
 
         private Vector2 ResolveFacingDirection(Vector3 movement)
@@ -539,5 +811,295 @@ namespace Nyangbingo.Yokai
         }
 
         private void HandleDawnWarning() => BeginDawnFlee();
+    }
+
+    /// <summary>
+    /// v34 moved Gangcheori from the boss track to a resident elite. Its reduced breath
+    /// therefore belongs to the yokai runtime rather than the boss-only combat controller.
+    /// </summary>
+    [RequireComponent(typeof(Health))]
+    public sealed class GangcheoriBreathController : MonoBehaviour
+    {
+        public const float TelegraphSeconds = 1.5f;
+        public const float RangeTiles = 3f;
+        public const float ArcDegrees = 60f;
+        public const int Damage = 18;
+        public const float KnockbackTiles = 2f;
+        public const float CooldownSeconds = 12f;
+        private const float EffectFrameSeconds = .1f;
+        private const float RangeTolerance = .05f;
+
+        private YokaiDefinition definition;
+        private Transform targetTransform;
+        private IBossCombatTarget combatTarget;
+        private SpriteRenderer headRenderer;
+        private RuntimeCharacterSpriteAnimator characterAnimator;
+        private WorldMobPhysicsBody physicsBody;
+        private Vector2 lockedAim = Vector2.left;
+        private Vector2 lockedOrigin;
+        private float cooldownRemaining;
+        private float telegraphRemaining;
+        private float effectRemaining;
+        private bool telegraphing;
+        private Mesh telegraphMesh;
+        private MeshRenderer telegraphRenderer;
+        private Material telegraphMaterial;
+        private Transform effectTransform;
+        private SpriteRenderer effectRenderer;
+        private RuntimeBuildingSpriteAnimator effectAnimator;
+        private System.Collections.Generic.IReadOnlyList<Sprite> effectFrames;
+        private Vector2 effectMaximumSize;
+
+        public bool IsTelegraphing => telegraphing;
+        public float CooldownRemaining => cooldownRemaining;
+        public static Vector2 EffectWorldSize => new Vector2(
+            RangeTiles,
+            RangeTiles * 2f * Mathf.Tan(ArcDegrees * .5f * Mathf.Deg2Rad));
+
+        public bool ConfigureForRuntime(YokaiDefinition value, MonoBehaviour target,
+            GameplayArtCatalog artCatalog, SpriteRenderer head)
+        {
+            definition = value;
+            targetTransform = target != null ? target.transform : null;
+            combatTarget = target as IBossCombatTarget;
+            headRenderer = head;
+            characterAnimator = head != null
+                ? head.GetComponent<RuntimeCharacterSpriteAnimator>()
+                : null;
+            physicsBody = GetComponent<WorldMobPhysicsBody>();
+            if (definition == null || definition.Kind != YokaiKind.Gangcheori ||
+                targetTransform == null || combatTarget == null || headRenderer == null)
+                return false;
+
+            cooldownRemaining = 0f;
+            telegraphRemaining = 0f;
+            effectRemaining = 0f;
+            telegraphing = false;
+            CreateTelegraph();
+            CreateEffect(artCatalog?.GangcheoriSpecialFireFrames);
+            return true;
+        }
+
+        /// <summary>
+        /// Returns true while the breath owns the elite's action and normal pursuit must pause.
+        /// </summary>
+        public bool Tick(float deltaGameSeconds)
+        {
+            if (!IsFinite(deltaGameSeconds) || deltaGameSeconds < 0f ||
+                definition == null || targetTransform == null || combatTarget == null)
+                return false;
+            var health = GetComponent<Health>();
+            if (health == null || health.IsDead) return false;
+
+            TickEffect(deltaGameSeconds);
+            if (telegraphing)
+            {
+                telegraphRemaining = Mathf.Max(0f, telegraphRemaining - deltaGameSeconds);
+                RefreshTelegraph();
+                if (telegraphRemaining <= .0001f) Fire();
+                return true;
+            }
+
+            cooldownRemaining = Mathf.Max(0f, cooldownRemaining - deltaGameSeconds);
+            if (cooldownRemaining > .0001f) return false;
+            var aim = (Vector2)(targetTransform.position - transform.position);
+            if (!IsFinite(aim) || aim.sqrMagnitude <= Mathf.Epsilon) return false;
+            aim.Normalize();
+            var origin = ResolveBreathOrigin(aim);
+            var targetOffset = (Vector2)targetTransform.position - origin;
+            if (!IsInsideBreathCone(targetOffset, aim) ||
+                physicsBody != null && !physicsBody.HasClearAttackLine(targetTransform.position))
+                return false;
+
+            BeginTelegraph(origin, aim);
+            return true;
+        }
+
+        public static bool IsInsideBreathCone(Vector2 offset, Vector2 aim)
+        {
+            if (!IsFinite(offset) || !IsFinite(aim) || aim.sqrMagnitude <= Mathf.Epsilon)
+                return false;
+            var distance = offset.magnitude;
+            if (distance > RangeTiles + RangeTolerance) return false;
+            if (distance <= Mathf.Epsilon) return true;
+            return Vector2.Angle(aim, offset) <= ArcDegrees * .5f + RangeTolerance;
+        }
+
+        private void BeginTelegraph(Vector2 origin, Vector2 aim)
+        {
+            lockedOrigin = origin;
+            lockedAim = aim.sqrMagnitude > Mathf.Epsilon ? aim.normalized : Vector2.left;
+            telegraphRemaining = TelegraphSeconds;
+            telegraphing = true;
+            characterAnimator?.SetFacing(lockedAim);
+            if (telegraphRenderer != null) telegraphRenderer.enabled = true;
+            RefreshTelegraph();
+        }
+
+        private void Fire()
+        {
+            telegraphing = false;
+            telegraphRemaining = 0f;
+            cooldownRemaining = CooldownSeconds;
+            if (telegraphRenderer != null) telegraphRenderer.enabled = false;
+            characterAnimator?.PlayAttack();
+            PlayEffect();
+
+            var targetOffset = (Vector2)targetTransform.position - lockedOrigin;
+            if (!IsInsideBreathCone(targetOffset, lockedAim)) return;
+            combatTarget.TryApplyBossSpecialDamage(
+                Damage,
+                DamageTag.Fire,
+                lockedAim * KnockbackTiles);
+        }
+
+        private Vector2 ResolveBreathOrigin(Vector2 aim)
+        {
+            if (headRenderer == null || headRenderer.sprite == null)
+                return transform.position;
+            var bounds = headRenderer.bounds;
+            return bounds.center + new Vector3(
+                aim.x * bounds.extents.x,
+                aim.y * bounds.extents.y,
+                0f);
+        }
+
+        private void CreateEffect(System.Collections.Generic.IReadOnlyList<Sprite> frames)
+        {
+            effectFrames = frames;
+            if (frames == null || frames.Count == 0) return;
+            var effectObject = new GameObject("GangcheoriSpecialFire");
+            effectObject.transform.SetParent(transform, false);
+            effectTransform = effectObject.transform;
+            effectRenderer = effectObject.AddComponent<SpriteRenderer>();
+            effectRenderer.sortingOrder = 16;
+            effectAnimator = effectObject.AddComponent<RuntimeBuildingSpriteAnimator>();
+            effectAnimator.Configure(frames, EffectFrameSeconds);
+            effectMaximumSize = Vector2.zero;
+            for (var index = 0; index < frames.Count; index++)
+            {
+                var frame = frames[index];
+                if (frame == null) continue;
+                effectMaximumSize.x =
+                    Mathf.Max(effectMaximumSize.x, frame.bounds.size.x);
+                effectMaximumSize.y =
+                    Mathf.Max(effectMaximumSize.y, frame.bounds.size.y);
+            }
+            effectRenderer.enabled = false;
+        }
+
+        private void PlayEffect()
+        {
+            if (effectRenderer == null || effectTransform == null ||
+                effectFrames == null || effectFrames.Count == 0) return;
+            effectAnimator.Configure(effectFrames, EffectFrameSeconds);
+            effectRemaining = effectFrames.Count * EffectFrameSeconds;
+            effectRenderer.enabled = true;
+            RefreshEffectVisual();
+        }
+
+        private void TickEffect(float deltaGameSeconds)
+        {
+            if (effectRemaining <= .0001f) return;
+            RefreshEffectVisual();
+            effectRemaining = Mathf.Max(0f, effectRemaining - deltaGameSeconds);
+            if (effectRemaining <= .0001f && effectRenderer != null)
+                effectRenderer.enabled = false;
+        }
+
+        private void RefreshEffectVisual()
+        {
+            if (effectTransform == null || effectRenderer == null ||
+                effectRenderer.sprite == null) return;
+
+            var aim = lockedAim.sqrMagnitude > Mathf.Epsilon
+                ? lockedAim.normalized
+                : Vector2.left;
+            var desiredSize = EffectWorldSize;
+            var rootScale = transform.lossyScale;
+            effectTransform.localScale = new Vector3(
+                desiredSize.x / Mathf.Max(effectMaximumSize.x, Mathf.Epsilon) /
+                Mathf.Max(Mathf.Abs(rootScale.x), Mathf.Epsilon),
+                desiredSize.y / Mathf.Max(effectMaximumSize.y, Mathf.Epsilon) /
+                Mathf.Max(Mathf.Abs(rootScale.y), Mathf.Epsilon),
+                1f);
+            effectTransform.rotation = Quaternion.Euler(
+                0f, 0f, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
+
+            // The delivered Aseprite frames use an off-canvas bottom pivot. Place the
+            // rendered bounds, not that pivot, over the same 3-tile cone as the hit test.
+            var desiredCenter = lockedOrigin + aim * (RangeTiles * .5f);
+            var renderedCenterOffset = (Vector2)
+                effectTransform.TransformVector(effectRenderer.sprite.bounds.center);
+            effectTransform.position = desiredCenter - renderedCenterOffset;
+        }
+
+        private void CreateTelegraph()
+        {
+            var telegraphObject = new GameObject("GangcheoriBreathTelegraph");
+            telegraphObject.transform.SetParent(transform, false);
+            var filter = telegraphObject.AddComponent<MeshFilter>();
+            telegraphRenderer = telegraphObject.AddComponent<MeshRenderer>();
+            telegraphMesh = new Mesh { name = "GangcheoriBreathTelegraphMesh" };
+            filter.sharedMesh = telegraphMesh;
+            BuildConeMesh();
+            var shader = Shader.Find("Sprites/Default");
+            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader != null)
+            {
+                telegraphMaterial = new Material(shader)
+                {
+                    color = new Color(1f, .2f, .05f, .3f),
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                telegraphRenderer.sharedMaterial = telegraphMaterial;
+            }
+            telegraphRenderer.sortingOrder = 14;
+            telegraphRenderer.enabled = false;
+        }
+
+        private void BuildConeMesh()
+        {
+            const int segments = 16;
+            var vertices = new Vector3[segments + 2];
+            var triangles = new int[segments * 3];
+            vertices[0] = Vector3.zero;
+            for (var index = 0; index <= segments; index++)
+            {
+                var angle = Mathf.Lerp(-ArcDegrees * .5f, ArcDegrees * .5f,
+                    index / (float)segments) * Mathf.Deg2Rad;
+                vertices[index + 1] =
+                    new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * RangeTiles;
+                if (index >= segments) continue;
+                var triangle = index * 3;
+                triangles[triangle] = 0;
+                triangles[triangle + 1] = index + 1;
+                triangles[triangle + 2] = index + 2;
+            }
+            telegraphMesh.Clear();
+            telegraphMesh.vertices = vertices;
+            telegraphMesh.triangles = triangles;
+            telegraphMesh.RecalculateBounds();
+        }
+
+        private void RefreshTelegraph()
+        {
+            if (telegraphRenderer == null) return;
+            telegraphRenderer.transform.position = lockedOrigin;
+            telegraphRenderer.transform.rotation = Quaternion.Euler(
+                0f, 0f, Mathf.Atan2(lockedAim.y, lockedAim.x) * Mathf.Rad2Deg);
+        }
+
+        private void OnDestroy()
+        {
+            if (telegraphMesh != null) Destroy(telegraphMesh);
+            if (telegraphMaterial != null) Destroy(telegraphMaterial);
+        }
+
+        private static bool IsFinite(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value);
+
+        private static bool IsFinite(Vector2 value) =>
+            IsFinite(value.x) && IsFinite(value.y);
     }
 }

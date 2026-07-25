@@ -38,6 +38,9 @@ namespace Nyangbingo.Inventory
             return (int)total;
         }
 
+        public ItemDefinition FindItem(string itemId) =>
+            string.IsNullOrEmpty(itemId) ? null : findItem(itemId);
+
         public bool Has(string itemId, int amount) => amount > 0 && Count(itemId) >= amount;
 
         public bool TryAdd(string itemId, int amount)
@@ -71,6 +74,35 @@ namespace Nyangbingo.Inventory
                 if (slot.amount == 0) slot.itemId = string.Empty; slots[i] = slot;
             }
             Changed?.Invoke(); return true;
+        }
+
+        public bool TryRemoveFromOccupiedSlots(int maximumSlots, int maximumAmount,
+            out List<InventorySlot> removedStacks)
+        {
+            removedStacks = new List<InventorySlot>();
+            if (maximumSlots <= 0 || maximumAmount <= 0) return false;
+            var candidates = new List<int>();
+            for (var index = 0; index < slots.Count; index++)
+                if (!string.IsNullOrEmpty(slots[index].itemId) && slots[index].amount > 0)
+                    candidates.Add(index);
+            var removedAmount = 0;
+            while (candidates.Count > 0 && removedStacks.Count < maximumSlots &&
+                   removedAmount < maximumAmount)
+            {
+                var candidateIndex = UnityEngine.Random.Range(0, candidates.Count);
+                var index = candidates[candidateIndex];
+                candidates.RemoveAt(candidateIndex);
+                var slot = slots[index];
+                var removed = Math.Min(slot.amount, maximumAmount - removedAmount);
+                removedStacks.Add(new InventorySlot { itemId = slot.itemId, amount = removed });
+                slot.amount -= removed;
+                removedAmount += removed;
+                if (slot.amount <= 0) slot = default;
+                slots[index] = slot;
+            }
+            if (removedStacks.Count == 0) return false;
+            Changed?.Invoke();
+            return true;
         }
 
         public List<InventorySlot> Export() => new List<InventorySlot>(slots);

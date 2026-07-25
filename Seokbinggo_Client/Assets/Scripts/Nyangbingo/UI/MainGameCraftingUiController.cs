@@ -58,8 +58,12 @@ namespace Nyangbingo.UI
         private readonly Text[] storageLabels = new Text[JangdokStorageRuntime.SlotCount];
         private readonly Image[] storagePlayerIcons = new Image[Nyangbingo.Inventory.Inventory.SlotCount];
         private readonly Image[] storageIcons = new Image[JangdokStorageRuntime.SlotCount];
+        private Text storageLabelText;
         private Text storageHintText;
         private string storageObjectId = string.Empty;
+        private ChestProgress chestProgress;
+        private string chestId = string.Empty;
+        private bool HasStorageMode => !string.IsNullOrEmpty(storageObjectId) || chestProgress != null;
         private readonly Text[] inventoryGridLabels =
             new Text[Nyangbingo.Inventory.Inventory.SlotCount];
         private readonly Button[] inventoryGridButtons =
@@ -232,7 +236,7 @@ namespace Nyangbingo.UI
                 return;
             }
 
-            if (open && !string.IsNullOrEmpty(storageObjectId))
+            if (open && HasStorageMode)
             {
                 if (openedFrame != Time.frameCount && Input.GetKeyDown(KeyCode.E)) SetOpen(false);
                 return;
@@ -295,11 +299,28 @@ namespace Nyangbingo.UI
             if (!initialized || string.IsNullOrWhiteSpace(objectId) ||
                 shell != null && shell.Screen != GameShellScreen.Gameplay || Time.timeScale <= 0f ||
                 !runtimeServices.JangdokStorage.TryRegister(objectId)) return false;
+            chestProgress = null;
+            chestId = string.Empty;
             storageObjectId = objectId;
             selectedIndex = 0;
             SetOpen(true);
             Refresh();
             Debug.Log($"[Nyangbingo] Jangdok storage opened: id={objectId}, slots={JangdokStorageRuntime.SlotCount}.");
+            return true;
+        }
+
+        public bool TryOpenChest(ChestProgress progress, string id)
+        {
+            if (!initialized || progress == null || string.IsNullOrWhiteSpace(id) ||
+                shell != null && shell.Screen != GameShellScreen.Gameplay || Time.timeScale <= 0f ||
+                !progress.TryGetContents(id, out _)) return false;
+            storageObjectId = string.Empty;
+            chestProgress = progress;
+            chestId = id;
+            selectedIndex = 0;
+            SetOpen(true);
+            Refresh();
+            Debug.Log($"[Nyangbingo] Chest loot storage opened: id={id}, slots={ChestProgress.StorageSlotCount}.");
             return true;
         }
 
@@ -608,8 +629,9 @@ namespace Nyangbingo.UI
         {
             storageModeRoot = CreateUiObject("JangdokStorageMode", panel.transform,
                 new Vector2(450f, 206f), new Vector2(0f, -2f));
-            CreateText(storageModeRoot.transform, "StorageLabel", 9, TextAnchor.MiddleCenter,
-                new Vector2(175f, 16f), new Vector2(-120f, 75f)).text = "장독 창고 · 40슬롯";
+            storageLabelText = CreateText(storageModeRoot.transform, "StorageLabel", 9, TextAnchor.MiddleCenter,
+                new Vector2(175f, 16f), new Vector2(-120f, 75f));
+            storageLabelText.text = "장독 창고 · 40슬롯";
             CreateText(storageModeRoot.transform, "PlayerLabel", 9, TextAnchor.MiddleCenter,
                 new Vector2(215f, 16f), new Vector2(100f, 75f)).text = "플레이어 · 50슬롯";
 
@@ -680,6 +702,15 @@ namespace Nyangbingo.UI
 
         private void TransferPlayerSlot(int index)
         {
+            if (chestProgress != null)
+            {
+                if (!chestProgress.TryGetContents(chestId, out var chestStorage)) return;
+                storageHintText.text = runtimeServices.PlayerInventory.TryTransferSlotTo(index, chestStorage)
+                    ? "자연 상자에 보관했습니다."
+                    : "빈 슬롯이거나 자연 상자에 공간이 없습니다.";
+                Refresh();
+                return;
+            }
             if (!runtimeServices.JangdokStorage.TryGet(storageObjectId, out var storage)) return;
             storageHintText.text = runtimeServices.PlayerInventory.TryTransferSlotTo(index, storage)
                 ? "장독 창고에 보관했습니다."
@@ -689,6 +720,37 @@ namespace Nyangbingo.UI
 
         private void TransferStorageSlot(int index)
         {
+            if (chestProgress != null)
+            {
+                if (!chestProgress.TryGetContents(chestId, out var chestStorage) ||
+                    index < 0 || index >= chestStorage.Slots.Count)
+                    return;
+                var slot = chestStorage.Slots[index];
+                var equipment = string.IsNullOrEmpty(slot.itemId)
+                    ? null
+                    : gameDataCatalog.FindEquipment(slot.itemId);
+                var transferred = false;
+                var acquiredEquipment = false;
+                if (equipment != null && slot.amount == 1 &&
+                    !runtimeServices.EquipmentCollection.Contains(equipment.Id))
+                {
+                    transferred = runtimeServices.EquipmentCollection.TryAdd(equipment) &&
+                                  chestStorage.TryRemove(slot.itemId, 1);
+                    acquiredEquipment = transferred;
+                }
+                else
+                {
+                    transferred = chestStorage.TryTransferSlotTo(
+                        index, runtimeServices.PlayerInventory);
+                }
+                storageHintText.text = acquiredEquipment
+                    ? "상자 장비를 장비 보유 목록으로 획득했습니다."
+                    : transferred
+                    ? "상자에서 아이템을 꺼냈습니다."
+                    : "빈 슬롯이거나 플레이어 인벤토리에 공간이 없습니다.";
+                Refresh();
+                return;
+            }
             if (!runtimeServices.JangdokStorage.TryGet(storageObjectId, out var storage)) return;
             storageHintText.text = storage.TryTransferSlotTo(index, runtimeServices.PlayerInventory)
                 ? "플레이어 인벤토리로 꺼냈습니다."
@@ -869,6 +931,8 @@ namespace Nyangbingo.UI
             if (target != Page.Codex && codexExpandedBackdrop != null) codexExpandedBackdrop.SetActive(false);
             page = target;
             storageObjectId = string.Empty;
+            chestProgress = null;
+            chestId = string.Empty;
             showingSmelting = false;
             selectedIndex = 0;
             if (page == Page.Crafting) RebuildFilteredRecipes(NearbyStation());
@@ -960,11 +1024,7 @@ namespace Nyangbingo.UI
 
         private void TryPrimaryAction()
         {
-            if (!open || runtimeServices?.NapService?.IsNapping == true)
-            {
-                ShowMessage("냥잠 중에는 제작·제련할 수 없습니다.");
-                return;
-            }
+            if (!open) return;
             switch (page)
             {
                 case Page.Gathering: TryUseOrPlaceSelectedInventoryItem(); break;
@@ -980,6 +1040,17 @@ namespace Nyangbingo.UI
         {
             var item = CurrentInventoryItem();
             if (item == null) return;
+            if (item.Id == PlayerHealthRecoveryService.CatnipItemId)
+            {
+                var recovery = runtimeServices?.PlayerHealthRecovery;
+                if (recovery != null && recovery.TryUseCatnip(out var restoredHealth))
+                {
+                    ShowMessage($"캣닢 사용 · HP +{restoredHealth}");
+                    Refresh();
+                }
+                else ShowMessage("HP가 가득 찼거나 캣닢을 사용할 수 없습니다.");
+                return;
+            }
             var summonBoss = stationSource?.FindBossForSummonItem(item.Id);
             if (summonBoss != null)
             {
@@ -1184,6 +1255,8 @@ namespace Nyangbingo.UI
             if (!open)
             {
                 storageObjectId = string.Empty;
+                chestProgress = null;
+                chestId = string.Empty;
                 CancelSummonConfirmation();
             }
             if (!open && codexModel != null) codexModel.TapOutside();
@@ -1198,7 +1271,7 @@ namespace Nyangbingo.UI
         {
             if (panel == null || !open || runtimeServices == null || !runtimeServices.IsInitialized) return;
             RefreshPageLayout();
-            if (!string.IsNullOrEmpty(storageObjectId))
+            if (HasStorageMode)
             {
                 RefreshStorage();
                 return;
@@ -1221,7 +1294,7 @@ namespace Nyangbingo.UI
 
         private void RefreshPageLayout()
         {
-            var storageMode = !string.IsNullOrEmpty(storageObjectId);
+            var storageMode = HasStorageMode;
             if (storageModeRoot != null) storageModeRoot.SetActive(storageMode);
             if (storageMode)
             {
@@ -1306,13 +1379,13 @@ namespace Nyangbingo.UI
                 placementRect.anchoredPosition = new Vector2(-100f, -91f);
                 placementRect.sizeDelta = new Vector2(150f, 22f);
                 collectButton.GetComponentInChildren<Text>().text = "설치";
-                collectButton.interactable = runtimeServices.NapService?.IsNapping != true;
+                collectButton.interactable = true;
             }
             titleText.text = $"제작 {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
             var stationOk = recipe.Station == CraftingStation.None || recipe.Station == NearbyStation();
             var canCraft = !runtimeServices.CraftingProcess.IsCrafting && stationOk &&
                            runtimeServices.CraftingService.CanCraft(recipe, recipe.Station);
-            primaryButton.interactable = canCraft && runtimeServices.NapService?.IsNapping != true;
+            primaryButton.interactable = canCraft;
             var builder = new StringBuilder();
             builder.AppendLine($"결과: {recipe.Output.item.DisplayName} ×{recipe.Output.amount}");
             builder.AppendLine($"제작대: {StationLabel(recipe.Station)} " +
@@ -1335,11 +1408,28 @@ namespace Nyangbingo.UI
 
         private void RefreshStorage()
         {
-            titleText.text = "장독 창고 · 클릭한 묶음 전체 이동";
-            if (!runtimeServices.JangdokStorage.TryGet(storageObjectId, out var storage))
+            Nyangbingo.Inventory.Inventory storage;
+            if (chestProgress != null)
+            {
+                titleText.text = "자연 상자 · 클릭한 묶음 전체 이동";
+                if (storageLabelText != null)
+                    storageLabelText.text = $"상자 내용물 · {ChestProgress.StorageSlotCount}슬롯";
+                if (!chestProgress.TryGetContents(chestId, out storage))
+                {
+                    SetOpen(false);
+                    return;
+                }
+            }
+            else if (!runtimeServices.JangdokStorage.TryGet(storageObjectId, out storage))
             {
                 SetOpen(false);
                 return;
+            }
+            else
+            {
+                titleText.text = "장독 창고 · 클릭한 묶음 전체 이동";
+                if (storageLabelText != null)
+                    storageLabelText.text = $"장독 창고 · {JangdokStorageRuntime.SlotCount}슬롯";
             }
             RefreshTransferSlots(storageLabels, storageIcons, storage.Slots);
             RefreshTransferSlots(storagePlayerLabels, storagePlayerIcons,
@@ -1456,7 +1546,7 @@ namespace Nyangbingo.UI
                 : runtimeServices.Furnace;
             var stationOk = NearbyStation() == requiredStation;
             titleText.text = $"제작 · 제련 {selectedIndex + 1}/{smeltingRecipes.Count} · {definition.Output.item.DisplayName}";
-            primaryButton.interactable = stationOk && runtimeServices.NapService?.IsNapping != true;
+            primaryButton.interactable = stationOk;
             collectButton.interactable = station.Completed.Count > 0;
             detailsText.text =
                 $"제련소: {StationLabel(requiredStation)} {(stationOk ? "(현재 사용 가능)" : "(근처로 이동 필요)")}\n" +
@@ -1519,19 +1609,24 @@ namespace Nyangbingo.UI
                            (MainGameTilePaletteController.SupportsPalettePlacement(selectedItem.Id)
                                ? tilePalette != null
                                : turretRuntime != null);
+            var isCatnip = selectedItem?.Id == PlayerHealthRecoveryService.CatnipItemId;
+            var canUseCatnip = isCatnip && runtimeServices.PlayerHealthRecovery?.CanUseCatnip == true;
             titleText.text = selectedItem == null
                 ? $"소지품 10×5 · {inventory.Capacity}슬롯"
                 : $"소지품 10×5 · {selectedItem.DisplayName} ×{inventory.Count(selectedItem.Id)}";
-            primaryButton.GetComponentInChildren<Text>().text = summonBoss != null
+            primaryButton.GetComponentInChildren<Text>().text = isCatnip
+                ? canUseCatnip ? "E · 캣닢 사용 (HP +25)" : "HP가 가득 찼습니다"
+                : summonBoss != null
                 ? canSummon ? $"E · {selectedItem.DisplayName} 사용" : summonReason
                 : canPlace ? $"E · {selectedItem.DisplayName} 설치 미리보기"
                 : "설치 가능한 소지품을 선택하세요";
-            primaryButton.interactable = (canSummon || canPlace) &&
-                                         runtimeServices.NapService?.IsNapping != true;
-            if (inventoryHintText != null && summonBoss != null)
+            primaryButton.interactable = canUseCatnip || canSummon || canPlace;
+            if (inventoryHintText != null && (isCatnip || summonBoss != null))
             {
                 inventoryHintText.gameObject.SetActive(true);
-                inventoryHintText.text = canSummon
+                inventoryHintText.text = isCatnip
+                    ? "사용 즉시 HP를 25 회복합니다."
+                    : canSummon
                     ? $"사용 시 {summonBoss.DisplayName} 소환 확인창이 열립니다."
                     : summonReason;
             }

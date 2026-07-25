@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.Save;
 using UnityEngine;
 
@@ -17,6 +18,13 @@ namespace Nyangbingo.World
     public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry, ICoolingSourceProvider,
         IGameSecondsTickable
     {
+        public const string MagpieNestDefinitionId = "magpie_nest";
+        public const string StrawInsulationDefinitionId = "straw_insul";
+        public const string ClayPlasterDefinitionId = "clay_plaster";
+        public const string DoorPaperDefinitionId = "munpungji";
+        public const string ColdWaveCoreDefinitionId = "cold_wave_core";
+        public const int StrawInsulationPieceCap = 6;
+
         private sealed class Entry
         {
             public PlacedObjectRecord Record;
@@ -37,11 +45,14 @@ namespace Nyangbingo.World
         private SealBoundaryPolicy boundaryPolicy;
         private CoolingSourceRuntime coolingSources;
         private float wallpaperDurationMultiplier = 1.25f;
+        private float strawInsulationBonusPerPiece = .05f;
 
         public bool IsColdSourceActive { get; private set; }
         public float CoolingCapPercent { get; private set; }
         public int PlacedObjectCount => byObjectId.Count;
         public int ActiveCoolingSourceCount { get; private set; }
+        public int HeatStageReduction => byObjectId.Values.Any(entry =>
+            entry.Record.definitionId == ColdWaveCoreDefinitionId) ? 1 : 0;
         public BuildingArtCatalog BuildingArtCatalog => buildingArtCatalog;
         public bool IsInitialized { get; private set; }
 
@@ -84,8 +95,13 @@ namespace Nyangbingo.World
             if (wallpaperBonus != null && wallpaperBonus.TryGetFloat(out var bonusPercent) &&
                 !float.IsNaN(bonusPercent) && !float.IsInfinity(bonusPercent))
                 wallpaperDurationMultiplier = 1f + Mathf.Max(0f, bonusPercent) * .01f;
+            var strawBonus = gameDataCatalog.FindGlobal("insul_straw_bonus");
+            if (strawBonus != null && strawBonus.TryGetFloat(out var insulationBonus) &&
+                !float.IsNaN(insulationBonus) && !float.IsInfinity(insulationBonus))
+                strawInsulationBonusPerPiece = Mathf.Max(0f, insulationBonus);
             coolingSources.ConsumableExpired += HandleConsumableExpired;
             bootstrap.TickDriver.Register(this);
+            GameEvents.OnTileBroken += HandleAttachmentSupportBroken;
             IsInitialized = true;
             Debug.Log("[Nyangbingo] MainGameEnvironmentState: 공식 설치물 경계와 냉기원 상태를 " +
                       "메인 SealSystem에 연결 완료.");
@@ -115,7 +131,14 @@ namespace Nyangbingo.World
             if (!IsValid(record)) return false;
 
             var cell = CellFrom(record.position);
-            if (byObjectId.ContainsKey(record.objectId) || byCell.ContainsKey(cell)) return false;
+            if (IsInsulationAttachment(record.definitionId) &&
+                !CanPlaceInsulationAt(record.definitionId, cell))
+                return false;
+            if (byObjectId.ContainsKey(record.objectId) || byCell.ContainsKey(cell) ||
+                IsGlobalSingletonDefinition(record.definitionId) &&
+                byObjectId.Values.Any(existing =>
+                    existing.Record.definitionId == record.definitionId))
+                return false;
 
             var entry = new Entry
             {
@@ -249,10 +272,78 @@ namespace Nyangbingo.World
             var tileService = bootstrap?.TileService;
             var head = cell + Vector3Int.up;
             var ground = cell + Vector3Int.down;
+            var decorations = GetComponent<MainGameWorldDecorationRenderer>();
             return !byCell.ContainsKey(cell) && tileService != null &&
                    cell.x >= 0 && ground.y >= 0 && cell.x < tileService.Width && head.y < tileService.Height &&
                    tileService.GetTile(cell).IsAir && tileService.GetTile(head).IsAir &&
+                   (decorations == null ||
+                    !decorations.IsForegroundPlacementBlocked(cell) &&
+                    !decorations.IsForegroundPlacementBlocked(head)) &&
                    !tileService.GetTile(ground).IsAir;
+        }
+
+        public bool CanPlaceDefinitionAt(string definitionId, Vector2 position)
+        {
+            if (string.IsNullOrWhiteSpace(definitionId) ||
+                !IsFinite(position.x) || !IsFinite(position.y))
+                return false;
+            if (IsGlobalSingletonDefinition(definitionId) &&
+                byObjectId.Values.Any(entry => entry.Record.definitionId == definitionId))
+                return false;
+            return IsInsulationAttachment(definitionId)
+                ? CanPlaceInsulationAt(definitionId, CellFrom(position))
+                : CanPlaceAt(position);
+        }
+
+        public float ResolveTemperatureRecoveryMultiplier(Vector2 position, SealSystem seals)
+        {
+            if (seals == null || !IsFinite(position.x) || !IsFinite(position.y) ||
+                !seals.TryGetDebugRegion(CellFrom(position), out var isSealed, out _,
+                    out var interiorCells, out var boundaryCells) || !isSealed)
+                return 1f;
+
+            var pieces = byObjectId.Values.Count(entry =>
+                entry.Record.definitionId == StrawInsulationDefinitionId &&
+                boundaryCells.Contains(entry.Cell));
+            var hasIceCrystalCooler = byObjectId.Values.Any(entry =>
+                entry.Record.definitionId == CoolingSourceRuntime.IceCrystalCoolerId &&
+                interiorCells.Contains(entry.Cell));
+            var multiplier = CalculateSealedRecoveryMultiplier(
+                pieces, strawInsulationBonusPerPiece, hasIceCrystalCooler);
+            var tileService = bootstrap?.TileService;
+            var hasUnpaperedOpenDoor = tileService != null && boundaryCells.Any(cell =>
+                tileService.IsDoorOpen(cell) &&
+                (!byCell.TryGetValue(cell, out var attachment) ||
+                 attachment.Record.definitionId != DoorPaperDefinitionId));
+            return CalculateDoorAdjustedRecoveryMultiplier(
+                multiplier, hasUnpaperedOpenDoor);
+        }
+
+        public static float CalculateStrawInsulationRecoveryMultiplier(
+            int attachedPieces, float bonusPerPiece)
+        {
+            if (attachedPieces <= 0 || bonusPerPiece <= 0f ||
+                float.IsNaN(bonusPerPiece) || float.IsInfinity(bonusPerPiece))
+                return 1f;
+            return 1f + Mathf.Min(attachedPieces, StrawInsulationPieceCap) * bonusPerPiece;
+        }
+
+        public static float CalculateSealedRecoveryMultiplier(
+            int attachedStrawPieces, float strawBonusPerPiece, bool hasIceCrystalCooler)
+        {
+            var insulationMultiplier = CalculateStrawInsulationRecoveryMultiplier(
+                attachedStrawPieces, strawBonusPerPiece);
+            return insulationMultiplier * (hasIceCrystalCooler ? 2f : 1f);
+        }
+
+        public static float CalculateDoorAdjustedRecoveryMultiplier(
+            float sealedRecoveryMultiplier, bool hasUnpaperedOpenDoor)
+        {
+            if (sealedRecoveryMultiplier <= 0f ||
+                float.IsNaN(sealedRecoveryMultiplier) ||
+                float.IsInfinity(sealedRecoveryMultiplier))
+                return 0f;
+            return hasUnpaperedOpenDoor ? 0f : sealedRecoveryMultiplier;
         }
 
         public bool HasPlacedObjectWithin(string definitionId, Vector2 position, float radius)
@@ -294,6 +385,8 @@ namespace Nyangbingo.World
             var restoredById = new Dictionary<string, Entry>(StringComparer.Ordinal);
             var restoredByCell = new Dictionary<Vector3Int, Entry>();
             var restoredCooling = new CoolingSourceRuntime(gameDataCatalog);
+            var restoredMagpieNestCount = 0;
+            var restoredColdWaveCoreCount = 0;
             var coolingStateById = new Dictionary<string, CoolingSourceStateRecord>(StringComparer.Ordinal);
             if (coolingStateRecords != null)
             {
@@ -307,7 +400,16 @@ namespace Nyangbingo.World
             foreach (var record in records)
             {
                 if (!IsValid(record)) return false;
+                if (record.definitionId == MagpieNestDefinitionId &&
+                    ++restoredMagpieNestCount > 1)
+                    return false;
+                if (record.definitionId == ColdWaveCoreDefinitionId &&
+                    ++restoredColdWaveCoreCount > 1)
+                    return false;
                 var cell = CellFrom(record.position);
+                if (IsInsulationAttachment(record.definitionId) &&
+                    !CanPlaceInsulationAt(record.definitionId, cell, checkRuntimeOccupancy: false))
+                    return false;
                 if (restoredById.ContainsKey(record.objectId) || restoredByCell.ContainsKey(cell)) return false;
                 var entry = new Entry
                 {
@@ -377,6 +479,17 @@ namespace Nyangbingo.World
 
         private void HandleConsumableExpired(string objectId) => TryRemove(objectId);
 
+        private void HandleAttachmentSupportBroken(Vector3Int cell)
+        {
+            if (!byCell.TryGetValue(cell, out var entry) ||
+                !IsInsulationAttachment(entry.Record.definitionId))
+                return;
+            var definitionId = entry.Record.definitionId;
+            if (!TryRemove(entry.Record.objectId)) return;
+            var item = gameDataCatalog?.FindItem(definitionId);
+            if (item != null) ItemAcquisition.Request(item, 1);
+        }
+
         private float ResolveCoolingDurationMultiplier()
         {
             var sealSystem = bootstrap?.SealSystem;
@@ -398,14 +511,16 @@ namespace Nyangbingo.World
             visual.transform.position = entry.Record.position;
             visual.transform.rotation = Quaternion.Euler(0f, 0f, entry.Record.rotationDegrees);
             var renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sortingOrder = 12;
+            var sortingOrder = IsInsulationAttachment(entry.Record.definitionId) ? 13 : 12;
+            renderer.sortingOrder = sortingOrder;
             if (art?.Sprite != null)
             {
                 renderer.sprite = art.Sprite;
                 visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
             }
             else
-                RuntimePlaceholderVisual.Configure(renderer, new Color(.55f, .85f, 1f), .75f, 12);
+                RuntimePlaceholderVisual.Configure(
+                    renderer, new Color(.55f, .85f, 1f), .75f, sortingOrder);
             visualsByObjectId.Add(entry.Record.objectId, visual);
         }
 
@@ -419,6 +534,37 @@ namespace Nyangbingo.World
         private static Vector3Int CellFrom(Vector2 position) =>
             new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
 
+        private bool CanPlaceInsulationAt(string definitionId, Vector3Int cell,
+            bool checkRuntimeOccupancy = true)
+        {
+            var tileService = bootstrap?.TileService;
+            if (tileService == null || !tileService.InBounds(cell) ||
+                checkRuntimeOccupancy && byCell.ContainsKey(cell))
+                return false;
+            var targetId = TileIdAlias.ToCanonical(tileService.GetTile(cell).elementType);
+            switch (definitionId)
+            {
+                case StrawInsulationDefinitionId:
+                    return targetId == "insul_wall" || targetId == "iron_insul_wall" ||
+                           targetId == "roof";
+                case ClayPlasterDefinitionId:
+                    return targetId == "insul_wall";
+                case DoorPaperDefinitionId:
+                    return targetId == "door";
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsInsulationAttachment(string definitionId) =>
+            definitionId == StrawInsulationDefinitionId ||
+            definitionId == ClayPlasterDefinitionId ||
+            definitionId == DoorPaperDefinitionId;
+
+        private static bool IsGlobalSingletonDefinition(string definitionId) =>
+            definitionId == MagpieNestDefinitionId ||
+            definitionId == ColdWaveCoreDefinitionId;
+
         private static bool IsValid(PlacedObjectRecord record) =>
             !string.IsNullOrWhiteSpace(record.objectId) &&
             !string.IsNullOrWhiteSpace(record.definitionId) &&
@@ -428,6 +574,7 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            GameEvents.OnTileBroken -= HandleAttachmentSupportBroken;
             bootstrap?.TickDriver?.Unregister(this);
             if (coolingSources != null) coolingSources.ConsumableExpired -= HandleConsumableExpired;
         }

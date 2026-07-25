@@ -34,7 +34,6 @@ namespace Nyangbingo.Core
         public static event Action OnBossFled;
         public static event Action OnEoduksiniBloomed;
         public static event Action OnPlayerHeatPanting;
-        public static event Action OnNapStarted;
         public static event Action OnGoalBadgeCompleted;
         public static event Action OnPlayerDied;
 
@@ -72,7 +71,6 @@ namespace Nyangbingo.Core
         public static void RaiseBossFled() => OnBossFled?.Invoke();
         public static void RaiseEoduksiniBloomed() => OnEoduksiniBloomed?.Invoke();
         public static void RaisePlayerHeatPanting() => OnPlayerHeatPanting?.Invoke();
-        public static void RaiseNapStarted() => OnNapStarted?.Invoke();
         public static void RaiseGoalBadgeCompleted() => OnGoalBadgeCompleted?.Invoke();
         public static void RaisePlayerDied() => OnPlayerDied?.Invoke();
     }

@@ -60,6 +60,119 @@ namespace Nyangbingo.World
 
         public int ActiveDropCount => drops.Count;
 
+        /// <summary>
+        /// Finds the actual nearest drop transform without removing it. Companions can
+        /// follow this transform until they visibly reach the item.
+        /// </summary>
+        public bool TryFindNearestStack(Vector2 origin, float radius, out Transform target)
+        {
+            target = null;
+            if (!TryFindNearestEntry(origin, radius, out var nearest, out _))
+                return false;
+            target = nearest.Root.transform;
+            return true;
+        }
+
+        /// <summary>
+        /// Collects one exact drop previously selected by its transform.
+        /// </summary>
+        public bool TryCollectStack(Transform target,
+            Nyangbingo.Inventory.Inventory destination, bool notifyPlayerAcquisition = false)
+        {
+            if (target == null || destination == null) return false;
+            for (var index = 0; index < drops.Count; index++)
+            {
+                var entry = drops[index];
+                if (entry?.Root == null || entry.Root.transform != target ||
+                    entry.Item == null || entry.Amount <= 0)
+                    continue;
+                return TryCollectEntry(entry, index, destination, notifyPlayerAcquisition);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Removes exactly one nearest world-drop stack after the destination accepts it.
+        /// The magpie uses the same authoritative drop list as manual player pickup, so a
+        /// collected stack cannot remain visible, be stolen, or be restored twice.
+        /// </summary>
+        public bool TryCollectNearestStack(Vector2 origin, float radius,
+            Nyangbingo.Inventory.Inventory destination, bool notifyPlayerAcquisition = false)
+        {
+            if (destination == null ||
+                !TryFindNearestEntry(origin, radius, out var nearest, out var nearestIndex))
+                return false;
+            return TryCollectEntry(
+                nearest, nearestIndex, destination, notifyPlayerAcquisition);
+        }
+
+        public bool TryStealNearestStack(Vector2 origin,
+            out ItemDefinition stolenItem, out int stolenAmount)
+        {
+            stolenItem = null;
+            stolenAmount = 0;
+            if (!IsFinite(origin)) return false;
+            Entry nearest = null;
+            var nearestIndex = -1;
+            var nearestDistance = float.PositiveInfinity;
+            for (var index = 0; index < drops.Count; index++)
+            {
+                var entry = drops[index];
+                if (entry?.Item == null || entry.Root == null || entry.Amount <= 0) continue;
+                var distance = ((Vector2)entry.Root.transform.position - origin).sqrMagnitude;
+                if (distance >= nearestDistance) continue;
+                nearest = entry;
+                nearestIndex = index;
+                nearestDistance = distance;
+            }
+            if (nearest == null || nearestIndex < 0) return false;
+            stolenItem = nearest.Item;
+            stolenAmount = nearest.Amount;
+            if (nearest.Collider != null) ActiveDropColliders.Remove(nearest.Collider);
+            Destroy(nearest.Root);
+            drops.RemoveAt(nearestIndex);
+            return true;
+        }
+
+        private bool TryFindNearestEntry(Vector2 origin, float radius,
+            out Entry nearest, out int nearestIndex)
+        {
+            nearest = null;
+            nearestIndex = -1;
+            if (!IsFinite(origin) || !IsFiniteNonNegative(radius)) return false;
+            var nearestDistance = radius * radius;
+            for (var index = 0; index < drops.Count; index++)
+            {
+                var entry = drops[index];
+                if (entry?.Item == null || entry.Root == null || entry.Amount <= 0) continue;
+                var distance = ((Vector2)entry.Root.transform.position - origin).sqrMagnitude;
+                if (distance > nearestDistance) continue;
+                if (nearest != null && (distance > nearestDistance ||
+                    Mathf.Approximately(distance, nearestDistance) &&
+                    string.CompareOrdinal(entry.Root.name, nearest.Root.name) >= 0))
+                    continue;
+                nearest = entry;
+                nearestIndex = index;
+                nearestDistance = distance;
+            }
+            return nearest != null && nearestIndex >= 0;
+        }
+
+        private bool TryCollectEntry(Entry entry, int index,
+            Nyangbingo.Inventory.Inventory destination, bool notifyPlayerAcquisition)
+        {
+            if (entry == null || index < 0 || index >= drops.Count ||
+                drops[index] != entry || destination == null ||
+                !destination.TryAdd(entry.Item.Id, entry.Amount))
+                return false;
+
+            if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
+            Destroy(entry.Root);
+            drops.RemoveAt(index);
+            if (notifyPlayerAcquisition) GameEvents.RaiseItemAcquired();
+            return true;
+        }
+
         public List<WorldDropStateRecord> Export()
         {
             var result = new List<WorldDropStateRecord>(drops.Count);
