@@ -191,3 +191,5 @@ MonoBehaviour:
     sprite: {fileID: 5701617983290330627, guid: dcd35d8604cde464d8407de27ea3f67b, type: 3}
   - id: stone_mid
     sprite: {fileID: 3434850802841734024, guid: e77ee64969a386f4ea717460b832c847, type: 3}
+  - id: catnip
+    sprite: {fileID: 2943590112692646875, guid: 019840ff016e77f43a85c1bca444283b, type: 3}
