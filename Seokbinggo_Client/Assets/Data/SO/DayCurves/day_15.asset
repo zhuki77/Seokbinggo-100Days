@@ -26,7 +26,9 @@ MonoBehaviour:
   - kind: 1
     amount: 2
   - kind: 2
-    amount: 7
+    amount: 6
+  - kind: 5
+    amount: 1
   spawnMultiplier: 3
   dropMultiplier: 1
   eventId: baekjung

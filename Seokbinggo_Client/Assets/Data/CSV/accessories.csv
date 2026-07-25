@@ -1,0 +1,7 @@
+id,name_ko,effect_ko,move_speed_bonus,vision_radius_tiles,day_temp_rise_mult,mining_crit_bonus,inventory_theft_immune,double_jump,double_jump_height_ratio,pools,note
+bell_norigae,방울 노리개,이중 점프(높이 80%),0,0,0,0,0,1,0.8,상층·심층,Cloud in a Bottle 번역
+wind_daenggi,바람 댕기,이동속도 +15%,0.15,0,0,0,0,0,0,폐허·중층,동선 QoL — 전투 수치 무간섭
+tiger_eye_bead,호랑이 눈 구슬,시야 반경 +3타일,0,3,0,0,0,0,0,중층·심층,등불 태그 분리 — 어둑시니 판정 불참
+ice_heart_norigae,얼음 심장 노리개,낮 체온 상승 -15%,0,0,-0.15,0,0,0,0,중층·심층,설한풍 -20%와 합연산 총 상한 -35%
+bokjumeoni,복주머니,채굴 크리티컬 +10%p,0,0,0,0.10,0,0,0,상층·중층,무쇠 발톱 15%와 합산 상한 25%
+dokkaebi_gamtu,도깨비 감투,야광귀 인벤 절도 무효,0,0,0,0,1,0,0,폐허·심층,바닥 절도·접촉 피해는 유지

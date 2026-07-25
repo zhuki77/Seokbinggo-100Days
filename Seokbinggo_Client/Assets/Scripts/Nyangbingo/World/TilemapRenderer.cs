@@ -137,8 +137,12 @@ namespace Nyangbingo.World
         private CompositeCollider2D foregroundComposite;
         private TilemapCollider2D foregroundTilemapCollider;
         private GameObject runtimeEdgeOverlayObject;
+        private GameObject runtimeWorldBoundaryObject;
+        private BoxCollider2D leftWorldBoundary;
+        private BoxCollider2D rightWorldBoundary;
 
         private const int RuntimeEdgeTextureSize = 16;
+        private const float WorldBoundaryThickness = 1f;
         private static readonly Color32 RuntimeEdgeInkColor = new Color32(0x1A, 0x1A, 0x24, 0xFF);
         private static readonly TileEdgeMask[] RuntimeEdgeBaseMasks =
         {
@@ -274,6 +278,7 @@ namespace Nyangbingo.World
             var bounds = new BoundsInt(0, 0, 0, width, height, 1);
 
             EnsureForegroundCollision();
+            EnsureWorldBoundaryCollision(width, height);
 
             foregroundTilemap.ClearAllTiles();
             backgroundTilemap.ClearAllTiles();
@@ -349,6 +354,78 @@ namespace Nyangbingo.World
                 var bgBody = backgroundTilemap.GetComponent<Rigidbody2D>();
                 if (bgBody != null) DestroyComponentSafe(bgBody);
             }
+        }
+
+        /// <summary>
+        /// Keeps the player inside the generated map without adding visible or mineable tiles.
+        /// The colliders share the foreground body's transform and collision layer.
+        /// </summary>
+        private void EnsureWorldBoundaryCollision(int width, int height)
+        {
+            if (foregroundTilemap == null || width <= 0 || height <= 0) return;
+
+            if (runtimeWorldBoundaryObject == null)
+            {
+                runtimeWorldBoundaryObject = new GameObject("RuntimeWorldBoundaries");
+                runtimeWorldBoundaryObject.transform.SetParent(foregroundTilemap.transform, false);
+                leftWorldBoundary = CreateWorldBoundaryCollider("WorldBoundaryLeft");
+                rightWorldBoundary = CreateWorldBoundaryCollider("WorldBoundaryRight");
+            }
+            else
+            {
+                if (leftWorldBoundary == null)
+                    leftWorldBoundary = FindOrCreateWorldBoundaryCollider("WorldBoundaryLeft");
+                if (rightWorldBoundary == null)
+                    rightWorldBoundary = FindOrCreateWorldBoundaryCollider("WorldBoundaryRight");
+            }
+
+            var collisionLayer = foregroundTilemap.gameObject.layer;
+            runtimeWorldBoundaryObject.layer = collisionLayer;
+            leftWorldBoundary.gameObject.layer = collisionLayer;
+            rightWorldBoundary.gameObject.layer = collisionLayer;
+
+            // Extend one map height above and below the playable area so a falling or jumping
+            // character cannot slip around either end of a short wall.
+            var boundaryHeight = Mathf.Max(3f, height * 3f);
+            var boundaryCenterY = height * .5f;
+            var boundarySize = new Vector2(WorldBoundaryThickness, boundaryHeight);
+
+            ConfigureWorldBoundary(
+                leftWorldBoundary,
+                boundarySize,
+                new Vector3(-WorldBoundaryThickness * .5f, boundaryCenterY, 0f));
+            ConfigureWorldBoundary(
+                rightWorldBoundary,
+                boundarySize,
+                new Vector3(width + WorldBoundaryThickness * .5f, boundaryCenterY, 0f));
+
+            Physics2D.SyncTransforms();
+        }
+
+        private BoxCollider2D CreateWorldBoundaryCollider(string objectName)
+        {
+            var boundaryObject = new GameObject(objectName);
+            boundaryObject.transform.SetParent(runtimeWorldBoundaryObject.transform, false);
+            return boundaryObject.AddComponent<BoxCollider2D>();
+        }
+
+        private BoxCollider2D FindOrCreateWorldBoundaryCollider(string objectName)
+        {
+            var child = runtimeWorldBoundaryObject.transform.Find(objectName);
+            if (child == null) return CreateWorldBoundaryCollider(objectName);
+            var collider = child.GetComponent<BoxCollider2D>();
+            return collider != null ? collider : child.gameObject.AddComponent<BoxCollider2D>();
+        }
+
+        private static void ConfigureWorldBoundary(
+            BoxCollider2D boundary,
+            Vector2 size,
+            Vector3 localPosition)
+        {
+            boundary.size = size;
+            boundary.offset = Vector2.zero;
+            boundary.isTrigger = false;
+            boundary.transform.localPosition = localPosition;
         }
 
         /// <summary>전경 타일 변경 후 CompositeCollider가 형상을 다시 합치도록 알린다.</summary>
@@ -587,6 +664,9 @@ namespace Nyangbingo.World
 
             if (runtimeEdgeOverlayObject != null)
                 DestroyRuntimeObject(runtimeEdgeOverlayObject);
+
+            if (runtimeWorldBoundaryObject != null)
+                DestroyRuntimeObject(runtimeWorldBoundaryObject);
         }
 
         private static void DestroyRuntimeObject(UnityEngine.Object target)

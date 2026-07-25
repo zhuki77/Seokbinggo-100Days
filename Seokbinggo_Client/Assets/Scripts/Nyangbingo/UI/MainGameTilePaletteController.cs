@@ -93,6 +93,9 @@ namespace Nyangbingo.UI
         public static bool SupportsPalettePlacement(string itemId) =>
             TileService.SupportsForegroundPlacement(itemId) || IsWallpaper(itemId);
 
+        public static bool IsDirectUseHotbarItem(string itemId) =>
+            string.Equals(itemId, PlayerHealthRecoveryService.CatnipItemId, StringComparison.Ordinal);
+
         public bool TryBeginPlacement(string itemId)
         {
             if (!initialized || string.IsNullOrEmpty(itemId) ||
@@ -145,6 +148,12 @@ namespace Nyangbingo.UI
             {
                 SelectEmptySlot(slotIndex);
                 return selectedSlotIndex == slotIndex;
+            }
+
+            if (IsDirectUseHotbarItem(itemId))
+            {
+                SelectDirectUseSlot(slotIndex, itemId);
+                return true;
             }
 
             if (TryBeginPlacement(itemId))
@@ -527,6 +536,16 @@ namespace Nyangbingo.UI
             CancelForegroundPlacement(clearSelection: false);
             selectedSlotIndex = slotIndex;
             selectedItemId = string.Empty;
+            runtimeServices?.ActiveSlot?.SelectBareHands();
+            RefreshSlotVisuals();
+        }
+
+        private void SelectDirectUseSlot(int slotIndex, string itemId)
+        {
+            placementRuntime?.CancelPlacementPreview();
+            CancelForegroundPlacement(clearSelection: false);
+            selectedSlotIndex = slotIndex;
+            selectedItemId = itemId;
             runtimeServices?.ActiveSlot?.SelectBareHands();
             RefreshSlotVisuals();
         }

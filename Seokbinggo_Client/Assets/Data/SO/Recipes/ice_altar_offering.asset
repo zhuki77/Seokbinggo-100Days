@@ -21,10 +21,15 @@ MonoBehaviour:
     amount: 2
   - item: {fileID: 11400000, guid: 8a0f12f13c8cd5b4b93c78c17d4ec5ee, type: 2}
     amount: 10
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 30
   output:
     item: {fileID: 11400000, guid: 8016e4cca3d8e7e43909efcf621d731c, type: 2}
     amount: 1
   durationSeconds: 30
   type: 12
-  mvpScope: 2
-  note: "\uC774\uBB34\uAE30 \uC18C\uD658(\uC2EC\uCE35 \uC81C\uB2E8 \uC804\uC6A9)"
+  mvpScope: 1
+  note: "\uC774\uBB34\uAE30 \uCD5C\uC885\uBCF4\uC2A4 \uC7AC\uC18C\uD658(30\uC77C
+    \uACE0\uC815\uB4F1\uC7A5+\uC2EC\uCE35 \uC81C\uB2E8 \uC7AC\uC18C\uD658\xB7v34
+    \uAC15\uCCA0\uC774\u2194\uC774\uBB34\uAE30 \uAD50\uCCB4) \u2014 \uB208\uBB3C30
+    \uC18C\uBE44\uCC98"

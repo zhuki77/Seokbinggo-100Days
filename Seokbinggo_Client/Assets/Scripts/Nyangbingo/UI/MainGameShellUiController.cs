@@ -241,9 +241,17 @@ namespace Nyangbingo.UI
             RefreshSpeakerIcon(bgmSpeakerImage, bgmSlider != null ? bgmSlider.value : 0f);
             RefreshSpeakerIcon(sfxSpeakerImage, sfxSlider != null ? sfxSlider.value : 0f);
             if (bgmSlider != null)
-                bgmSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(bgmSpeakerImage, value));
+                bgmSlider.onValueChanged.AddListener(value =>
+                {
+                    RefreshSpeakerIcon(bgmSpeakerImage, value);
+                    PreviewSettingsVolumes();
+                });
             if (sfxSlider != null)
-                sfxSlider.onValueChanged.AddListener(value => RefreshSpeakerIcon(sfxSpeakerImage, value));
+                sfxSlider.onValueChanged.AddListener(value =>
+                {
+                    RefreshSpeakerIcon(sfxSpeakerImage, value);
+                    PreviewSettingsVolumes();
+                });
         }
 
         public static float ShellLoadingFrameDurationSeconds(int frameIndex) =>
@@ -272,7 +280,7 @@ namespace Nyangbingo.UI
                 var rect = new Rect(column * frameWidth,
                     texture.height - (rowFromTop + 1) * frameHeight, frameWidth, frameHeight);
                 shellLoadingFrames[index] = Sprite.Create(texture, rect, new Vector2(.5f, .5f),
-                    100f, 0, SpriteMeshType.FullRect);
+                    100f, 0, SpriteMeshType.FullRect, Vector4.zero, false);
                 shellLoadingFrames[index].name = $"ShellLoading_{index:00}";
             }
 
@@ -1084,9 +1092,14 @@ namespace Nyangbingo.UI
         private void ApplySettings()
         {
             var succeeded = shell.TryApplySettings(bgmSlider.value, sfxSlider.value, fullscreenToggle.isOn);
-            if (succeeded) audioService?.EnsureAudiblePlayback();
             SetStatus(succeeded ? "설정 적용 완료" : "설정 적용 실패");
             if (succeeded) shell.CloseSettings();
+        }
+
+        private void PreviewSettingsVolumes()
+        {
+            if (audioService == null || bgmSlider == null || sfxSlider == null) return;
+            audioService.TryPreviewBusVolumes(bgmSlider.value, sfxSlider.value);
         }
 
         private void HandleNewGameRequested(int _)
@@ -1228,7 +1241,7 @@ namespace Nyangbingo.UI
                         .AppendLine(module.DisplayName);
                 }
             }
-            builder.AppendLine(result.GangcheolDefeated ? "✓ 강철이 격퇴" : "□ 강철이 도주");
+            builder.AppendLine(result.ImugiDefeated ? "✓ 이무기 격퇴" : "□ 이무기 도주");
             builder.AppendLine();
             builder.AppendLine($"요괴 처치 {result.YokaiKills}");
             builder.AppendLine($"채굴 타일 {result.MinedTiles}");

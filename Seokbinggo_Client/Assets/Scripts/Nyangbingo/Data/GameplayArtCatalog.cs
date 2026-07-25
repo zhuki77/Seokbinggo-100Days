@@ -9,12 +9,13 @@ namespace Nyangbingo.Data
     {
         [SerializeField] private Sprite[] temperatureFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] playerAttackFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] napFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] miningCrackFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] miningBreakFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] miningCriticalFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] bossWarningFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] gangcheoriSpecialFireFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] playerFireHitFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] imugiElectricAttackFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] blueProjectileFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] dayCounterFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] dayNightClockFrames = Array.Empty<Sprite>();
@@ -79,13 +80,16 @@ namespace Nyangbingo.Data
 
         public IReadOnlyList<Sprite> TemperatureFrames => temperatureFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerAttackFrames => playerAttackFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> NapFrames => napFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> MiningCrackFrames => miningCrackFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> MiningBreakFrames => miningBreakFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> MiningCriticalFrames => miningCriticalFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> BossWarningFrames => bossWarningFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> GangcheoriSpecialFireFrames =>
             gangcheoriSpecialFireFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> PlayerFireHitFrames =>
+            playerFireHitFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> ImugiElectricAttackFrames =>
+            imugiElectricAttackFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> BlueProjectileFrames => blueProjectileFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> DayCounterFrames => dayCounterFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> DayNightClockFrames => dayNightClockFrames ?? Array.Empty<Sprite>();

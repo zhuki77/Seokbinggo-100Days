@@ -176,6 +176,8 @@ public static class NyangbingoDevARegressionTests
         foreach (var chest in result.chests)
         {
             Assert(ids.Add(chest.id), $"중복된 상자 ID 발견: {chest.id}");
+            Assert(result.tiles[chest.position.x, chest.position.y].IsAir,
+                $"상자 셀에 전경 타일이 겹침: {chest.id} at {chest.position}");
             perRegion.TryGetValue(chest.region, out var count);
             perRegion[chest.region] = count + 1;
         }
@@ -332,6 +334,70 @@ public static class NyangbingoDevARegressionTests
         var replayService = new TileService(replay.tiles, null, null, seed);
         Assert(replayService.RestoreTileChanges(records), "정상 타일 변경 이력 재생이 실패함");
         Assert(replay.tiles[breakable.x, breakable.y].IsAir, "재생 후에도 파괴된 칸이 원래 상태로 남아 있음");
+
+        // 같은 셀의 설치 -> 제거는 마지막 제거 하나로 덮어쓰지 않고 순서대로 보존해야 한다.
+        var roundTripWorld = new MapGenerator(config).GenerateDetailed(seed);
+        var roundTripService = new TileService(roundTripWorld.tiles, null, null, seed);
+        var roundTripCell = FindAirCellNearSpawn(roundTripService, roundTripWorld);
+        Assert(roundTripService.TryPlaceForeground(roundTripCell, WorldTileTypes.Dirt),
+            "설치-제거 이력 테스트용 dirt 설치 실패");
+        Assert(roundTripService.TryBreakForeground(roundTripCell, 3, out _, out _),
+            "설치-제거 이력 테스트용 dirt 제거 실패");
+        var roundTripRecords = roundTripService.GetTileChangeRecords();
+        Assert(roundTripRecords.Count == 2 && roundTripRecords[0].placed && !roundTripRecords[1].placed,
+            "동일 셀 설치-제거 이력이 실행 순서대로 보존되지 않음");
+        var roundTripReplay = new MapGenerator(config).GenerateDetailed(seed);
+        var roundTripReplayService = new TileService(roundTripReplay.tiles, null, null, seed);
+        Assert(roundTripReplayService.RestoreTileChanges(roundTripRecords) &&
+               roundTripReplay.tiles[roundTripCell.x, roundTripCell.y].IsAir,
+            "동일 셀 설치-제거 이력을 재생하지 못함");
+
+        // 구버전은 위 두 기록을 마지막 제거 하나로 압축했다. 원본도 공기라면 상쇄된 이력으로 이관한다.
+        var legacyCollapsedRoundTrip = new List<TileChangeRecord>
+        {
+            new TileChangeRecord
+            {
+                x = roundTripCell.x,
+                y = roundTripCell.y,
+                z = 0,
+                tileId = WorldTileTypes.Dirt,
+                placed = false
+            }
+        };
+        var legacyRoundTripWorld = new MapGenerator(config).GenerateDetailed(seed);
+        var legacyRoundTripService = new TileService(legacyRoundTripWorld.tiles, null, null, seed);
+        Assert(legacyRoundTripService.RestoreTileChanges(legacyCollapsedRoundTrip) &&
+               legacyRoundTripService.GetTileChangeRecords().Count == 0,
+            "구버전의 상쇄된 설치-제거 기록을 공기 상태로 이관하지 못함");
+
+        // 구 생성기에서 상자와 겹친 흙을 제거한 세이브는 새 생성기의 상자 셀이 이미 공기다.
+        // 상자 좌표로 명시된 경우에만 이 제거 기록을 이미 적용된 상태로 이관한다.
+        var chest = original.chests[0];
+        var legacyChestRemoval = new List<TileChangeRecord>
+        {
+            new TileChangeRecord
+            {
+                x = chest.position.x,
+                y = chest.position.y,
+                z = 0,
+                tileId = WorldTileTypes.Dirt,
+                placed = false
+            }
+        };
+        var strictChestAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        Assert(!new TileService(strictChestAttempt.tiles, null, null, seed)
+                .RestoreTileChanges(legacyChestRemoval),
+            "일반 복원은 이미 공기인 셀의 제거 기록을 허용하면 안 됨");
+        var migratedChestAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        var migratedChestService = new TileService(migratedChestAttempt.tiles, null, null, seed);
+        var allowedChestCells = new HashSet<Vector3Int>
+        {
+            new Vector3Int(chest.position.x, chest.position.y, 0)
+        };
+        Assert(migratedChestService.RestoreTileChanges(legacyChestRemoval, allowedChestCells),
+            "구버전 상자 겹침 제거 기록을 현재 공기 셀로 이관하지 못함");
+        Assert(migratedChestService.GetTileChangeRecords().Count == 1,
+            "이관한 상자 제거 기록이 다음 저장을 위해 유지되지 않음");
 
         // 손상된 레코드(기반암 좌표에 "설치" 기록을 끼워넣음) — 보호 타일 위 설치는 항상 거부돼야 하고,
         // 그 앞의 정상 레코드까지 포함해 전체가 실패로 처리돼야 한다(원자성).
@@ -1164,6 +1230,14 @@ public static class NyangbingoDevARegressionTests
 
             // 제거 시 빈 배경 복원(원래 동굴/빈 칸)
             Assert(roomService.TryRemoveBackground(lastEmpty), "벽지 제거 실패");
+            var lastCellBackgroundChanges = new List<TileChangeRecord>();
+            foreach (var record in roomService.GetBackgroundChangeRecords())
+                if (record.x == lastEmpty.x && record.y == lastEmpty.y)
+                    lastCellBackgroundChanges.Add(record);
+            Assert(lastCellBackgroundChanges.Count == 2 &&
+                   lastCellBackgroundChanges[0].placed &&
+                   !lastCellBackgroundChanges[1].placed,
+                "동일 셀 벽지 설치-제거 이력이 실행 순서대로 보존되지 않음");
             Assert(!roomService.GetTile(lastEmpty).HasBackground, "벽지 제거 후 빈 배경이 복원되지 않음");
 
             // 지하 자연 배경 위에 벽지를 덮을 수 없음(빈 배경만) — 자연 bg가 있는 칸
@@ -1251,6 +1325,27 @@ public static class NyangbingoDevARegressionTests
             var result = new MapGenerator(config).GenerateDetailed(seed);
             Assert(result.passedValidation, "충돌 테스트용 월드 생성 실패");
             renderer.RenderWorld(result.tiles);
+
+            var boundaryRoot = renderer.Foreground.transform.Find("RuntimeWorldBoundaries");
+            Assert(boundaryRoot != null, "생성 월드 좌우 투명 경계 루트 없음");
+            var leftBoundary = boundaryRoot.Find("WorldBoundaryLeft")?.GetComponent<BoxCollider2D>();
+            var rightBoundary = boundaryRoot.Find("WorldBoundaryRight")?.GetComponent<BoxCollider2D>();
+            Assert(leftBoundary != null && rightBoundary != null, "생성 월드 좌우 투명 경계 콜라이더 없음");
+
+            var worldLeft = renderer.Foreground.CellToWorld(Vector3Int.zero).x;
+            var worldRight = renderer.Foreground.CellToWorld(new Vector3Int(result.width, 0, 0)).x;
+            Assert(!leftBoundary.isTrigger && !rightBoundary.isTrigger,
+                "월드 좌우 경계는 플레이어를 물리적으로 막아야 함");
+            Assert(Mathf.Abs(leftBoundary.bounds.max.x - worldLeft) < .01f,
+                "왼쪽 투명벽이 생성 맵 왼쪽 끝과 맞지 않음");
+            Assert(Mathf.Abs(rightBoundary.bounds.min.x - worldRight) < .01f,
+                "오른쪽 투명벽이 생성 맵 오른쪽 끝과 맞지 않음");
+            Assert(leftBoundary.bounds.size.y >= result.height * 3f - .01f &&
+                   rightBoundary.bounds.size.y >= result.height * 3f - .01f,
+                "좌우 투명벽은 맵 위아래로 우회할 수 없을 만큼 길어야 함");
+            Assert(leftBoundary.GetComponent<SpriteRenderer>() == null &&
+                   rightBoundary.GetComponent<SpriteRenderer>() == null,
+                "월드 좌우 경계에는 보이는 렌더러가 없어야 함");
 
             var tileService = new TileService(result.tiles, renderer, null, result.acceptedSeed);
             var cell = FindUndergroundNaturalSolid(tileService, result, renderer);
@@ -1419,6 +1514,18 @@ public static class NyangbingoDevARegressionTests
 
             var airCell = FindAirCellNearSpawn(tiles, session.LastResult);
             Assert(tiles.CanPlaceForeground(airCell, WorldTileTypes.Dirt), "공기 셀에 dirt 설치 가능해야 함");
+            Func<Vector3Int, bool> placementBlocker = cell => cell == airCell;
+            Func<Vector3Int, bool> secondPlacementBlocker = cell => cell == airCell;
+            tiles.SetForegroundPlacementBlocker(placementBlocker);
+            tiles.SetForegroundPlacementBlocker(secondPlacementBlocker);
+            Assert(!tiles.CanPlaceForeground(airCell, WorldTileTypes.Dirt),
+                "월드 오브젝트 점유 셀에는 전경 블럭을 설치할 수 없어야 함");
+            Assert(!tiles.TryPlaceForeground(airCell, WorldTileTypes.Dirt),
+                "월드 오브젝트 점유 셀의 직접 전경 설치도 거부해야 함");
+            tiles.ClearForegroundPlacementBlocker(placementBlocker);
+            Assert(!tiles.CanPlaceForeground(airCell, WorldTileTypes.Dirt),
+                "한 점유 차단기를 해제해도 다른 점유 차단기는 유지되어야 함");
+            tiles.ClearForegroundPlacementBlocker(secondPlacementBlocker);
             Assert(tiles.TryPlaceForeground(airCell, WorldTileTypes.Dirt), "dirt 설치 실패");
             Assert(!tiles.GetTile(airCell).IsAir, "설치 후 전경이 비어 있음");
             Assert(!tiles.CanPlaceForeground(airCell, WorldTileTypes.Dirt), "점유 셀에 재설치 가능으로 나옴");
@@ -1631,7 +1738,7 @@ public static class NyangbingoDevARegressionTests
         Debug.Log("[Nyangbingo] Dev A player jump physics test completed.");
     }
 
-    /// <summary>지표에서 마우스가 공기 칸을 가리킬 때 발밑 전경 고체로 채굴 칸을 보정한다.</summary>
+    /// <summary>채굴은 발톱 이펙트와 같은 8방향 직선 위의 전경 고체만 선택한다.</summary>
     private static void TestMiningCellSurfaceFallback()
     {
         var tiles = new TileData[8, 8];
@@ -1651,15 +1758,21 @@ public static class NyangbingoDevARegressionTests
         var playerOrigin = new Vector2(groundX + .5f, airY + .5f);
         const float reach = 1.5f;
 
+        Assert(!MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
+                new Vector2(groundX + .2f, airY + .3f), Vector2.right, reach, out _),
+            "수평 발톱이 방향선 밖의 아래쪽 지표 블록을 채굴하면 안 됨");
+
+        tiles[groundX + 1, airY] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
         Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(groundX + .2f, airY + .3f), Vector2.right, reach, out var surfaceCell) &&
-            surfaceCell.x == groundX && surfaceCell.y == groundY,
-            $"지표 공기 클릭 보정 실패 — 기대 ({groundX},{groundY}), 실제 {surfaceCell}");
+                new Vector2(groundX + 1.5f, airY + .5f), Vector2.right, reach, out var frontCell) &&
+            frontCell.x == groundX + 1 && frontCell.y == airY,
+            "수평 발톱은 플레이어 물리 원점과 같은 높이의 정면 블록을 채굴해야 함");
 
         Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(groundX + .5f, groundY + .5f), Vector2.right, reach, out var directCell) &&
+                new Vector2(groundX + .5f, groundY + .5f), Vector2.down, reach, out var directCell) &&
             directCell.x == groundX && directCell.y == groundY,
-            "지표 고체 직접 클릭이 바뀌면 안 됨");
+            "아래 방향 발톱은 발밑 지표 고체를 채굴해야 함");
 
         var undergroundOrigin = new Vector2(3.5f, 3.5f);
         tiles[3, 3] = TileData.CreateNaturalWithBackground(

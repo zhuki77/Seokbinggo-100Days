@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using Nyangbingo.Combat;
+using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.UI;
+using Nyangbingo.Yokai;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
@@ -17,6 +19,7 @@ namespace Nyangbingo.World
     public sealed class MainGamePlayerController : MonoBehaviour
     {
         public const float GameplayCameraOrthographicSize = 8f;
+        public const float FallDamageBounceHeightTiles = .5f;
 
         private const string MoveSpeedKey = "player_move_speed";
         private const string BareClawId = "bare_claw";
@@ -28,10 +31,13 @@ namespace Nyangbingo.World
         private const string IronClawMiningCriticalKey = "claw_t2_mine_crit";
         private const string IceSteelClawSlowKey = "claw_t3_slow";
         private const float IceSteelClawSlowDurationSeconds = 2f;
+        private const string FallDamageThresholdKey = "fall_damage_threshold_tiles";
+        private const string FallDamagePerTileKey = "fall_damage_per_tile";
+        private const string IceShardItemId = "ice_shard";
+        private const string IceShardTemperatureReliefKey = "ice_shard_temp_relief";
         private const string NestBedId = "nest_bed";
-        private const float NestInteractionRadius = 1.25f;
-        private const float NapYokaiWakeRadius = 12f;
         private const float TearPouchPickupRadius = .75f;
+        private const float CatnipHarvestRadius = 1.5f;
         // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
         // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
         private const float MiningReach = 1.5f;
@@ -44,6 +50,9 @@ namespace Nyangbingo.World
         private const float BossKnockbackMinimumSeconds = .15f;
         private const float BossKnockbackMaximumSeconds = .6f;
         private const float BossKnockbackArcVelocityRatio = .7f;
+        private const float AttackFeedbackRadius = .85f;
+        private const float AttackFeedbackOriginHeight = .65f;
+        private const float AttackFeedbackArtRotationDegrees = -90f;
         private const float SurfaceCameraOffsetRatio = .5f;
         private const float SurfaceCameraTransitionDepthTiles = 8f;
 
@@ -59,6 +68,12 @@ namespace Nyangbingo.World
         private float gravityAcceleration;
         private float maximumFallSpeed;
         private float jumpCutMultiplier;
+        private float fallDamageThresholdTiles;
+        private float fallDamagePerTile;
+        private float iceShardTemperatureRelief;
+        private float fallPeakWorldY;
+        private bool trackingFall;
+        private bool fallDamageBounceAscending;
 
         private const float GroundProbeDistance = .08f;
 
@@ -79,6 +94,8 @@ namespace Nyangbingo.World
         private bool airJumpConsumed;
         private bool miningAllowedByLastSwing;
         private bool miningActive;
+        private string miningTreeId = string.Empty;
+        private string miningRebarId = string.Empty;
         private Vector3Int miningCell;
         private Vector3Int miningCompanionCell;
         private bool miningHasCompanion;
@@ -94,11 +111,14 @@ namespace Nyangbingo.World
         private float attackIndicatorRemaining;
         private int attackIndicatorFrameIndex;
         private float attackIndicatorFrameRemaining;
+        private Vector2 attackIndicatorDirection = Vector2.right;
         private bool loggedFirstAttackInput;
         private bool loggedFirstAttackHit;
         private bool dead;
         private bool respawnApplied;
         private float deathSequenceElapsed;
+        private bool deathPhysicsLocked;
+        private bool bodySimulationBeforeDeath;
         private Vector2 initialSpawnPosition;
         private SpriteRenderer playerRenderer;
         private Color aliveRendererColor;
@@ -106,17 +126,23 @@ namespace Nyangbingo.World
         private Image deathFadeImage;
         private GameObject deathFadeCanvas;
         private Light2D portableLanternLight;
+        private Light2D personalVisionLight;
         private readonly Dictionary<string, GameObject> tearPouchVisuals =
             new Dictionary<string, GameObject>();
         private bool initialized;
         private MainGameEnvironmentState environmentState;
         private MainGameTurretRuntime placedObjectInteractions;
         private MainGameWorldDecorationRenderer worldDecorationRenderer;
+        private MainGameTilePaletteController tilePalette;
         private MainGameRaidTarget raidTarget;
         private MainGameEncounterCoordinator encounterCoordinator;
         private MainGameWorldDropRuntime worldDropRuntime;
         private Nyangbingo.UI.MainGameBossSummonUiController interactionMessages;
+        private Nyangbingo.UI.MainGameCraftingUiController storageUi;
         private MainGameParallaxBackground parallaxBackground;
+        private TileService placementBlockerTileService;
+        private CounterAuraSensor playerCounterAuraSensor;
+        private readonly Vector3[] placementCellCorners = new Vector3[4];
 
         public bool IsInitialized => initialized;
         public string ActiveCombatProfileId => activeProfile != null ? activeProfile.Id : string.Empty;
@@ -155,10 +181,15 @@ namespace Nyangbingo.World
             attack = GetComponent<MeleeArcAttack>();
             environmentState = GetComponentInParent<MainGameEnvironmentState>();
             placedObjectInteractions = GetComponentInParent<MainGameTurretRuntime>();
+            if (placedObjectInteractions != null)
+                playerCounterAuraSensor = new CounterAuraSensor(
+                    transform, placedObjectInteractions.ActiveCounterAuras);
             worldDecorationRenderer = GetComponentInParent<MainGameWorldDecorationRenderer>();
+            tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             raidTarget = GetComponent<MainGameRaidTarget>();
             encounterCoordinator = GetComponentInParent<MainGameEncounterCoordinator>();
             interactionMessages = FindAnyObjectByType<Nyangbingo.UI.MainGameBossSummonUiController>();
+            storageUi = FindAnyObjectByType<Nyangbingo.UI.MainGameCraftingUiController>();
             followCamera ??= Camera.main;
             if (followCamera != null && followCamera.orthographic)
                 followCamera.orthographicSize = GameplayCameraOrthographicSize;
@@ -167,22 +198,39 @@ namespace Nyangbingo.World
                 : null;
 
             var moveSpeedDefinition = catalog != null ? catalog.FindGlobal(MoveSpeedKey) : null;
+            var fallThresholdDefinition = catalog != null ? catalog.FindGlobal(FallDamageThresholdKey) : null;
+            var fallDamageDefinition = catalog != null ? catalog.FindGlobal(FallDamagePerTileKey) : null;
+            var iceShardReliefDefinition =
+                catalog != null ? catalog.FindGlobal(IceShardTemperatureReliefKey) : null;
+            var sealPenaltyStartDefinition =
+                catalog != null ? catalog.FindGlobal(GlobalKeys.SealPenaltyStartDay) : null;
             var defaultProfile = catalog != null ? catalog.FindCombatProfile(BareClawId) : null;
             if (catalog == null || bootstrap == null || runtimeServices == null ||
                 !runtimeServices.Initialize() || body == null || health == null || attack == null ||
+                !runtimeServices.BindPlayerHealth(health) ||
                 moveSpeedDefinition == null || !moveSpeedDefinition.TryGetFloat(out baseMoveSpeed) ||
-                baseMoveSpeed <= 0f || defaultProfile == null)
+                baseMoveSpeed <= 0f ||
+                fallThresholdDefinition == null ||
+                !fallThresholdDefinition.TryGetFloat(out fallDamageThresholdTiles) ||
+                fallDamageThresholdTiles <= 0f ||
+                fallDamageDefinition == null ||
+                !fallDamageDefinition.TryGetFloat(out fallDamagePerTile) ||
+                fallDamagePerTile <= 0f ||
+                iceShardReliefDefinition == null ||
+                !iceShardReliefDefinition.TryGetFloat(out iceShardTemperatureRelief) ||
+                iceShardTemperatureRelief <= 0f ||
+                sealPenaltyStartDefinition == null ||
+                !sealPenaltyStartDefinition.TryGetInt(out var sealPenaltyStartDay) ||
+                sealPenaltyStartDay <= 0 ||
+                defaultProfile == null)
             {
                 Debug.LogError("[Nyangbingo] MainGamePlayerController: 플레이어 이동·전투 필수 데이터가 준비되지 않았습니다.");
                 return false;
             }
 
-            if (!PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var physics))
-            {
-                physics = PlayerMovementPhysics.CreateDefault();
-                Debug.LogWarning("[Nyangbingo] MainGamePlayerController: player physics globals missing; " +
-                                 "using Terraria-like defaults.");
-            }
+            var physics = PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var legacyPhysics)
+                ? legacyPhysics
+                : PlayerMovementPhysics.CreateDefault();
             jumpVelocity = physics.JumpVelocity;
             gravityAcceleration = physics.Gravity;
             maximumFallSpeed = physics.MaxFallSpeed;
@@ -206,6 +254,10 @@ namespace Nyangbingo.World
             var indicatorObject = new GameObject("AttackIndicator");
             indicatorObject.transform.SetParent(transform, false);
             attackIndicator = indicatorObject.AddComponent<SpriteRenderer>();
+            // The delivered art is rotated -90 degrees for a right-facing attack, so its
+            // source Y axis becomes screen X. flipY is therefore the required screen-space
+            // horizontal mirror that keeps the claw tips pointing away from the player.
+            attackIndicator.flipY = true;
             var attackFrames = gameplayArtCatalog?.PlayerAttackFrames;
             if (attackFrames != null && attackFrames.Count > 0)
                 RuntimePlaceholderVisual.ConfigureSprite(attackIndicator, attackFrames[0], 19);
@@ -223,6 +275,15 @@ namespace Nyangbingo.World
             portableLanternLight.intensity = 1.15f;
             // Warm torch tone close to Terraria/Stardew lantern pools.
             portableLanternLight.color = new Color(1f, .78f, .42f, 1f);
+
+            var visionLightObject = new GameObject("PersonalVisionLight");
+            visionLightObject.transform.SetParent(transform, false);
+            personalVisionLight = visionLightObject.AddComponent<Light2D>();
+            personalVisionLight.lightType = Light2D.LightType.Point;
+            personalVisionLight.falloffIntensity = .55f;
+            personalVisionLight.intensity = .65f;
+            // Tiger-eye bead's approved dokkaebi-fire aura color (#7FE3C3).
+            personalVisionLight.color = new Color(127f / 255f, 227f / 255f, 195f / 255f, 1f);
             RefreshPortableLanternLight();
 
             worldDropRuntime = GetComponentInParent<MainGameWorldDropRuntime>();
@@ -235,24 +296,39 @@ namespace Nyangbingo.World
             var hud = FindAnyObjectByType<Nyangbingo.UI.MainGameHudController>();
             worldDropRuntime.ConfigureForRuntime(transform, runtimeServices.PlayerInventory,
                 hud != null ? hud.BoundItemArtCatalog : null, bootstrap.TileService);
+            raidTarget?.ConfigureTheftRuntime(runtimeServices.PlayerInventory,
+                runtimeServices.EquipmentSystem, worldDropRuntime);
+            if (raidTarget != null && !raidTarget.ConfigureWallPaceRuntime(
+                    bootstrap, sealPenaltyStartDay))
+            {
+                Debug.LogError("[Nyangbingo] MainGamePlayerController: seal-pace wall damage binding failed.");
+                return false;
+            }
+            if (!runtimeServices.BindMagpieCompanion(
+                    transform, worldDropRuntime, characterArtCatalog))
+            {
+                Debug.LogError("[Nyangbingo] MainGamePlayerController: magpie companion runtime binding failed.");
+                return false;
+            }
 
             runtimeServices.PlayerInventory.Changed += RefreshCombatProfile;
             runtimeServices.ActiveSlot.Changed += RefreshCombatProfile;
             runtimeServices.PortableLantern.Changed += RefreshPortableLanternLight;
             runtimeServices.EquipmentSystem.Changed += RefreshEquipmentStats;
             health.Died += HandleDied;
-            health.Damaged += HandleDamaged;
             runtimeServices.PlayerTemperature.ReachedMaximum += HandleTemperatureMaximum;
             runtimeServices.DeathTearPouches.Changed += RefreshTearPouchVisuals;
-            if (raidTarget != null) raidTarget.WallDamaged += HandleWallDamaged;
             wireSnare = new WireSnareAbility(attack);
             RefreshEquipmentStats();
             RefreshCombatProfile();
             RefreshTearPouchVisuals();
             grounded = IsStandingOnForeground();
+            ResetFallTracking();
             initialized = activeProfile != null;
             if (initialized)
             {
+                bootstrap.WorldReady += RebindForegroundPlacementBlocker;
+                RebindForegroundPlacementBlocker();
                 SnapCameraToPlayer();
                 Debug.Log($"[Nyangbingo] MainGamePlayerController: 이동·체력·근접 공격·카메라 연결 완료 " +
                           $"(speed={currentMoveSpeed:0.##}, profile={ActiveCombatProfileId}).");
@@ -260,10 +336,52 @@ namespace Nyangbingo.World
             return initialized;
         }
 
+        private void RebindForegroundPlacementBlocker()
+        {
+            var current = bootstrap?.TileService;
+            if (ReferenceEquals(current, placementBlockerTileService)) return;
+            placementBlockerTileService?.ClearForegroundPlacementBlocker(
+                IsPlayerOverlappingForegroundCell);
+            placementBlockerTileService = current;
+            placementBlockerTileService?.SetForegroundPlacementBlocker(
+                IsPlayerOverlappingForegroundCell);
+        }
+
+        private bool IsPlayerOverlappingForegroundCell(Vector3Int cell)
+        {
+            if (playerCollider == null || !playerCollider.enabled ||
+                !playerCollider.gameObject.activeInHierarchy)
+                return false;
+
+            var worldRenderer = bootstrap?.WorldRenderer;
+            if (worldRenderer == null) return false;
+            worldRenderer.GetCellWorldCorners(cell, placementCellCorners);
+
+            var minimum = placementCellCorners[0];
+            var maximum = placementCellCorners[0];
+            for (var index = 1; index < placementCellCorners.Length; index++)
+            {
+                minimum = Vector3.Min(minimum, placementCellCorners[index]);
+                maximum = Vector3.Max(maximum, placementCellCorners[index]);
+            }
+
+            return BoundsOverlapCell(playerCollider.bounds, minimum, maximum);
+        }
+
+        public static bool BoundsOverlapCell(Bounds playerBounds, Vector3 cellMinimum, Vector3 cellMaximum)
+        {
+            const float contactEpsilon = .001f;
+            return playerBounds.min.x < cellMaximum.x - contactEpsilon &&
+                   playerBounds.max.x > cellMinimum.x + contactEpsilon &&
+                   playerBounds.min.y < cellMaximum.y - contactEpsilon &&
+                   playerBounds.max.y > cellMinimum.y + contactEpsilon;
+        }
+
         private void Update()
         {
             if (!initialized) return;
             RefreshPortableLanternLight();
+            RefreshPlayerFireDamageMultiplier();
             if (dead)
             {
                 movementInput = Vector2.zero;
@@ -279,6 +397,15 @@ namespace Nyangbingo.World
                 characterAnimator?.SetMoving(false);
                 return;
             }
+#if UNITY_EDITOR
+            if (Input.GetKeyDown(KeyCode.M) &&
+                (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)))
+            {
+                var active = runtimeServices.MagpieCompanion?.ToggleEditorTestOverride() == true;
+                interactionMessages?.ShowExternalMessage(
+                    active ? "까치 테스트 활성화" : "까치 테스트 비활성화");
+            }
+#endif
             if (Input.GetKeyDown(KeyCode.Q) && runtimeServices.ActiveSlot.Toggle())
             {
                 var activeItemId = runtimeServices.ActiveSlot.EquippedItemId;
@@ -296,32 +423,17 @@ namespace Nyangbingo.World
                 var recover = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
                 var handled = recover
                     ? placedObjectInteractions?.TryRecoverNearestPlacedObject() == true
-                    : TryOpenNearbyChest() ||
+                    : TryUseSelectedIceShard() ||
+                      TryUseSelectedCatnip() ||
+                      TryHarvestNearbyCatnip() ||
+                      TryHarvestNearbyHemp() ||
+                      TryOpenNearbyChest() ||
+                      TryToggleNearbyDoor() ||
                       placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(recover
                         ? "가까이 있는 회수 가능한 설치물이 없습니다."
                         : "가까이 있는 상호작용 대상을 찾지 못했습니다.");
-                if (runtimeServices.NapService.IsNapping)
-                {
-                    movementInput = Vector2.zero;
-                    CancelMining();
-                    characterAnimator?.SetMoving(false);
-                    return;
-                }
-            }
-            if (runtimeServices.NapService.IsNapping)
-            {
-                if (encounterCoordinator != null &&
-                    encounterCoordinator.HasActiveYokaiWithin(transform.position, NapYokaiWakeRadius))
-                    runtimeServices.NapService.Wake(NapWakeReason.YokaiApproached);
-            }
-            if (runtimeServices.NapService.IsNapping)
-            {
-                movementInput = Vector2.zero;
-                CancelMining();
-                characterAnimator?.SetMoving(false);
-                return;
             }
             movementInput = new Vector2(Mathf.Clamp(Input.GetAxisRaw("Horizontal"), -1f, 1f), 0f);
             if (Mathf.Abs(movementInput.x) > Mathf.Epsilon)
@@ -366,15 +478,27 @@ namespace Nyangbingo.World
             if (!initialized || dead || body == null) return;
             var deltaSeconds = Time.fixedDeltaTime;
             grounded = IsStandingOnForeground();
-            if (grounded && verticalVelocity < 0f)
+            if (grounded)
             {
-                verticalVelocity = 0f;
-                airJumpConsumed = false;
+                ResolveFallLanding(body.position.y);
+                if (verticalVelocity < 0f)
+                {
+                    verticalVelocity = 0f;
+                    airJumpConsumed = false;
+                }
             }
-            var jumpHeld = bossKnockbackRemainingSeconds > 0f || IsJumpPressed();
+            else TrackAirborneHeight(body.position.y);
+            // Fall-damage recoil is an automatic launch, not a variable-height player jump.
+            // Applying the released-jump cut here would collapse a requested 0.5-tile bounce
+            // to an almost invisible movement over the first two physics frames.
+            var jumpHeld = fallDamageBounceAscending ||
+                           bossKnockbackRemainingSeconds > 0f ||
+                           IsJumpPressed();
             verticalVelocity = PlayerMovementPhysics.ApplyJumpCutWhileAscending(
                 verticalVelocity, jumpHeld, jumpCutMultiplier);
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
+            if (fallDamageBounceAscending && verticalVelocity <= 0f)
+                fallDamageBounceAscending = false;
             var horizontalVelocity = CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed);
             if (bossKnockbackRemainingSeconds > 0f)
             {
@@ -459,15 +583,21 @@ namespace Nyangbingo.World
         {
             if (grounded)
             {
+                fallDamageBounceAscending = false;
                 verticalVelocity = jumpVelocity;
                 grounded = false;
                 airJumpConsumed = false;
+                BeginFallTracking(body != null ? body.position.y : transform.position.y);
                 return;
             }
             if (!statSheet.HasDoubleJump || airJumpConsumed) return;
             verticalVelocity = CalculateJumpVelocityForHeightRatio(jumpVelocity,
                 statSheet.DoubleJumpHeightRatio);
+            fallDamageBounceAscending = false;
             airJumpConsumed = true;
+            // The v34 contract treats every jump as a new fall origin, so a late double jump
+            // cushions the earlier drop even when it does not rise above the old apex.
+            BeginFallTracking(body != null ? body.position.y : transform.position.y);
         }
 
         private bool IsStandingOnForeground()
@@ -492,12 +622,20 @@ namespace Nyangbingo.World
                 var normal = collision.GetContact(index).normal;
                 if (normal.y > .5f && verticalVelocity <= 0f)
                 {
-                    grounded = true;
-                    verticalVelocity = 0f;
-                    airJumpConsumed = false;
+                    var bounced = ResolveFallLanding(
+                        body != null ? body.position.y : transform.position.y);
+                    grounded = !bounced;
+                    if (!bounced)
+                    {
+                        verticalVelocity = 0f;
+                        airJumpConsumed = false;
+                    }
                 }
                 else if (normal.y < -.5f && verticalVelocity > 0f)
+                {
                     verticalVelocity = 0f;
+                    fallDamageBounceAscending = false;
+                }
             }
         }
 
@@ -538,6 +676,77 @@ namespace Nyangbingo.World
             return Mathf.Sqrt(2f * gravity * heightTiles);
         }
 
+        public static float CalculateFallDamage(float fallTiles, float thresholdTiles,
+            float damagePerTile)
+        {
+            if (float.IsNaN(fallTiles) || float.IsInfinity(fallTiles) ||
+                float.IsNaN(thresholdTiles) || float.IsInfinity(thresholdTiles) ||
+                float.IsNaN(damagePerTile) || float.IsInfinity(damagePerTile) ||
+                fallTiles < thresholdTiles || thresholdTiles <= 0f || damagePerTile <= 0f)
+                return 0f;
+            return fallTiles * damagePerTile;
+        }
+
+        public static int CalculateAppliedFallDamage(float fallTiles, float thresholdTiles,
+            float damagePerTile)
+        {
+            var rawDamage = CalculateFallDamage(fallTiles, thresholdTiles, damagePerTile);
+            if (rawDamage <= 0f) return 0;
+            if (rawDamage >= int.MaxValue) return int.MaxValue;
+            // Health is integer-based. Resolve the design's half-HP samples with conventional
+            // half-up rounding while preserving the exact floating-point formula above.
+            return Mathf.Max(1, Mathf.FloorToInt(rawDamage + .5f));
+        }
+
+        private void BeginFallTracking(float worldY)
+        {
+            if (float.IsNaN(worldY) || float.IsInfinity(worldY)) return;
+            trackingFall = true;
+            fallPeakWorldY = worldY;
+        }
+
+        private void TrackAirborneHeight(float worldY)
+        {
+            if (float.IsNaN(worldY) || float.IsInfinity(worldY)) return;
+            if (!trackingFall)
+            {
+                BeginFallTracking(worldY);
+                return;
+            }
+            fallPeakWorldY = Mathf.Max(fallPeakWorldY, worldY);
+        }
+
+        private bool ResolveFallLanding(float landingWorldY)
+        {
+            if (!trackingFall || float.IsNaN(landingWorldY) || float.IsInfinity(landingWorldY))
+                return false;
+            var fallTiles = Mathf.Max(0f, fallPeakWorldY - landingWorldY);
+            trackingFall = false;
+            fallPeakWorldY = landingWorldY;
+            var damage = CalculateAppliedFallDamage(
+                fallTiles, fallDamageThresholdTiles, fallDamagePerTile);
+            if (damage <= 0 || health == null || health.IsDead) return false;
+            var healthBeforeDamage = health.Current;
+            health.ApplyDamage(damage, DamageTag.Fall, DamageDelivery.Environmental);
+            if (dead || health.IsDead || health.Current >= healthBeforeDamage) return false;
+
+            verticalVelocity = CalculateBossAirborneVelocity(
+                FallDamageBounceHeightTiles, gravityAcceleration);
+            if (verticalVelocity <= Mathf.Epsilon) return false;
+            fallDamageBounceAscending = true;
+            grounded = false;
+            BeginFallTracking(landingWorldY);
+            if (body != null)
+                body.linearVelocity = new Vector2(body.linearVelocity.x, verticalVelocity);
+            return true;
+        }
+
+        private void ResetFallTracking()
+        {
+            trackingFall = false;
+            fallPeakWorldY = body != null ? body.position.y : transform.position.y;
+        }
+
         public static float CalculateSurfaceCameraVerticalOffset(float playerWorldY,
             float undergroundThreshold, float orthographicSize)
         {
@@ -567,11 +776,12 @@ namespace Nyangbingo.World
             // component's normal Start/Initialize pass. There is no transient motion or death
             // state to clear yet in that phase, so it is already a valid reset.
             if (!initialized) return true;
-            dead = false;
             respawnApplied = false;
             deathSequenceElapsed = 0f;
             movementInput = Vector2.zero;
+            CancelAttackFeedback();
             verticalVelocity = 0f;
+            fallDamageBounceAscending = false;
             bossKnockbackHorizontalVelocity = 0f;
             bossKnockbackRemainingSeconds = 0f;
             attackCooldown = 0f;
@@ -589,6 +799,9 @@ namespace Nyangbingo.World
             characterAnimator?.ResetToIdle();
             SetDeathFadeAlpha(0f);
             SnapCameraToPlayer();
+            ResetFallTracking();
+            RestoreDeathPhysics();
+            dead = false;
             return true;
         }
 
@@ -618,7 +831,7 @@ namespace Nyangbingo.World
         {
             if (activeProfile == null || !activeProfile.HasBasicAttack || activeProfile.AttacksPerSecond <= 0f)
                 return false;
-            attack.Strike(facing);
+            attack.Strike(SnapAttackFeedbackDirection(facing));
             characterAnimator?.PlayAttack();
             ShowAttackFeedback();
             attackCooldown = 1f / activeProfile.AttacksPerSecond;
@@ -643,12 +856,14 @@ namespace Nyangbingo.World
                 ResetMiningProgress();
                 return;
             }
+            var clawTier = ResolveMiningClawTier();
+            if (TryTickTreeMining(clawTier, miningDelta)) return;
+            if (TryTickRebarMining(clawTier, miningDelta)) return;
             if (!TryResolveMiningCell(tileService, out var cell))
             {
                 ResetMiningProgress();
                 return;
             }
-            var clawTier = ResolveMiningClawTier();
             var tile = tileService.GetTile(cell);
             var definitionId = ResolveMiningDefinitionId(tile.elementType);
             var definition = catalog?.FindMineralTier(definitionId);
@@ -665,13 +880,16 @@ namespace Nyangbingo.World
                 out companionRequiredSeconds);
             if (hasCompanion) requiredSeconds = Mathf.Max(requiredSeconds, companionRequiredSeconds);
 
-            if (!miningActive || miningCell != cell ||
+            if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
+                !string.IsNullOrEmpty(miningRebarId) || miningCell != cell ||
                 miningHasCompanion != hasCompanion ||
                 hasCompanion && miningCompanionCell != companionCell ||
                 !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
             {
                 ResetMiningProgress();
                 miningActive = true;
+                miningTreeId = string.Empty;
+                miningRebarId = string.Empty;
                 miningCell = cell;
                 miningCompanionCell = companionCell;
                 miningHasCompanion = hasCompanion;
@@ -687,6 +905,71 @@ namespace Nyangbingo.World
             CompleteMining(miningCell, clawTier);
             if (miningHasCompanion) CompleteMining(miningCompanionCell, clawTier);
             ResetMiningProgress();
+        }
+
+        private bool TryTickTreeMining(int clawTier, float miningDelta)
+        {
+            if (worldDecorationRenderer == null ||
+                !worldDecorationRenderer.TryResolveTreeMiningTarget(transform.position,
+                    SnapAttackFeedbackDirection(facing), MiningReach, out var treeId, out var hitCell))
+                return false;
+            var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.WoodItemId);
+            var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
+            if (requiredSeconds <= 0f)
+            {
+                ResetMiningProgress();
+                return true;
+            }
+            if (!miningActive || !string.IsNullOrEmpty(miningRebarId) ||
+                !string.Equals(miningTreeId, treeId, System.StringComparison.Ordinal) ||
+                miningCell != hitCell || !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
+            {
+                ResetMiningProgress();
+                miningActive = true;
+                miningTreeId = treeId;
+                miningCell = hitCell;
+                miningElapsedSeconds = 0f;
+                miningRequiredSeconds = requiredSeconds;
+            }
+            miningElapsedSeconds = Mathf.Min(miningRequiredSeconds, miningElapsedSeconds + miningDelta);
+            Nyangbingo.Core.GameEvents.RaiseMiningProgress(miningCell, MiningProgress);
+            if (miningElapsedSeconds < miningRequiredSeconds) return true;
+            CompleteTreeMining(miningTreeId, miningCell, clawTier);
+            ResetMiningProgress();
+            return true;
+        }
+
+        private bool TryTickRebarMining(int clawTier, float miningDelta)
+        {
+            if (worldDecorationRenderer == null ||
+                !worldDecorationRenderer.TryResolveRebarMiningTarget(transform.position,
+                    SnapAttackFeedbackDirection(facing), MiningReach, out var rebarId, out var hitCell))
+                return false;
+            var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.RebarItemId);
+            var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
+            if (requiredSeconds <= 0f)
+            {
+                ResetMiningProgress();
+                return true;
+            }
+            if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
+                !string.Equals(miningRebarId, rebarId, System.StringComparison.Ordinal) ||
+                miningCell != hitCell || !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
+            {
+                ResetMiningProgress();
+                miningActive = true;
+                miningTreeId = string.Empty;
+                miningRebarId = rebarId;
+                miningCell = hitCell;
+                miningElapsedSeconds = 0f;
+                miningRequiredSeconds = requiredSeconds;
+            }
+            miningElapsedSeconds = Mathf.Min(miningRequiredSeconds, miningElapsedSeconds + miningDelta);
+            Nyangbingo.Core.GameEvents.RaiseMiningProgress(miningCell, MiningProgress);
+            if (miningElapsedSeconds < miningRequiredSeconds) return true;
+            CompleteRebarMining(miningRebarId, miningCell, clawTier);
+            ResetMiningProgress();
+            return true;
         }
 
         /// <summary>
@@ -717,34 +1000,28 @@ namespace Nyangbingo.World
                 float.IsNaN(playerOrigin.y) || float.IsInfinity(playerOrigin.y))
                 return false;
 
+            // Mouse position already determines facing. Searching the cursor's neighboring cells
+            // made a horizontal swing mine the ground diagonally below it. Mine only the first
+            // foreground cell crossed by the same snapped eight-direction line as the claw.
+            _ = mouseWorld;
+            var direction = SnapAttackFeedbackDirection(facing);
+            // MeleeArcAttack and the player's Rigidbody2D both use playerOrigin. The visual claw
+            // has a separate hand-height offset and must never raise the authoritative mining ray.
+            var attackOrigin = playerOrigin;
             var reachSq = miningReach * miningReach;
-            if (mouseWorld.HasValue)
+            var steps = Mathf.Max(1, Mathf.CeilToInt(miningReach * 8f));
+            var previousCell = new Vector3Int(int.MinValue, int.MinValue, 0);
+            for (var step = 0; step <= steps; step++)
             {
-                var mouse = mouseWorld.Value;
-                if (!float.IsNaN(mouse.x) && !float.IsInfinity(mouse.x) &&
-                    !float.IsNaN(mouse.y) && !float.IsInfinity(mouse.y))
-                {
-                    var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
-                    if (TryPickSolidMiningCell(tileService, playerOrigin, mouseCell, reachSq, out cell))
-                        return true;
-                }
-            }
-
-            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            var aim = playerOrigin + direction * miningReach;
-            var aimCell = new Vector3Int(Mathf.FloorToInt(aim.x), Mathf.FloorToInt(aim.y), 0);
-            return TryPickSolidMiningCell(tileService, playerOrigin, aimCell, reachSq, out cell);
-        }
-
-        private static bool TryPickSolidMiningCell(TileService tileService, Vector2 playerOrigin,
-            Vector3Int primaryCell, float reachSq, out Vector3Int cell)
-        {
-            cell = default;
-            foreach (var offset in MiningCellPickOffsets)
-            {
-                var candidate = primaryCell + offset;
-                if (!IsMineableForegroundCell(tileService, candidate)) continue;
-                if (!IsWithinMiningReach(playerOrigin, candidate, reachSq)) continue;
+                var distance = miningReach * step / steps;
+                var sample = attackOrigin + direction * distance;
+                var candidate = new Vector3Int(
+                    Mathf.FloorToInt(sample.x), Mathf.FloorToInt(sample.y), 0);
+                if (candidate == previousCell) continue;
+                previousCell = candidate;
+                if (!IsMineableForegroundCell(tileService, candidate) ||
+                    !IsWithinMiningReach(attackOrigin, candidate, reachSq))
+                    continue;
                 cell = candidate;
                 return true;
             }
@@ -759,22 +1036,11 @@ namespace Nyangbingo.World
 
         private static bool IsWithinMiningReach(Vector2 playerOrigin, Vector3Int cell, float reachSq)
         {
-            var center = new Vector2(cell.x + .5f, cell.y + .5f);
-            return (center - playerOrigin).sqrMagnitude <= reachSq;
+            var closest = new Vector2(
+                Mathf.Clamp(playerOrigin.x, cell.x, cell.x + 1f),
+                Mathf.Clamp(playerOrigin.y, cell.y, cell.y + 1f));
+            return (closest - playerOrigin).sqrMagnitude <= reachSq;
         }
-
-        private static readonly Vector3Int[] MiningCellPickOffsets =
-        {
-            Vector3Int.zero,
-            Vector3Int.down,
-            Vector3Int.left,
-            Vector3Int.right,
-            new Vector3Int(-1, -1, 0),
-            new Vector3Int(1, -1, 0),
-            Vector3Int.up,
-            new Vector3Int(-1, 1, 0),
-            new Vector3Int(1, 1, 0),
-        };
 
         private bool TryGetMiningSeconds(Vector3Int cell, int clawTier, out float requiredSeconds)
         {
@@ -820,6 +1086,52 @@ namespace Nyangbingo.World
             }
         }
 
+        private void CompleteTreeMining(string treeId, Vector3Int hitCell, int clawTier)
+        {
+            var item = catalog?.FindItem(MainGameWorldDecorationRenderer.WoodItemId);
+            if (item == null || worldDecorationRenderer == null ||
+                !worldDecorationRenderer.TryHarvestTree(treeId, out _, out var dropPosition))
+                return;
+            var amount = 1;
+            var criticalDefinition = clawTier == 2 ? catalog?.FindGlobal(IronClawMiningCriticalKey) : null;
+            var baseCriticalChance = 0f;
+            if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
+                baseCriticalChance = configuredChance;
+            var critical = UnityEngine.Random.value <
+                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+            if (critical)
+            {
+                amount++;
+                Nyangbingo.Core.GameEvents.RaiseMiningCritical();
+            }
+            WorldItemDropRequest.Request(item, amount, dropPosition);
+            Nyangbingo.Core.GameEvents.RaiseMiningResult(
+                hitCell, item.DisplayName, amount, critical);
+        }
+
+        private void CompleteRebarMining(string rebarId, Vector3Int hitCell, int clawTier)
+        {
+            var item = catalog?.FindItem(MainGameWorldDecorationRenderer.RebarItemId);
+            if (item == null || worldDecorationRenderer == null ||
+                !worldDecorationRenderer.TryHarvestRebar(rebarId, out var dropPosition))
+                return;
+            var amount = 1;
+            var criticalDefinition = clawTier == 2 ? catalog?.FindGlobal(IronClawMiningCriticalKey) : null;
+            var baseCriticalChance = 0f;
+            if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
+                baseCriticalChance = configuredChance;
+            var critical = UnityEngine.Random.value <
+                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+            if (critical)
+            {
+                amount++;
+                Nyangbingo.Core.GameEvents.RaiseMiningCritical();
+            }
+            WorldItemDropRequest.Request(item, amount, dropPosition);
+            Nyangbingo.Core.GameEvents.RaiseMiningResult(
+                hitCell, item.DisplayName, amount, critical);
+        }
+
         private void CancelMining()
         {
             miningAllowedByLastSwing = false;
@@ -831,6 +1143,8 @@ namespace Nyangbingo.World
             if (miningActive)
                 Nyangbingo.Core.GameEvents.RaiseMiningProgress(miningCell, 0f);
             miningActive = false;
+            miningTreeId = string.Empty;
+            miningRebarId = string.Empty;
             miningHasCompanion = false;
             miningElapsedSeconds = 0f;
             miningRequiredSeconds = 0f;
@@ -886,13 +1200,18 @@ namespace Nyangbingo.World
         private void ShowAttackFeedback()
         {
             if (attackIndicator == null) return;
-            attackIndicator.transform.localPosition = facing * .85f;
-            attackIndicator.transform.right = facing;
+            attackIndicatorDirection = SnapAttackFeedbackDirection(facing);
+            var attackAngle = CalculateAttackFeedbackRotationDegrees(attackIndicatorDirection);
+            attackIndicator.transform.localRotation = Quaternion.Euler(0f, 0f, attackAngle);
             attackIndicator.enabled = true;
-            attackIndicatorFrameIndex = 0;
             attackIndicatorFrameRemaining = .1f;
             var frames = gameplayArtCatalog?.PlayerAttackFrames;
-            if (frames != null && frames.Count > 0) attackIndicator.sprite = frames[0];
+            attackIndicatorFrameIndex = frames != null && frames.Count > 0
+                ? frames.Count - 1
+                : 0;
+            if (frames != null && frames.Count > 0)
+                attackIndicator.sprite = frames[attackIndicatorFrameIndex];
+            PositionAttackFeedback();
             attackIndicatorRemaining = frames != null && frames.Count > 0
                 ? Mathf.Max(.12f, frames.Count * .1f)
                 : .12f;
@@ -903,12 +1222,69 @@ namespace Nyangbingo.World
             var frames = gameplayArtCatalog?.PlayerAttackFrames;
             if (attackIndicator == null || frames == null || frames.Count <= 1) return;
             attackIndicatorFrameRemaining -= Mathf.Max(0f, deltaTime);
-            while (attackIndicatorFrameRemaining <= 0f && attackIndicatorFrameIndex < frames.Count - 1)
+            while (attackIndicatorFrameRemaining <= 0f && attackIndicatorFrameIndex > 0)
             {
-                attackIndicatorFrameIndex++;
+                attackIndicatorFrameIndex--;
                 attackIndicator.sprite = frames[attackIndicatorFrameIndex];
+                PositionAttackFeedback();
                 attackIndicatorFrameRemaining += .1f;
             }
+        }
+
+        private void PositionAttackFeedback()
+        {
+            if (attackIndicator == null || attackIndicator.sprite == null) return;
+            var referenceSpriteCenter = (Vector2)attackIndicator.sprite.bounds.center;
+            var renderedSpriteCenter = referenceSpriteCenter;
+            if (attackIndicator.flipX) renderedSpriteCenter.x = -renderedSpriteCenter.x;
+            if (attackIndicator.flipY) renderedSpriteCenter.y = -renderedSpriteCenter.y;
+            attackIndicator.transform.localPosition = CalculateAttackFeedbackLocalPosition(
+                attackIndicatorDirection, referenceSpriteCenter, renderedSpriteCenter);
+        }
+
+        public static Vector2 SnapAttackFeedbackDirection(Vector2 direction)
+        {
+            if (float.IsNaN(direction.x) || float.IsInfinity(direction.x) ||
+                float.IsNaN(direction.y) || float.IsInfinity(direction.y) ||
+                direction.sqrMagnitude <= Mathf.Epsilon)
+                return Vector2.right;
+            var angle = Mathf.Round(Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg / 45f) * 45f;
+            var radians = angle * Mathf.Deg2Rad;
+            return new Vector2(Mathf.Cos(radians), Mathf.Sin(radians)).normalized;
+        }
+
+        public static Vector2 CalculateAttackFeedbackLocalPosition(
+            Vector2 direction, Vector2 spriteCenter)
+        {
+            return CalculateAttackFeedbackLocalPosition(direction, spriteCenter, spriteCenter);
+        }
+
+        public static Vector2 CalculateAttackFeedbackLocalPosition(
+            Vector2 direction, Vector2 referenceSpriteCenter, Vector2 renderedSpriteCenter)
+        {
+            var snappedDirection = SnapAttackFeedbackDirection(direction);
+            var angle = CalculateAttackFeedbackRotationDegrees(snappedDirection);
+            var rotatedSpriteCenter =
+                (Vector2)(Quaternion.Euler(0f, 0f, angle) * (Vector3)renderedSpriteCenter);
+            var desiredVisualCenter = Vector2.up * AttackFeedbackOriginHeight +
+                                      snappedDirection *
+                                      (AttackFeedbackRadius + referenceSpriteCenter.x);
+            return desiredVisualCenter - rotatedSpriteCenter;
+        }
+
+        public static float CalculateAttackFeedbackRotationDegrees(Vector2 direction)
+        {
+            var snappedDirection = SnapAttackFeedbackDirection(direction);
+            return Mathf.Atan2(snappedDirection.y, snappedDirection.x) * Mathf.Rad2Deg +
+                   AttackFeedbackArtRotationDegrees;
+        }
+
+        private void CancelAttackFeedback()
+        {
+            attackIndicatorRemaining = 0f;
+            attackIndicatorFrameRemaining = 0f;
+            attackIndicatorFrameIndex = 0;
+            if (attackIndicator != null) attackIndicator.enabled = false;
         }
 
         private void RefreshEquipmentStats()
@@ -917,6 +1293,27 @@ namespace Nyangbingo.World
             statSheet.Recalculate(runtimeServices.EquipmentSystem);
             currentMoveSpeed = baseMoveSpeed * statSheet.MovementMultiplier;
             health.SetDefense(statSheet.Defense);
+            RefreshPlayerFireDamageMultiplier();
+            RefreshPlayerVisionLight();
+        }
+
+        private void RefreshPlayerFireDamageMultiplier()
+        {
+            if (health == null) return;
+            var auraMultiplier = playerCounterAuraSensor?.FireDamageMultiplier ?? 1f;
+            health.SetFireDamageMultiplier(CalculateFireDamageMultiplier(
+                statSheet.FireDamageModifier, auraMultiplier));
+        }
+
+        public static float CalculateFireDamageMultiplier(
+            float equipmentModifier, float auraMultiplier)
+        {
+            if (float.IsNaN(equipmentModifier) || float.IsInfinity(equipmentModifier))
+                equipmentModifier = 0f;
+            if (float.IsNaN(auraMultiplier) || float.IsInfinity(auraMultiplier))
+                auraMultiplier = 1f;
+            return Mathf.Max(0f, 1f + equipmentModifier) *
+                   Mathf.Max(0f, auraMultiplier);
         }
 
         private void RefreshCombatProfile()
@@ -960,12 +1357,15 @@ namespace Nyangbingo.World
             respawnApplied = false;
             deathSequenceElapsed = 0f;
             movementInput = Vector2.zero;
+            CancelAttackFeedback();
             verticalVelocity = 0f;
+            fallDamageBounceAscending = false;
             grounded = false;
             airJumpConsumed = false;
+            ResetFallTracking();
+            LockDeathPhysics();
             characterAnimator?.SetMoving(false);
             characterAnimator?.PlayDeath();
-            runtimeServices?.NapService?.Wake(NapWakeReason.PlayerDied);
             var dropped = runtimeServices?.DeathTearPouches?.DropTwentyPercent(transform.position) ?? 0;
             if (playerRenderer != null) playerRenderer.color = new Color(.35f, .35f, .4f);
             if (playerCollider != null) playerCollider.enabled = false;
@@ -995,13 +1395,14 @@ namespace Nyangbingo.World
             SetDeathFadeAlpha(1f - Mathf.Clamp01(fadeInElapsed / FadeInSeconds));
             if (fadeInElapsed < FadeInSeconds) return;
 
-            dead = false;
             if (health != null) health.RestoreCurrent(health.MaxHealth);
             var temperature = runtimeServices?.PlayerTemperature;
             if (temperature != null) temperature.Restore(temperature.StartingTemperature);
             if (playerCollider != null) playerCollider.enabled = true;
             if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
             transform.rotation = aliveRotation;
+            RestoreDeathPhysics();
+            dead = false;
             SetDeathFadeAlpha(0f);
             Debug.Log("[Nyangbingo] MainGamePlayerController: 보금자리 리스폰 완료(HP 전량, 체온 시작값 복원).");
         }
@@ -1017,16 +1418,43 @@ namespace Nyangbingo.World
             transform.position = respawnPosition;
             if (body != null) body.position = respawnPosition;
             verticalVelocity = 0f;
+            fallDamageBounceAscending = false;
             bossKnockbackHorizontalVelocity = 0f;
             bossKnockbackRemainingSeconds = 0f;
             grounded = false;
             airJumpConsumed = false;
+            ResetFallTracking();
             transform.rotation = aliveRotation;
             characterAnimator?.ResetToIdle();
             if (health != null) health.RestoreCurrent(health.MaxHealth);
             var temperature = runtimeServices?.PlayerTemperature;
             if (temperature != null) temperature.Restore(temperature.StartingTemperature);
             if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
+        }
+
+        private void LockDeathPhysics()
+        {
+            if (body == null) return;
+            if (!deathPhysicsLocked)
+            {
+                bodySimulationBeforeDeath = body.simulated;
+                deathPhysicsLocked = true;
+            }
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.simulated = false;
+        }
+
+        private void RestoreDeathPhysics()
+        {
+            if (!deathPhysicsLocked) return;
+            if (body != null)
+            {
+                body.linearVelocity = Vector2.zero;
+                body.angularVelocity = 0f;
+                body.simulated = bodySimulationBeforeDeath;
+            }
+            deathPhysicsLocked = false;
         }
 
         private Vector2 ResolveSafeSurfaceRespawn(Vector2 preferredPosition)
@@ -1117,35 +1545,103 @@ namespace Nyangbingo.World
             }
         }
 
-        public void TryToggleNapFromInteraction()
-        {
-            var nap = runtimeServices?.NapService;
-            if (nap == null) return;
-            if (nap.IsNapping)
-            {
-                nap.Wake(NapWakeReason.Manual);
-                return;
-            }
-            if (runtimeServices?.CraftingProcess?.IsCrafting == true) return;
-
-            var onNest = environmentState != null &&
-                         environmentState.HasPlacedObjectWithin(
-                             NestBedId, transform.position, NestInteractionRadius);
-            var sealedArea = bootstrap?.SealSystem?.IsInsideSealedArea(transform.position) == true;
-            nap.TryStart(onNest, sealedArea);
-        }
-
         private bool TryOpenNearbyChest()
         {
             var session = bootstrap?.Session;
             if (session == null || !session.HasWorld) return false;
             if (!TryResolveNearbyChestCell(session, out var cell)) return false;
             if (!session.TryOpenChestAt(cell, out var chestId, out var definition)) return false;
-
-            var rewardSummary = FormatChestRewardSummary(definition, session.Seed, chestId);
-            interactionMessages?.ShowExternalMessage($"상자 개봉: {rewardSummary}");
+            storageUi ??= FindAnyObjectByType<Nyangbingo.UI.MainGameCraftingUiController>();
+            if (storageUi == null || !storageUi.TryOpenChest(session.ChestProgress, chestId))
+                return false;
             worldDecorationRenderer?.MarkChestOpened(chestId);
-            Debug.Log($"[Nyangbingo] Product chest interaction completed: {chestId}, region={definition.Id}, rewards={rewardSummary}.");
+            Debug.Log($"[Nyangbingo] Product chest loot interface opened: {chestId}, region={definition.Id}.");
+            return true;
+        }
+
+        private bool TryHarvestNearbyCatnip()
+        {
+            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null ||
+                !worldDecorationRenderer.TryHarvestCatnip(
+                    transform.position, CatnipHarvestRadius, runtimeServices.PlayerInventory, out var harvested))
+                return false;
+            interactionMessages?.ShowExternalMessage($"캣닢 채집 ×{harvested} · 2일 뒤 재생");
+            return true;
+        }
+
+        private bool TryUseSelectedCatnip()
+        {
+            tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
+            if (tilePalette == null ||
+                tilePalette.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId)
+                return false;
+
+            var recovery = runtimeServices.PlayerHealthRecovery;
+            if (recovery != null && recovery.TryUseCatnip(out var restoredHealth))
+            {
+                interactionMessages?.ShowExternalMessage($"캣닢 사용 · HP +{restoredHealth}");
+                return true;
+            }
+
+            interactionMessages?.ShowExternalMessage("HP가 가득 찼거나 캣닢을 사용할 수 없습니다.");
+            return true;
+        }
+
+        private bool TryUseSelectedIceShard()
+        {
+            tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
+            if (tilePalette == null || tilePalette.SelectedItemId != IceShardItemId)
+                return false;
+
+            var temperature = runtimeServices?.PlayerTemperature;
+            var inventory = runtimeServices?.PlayerInventory;
+            if (temperature == null || inventory == null ||
+                temperature.Current <= temperature.Minimum)
+            {
+                interactionMessages?.ShowExternalMessage(
+                    "체온이 이미 최저치라 얼음 조각을 사용할 수 없습니다.");
+                return true;
+            }
+
+            if (!inventory.TryRemove(IceShardItemId, 1))
+            {
+                interactionMessages?.ShowExternalMessage("얼음 조각이 없습니다.");
+                return true;
+            }
+
+            if (temperature.TryCoolImmediately(
+                    iceShardTemperatureRelief, out var reducedTemperature))
+            {
+                interactionMessages?.ShowExternalMessage(
+                    $"얼음 조각 사용 · 체온 -{reducedTemperature:0.#}");
+                return true;
+            }
+
+            inventory.TryAdd(IceShardItemId, 1);
+            interactionMessages?.ShowExternalMessage(
+                "현재는 얼음 조각을 사용할 수 없습니다.");
+            return true;
+        }
+
+        private bool TryToggleNearbyDoor()
+        {
+            var tileService = bootstrap?.TileService;
+            if (tileService == null ||
+                !tileService.TryToggleNearestDoor(
+                    transform.position, ChestInteractReach, out var isOpen))
+                return false;
+            interactionMessages?.ShowExternalMessage(
+                isOpen ? "단열 문을 열었습니다." : "단열 문을 닫았습니다.");
+            return true;
+        }
+
+        private bool TryHarvestNearbyHemp()
+        {
+            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null ||
+                !worldDecorationRenderer.TryHarvestHemp(
+                    transform.position, CatnipHarvestRadius, runtimeServices.PlayerInventory, out var harvested))
+                return false;
+            interactionMessages?.ShowExternalMessage($"삼줄기 채집 ×{harvested}");
             return true;
         }
 
@@ -1163,7 +1659,7 @@ namespace Nyangbingo.World
                 var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
                 var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
                 if (IsChestCellInReach(origin, mouseCell, reachSq) &&
-                    session.TryPeekUnopenedChestAt(mouseCell))
+                    session.TryPeekChestAt(mouseCell))
                 {
                     cell = mouseCell;
                     return true;
@@ -1174,22 +1670,22 @@ namespace Nyangbingo.World
                 (facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.right));
             var currentCell = Vector3Int.FloorToInt(origin);
             if (IsChestCellInReach(origin, facingCell, reachSq) &&
-                session.TryPeekUnopenedChestAt(facingCell))
+                session.TryPeekChestAt(facingCell))
             {
                 cell = facingCell;
                 return true;
             }
             if (IsChestCellInReach(origin, currentCell, reachSq) &&
-                session.TryPeekUnopenedChestAt(currentCell))
+                session.TryPeekChestAt(currentCell))
             {
                 cell = currentCell;
                 return true;
             }
 
-            return TryFindNearestUnopenedChestCell(session, origin, reachSq, out cell);
+            return TryFindNearestChestCell(session, origin, reachSq, out cell);
         }
 
-        private static bool TryFindNearestUnopenedChestCell(WorldSessionController session, Vector2 origin,
+        private static bool TryFindNearestChestCell(WorldSessionController session, Vector2 origin,
             float reachSq, out Vector3Int cell)
         {
             cell = default;
@@ -1201,7 +1697,6 @@ namespace Nyangbingo.World
             for (var i = 0; i < chests.Count; i++)
             {
                 var chest = chests[i];
-                if (session.ChestProgress != null && session.ChestProgress.IsOpened(chest.id)) continue;
                 var chestCell = new Vector3Int(chest.position.x, chest.position.y, 0);
                 var center = new Vector2(chestCell.x + .5f, chestCell.y + .5f);
                 var distSq = (center - origin).sqrMagnitude;
@@ -1235,24 +1730,46 @@ namespace Nyangbingo.World
             return parts.Count == 0 ? definition.Id : string.Join(", ", parts);
         }
 
-        private void HandleDamaged(Nyangbingo.Core.DamageTag tag, int amount)
-        {
-            if (amount > 0) runtimeServices?.NapService?.Wake(NapWakeReason.PlayerDamaged);
-        }
-
-        private void HandleWallDamaged(float amount)
-        {
-            if (amount > 0f) runtimeServices?.NapService?.Wake(NapWakeReason.WallDamaged);
-        }
-
         private void RefreshPortableLanternLight()
         {
-            if (portableLanternLight != null)
-                portableLanternLight.enabled = runtimeServices?.PortableLantern?.IsLit == true;
+            if (portableLanternLight == null) return;
+            var lantern = runtimeServices?.PortableLantern;
+            var isLit = lantern?.IsLit == true;
+            var lanternRadius = isLit ? lantern.RadiusTiles : 0f;
+            portableLanternLight.pointLightInnerRadius =
+                CalculatePersonalVisionRadius(lanternRadius * .35f,
+                    statSheet.VisionRadiusBonus * .35f);
+            portableLanternLight.pointLightOuterRadius =
+                CalculatePersonalVisionRadius(lanternRadius * 1.15f,
+                    statSheet.VisionRadiusBonus);
+            portableLanternLight.enabled = isLit;
+        }
+
+        private void RefreshPlayerVisionLight()
+        {
+            var bonus = CalculatePersonalVisionRadius(0f, statSheet.VisionRadiusBonus);
+            if (personalVisionLight != null)
+            {
+                personalVisionLight.pointLightInnerRadius = bonus * .35f;
+                personalVisionLight.pointLightOuterRadius = bonus;
+                personalVisionLight.enabled = bonus > 0f;
+            }
+            RefreshPortableLanternLight();
+        }
+
+        public static float CalculatePersonalVisionRadius(float baseRadius, float equipmentBonus)
+        {
+            if (float.IsNaN(baseRadius) || float.IsInfinity(baseRadius)) baseRadius = 0f;
+            if (float.IsNaN(equipmentBonus) || float.IsInfinity(equipmentBonus)) equipmentBonus = 0f;
+            return Mathf.Max(0f, baseRadius) + Mathf.Max(0f, equipmentBonus);
         }
 
         private void OnDestroy()
         {
+            if (bootstrap != null) bootstrap.WorldReady -= RebindForegroundPlacementBlocker;
+            placementBlockerTileService?.ClearForegroundPlacementBlocker(
+                IsPlayerOverlappingForegroundCell);
+            placementBlockerTileService = null;
             if (runtimeServices?.PlayerInventory != null)
                 runtimeServices.PlayerInventory.Changed -= RefreshCombatProfile;
             if (runtimeServices?.ActiveSlot != null)
@@ -1262,12 +1779,10 @@ namespace Nyangbingo.World
             if (runtimeServices?.EquipmentSystem != null)
                 runtimeServices.EquipmentSystem.Changed -= RefreshEquipmentStats;
             if (health != null) health.Died -= HandleDied;
-            if (health != null) health.Damaged -= HandleDamaged;
             if (runtimeServices?.PlayerTemperature != null)
                 runtimeServices.PlayerTemperature.ReachedMaximum -= HandleTemperatureMaximum;
             if (runtimeServices?.DeathTearPouches != null)
                 runtimeServices.DeathTearPouches.Changed -= RefreshTearPouchVisuals;
-            if (raidTarget != null) raidTarget.WallDamaged -= HandleWallDamaged;
             foreach (var visual in tearPouchVisuals.Values)
                 if (visual != null) Destroy(visual);
             tearPouchVisuals.Clear();

@@ -23,6 +23,16 @@ namespace Nyangbingo.World
         [SerializeField] private InventoryRuntime inventoryRuntime;
         [SerializeField] private MainGameEnvironmentState environmentState;
 
+        [Header("Player Health Recovery")]
+        [Tooltip("켜면 globals.csv의 hp_regen_delay/rate 대신 아래 인스펙터 값을 사용합니다.")]
+        [SerializeField] private bool overridePlayerHealthRecovery;
+        [Tooltip("마지막 피격 후 자연 회복이 시작되기까지의 게임 시간(초)입니다.")]
+        [Min(.01f)]
+        [SerializeField] private float playerHealthRegenDelaySeconds = 10f;
+        [Tooltip("자연 회복이 시작된 뒤 게임 시간 1초당 회복하는 HP입니다.")]
+        [Min(.01f)]
+        [SerializeField] private float playerHealthRegenPerSecond = 1f;
+
         private readonly HashSet<IGameSecondsTickable> registered = new HashSet<IGameSecondsTickable>();
 
         public Inventory.Inventory PlayerInventory { get; private set; }
@@ -38,7 +48,9 @@ namespace Nyangbingo.World
         public SmeltingStation Furnace { get; private set; }
         public SmeltingStation Foundry { get; private set; }
         public PlayerTemperatureState PlayerTemperature { get; private set; }
-        public NapService NapService { get; private set; }
+        public PlayerHealthRecoveryService PlayerHealthRecovery { get; private set; }
+        public PlayerDayHeatDamageService PlayerDayHeatDamage { get; private set; }
+        public MagpieCompanionRuntime MagpieCompanion { get; private set; }
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
@@ -121,9 +133,7 @@ namespace Nyangbingo.World
             Furnace = new SmeltingStation(PlayerInventory, SmeltingStationKind.Furnace, furnaceCapacity);
             Foundry = new SmeltingStation(PlayerInventory, SmeltingStationKind.Foundry, foundryCapacity);
             PlayerTemperature = new PlayerTemperatureState(gameDataCatalog, bootstrap.TimeService,
-                bootstrap.SealSystem, EquipmentSystem, environmentState);
-            NapService = new NapService(gameDataCatalog, bootstrap.TimeService,
-                multiplier => PlayerTemperature.SetRecoveryMultiplier(multiplier));
+                bootstrap.SealSystem, EquipmentSystem, environmentState, bootstrap.Session);
             DeathTearPouches = new DeathTearPouchRuntime(PlayerInventory, bootstrap.TimeService);
             var jangdokDefinition = gameDataCatalog.FindGlobal(GlobalKeys.JangdokStorageSlots);
             if (jangdokDefinition == null || !jangdokDefinition.TryGetInt(out var jangdokSlots) ||
@@ -154,6 +164,94 @@ namespace Nyangbingo.World
             return IsInitialized;
         }
 
+        public bool BindPlayerHealth(Health health)
+        {
+            if (!IsInitialized || health == null) return false;
+            if (PlayerHealthRecovery?.Health == health) return true;
+            if (!TryReadPositiveGlobal("hp_regen_delay", out var regenDelay) ||
+                !TryReadPositiveGlobal("hp_regen_rate", out var regenRate) ||
+                !TryReadPositiveGlobal("catnip_heal", out var catnipHeal) ||
+                catnipHeal > int.MaxValue || !Mathf.Approximately(catnipHeal, Mathf.Round(catnipHeal)))
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: HP recovery globals are invalid.");
+                return false;
+            }
+            var penaltyStartDefinition = gameDataCatalog.FindGlobal(GlobalKeys.SealPenaltyStartDay);
+            if (penaltyStartDefinition == null ||
+                !penaltyStartDefinition.TryGetInt(out var penaltyStartDay) ||
+                penaltyStartDay <= 0)
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: seal_penalty_start_day is invalid.");
+                return false;
+            }
+
+            if (overridePlayerHealthRecovery)
+            {
+                if (!IsFinitePositive(playerHealthRegenDelaySeconds) ||
+                    !IsFinitePositive(playerHealthRegenPerSecond))
+                {
+                    Debug.LogError("[Nyangbingo] MainGameRuntimeServices: Inspector HP recovery override values must be positive.");
+                    return false;
+                }
+                regenDelay = playerHealthRegenDelaySeconds;
+                regenRate = playerHealthRegenPerSecond;
+            }
+
+            if (PlayerHealthRecovery != null)
+            {
+                Unregister(PlayerHealthRecovery);
+                PlayerHealthRecovery.Dispose();
+            }
+            if (PlayerDayHeatDamage != null)
+            {
+                Unregister(PlayerDayHeatDamage);
+                PlayerDayHeatDamage.Dispose();
+            }
+            PlayerHealthRecovery = new PlayerHealthRecoveryService(
+                PlayerInventory, health, regenDelay, regenRate, Mathf.RoundToInt(catnipHeal));
+            PlayerDayHeatDamage = new PlayerDayHeatDamageService(
+                health, health.transform, bootstrap.TimeService, bootstrap.Session,
+                bootstrap.SealSystem, penaltyStartDay);
+            if (Register(PlayerHealthRecovery) && Register(PlayerDayHeatDamage)) return true;
+
+            Unregister(PlayerHealthRecovery);
+            PlayerHealthRecovery.Dispose();
+            PlayerHealthRecovery = null;
+            Unregister(PlayerDayHeatDamage);
+            PlayerDayHeatDamage.Dispose();
+            PlayerDayHeatDamage = null;
+            return false;
+        }
+
+        private static bool IsFinitePositive(float value) =>
+            value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
+
+        public bool BindMagpieCompanion(Transform player, MainGameWorldDropRuntime worldDrops,
+            CharacterArtCatalog characterArtCatalog = null)
+        {
+            if (!IsInitialized || player == null || worldDrops == null ||
+                environmentState == null || bootstrap?.TimeService == null ||
+                bootstrap.SealSystem == null)
+                return false;
+            if (MagpieCompanion != null) return true;
+            try
+            {
+                MagpieCompanion = new MagpieCompanionRuntime(
+                    gameDataCatalog, PlayerInventory, environmentState, worldDrops,
+                    player, bootstrap.TimeService, bootstrap.SealSystem, characterArtCatalog);
+                if (Register(MagpieCompanion)) return true;
+                MagpieCompanion.Dispose();
+                MagpieCompanion = null;
+                return false;
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: magpie runtime binding failed: {exception.Message}");
+                MagpieCompanion = null;
+                return false;
+            }
+        }
+
         /// <summary>스폰 시 생기는 AI·전투 소비자를 동일한 session.TickDriver에 연결한다.</summary>
         public bool Register(IGameSecondsTickable consumer)
         {
@@ -174,8 +272,16 @@ namespace Nyangbingo.World
             IsInitialized = false;
             PortableLantern?.Dispose();
             PortableLantern = null;
-            NapService?.Dispose();
-            NapService = null;
+            PlayerHealthRecovery?.Dispose();
+            PlayerHealthRecovery = null;
+            PlayerDayHeatDamage?.Dispose();
+            PlayerDayHeatDamage = null;
+            if (MagpieCompanion != null)
+            {
+                Unregister(MagpieCompanion);
+                MagpieCompanion.Dispose();
+                MagpieCompanion = null;
+            }
             DeathTearPouches?.Dispose();
             DeathTearPouches = null;
             JangdokStorage = null;
@@ -187,6 +293,14 @@ namespace Nyangbingo.World
                     bootstrap.TickDriver.Unregister(consumer);
             }
             registered.Clear();
+        }
+
+        private bool TryReadPositiveGlobal(string key, out float value)
+        {
+            value = 0f;
+            var definition = gameDataCatalog?.FindGlobal(key);
+            return definition != null && definition.TryGetFloat(out value) && value > 0f &&
+                   !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
         private static bool TryGetSharedCapacity(IReadOnlyList<SmeltingDefinition> definitions, out int capacity)

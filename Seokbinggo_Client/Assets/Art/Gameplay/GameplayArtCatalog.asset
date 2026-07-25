@@ -30,11 +30,6 @@ MonoBehaviour:
   - {fileID: 6284916264915588163, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
   - {fileID: -8095174646388654662, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
   - {fileID: -5862808029776645176, guid: e5b93495f558e8c45baccc73a751cea1, type: 3}
-  napFrames:
-  - {fileID: -4720411098547174715, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
-  - {fileID: -7882630989249393061, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
-  - {fileID: -8420978340319773532, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
-  - {fileID: 6903819377081626375, guid: 407598e184c13a54ea2cd7fa2cb9de47, type: 3}
   miningCrackFrames:
   - {fileID: -734855239842383610, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
   - {fileID: -3731632179725249485, guid: fcf9c0f8c1d6c1241962ae956b2ef6dc, type: 3}
@@ -51,10 +46,22 @@ MonoBehaviour:
   - {fileID: 4699966602189482013, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
   - {fileID: 2350356796563014357, guid: 79f918bf9ed9c13438f12ad46930eb68, type: 3}
   gangcheoriSpecialFireFrames:
-  - {fileID: 640100000000000001, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
-  - {fileID: 640100000000000002, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
-  - {fileID: 640100000000000003, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
-  - {fileID: 640100000000000004, guid: a9e74d0165b0477eb623881cf864dae2, type: 3}
+  - {fileID: 7066594217943358125, guid: f4303b7819e71ba41bc3aad3ac2aa7e3, type: 3}
+  - {fileID: 206344789790955047, guid: f4303b7819e71ba41bc3aad3ac2aa7e3, type: 3}
+  - {fileID: -2520513060855474093, guid: f4303b7819e71ba41bc3aad3ac2aa7e3, type: 3}
+  - {fileID: -6799940260317070596, guid: f4303b7819e71ba41bc3aad3ac2aa7e3, type: 3}
+  playerFireHitFrames:
+  - {fileID: 7705370492703737987, guid: 45aee02b233d59c47b04e51407e0ae29, type: 3}
+  - {fileID: -6323834418103746667, guid: 45aee02b233d59c47b04e51407e0ae29, type: 3}
+  - {fileID: -7425301390894837394, guid: 45aee02b233d59c47b04e51407e0ae29, type: 3}
+  imugiElectricAttackFrames:
+  - {fileID: 9170574986265448285, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
+  - {fileID: 489425299316102853, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
+  - {fileID: -5926812385621868658, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
+  - {fileID: 2771110885526632667, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
+  - {fileID: -3931449008998042778, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
+  - {fileID: 6421251682242087408, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
+  - {fileID: -3094579979663691813, guid: 87e010feeea9be14fb63c93297238f5e, type: 3}
   blueProjectileFrames:
   - {fileID: 4082674624207476099, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}
   - {fileID: -245658596771386416, guid: 649ff0dc03a6e634a8fd52d8be6fe908, type: 3}

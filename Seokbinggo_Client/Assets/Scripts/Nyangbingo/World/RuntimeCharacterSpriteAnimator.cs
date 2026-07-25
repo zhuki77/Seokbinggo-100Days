@@ -64,6 +64,18 @@ namespace Nyangbingo.World
             PlayAction(entry?.AttackFrames);
         }
 
+        public void PlaySpecial()
+        {
+            if (specialActionPlaying) return;
+            specialActionPlaying = PlayAction(entry?.SpecialFrames);
+        }
+
+        public void PlayImpact()
+        {
+            specialActionPlaying = false;
+            PlayAction(entry?.AttackFrames);
+        }
+
         public void PlayDeath()
         {
             if (!configured || entry == null || entry.DeathFrames.Count == 0) return;
@@ -97,13 +109,13 @@ namespace Nyangbingo.World
             if (bossCombat != null)
             {
                 bossCombat.Attacked -= PlayAttack;
-                bossCombat.SpecialAnimationStarted -= PlaySpecial;
+                bossCombat.SpecialAnimationStarted -= PlayBossSpecial;
             }
             bossCombat = combat;
             if (bossCombat != null)
             {
                 bossCombat.Attacked += PlayAttack;
-                bossCombat.SpecialAnimationStarted += PlaySpecial;
+                bossCombat.SpecialAnimationStarted += PlayBossSpecial;
             }
         }
 
@@ -116,7 +128,7 @@ namespace Nyangbingo.World
             ApplyFrame();
         }
 
-        private void PlaySpecial()
+        private void PlayBossSpecial()
         {
             var frames = entry?.SpecialFrames;
             specialActionPlaying =
@@ -226,9 +238,220 @@ namespace Nyangbingo.World
             if (bossCombat != null)
             {
                 bossCombat.Attacked -= PlayAttack;
-                bossCombat.SpecialAnimationStarted -= PlaySpecial;
+                bossCombat.SpecialAnimationStarted -= PlayBossSpecial;
             }
         }
+    }
+
+    /// <summary>
+    /// Presentation-only binding for the Baekjung gaekgwi pattern. Combat timing and
+    /// collision remain owned by YokaiBrain so replacing these sprites cannot alter gameplay.
+    /// </summary>
+    public sealed class RuntimeGaekgwiVisual : MonoBehaviour
+    {
+        private const float EffectFrameSeconds = .1f;
+        private static readonly Color WhiteAfterimage = new Color(1f, 1f, 1f, .55f);
+        private static readonly Color CyanAfterimage = new Color(.25f, 1f, 1f, .42f);
+
+        private YokaiBrain brain;
+        private SpriteRenderer bodyRenderer;
+        private RuntimeCharacterSpriteAnimator characterAnimator;
+        private CharacterArtCatalog.Entry art;
+        private SpriteRenderer whiteAfterimage;
+        private SpriteRenderer cyanAfterimage;
+        private SpriteRenderer effectRenderer;
+        private IReadOnlyList<Sprite> effectFrames;
+        private float telegraphRemaining;
+        private float effectFrameRemaining;
+        private int effectFrameIndex;
+        private bool loopEffect;
+        private Vector3 effectBaseLocalPosition;
+
+        public void ConfigureForRuntime(YokaiBrain targetBrain, SpriteRenderer targetRenderer,
+            RuntimeCharacterSpriteAnimator animator, CharacterArtCatalog.Entry artEntry)
+        {
+            Unbind();
+            brain = targetBrain;
+            bodyRenderer = targetRenderer;
+            characterAnimator = animator;
+            art = artEntry;
+            if (brain == null || bodyRenderer == null || art == null) return;
+
+            BuildRenderers();
+            brain.GaekgwiTelegraphStarted += HandleTelegraphStarted;
+            brain.GaekgwiDashStarted += HandleDashStarted;
+            brain.GaekgwiWailTriggered += HandleWailTriggered;
+        }
+
+        private void Update()
+        {
+            TickTelegraph(Time.deltaTime);
+            TickEffect(Time.deltaTime);
+        }
+
+        private void HandleTelegraphStarted()
+        {
+            StopEffect();
+            telegraphRemaining = YokaiBrain.GaekgwiTelegraphSeconds;
+            SetAfterimagesVisible(true);
+            RefreshAfterimages();
+        }
+
+        private void HandleDashStarted()
+        {
+            telegraphRemaining = 0f;
+            SetAfterimagesVisible(false);
+            characterAnimator?.PlaySpecial();
+            PlayEffect(art.DashEffectFrames, true, Vector3.zero);
+            if (effectFrames.Count > 0) bodyRenderer.enabled = false;
+        }
+
+        private void HandleWailTriggered()
+        {
+            bodyRenderer.enabled = true;
+            characterAnimator?.PlayImpact();
+            PlayEffect(art.ImpactEffectFrames, false, new Vector3(0f, -.45f, 0f));
+        }
+
+        private void TickTelegraph(float deltaSeconds)
+        {
+            if (telegraphRemaining <= 0f || bodyRenderer == null) return;
+            telegraphRemaining = Mathf.Max(0f, telegraphRemaining - Mathf.Max(0f, deltaSeconds));
+            RefreshAfterimages();
+            var pulse = .6f + Mathf.PingPong(
+                (YokaiBrain.GaekgwiTelegraphSeconds - telegraphRemaining) * 4f, .4f);
+            var white = WhiteAfterimage;
+            white.a *= pulse;
+            var cyan = CyanAfterimage;
+            cyan.a *= pulse;
+            whiteAfterimage.color = white;
+            cyanAfterimage.color = cyan;
+            if (telegraphRemaining <= 0f) SetAfterimagesVisible(false);
+        }
+
+        private void TickEffect(float deltaSeconds)
+        {
+            if (effectRenderer == null || !effectRenderer.enabled || effectFrames == null ||
+                effectFrames.Count == 0) return;
+            effectRenderer.flipX = bodyRenderer != null && bodyRenderer.flipX;
+            if (loopEffect && brain != null)
+            {
+                effectFrameIndex = Mathf.Clamp(
+                    Mathf.FloorToInt(
+                        brain.GaekgwiDashNormalizedTime * effectFrames.Count),
+                    0,
+                    effectFrames.Count - 1);
+                effectRenderer.sprite = effectFrames[effectFrameIndex];
+                RefreshDashEffectAlignment();
+                return;
+            }
+            effectFrameRemaining -= Mathf.Max(0f, deltaSeconds);
+            while (effectFrameRemaining <= 0f)
+            {
+                effectFrameIndex++;
+                if (effectFrameIndex >= effectFrames.Count)
+                {
+                    if (!loopEffect)
+                    {
+                        StopEffect();
+                        return;
+                    }
+                    effectFrameIndex = 0;
+                }
+                effectFrameRemaining += EffectFrameSeconds;
+                effectRenderer.sprite = effectFrames[effectFrameIndex];
+                if (loopEffect) RefreshDashEffectAlignment();
+            }
+        }
+
+        private void PlayEffect(IReadOnlyList<Sprite> frames, bool loop, Vector3 localPosition)
+        {
+            effectFrames = frames;
+            effectFrameIndex = 0;
+            effectFrameRemaining = EffectFrameSeconds;
+            loopEffect = loop;
+            effectBaseLocalPosition = localPosition;
+            effectRenderer.transform.localPosition = effectBaseLocalPosition;
+            effectRenderer.sprite = frames != null && frames.Count > 0 ? frames[0] : null;
+            effectRenderer.flipX = bodyRenderer != null && bodyRenderer.flipX;
+            if (loopEffect) RefreshDashEffectAlignment();
+            effectRenderer.enabled = effectRenderer.sprite != null;
+        }
+
+        private void RefreshDashEffectAlignment()
+        {
+            if (effectRenderer == null || effectRenderer.sprite == null) return;
+            var spriteCenterX = effectRenderer.sprite.bounds.center.x;
+            effectRenderer.transform.localPosition = effectBaseLocalPosition + new Vector3(
+                effectRenderer.flipX ? spriteCenterX : -spriteCenterX,
+                0f,
+                0f);
+        }
+
+        private void StopEffect()
+        {
+            if (effectRenderer != null)
+            {
+                effectRenderer.enabled = false;
+                effectRenderer.sprite = null;
+            }
+            effectFrames = null;
+            effectFrameIndex = 0;
+            loopEffect = false;
+            if (bodyRenderer != null) bodyRenderer.enabled = true;
+        }
+
+        private void RefreshAfterimages()
+        {
+            if (bodyRenderer == null || whiteAfterimage == null || cyanAfterimage == null) return;
+            var facing = bodyRenderer.flipX ? -1f : 1f;
+            whiteAfterimage.sprite = bodyRenderer.sprite;
+            cyanAfterimage.sprite = bodyRenderer.sprite;
+            whiteAfterimage.flipX = bodyRenderer.flipX;
+            cyanAfterimage.flipX = bodyRenderer.flipX;
+            whiteAfterimage.transform.localPosition = new Vector3(-facing * .14f, 0f, 0f);
+            cyanAfterimage.transform.localPosition = new Vector3(-facing * .28f, 0f, 0f);
+        }
+
+        private void BuildRenderers()
+        {
+            whiteAfterimage = CreateChildRenderer("WhiteAfterimage", bodyRenderer.sortingOrder - 1);
+            cyanAfterimage = CreateChildRenderer("CyanAfterimage", bodyRenderer.sortingOrder - 2);
+            effectRenderer = CreateChildRenderer("PatternEffect", bodyRenderer.sortingOrder + 1);
+            SetAfterimagesVisible(false);
+            effectRenderer.enabled = false;
+        }
+
+        private SpriteRenderer CreateChildRenderer(string objectName, int sortingOrder)
+        {
+            var child = new GameObject(objectName);
+            child.transform.SetParent(transform, false);
+            var renderer = child.AddComponent<SpriteRenderer>();
+            renderer.sortingLayerID = bodyRenderer.sortingLayerID;
+            renderer.sortingOrder = sortingOrder;
+            return renderer;
+        }
+
+        private void SetAfterimagesVisible(bool visible)
+        {
+            if (whiteAfterimage != null) whiteAfterimage.enabled = visible;
+            if (cyanAfterimage != null) cyanAfterimage.enabled = visible;
+        }
+
+        private void Unbind()
+        {
+            if (brain != null)
+            {
+                brain.GaekgwiTelegraphStarted -= HandleTelegraphStarted;
+                brain.GaekgwiDashStarted -= HandleDashStarted;
+                brain.GaekgwiWailTriggered -= HandleWailTriggered;
+            }
+            brain = null;
+            StopEffect();
+            SetAfterimagesVisible(false);
+        }
+
+        private void OnDestroy() => Unbind();
     }
 
     /// <summary>

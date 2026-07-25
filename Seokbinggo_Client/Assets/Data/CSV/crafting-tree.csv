@@ -8,30 +8,29 @@ icesteel_claw,claw,얼음강철 발톱 T3,ice_anvil,"icesteel_ingot:5,frost_esse
 lantern,placeable,등불,workbench,"wood:4,hemp_stalk:2,coal:2",1,10,A,반경 6타일·석탄 1=270초·어둑시니 카운터
 sieve,placeable,체,workbench,"hemp_stalk:6,wood:2",1,10,A,야광귀 12초 정지+피해 1.5배·쿨 30초
 haetae_statue,placeable,해태 석상,furnace,"stone:20,copper_ingot:3,yokai_tear:20",1,60,A,반경 8타일 화염 -50%
-nest_bed,placeable,보금자리,workbench,"wood:6,hemp_stalk:4",1,10,A,냥잠(v6)
+nest_bed,placeable,보금자리,workbench,"wood:6,hemp_stalk:4",1,10,A,리스폰 지점(4-8) — 냥잠 v31.1 폐지
 magpie_nest,placeable,까치 둥지,workbench,"wood:8,hemp_stalk:6",1,10,A,까치 벗 입주(v6)
 dokkaebi_club,weapon,도깨비 방망이,workbench,"club_shard:3,wood:4",1,30,A,넉백 2.0타일 특화
-frostclaw_gauntlet,weapon,서리발톱 장갑,ice_anvil,"gangcheol_scale:1,frost_essence:6,icesteel_ingot:4,yokai_tear:25,shadow_shard:5",1,120,A,엔드 무기 DPS 90
+frostclaw_gauntlet,weapon,서리발톱 장갑,ice_anvil,"gangcheol_scale:1,frost_essence:6,icesteel_ingot:4,yokai_tear:25,shadow_shard:5",1,120,A,엔드 무기 DPS 42
 iron_insul_wall,wall,무쇠 차열벽,furnace,"iron_scale:2,iron_ingot:2,stone:2",1,20,A,HP900·불가사리 면역
 cold_device,device,냉기 장치,ice_anvil,"yokai_tear:40,frost_essence:2,ice_shard:10,copper_ingot:2",1,60,A,눈물 주 소비처
 insul_wall,module,차열벽,workbench,"stone:2,dirt:1",1,5,A,HP600 기본 방벽
 door,module,단열 문,workbench,"wood:6,hemp_stalk:4,ice_shard:4",1,30,A,통행 가능+flood-fill 밀폐 인정
 roof,module,차열 지붕,furnace,"stone:6,rebar:3,hemp_stalk:2",1,20,A,상부 밀폐·철근 반복 소비처
-jangdok,module,장독 창고,workbench,"dirt:10,stone:8,wood:6",1,45,A,보관함 40슬롯(v29 확정)
+jangdok,module,장독 창고,workbench,"dirt:10,stone:8,wood:6",1,45,A,보관함 40슬롯(v29)
 ice_core,module,얼음 저장고,furnace,"ice_shard:20,stone:10,iron_ingot:2",1,60,A,체온 회복 거점 — 모듈 5종 화로 티어 이하
 ssireum_satba,summon,씨름 샅바,workbench,"club_shard:1,hemp_stalk:10,wood:5",1,30,A,도깨비 대장 소환
 iron_bait_pile,summon,무쇠 미끼 더미,furnace,"iron_ingot:10,iron_scale:3,coal:5",1,30,B,어미 불가사리 소환
-ice_altar_offering,summon,얼음 제단 봉헌,ice_anvil,"icesteel_ingot:2,frost_essence:2,ice_shard:10",1,30,B,이무기 소환(심층 제단 전용)
-drought_talisman,summon,가뭄 부적,ice_anvil,"yokai_tear:30,shadow_shard:2,hemp_stalk:5",1,30,A,강철이 재소환(최초 격퇴 후 해금)
-dokkaebi_fire_tower,turret,도깨비불 등탑,workbench,"dokkaebi_fire_essence:1,wood:10,stone:10,coal:5",1,60,A,DPS10 유도·반경 8타일
-singijeon_cart,turret,신기전 화차,furnace,"iron_forge_core:1,iron_ingot:7,wood:20,coal:5",1,60,B,DPS6 직선 관통·10타일
-ice_crystal_cooler,cooling,빙정 냉각로,ice_anvil,"yeouiju:1,icesteel_ingot:5,copper_ingot:3",1,60,B,내부 체온 회복x2+얼음 용해 방지
+ice_altar_offering,summon,얼음 제단 봉헌,ice_anvil,"icesteel_ingot:2,frost_essence:2,ice_shard:10,yokai_tear:30",1,30,A,이무기 최종보스 재소환(30일 고정등장+심층 제단 재소환·v34 강철이↔이무기 교체) — 눈물30 소비처
+dokkaebi_fire_tower,turret,도깨비불 등탑,workbench,"dokkaebi_fire_essence:1,wood:10,stone:10,coal:5",1,60,A,DPS10 유도·반경 8타일(v30 동배율)
+singijeon_cart,turret,신기전 화차,furnace,"iron_forge_core:1,iron_ingot:7,wood:20,coal:5",1,60,B,DPS12 직선 관통·10타일(v30 동배율)
+ice_crystal_cooler,cooling,빙정 냉각로,ice_anvil,"yeouiju:1,icesteel_ingot:5,copper_ingot:3",1,60,A,내부 체온 회복x2+얼음 용해 방지 — v34 이무기 최종보스 보상(여의주)으로 A 승격
 cold_wave_core,cooling,한파 코어,ice_anvil,"drought_heart:1,icesteel_ingot:6,frost_essence:4",1,60,A,더위 단계 -1 상쇄(전역 1기)
 straw_insul,insulation,짚 단열재,workbench,"hemp_stalk:3,wood:1",1,5,A,벽 1장당 체온 하강 +5%·상한 6장
 clay_plaster,insulation,점토 미장,workbench,"clay:2,dirt:2",1,5,A,차열벽 HP 600→750
 munpungji,insulation,문풍지,workbench,"hemp_stalk:4,wood:2",1,10,A,단열 문 개방 중 체온 손실 0
 hapjukseon,util,합죽선,workbench,"hemp_stalk:6,wood:3",1,10,A,밀치기 2타일·뎀0·쿨3초 — 보스 무효
-cheolseon,evo,철선,furnace,"hapjukseon:1,iron_ingot:2,iron_scale:1",1,30,A,물리 부채 무기·원본 소모 — DPS27·기본넉백1.5·밀치기 뎀4/2타일/쿨3초·보스넉백무효·채굴불가(6-14)
+cheolseon,evo,철선,furnace,"hapjukseon:1,iron_ingot:2,iron_scale:1",1,30,A,물리 부채 무기·원본 소모 — DPS27(v30.1)·기본넉백1.5·밀치기 뎀4/2타일/쿨3초·보스넉백무효·채굴불가(6-14)
 iron_bell_rope,evo,쇠 방울 금줄,furnace,"bell_rope:1,iron_ingot:1",1,20,A,경보(반경10 유지)+진입 요괴 감속 1회 — 원석 철2
 iron_sieve,evo,무쇠 체,furnace,"sieve:1,iron_ingot:1,iron_scale:1",1,20,A,야광귀 정지·피해배수·쿨 강화 — 원석 철2+무쇠 비늘1
 frost_lantern,evo,서리 등불,ice_anvil,"lantern:1,icesteel_ingot:1,frost_essence:1",1,30,A,연료 석탄→서리정수·장시간 점등·반경6 불변 — 후반 잉여 서리정수 소비처

@@ -31,8 +31,10 @@ MonoBehaviour:
   stealMaxItems: 0
   tearItem: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
   tearDrop: 1
+  tearBonus: 0
   signatureItem: {fileID: 11400000, guid: 568542bf179436e47889cff4d294d8ca, type: 2}
   signatureChance: 0.25
+  signatureCondition: 0
   spawnTracks: 1
   raidFleesAtDawn: 1
   drops: []
