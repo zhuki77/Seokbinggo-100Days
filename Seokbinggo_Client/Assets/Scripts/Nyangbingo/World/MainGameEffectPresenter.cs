@@ -9,12 +9,15 @@ namespace Nyangbingo.World
     {
         internal const int WorldPopupFontSize = 64;
         internal const float WorldPopupCharacterSize = .12f;
+        public const float PlayerFireHitHeadOffset = .65f;
+        public const int PlayerFireHitFallbackSortingOrder = 19;
         [SerializeField] private GameplayArtCatalog artCatalog;
         [SerializeField] private Transform playerTransform;
-        private RuntimeOneShotSpriteEffect napEffect;
         private RuntimeOneShotSpriteEffect miningEffect;
         private RuntimeOneShotSpriteEffect miningBreakEffect;
         private RuntimeOneShotSpriteEffect miningCriticalEffect;
+        private RuntimeOneShotSpriteEffect playerFireHitEffect;
+        private Health playerHealth;
         private SpriteRenderer miningProgressRenderer;
         private System.Collections.Generic.IReadOnlyList<Sprite> miningProgressFrames;
         private Vector3Int miningProgressCell;
@@ -29,19 +32,30 @@ namespace Nyangbingo.World
         private void Start()
         {
             if (artCatalog == null || playerTransform == null) return;
-            napEffect = CreateEffect("NapEffect", playerTransform, artCatalog.NapFrames, 26);
-            napEffect.transform.localPosition = new Vector3(0f, 1.15f, 0f);
             miningEffect = CreateEffect("MiningCrackEffect", transform, artCatalog.MiningCrackFrames, 24);
             miningBreakEffect = CreateEffect("MiningBreakEffect", transform, artCatalog.MiningBreakFrames, 29);
             miningCriticalEffect = CreateEffect("MiningCriticalEffect", transform,
                 artCatalog.MiningCriticalFrames, 30);
+            var playerRenderer = playerTransform.GetComponent<SpriteRenderer>();
+            var fireSortingOrder = playerRenderer != null
+                ? playerRenderer.sortingOrder - 1
+                : PlayerFireHitFallbackSortingOrder;
+            playerFireHitEffect = CreateEffect(
+                "PlayerFireHitEffect", playerTransform, artCatalog.PlayerFireHitFrames,
+                fireSortingOrder);
+            var fireRenderer = playerFireHitEffect.GetComponent<SpriteRenderer>();
+            if (playerRenderer != null && fireRenderer != null)
+                fireRenderer.sortingLayerID = playerRenderer.sortingLayerID;
+            playerFireHitEffect.transform.localPosition =
+                Vector3.up * PlayerFireHitHeadOffset;
+            playerHealth = playerTransform.GetComponent<Health>();
+            if (playerHealth != null) playerHealth.Damaged += HandlePlayerDamaged;
             var progressObject = new GameObject("MiningProgressOverlay");
             progressObject.transform.SetParent(transform, false);
             miningProgressRenderer = progressObject.AddComponent<SpriteRenderer>();
             miningProgressRenderer.sortingOrder = 25;
             miningProgressRenderer.enabled = false;
             miningProgressFrames = artCatalog.MiningCrackFrames;
-            GameEvents.OnNapStarted += HandleNapStarted;
             GameEvents.OnMiningProgress += HandleMiningProgress;
             GameEvents.OnMiningImpact += HandleMiningImpact;
             GameEvents.OnTileBroken += HandleTileBroken;
@@ -63,17 +77,34 @@ namespace Nyangbingo.World
                 HandleTileBroken(cell);
                 Debug.Log("[Nyangbingo] Shift+F10 mining break VFX preview.");
             }
-            else
-            {
-                HandleNapStarted();
-                Debug.Log("[Nyangbingo] F10 nap VFX preview.");
-            }
         }
 #endif
 
-        private void HandleNapStarted() => napEffect?.Play(1.2f);
-
         private void HandleMiningImpact(MiningImpactSurface surface) => lastMiningSurface = surface;
+
+        private void HandlePlayerDamaged(DamageTag tag, int amount)
+        {
+            if (amount <= 0) return;
+            CreatePlayerDamagePopup(amount);
+            if (tag == DamageTag.Fire && playerFireHitEffect != null)
+                playerFireHitEffect.Play(.3f);
+        }
+
+        private void CreatePlayerDamagePopup(int amount)
+        {
+            if (playerTransform == null || amount <= 0) return;
+            var popup = new GameObject("PlayerDamagePopup");
+            popup.transform.position = playerTransform.position + Vector3.up * .75f;
+            var text = popup.AddComponent<TextMesh>();
+            text.text = $"-{amount}";
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontSize = WorldPopupFontSize;
+            text.characterSize = WorldPopupCharacterSize;
+            text.color = new Color(1f, .22f, .18f);
+            text.GetComponent<MeshRenderer>().sortingOrder = 40;
+            popup.AddComponent<RuntimeFloatingWorldText>().Configure(text, .65f, .8f);
+        }
 
         private void HandleMiningProgress(Vector3Int cell, float normalizedProgress)
         {
@@ -147,7 +178,7 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
-            GameEvents.OnNapStarted -= HandleNapStarted;
+            if (playerHealth != null) playerHealth.Damaged -= HandlePlayerDamaged;
             GameEvents.OnMiningProgress -= HandleMiningProgress;
             GameEvents.OnMiningImpact -= HandleMiningImpact;
             GameEvents.OnTileBroken -= HandleTileBroken;

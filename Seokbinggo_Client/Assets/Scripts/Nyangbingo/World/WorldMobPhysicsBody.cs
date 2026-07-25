@@ -95,13 +95,19 @@ namespace Nyangbingo.World
             if (actorRoot == null) return;
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
             if (attachedCollider == null) return;
+            var mobColliders = transform.GetComponentsInChildren<Collider2D>(true);
             var actorColliders = actorRoot.GetComponentsInChildren<Collider2D>(true);
-            for (var index = 0; index < actorColliders.Length; index++)
+            for (var actorIndex = 0; actorIndex < actorColliders.Length; actorIndex++)
             {
-                var actorCollider = actorColliders[index];
-                if (actorCollider == null || actorCollider == attachedCollider) continue;
+                var actorCollider = actorColliders[actorIndex];
+                if (actorCollider == null) continue;
                 ignoredCollisionColliders.Add(actorCollider);
-                Physics2D.IgnoreCollision(attachedCollider, actorCollider, true);
+                for (var mobIndex = 0; mobIndex < mobColliders.Length; mobIndex++)
+                {
+                    var mobCollider = mobColliders[mobIndex];
+                    if (mobCollider == null || mobCollider == actorCollider) continue;
+                    Physics2D.IgnoreCollision(mobCollider, actorCollider, true);
+                }
             }
         }
 
@@ -266,11 +272,9 @@ namespace Nyangbingo.World
             var blockingCell = ToCell(forwardProbe);
             if (IsAirCell(blockingCell)) return false;
 
-            var rise = 1f + Mathf.Max(0f, extents.y - .45f);
-            var verticalClearPosition = body.position + Vector2.up * rise;
-            var landingClearPosition = verticalClearPosition + Vector2.right * horizontalSign;
-            if (!IsPositionClear(verticalClearPosition) || !IsPositionClear(landingClearPosition)) return false;
-
+            // Jump even when the obstacle is taller than one tile. Collision still prevents the
+            // mob from passing through an uncleared wall, but repeated attempts look intentional
+            // instead of leaving grounded pursuers walking against it forever.
             body.linearVelocity = new Vector2(body.linearVelocity.x,
                 StepJumpVelocityForCollider(extents.x));
             nextStepJumpTime = Time.unscaledTime + StepJumpCooldownSeconds;

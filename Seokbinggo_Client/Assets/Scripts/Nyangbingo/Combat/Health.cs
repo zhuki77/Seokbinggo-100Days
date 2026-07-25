@@ -46,6 +46,13 @@ namespace Nyangbingo.Combat
             Current = value;
             return true;
         }
+        public int Heal(int amount)
+        {
+            if (IsDead || amount <= 0 || Current >= maxHealth) return 0;
+            var previous = Current;
+            Current = Mathf.Min(maxHealth, Current + amount);
+            return Current - previous;
+        }
         public bool TryApplyKnockback(Vector2 impulse)
         {
             if (knockbackImmune || float.IsNaN(impulse.x) || float.IsInfinity(impulse.x) ||
@@ -66,7 +73,16 @@ namespace Nyangbingo.Combat
                 : Mathf.RoundToInt(scaledAmount);
             if (scaledDamage <= 0) return;
             var appliedDamage = delivery == DamageDelivery.Direct ? Mathf.Max(1, scaledDamage - defense) : scaledDamage;
-            Current = Mathf.Max(0, Current - appliedDamage); Damaged?.Invoke(tag, appliedDamage);
+            ApplyResolvedDamage(appliedDamage, tag);
+        }
+        /// <summary>
+        /// Applies damage whose continuous multipliers and fractional remainder were already
+        /// resolved by the owning environmental service. Per-hit defense is intentionally skipped.
+        /// </summary>
+        public void ApplyResolvedDamage(int amount, DamageTag tag)
+        {
+            if (IsDead || amount <= 0) return;
+            Current = Mathf.Max(0, Current - amount); Damaged?.Invoke(tag, amount);
             if (IsDead) Died?.Invoke();
         }
     }

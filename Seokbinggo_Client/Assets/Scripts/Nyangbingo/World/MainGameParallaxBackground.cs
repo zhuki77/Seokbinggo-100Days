@@ -101,15 +101,32 @@ namespace Nyangbingo.World
             var viewWidth = viewHeight * targetCamera.aspect;
             var canvasWidth = SurfaceCanvasWidthPixels / SurfacePixelsPerUnit;
             var canvasHeight = SurfaceCanvasHeightPixels / SurfacePixelsPerUnit;
-            // The delivered background is 2:1 while gameplay is 16:9. Fit to width and top-align it:
-            // the complete authored landscape remains visible, and the unavoidable short margin sits
-            // behind the terrain-heavy bottom of the gameplay view instead of cropping both sides.
-            var scale = viewWidth / canvasWidth;
-            var canvasWorldHeight = canvasHeight * scale;
-            var canvasOriginY = viewHeight * .5f - canvasWorldHeight;
+            // The delivered background is 2:1 while gameplay is normally 16:9. It used to fit
+            // width and leave a short uncovered margin below the canvas, relying on tall terrain
+            // to hide it. Surface terrain is now lower, so use a cover fit: fill both viewport
+            // dimensions and allow only the excess width/height to be cropped.
+            var layout = CalculateSurfaceCanvasCoverTransform(
+                viewWidth, viewHeight, canvasWidth, canvasHeight);
+            var scale = layout.x;
+            var canvasOriginY = layout.y;
             ApplySurfaceCanvasTransform(skyRenderer, scale, canvasOriginY);
             ApplySurfaceCanvasTransform(mountainRenderer, scale, canvasOriginY);
             ApplySurfaceCanvasTransform(frontCloudRenderer, scale, canvasOriginY);
+        }
+
+        public static Vector2 CalculateSurfaceCanvasCoverTransform(
+            float viewWidth,
+            float viewHeight,
+            float canvasWidth,
+            float canvasHeight)
+        {
+            if (viewWidth <= 0f || viewHeight <= 0f || canvasWidth <= 0f || canvasHeight <= 0f)
+                return Vector2.zero;
+            var scale = Mathf.Max(viewWidth / canvasWidth, viewHeight / canvasHeight);
+            var canvasWorldHeight = canvasHeight * scale;
+            // Cropping stays anchored at the authored top edge. At the product 16:9 aspect the
+            // height matches exactly, while wider displays crop only the excess canvas bottom.
+            return new Vector2(scale, viewHeight * .5f - canvasWorldHeight);
         }
 
         private static void ApplySurfaceCanvasTransform(SpriteRenderer renderer, float scale, float canvasOriginY)
