@@ -94,6 +94,42 @@ public static class NyangbingoDataMenu
     [MenuItem("Nyangbingo/Reimport v34 Data Bundle")]
     public static void ReimportV34DataBundle()
     {
+        var importHadErrors = false;
+        Application.LogCallback captureImportError = (_, _, type) =>
+        {
+            if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+                importHadErrors = true;
+        };
+        Application.logMessageReceived += captureImportError;
+        try
+        {
+            ReimportV34DataBundleCore();
+        }
+        finally
+        {
+            Application.logMessageReceived -= captureImportError;
+        }
+
+        if (importHadErrors)
+        {
+            Debug.LogError("[Nyangbingo] v34 data import logged an error. " +
+                           "The product data freshness manifest was not updated.");
+            return;
+        }
+
+        try
+        {
+            NyangbingoDataBuildGate.WriteCurrentManifest();
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError("[Nyangbingo] v34 data import completed, but recording the product " +
+                           $"data freshness manifest failed: {exception.Message}");
+        }
+    }
+
+    private static void ReimportV34DataBundleCore()
+    {
         var csvDirectory = Path.Combine(Application.dataPath, "Data", "CSV");
         try
         {

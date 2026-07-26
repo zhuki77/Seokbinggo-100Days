@@ -140,6 +140,8 @@ public static class NyangbingoTestBuildMenu
             failures.Add($"Product scene missing: {ProductScenePath}");
         if (string.IsNullOrWhiteSpace(PlayerSettings.productName))
             failures.Add("PlayerSettings.productName is empty.");
+        if (!NyangbingoDataBuildGate.TryValidateCurrent(out var dataValidationSummary))
+            failures.Add($"Product data is stale or invalid: {dataValidationSummary}");
 
         if (failures.Count > 0)
         {
@@ -156,7 +158,7 @@ public static class NyangbingoTestBuildMenu
             Debug.LogWarning("[Nyangbingo] Product identity still uses DefaultCompany. " +
                              "Set the confirmed team/company name before external distribution.");
         Debug.Log("[Nyangbingo] Windows product build validation passed: " +
-                  "MainGame only, Windows x64, non-development flags.");
+                  "MainGame only, Windows x64, non-development flags, current v34 data manifest.");
         return true;
     }
 
