@@ -45,10 +45,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestPlayerDeathAnimationContract();
         TestDeliveredShellGlyphArtContract();
         TestCraftAndPlacementActionsRemainIndependent();
+        TestRecipeProgressionUnlockContract();
         TestMissingTileEdgeOverlayRemainsDisabled();
         TestDetailedDynamicSaveSchema();
         TestResidentEliteContract();
         TestSealPaceWallDamageContract();
+        TestDestructibleWallHealthContract();
         TestStrawInsulationContract();
         TestInstalledCounterAuraContract();
         TestColdWaveCoreContract();
@@ -68,7 +70,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestPlayerFireMitigationContract();
         TestPlayerVisionBonusContract();
         TestYagwangRuntimeTheftContract();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (46/46).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (48/48).");
     }
 
     private static void TestChestLootInterfaceContract()
@@ -370,6 +372,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestQuickSlotConsumableContract()
     {
+        Require(MainGameTilePaletteController.ShouldHighlightSlot(2, 2, "dirt") &&
+                !MainGameTilePaletteController.ShouldHighlightSlot(2, 2, string.Empty) &&
+                !MainGameTilePaletteController.ShouldHighlightSlot(2, 1, "dirt"),
+            "A quick-slot border must render only while that slot has an active selection.");
+        Require(MainGameTilePaletteController.ShouldClearEndedProductSelection(
+                    true, false, false, "workbench") &&
+                !MainGameTilePaletteController.ShouldClearEndedProductSelection(
+                    true, false, false, PlayerHealthRecoveryService.CatnipItemId) &&
+                !MainGameTilePaletteController.ShouldClearEndedProductSelection(
+                    true, true, false, "workbench"),
+            "Ending or cancelling a product placement must clear its quick-slot selection without cancelling direct-use items.");
         Require(Mathf.Approximately(
                     PlayerTemperatureState.CalculateCooledTemperature(40f, 0f, 10f), 30f) &&
                 Mathf.Approximately(
@@ -422,7 +435,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                         1f) &&
                     Mathf.Approximately(
                         Nyangbingo.Audio.NyangbingoAudioService.CalculateSourceVolume(.5f, false),
-                        .5f),
+                        .5f) &&
+                    Mathf.Approximately(
+                        Nyangbingo.Audio.NyangbingoAudioService.ResolveCueGain(
+                            Nyangbingo.Audio.AudioCue.WallDamaged),
+                        Nyangbingo.Audio.NyangbingoAudioService.WallDamagedCueGain) &&
+                    Nyangbingo.Audio.NyangbingoAudioService.WallDamagedCueGain < 1f,
                 "The final listener gain must reduce every BGM/SFX path without changing saved slider values.");
             firstService.Shutdown();
             UnityEngine.Object.DestroyImmediate(first);
@@ -493,8 +511,24 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Editor/NyangbingoTestBuildMenu.cs");
         Require(buildSource.Contains("RemoveNonShippingArtifacts(projectRoot, outputDirectory)") &&
                 buildSource.Contains("*DoNotShip*") &&
-                buildSource.Contains("Validate Windows Product Build Artifacts"),
+                buildSource.Contains("Validate Windows Product Build Artifacts") &&
+                buildSource.Contains("NyangbingoDataBuildGate.TryValidateCurrent"),
             "The product build must remove and validate non-shipping debug artifacts.");
+        Require(NyangbingoDataBuildGate.TryValidateCurrent(out var dataSummary),
+            $"The product build data freshness gate must accept the current successful v34 import: {dataSummary}");
+        Require(NyangbingoDataBuildGate.ManifestEntriesMatch(
+                    new[] { "b.csv|1|BB", "a.csv|1|AA" },
+                    new[] { "a.csv|1|AA", "b.csv|1|BB" }) &&
+                !NyangbingoDataBuildGate.ManifestEntriesMatch(
+                    new[] { "a.csv|1|AA" },
+                    new[] { "a.csv|1|AB" }),
+            "The product data manifest must ignore entry ordering but reject any row-count or hash change.");
+        var dataMenuSource = System.IO.File.ReadAllText(
+            "Assets/Editor/NyangbingoDataMenu.cs");
+        Require(dataMenuSource.Contains("Application.logMessageReceived += captureImportError") &&
+                dataMenuSource.Contains("NyangbingoDataBuildGate.WriteCurrentManifest()") &&
+                dataMenuSource.Contains("if (importHadErrors)"),
+            "Only an error-free v34 reimport may refresh the product data manifest.");
     }
 
     private static void TestProductAudioMixerContract()
@@ -643,18 +677,29 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestBossPausedYokaiVisibilityContract()
     {
-        var root = new GameObject("BossPausedYokaiVisibility", typeof(SpriteRenderer));
+        var root = new GameObject(
+            "BossPausedYokaiVisibility",
+            typeof(SpriteRenderer),
+            typeof(RuntimeCharacterSpriteAnimator));
         try
         {
             var renderer = root.GetComponent<SpriteRenderer>();
+            var animator = root.GetComponent<RuntimeCharacterSpriteAnimator>();
             var original = new Color(.2f, .4f, .6f, .7f);
             renderer.color = original;
             var brain = root.AddComponent<Nyangbingo.Yokai.YokaiBrain>();
 
-            Require(brain.SetBossEncounterPaused(true) && Mathf.Approximately(renderer.color.a, 0f),
-                "Field yokai paused by a boss encounter must be completely invisible.");
-            Require(brain.SetBossEncounterPaused(false) && renderer.color == original,
-                "Field yokai visibility and tint must be restored exactly after the boss encounter.");
+            Require(brain.SetBossEncounterPaused(true) &&
+                    Mathf.Approximately(
+                        renderer.color.a,
+                        original.a * Nyangbingo.Yokai.YokaiBrain
+                            .BossEncounterPausedAlphaMultiplier) &&
+                    !animator.enabled,
+                "A summoned-boss encounter must visibly freeze existing yokai at a translucent alpha instead of hiding them.");
+            Require(brain.SetBossEncounterPaused(false) &&
+                    renderer.color == original &&
+                    animator.enabled,
+                "Field yokai visibility and animation state must be restored exactly after the summoned-boss encounter.");
         }
         finally
         {
@@ -863,6 +908,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 gangcheori != null &&
                 gangcheori.SupportsSpawnTrack(YokaiSpawnTrack.Resident),
             "Eoduksini and Gangcheori must both use the resident encounter track.");
+        Require(YokaiSpecialRules.ContactDamage(eoduksini, true) == 14 &&
+                YokaiSpecialRules.ContactDamage(eoduksini, false) == 21,
+            "Eoduksini contact damage must use 14 inside lantern light and 21 outside it.");
         Require(!MainGameEncounterCoordinator.ShouldSpawnResident(15, 16, 0, 0, 1) &&
                 MainGameEncounterCoordinator.ShouldSpawnResident(16, 16, 0, 0, 1) &&
                 !MainGameEncounterCoordinator.ShouldSpawnResident(16, 16, 16, 0, 1) &&
@@ -904,6 +952,130 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     10f),
             "Yokai wall damage must gain exactly 30% only at a 40-point seal pace deficit " +
             "on or after the configured penalty day.");
+    }
+
+    private static void TestDestructibleWallHealthContract()
+    {
+        var tiles = new TileData[6, 4];
+        var service = new TileService(tiles, null, null, 17);
+        var wallCell = new Vector3Int(2, 1, 0);
+        var placedWallEvents = 0;
+        Action<string> countPlacedWall = id =>
+        {
+            if (id == GoalBadgeProgress.InsulationWallId) placedWallEvents++;
+        };
+        GameEvents.OnPlacedObjectBuilt += countPlacedWall;
+        var placed = false;
+        try
+        {
+            placed = service.TryPlaceForeground(wallCell, "insul_wall");
+        }
+        finally
+        {
+            GameEvents.OnPlacedObjectBuilt -= countPlacedWall;
+        }
+        Require(placed && placedWallEvents == 1,
+            "A foreground insulation wall placement must complete the official first-wall badge.");
+        Require(Mathf.Approximately(
+                    MainGamePlayerController.ResolveTileMiningSeconds(
+                        null, "insul_wall", 1),
+                    MainGamePlayerController.InsulationWallBareClawMiningSeconds) &&
+                service.GetTile(wallCell).hardness == 1,
+            "A basic insulation wall must remain removable by the T1 bare claw in three seconds.");
+        Require(
+                service.TryFindDamageableWall(
+                    new Vector2(1.5f, 1.5f), new Vector2(4.5f, 1.5f), 1f,
+                    out var foundCell, out var material) &&
+                foundCell == wallCell && material == YokaiWallMaterial.Default,
+            "A yokai must resolve an adjacent insulation wall between itself and the player.");
+        var durabilityEvents = 0;
+        var durabilityCell = default(Vector3Int);
+        var durabilityCurrent = 0f;
+        var durabilityMaximum = 0f;
+        Action<Vector3Int, float, float, bool> captureDurability =
+            (cell, current, maximum, destroyedWall) =>
+            {
+                durabilityEvents++;
+                durabilityCell = cell;
+                durabilityCurrent = current;
+                durabilityMaximum = maximum;
+            };
+        GameEvents.OnWallDurabilityChanged += captureDurability;
+        var damaged = false;
+        var applied = 0f;
+        var destroyed = false;
+        try
+        {
+            damaged = service.TryDamageWall(
+                wallCell, 125f, out applied, out destroyed);
+        }
+        finally
+        {
+            GameEvents.OnWallDurabilityChanged -= captureDurability;
+        }
+        Require(damaged &&
+                Mathf.Approximately(applied, 125f) && !destroyed &&
+                Mathf.Approximately(service.GetWallRemainingHitPoints(wallCell), 475f) &&
+                durabilityEvents == 1 && durabilityCell == wallCell &&
+                Mathf.Approximately(durabilityCurrent, 475f) &&
+                Mathf.Approximately(durabilityMaximum, 600f),
+            "A regular insulation wall must retain data-driven partial damage and publish its current durability.");
+
+        var records = service.ExportWallDamage();
+        var restoredTiles = new TileData[6, 4];
+        var restored = new TileService(restoredTiles, null, null, 17);
+        Require(restored.TryPlaceForeground(wallCell, "insul_wall") &&
+                restored.RestoreWallDamage(records) &&
+                Mathf.Approximately(restored.GetWallRemainingHitPoints(wallCell), 475f),
+            "Partial wall damage must survive a structured save round-trip.");
+        Require(restored.TryDamageWall(wallCell, 475f, out applied, out destroyed) &&
+                destroyed && Mathf.Approximately(applied, 475f) &&
+                restored.GetTile(wallCell).IsAir &&
+                restored.ExportWallDamage().Count == 0,
+            "A wall reduced to zero HP must become air and clear its partial-damage record.");
+
+        var upgradedTiles = new TileData[6, 4];
+        var upgraded = new TileService(upgradedTiles, null, null, 18);
+        Require(upgraded.TryPlaceForeground(wallCell, "insul_wall"),
+            "The clay-plaster wall test requires a placed insulation wall.");
+        upgraded.SetClayPlasterResolver(cell => cell == wallCell);
+        Require(Mathf.Approximately(
+                upgraded.GetWallRemainingHitPoints(wallCell),
+                TileService.DefaultClayPlasteredWallHitPoints),
+            "Clay plaster must raise the supported insulation wall to 750 HP.");
+
+        var cadenceTargetObject = new GameObject("WallAttackCadenceTarget");
+        var cadenceYokaiObject = new GameObject("WallAttackCadenceYokai");
+        var cadenceDefinition = YokaiDefinition.CreateRuntime(
+            YokaiKind.ClubGoblin, 10, 1f, 1, 5f, Array.Empty<ItemAmount>());
+        var wallSfxEvents = 0;
+        Action countWallSfx = () => wallSfxEvents++;
+        try
+        {
+            cadenceTargetObject.transform.position = Vector3.right * .5f;
+            var cadenceTarget =
+                cadenceTargetObject.AddComponent<Nyangbingo.Debugging.DevBTestYokaiTarget>();
+            var cadenceBrain = cadenceYokaiObject.AddComponent<YokaiBrain>();
+            cadenceBrain.ConfigureForRuntime(cadenceDefinition, cadenceTarget);
+            cadenceBrain.Tick(0f);
+            GameEvents.OnWallDamaged += countWallSfx;
+            cadenceBrain.Tick(.1f);
+            cadenceBrain.Tick(.5f);
+            Require(Mathf.Approximately(cadenceTarget.WallDamageReceived, 5f) &&
+                    wallSfxEvents == 1,
+                "Wall damage and SFX must fire once per attack cycle instead of every game tick.");
+            cadenceBrain.Tick(.5f);
+            Require(Mathf.Approximately(cadenceTarget.WallDamageReceived, 10f) &&
+                    wallSfxEvents == 2,
+                "A sustained wall attack must retain its configured DPS at the one-second cadence.");
+        }
+        finally
+        {
+            GameEvents.OnWallDamaged -= countWallSfx;
+            UnityEngine.Object.DestroyImmediate(cadenceYokaiObject);
+            UnityEngine.Object.DestroyImmediate(cadenceTargetObject);
+            UnityEngine.Object.DestroyImmediate(cadenceDefinition);
+        }
     }
 
     private static void TestStrawInsulationContract()
@@ -1420,6 +1592,55 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestMeleeArcAttackPhysicsQueryContract()
     {
+        var combatCatalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(MainGamePlayerController.ResolveFanAbilityDamage(FanItemIds.Hapjukseon) == 0 &&
+                MainGamePlayerController.ResolveFanAbilityDamage(FanItemIds.Cheolseon) == 4 &&
+                WireSnareAbility.HapjukseonDamage == 0 &&
+                WireSnareAbility.CheolseonDamage == 4,
+            "Hapjukseon must push without damage while Cheolseon retains its four-damage fan ability.");
+        Require(combatCatalog != null &&
+                !MainGamePlayerController.AllowsPlayerBasicAttack(
+                    combatCatalog.FindCombatProfile(FanItemIds.Hapjukseon)) &&
+                MainGamePlayerController.AllowsPlayerBasicAttack(
+                    combatCatalog.FindCombatProfile(FanItemIds.Cheolseon)) &&
+                Mathf.Approximately(
+                    combatCatalog.FindCombatProfile(FanItemIds.Cheolseon).KnockbackTiles, 1.5f) &&
+                MainGamePlayerController.AllowsPlayerBasicAttack(
+                    combatCatalog.FindCombatProfile("dokkaebi_club")),
+            "Hapjukseon must remain right-click-only while Cheolseon keeps its 1.5-tile left-click knockback.");
+        var upwardDiagonalTiles = new TileData[6, 6];
+        upwardDiagonalTiles[3, 2] = new TileData
+            { elementType = WorldTileTypes.Stone, hardness = 1 };
+        upwardDiagonalTiles[3, 3] = new TileData
+            { elementType = WorldTileTypes.Stone, hardness = 1 };
+        var upwardDiagonalService = new TileService(upwardDiagonalTiles, null, null, 1);
+        Require(MainGamePlayerController.TryPickMiningCell(
+                    upwardDiagonalService, new Vector2(2.9f, 2.4f),
+                    new Vector2(3.5f, 3.5f), new Vector2(.6f, 1.1f),
+                    1.5f, out var upwardDiagonalCell) &&
+                upwardDiagonalCell == new Vector3Int(3, 3, 0),
+            "A cursor over an upper-diagonal tile must not be intercepted by the nearer side tile.");
+        Require(MainGamePlayerController.TryPickMiningCell(
+                    upwardDiagonalService, new Vector2(2.9f, 2.4f),
+                    null, new Vector2(.6f, 1.1f),
+                    1.5f, out var fallbackDiagonalCell) &&
+                fallbackDiagonalCell == new Vector3Int(3, 3, 0),
+            "Eight-direction mining over air must prefer the intended diagonal neighbor before ray order.");
+
+        var downwardDiagonalTiles = new TileData[6, 6];
+        downwardDiagonalTiles[3, 3] = new TileData
+            { elementType = WorldTileTypes.Stone, hardness = 1 };
+        downwardDiagonalTiles[3, 2] = new TileData
+            { elementType = WorldTileTypes.Stone, hardness = 1 };
+        var downwardDiagonalService = new TileService(downwardDiagonalTiles, null, null, 2);
+        Require(MainGamePlayerController.TryPickMiningCell(
+                    downwardDiagonalService, new Vector2(2.9f, 3.6f),
+                    new Vector2(3.5f, 2.5f), new Vector2(.6f, -1.1f),
+                    1.5f, out var downwardDiagonalCell) &&
+                downwardDiagonalCell == new Vector3Int(3, 2, 0),
+            "A cursor over a lower-diagonal tile must not be intercepted by the player's nearer support-side tile.");
+
         const int isolatedPhysicsLayer = 31;
         var isolatedPhysicsMask = (LayerMask)(1 << isolatedPhysicsLayer);
         var root = new GameObject("MeleeArcPhysicsQueryContract");
@@ -1494,6 +1715,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
             Require(attack.LastHitCount == 2 && yokaiDamageEvents == 1 && bossDamageEvents == 1,
                 $"The isolated melee query must report exactly two targets and one damage event per target. " +
                 $"hits={attack.LastHitCount}, yokaiEvents={yokaiDamageEvents}, bossEvents={bossDamageEvents}.");
+
+            yokaiHealth.ConfigureForRuntime(100);
+            bossHealth.ConfigureForRuntime(200);
+            attack.Strike(Vector2.right, WireSnareAbility.HapjukseonDamage,
+                WireSnareAbility.Knockback);
+            Require(attack.LastHitCount == 2 && yokaiHealth.Current == 100 && bossHealth.Current == 200 &&
+                    yokaiDamageEvents == 1 && bossDamageEvents == 1,
+                "A zero-damage Hapjukseon swing must still resolve its targets without applying damage.");
         }
         finally
         {
@@ -1706,9 +1935,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Center-pivot plants must sit higher than bottom-pivot plants with the same visual foot line.");
         var source = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameWorldDecorationRenderer.cs");
-        Require(source.Contains("ComputeSurfaceDecorationWorldY(surfaceY, art.Sprite)") &&
+        Require(source.Contains("AlignSurfaceVisual(tree.Renderer, supportCell)") &&
+                source.Contains("AlignSurfaceVisual(renderer, supportCell)") &&
+                source.Contains("AlignVisualToCellBase(renderer, chestCell)") &&
                 !source.Contains("TreeVegetationVisualOffset"),
-            "Surface vegetation must use pivot-aware placement instead of a fixed tree-only sink offset.");
+            "Surface vegetation and chests must use shared pivot-aware cell-base placement instead of fixed offsets.");
         Require(!source.Contains("PlaceSurfaceGroundCover(result, random)") &&
                 source.Contains("renderer.sprite = artCatalog.Find(\"hemp\")?.Sprite;") &&
                 source.Contains(".BoundItemArtCatalog?.FindSprite(PlayerHealthRecoveryService.CatnipItemId)") &&
@@ -1790,8 +2021,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestWorldDropVisualSurfaceOffset()
     {
-        Require(Mathf.Approximately(MainGameWorldDropRuntime.VisualSurfaceOffset, .5f),
-            "World-drop visuals must sit half a tile above the physics root to match the visible foreground surface.");
+        Require(Mathf.Approximately(MainGameWorldDropRuntime.VisualSurfaceOffset, 0f),
+            "World-drop visuals must share the corrected logical foreground surface without a legacy half-tile lift.");
         Require(!MainGameWorldDropRuntime.DropToDropCollisionResponseEnabled,
             "World drops must not physically push one another after their initial reward fan-out.");
         var smallBatchDirection = MainGameWorldDropRuntime.CalculateLaunchDirection(0, 2);
@@ -1855,25 +2086,90 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Ground bosses must align their bottom-pivot art to the surface while flying bosses retain a centered movement core.");
 
         var groundObject = new GameObject("GroundMobPhysicsContract", typeof(CircleCollider2D),
-            typeof(Rigidbody2D), typeof(WorldMobPhysicsBody));
+            typeof(Rigidbody2D), typeof(WorldMobPhysicsBody), typeof(Health));
         var flyingObject = new GameObject("FlyingMobPhysicsContract", typeof(CircleCollider2D),
-            typeof(Rigidbody2D), typeof(WorldMobPhysicsBody));
+            typeof(Rigidbody2D), typeof(WorldMobPhysicsBody), typeof(Health));
+        GameObject movementObstacle = null;
         try
         {
             var ground = groundObject.GetComponent<WorldMobPhysicsBody>();
             var flying = flyingObject.GetComponent<WorldMobPhysicsBody>();
+            var groundCollider = groundObject.GetComponent<CircleCollider2D>();
+            groundCollider.radius = .42f;
+            var groundRenderer = groundObject.AddComponent<SpriteRenderer>();
+            var visualTexture = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+            var bottomPivotSprite = Sprite.Create(
+                visualTexture, new Rect(0f, 0f, 8f, 8f), new Vector2(.5f, 0f), 8f);
+            groundRenderer.sprite = bottomPivotSprite;
+            Require(Mathf.Approximately(
+                    RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
+                        groundCollider, groundRenderer), -.42f),
+                "A bottom-pivot grounded character visual must attach to the movement collider's lower edge.");
             ground.ConfigureForRuntime(WorldMobLocomotion.Grounded);
             flying.ConfigureForRuntime(WorldMobLocomotion.Flying);
-            Require(groundObject.GetComponent<Rigidbody2D>().gravityScale > 0f &&
+            Require(groundObject.GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Dynamic &&
+                    flyingObject.GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
+                    groundObject.GetComponent<Rigidbody2D>().gravityScale > 0f &&
                     Mathf.Approximately(flyingObject.GetComponent<Rigidbody2D>().gravityScale, 0f) &&
                     !groundObject.GetComponent<Collider2D>().isTrigger &&
                     !flyingObject.GetComponent<Collider2D>().isTrigger &&
-                    Mathf.Approximately(ground.NavigationOffset(new Vector2(2f, 3f)).y, 0f) &&
+                    ground.NavigationOffset(new Vector2(2f, 3f)) == new Vector2(2f, 3f) &&
                     flying.NavigationOffset(new Vector2(2f, 3f)) == new Vector2(2f, 3f),
-                "Ground mobs must use gravity and horizontal navigation; flying mobs must stay gravity-free while retaining solid collision.");
+                "Both locomotion types must retain vertical target separation for navigation distance, while grounded movement remains horizontal.");
             Require(Physics2D.GetIgnoreCollision(groundObject.GetComponent<Collider2D>(),
                     flyingObject.GetComponent<Collider2D>()),
                 "Yokai and bosses must ignore mutual physical response so faster mobs are never slowed by the mob ahead.");
+            var groundBody = groundObject.GetComponent<Rigidbody2D>();
+            var flyingKnockbackBody = flyingObject.GetComponent<Rigidbody2D>();
+            // Keep the physics-only contract outside the loaded gameplay world's colliders.
+            // Running this menu test during Play Mode previously put the temporary bodies at
+            // world origin, so terrain depenetration was incorrectly counted as knockback.
+            var knockbackTestOrigin = new Vector2(10000f, 10000f);
+            groundBody.position = knockbackTestOrigin;
+            flyingKnockbackBody.position = knockbackTestOrigin + Vector2.right * 4f;
+            Physics2D.SyncTransforms();
+            Require(groundObject.GetComponent<Health>().TryApplyKnockback(Vector2.right * .5f) &&
+                    flyingObject.GetComponent<Health>().TryApplyKnockback(Vector2.right * .5f) &&
+                    Mathf.Approximately(groundBody.position.x, knockbackTestOrigin.x) &&
+                    Mathf.Approximately(flyingKnockbackBody.position.x, knockbackTestOrigin.x + 4f) &&
+                    ground.IsKnockbackActive && flying.IsKnockbackActive,
+                "Fan knockback must begin as a timed displacement instead of teleporting the yokai.");
+            var halfKnockbackSeconds = WorldMobPhysicsBody.KnockbackDurationSeconds * .5f;
+            ground.TickKnockback(halfKnockbackSeconds);
+            flying.TickKnockback(halfKnockbackSeconds);
+            Require(groundBody.position.x > knockbackTestOrigin.x &&
+                    groundBody.position.x < knockbackTestOrigin.x + .5f &&
+                    flyingKnockbackBody.position.x > knockbackTestOrigin.x + 4f &&
+                    flyingKnockbackBody.position.x < knockbackTestOrigin.x + 4.5f,
+                "Timed fan knockback must visibly interpolate before reaching its destination.");
+            ground.TickKnockback(WorldMobPhysicsBody.KnockbackDurationSeconds);
+            flying.TickKnockback(WorldMobPhysicsBody.KnockbackDurationSeconds);
+            Require(Mathf.Approximately(groundBody.position.x, knockbackTestOrigin.x + .5f) &&
+                    Mathf.Approximately(flyingKnockbackBody.position.x, knockbackTestOrigin.x + 4.5f) &&
+                    !ground.IsKnockbackActive && !flying.IsKnockbackActive,
+                "Fan knockback must finish at the requested collision-safe distance for both locomotion types.");
+            var ledgeSlide = WorldMobPhysicsBody.ProjectAlongCollisionSurface(
+                new Vector2(1f, 1f), Vector2.left);
+            Require(Mathf.Approximately(ledgeSlide.x, 0f) && ledgeSlide.y > .9f,
+                "A flying yokai hitting a tile corner diagonally must keep the surface-parallel movement needed to rise over it.");
+
+            movementObstacle = new GameObject(
+                "MobKnockbackOverlapRecovery", typeof(BoxCollider2D));
+            var overlapTestOrigin = knockbackTestOrigin + new Vector2(0f, 10f);
+            movementObstacle.transform.position =
+                overlapTestOrigin + new Vector2(2.5f, 3.5f);
+            movementObstacle.GetComponent<BoxCollider2D>().size = Vector2.one;
+            flyingKnockbackBody.position = overlapTestOrigin + new Vector2(1.65f, 3.5f);
+            Physics2D.SyncTransforms();
+            flying.ConfigureForRuntime(WorldMobLocomotion.Flying);
+            Require(flying.TryApplyKnockback(Vector2.left * .5f),
+                "A flying yokai touching a ledge must still accept fan knockback.");
+            flying.TickKnockback(WorldMobPhysicsBody.KnockbackDurationSeconds);
+            Require(flyingKnockbackBody.position.x < overlapTestOrigin.x + 1.15f &&
+                    !flying.IsKnockbackActive,
+                "A fan must push a flying yokai out of a shallow terrain overlap instead of leaving it frozen in the ledge.");
+            UnityEngine.Object.DestroyImmediate(movementObstacle);
+            movementObstacle = null;
 
             var spawnCells = new TileData[12, 10];
             for (var x = 0; x < 12; x++)
@@ -1903,7 +2199,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 stepCells[x, 0] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
             stepCells[3, 1] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
             var stepTiles = new TileService(stepCells, null, null, 3);
-            var groundBody = groundObject.GetComponent<Rigidbody2D>();
             groundObject.transform.position = new Vector3(2.5f, 1.5f, 0f);
             groundBody.position = new Vector2(2.5f, 1.5f);
             groundBody.linearVelocity = Vector2.zero;
@@ -1918,6 +2213,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 tallWallCells[x, 0] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
             tallWallCells[3, 1] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
             tallWallCells[3, 2] = new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            groundObject.transform.position = new Vector3(2.5f, 1.5f, 0f);
             groundBody.position = new Vector2(2.5f, 1.5f);
             groundBody.linearVelocity = Vector2.zero;
             Physics2D.SyncTransforms();
@@ -1927,12 +2223,78 @@ public static class NyangbingoDevBIntegrationRegressionTests
             Require(groundBody.linearVelocity.y > 8f,
                 "A grounded yokai blocked by a wall at least two tiles high must still attempt a jump.");
 
+            var verticalRouteCells = new TileData[9, 8];
+            for (var x = 0; x < 9; x++)
+                verticalRouteCells[x, 0] =
+                    new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            verticalRouteCells[4, 1] =
+                new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            verticalRouteCells[5, 2] =
+                new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            for (var x = 1; x <= 4; x++)
+                verticalRouteCells[x, 3] =
+                    new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            groundObject.transform.position = new Vector3(2.5f, 1.5f, 0f);
+            groundBody.position = new Vector2(2.5f, 1.5f);
+            groundBody.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+            ground.ConfigureForRuntime(
+                WorldMobLocomotion.Grounded,
+                new TileService(verticalRouteCells, null, null, 5));
+            var verticalRouteDirection = ground.NavigationDirection(new Vector2(0f, 3f));
+            Require(verticalRouteDirection.x > .9f &&
+                    Mathf.Approximately(verticalRouteDirection.y, 0f) &&
+                    ground.HasTraversableGroundRoute &&
+                    ground.NavigationFacingDirection.x > .9f,
+                "A grounded yokai sharing the target's X coordinate on another level must route toward the reachable staircase instead of stopping.");
+            groundObject.transform.position = new Vector3(3.8f, 2.15f, 0f);
+            groundBody.position = new Vector2(3.8f, 2.15f);
+            Physics2D.SyncTransforms();
+            var airborneStepDirection = ground.NavigationDirection(
+                new Vector2(2.5f - groundBody.position.x, 4.5f - groundBody.position.y));
+            Require(Vector2.Dot(verticalRouteDirection, airborneStepDirection) > .9f,
+                "A grounded yokai crossing a step waypoint while airborne must keep its route direction instead of turning back toward the crossed cell center.");
+
+            var dropRouteCells = new TileData[9, 8];
+            for (var x = 0; x < 9; x++)
+                dropRouteCells[x, 0] =
+                    new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            for (var x = 1; x <= 5; x++)
+                dropRouteCells[x, 4] =
+                    new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            groundObject.transform.position = new Vector3(3.5f, 5.5f, 0f);
+            groundBody.position = new Vector2(3.5f, 5.5f);
+            groundBody.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+            ground.ConfigureForRuntime(
+                WorldMobLocomotion.Grounded,
+                new TileService(dropRouteCells, null, null, 7));
+            var dropRouteDirection = ground.NavigationDirection(new Vector2(0f, -4f));
+            var retainedDropRouteDirection =
+                ground.NavigationDirection(new Vector2(.5f, -4f));
+            Require(Mathf.Abs(dropRouteDirection.x) > .9f &&
+                    Mathf.Approximately(dropRouteDirection.y, 0f) &&
+                    Vector2.Dot(dropRouteDirection, retainedDropRouteDirection) > .9f &&
+                    ground.HasTraversableGroundRoute,
+                "A grounded yokai above a same-X target must keep one platform route toward a reachable ledge instead of alternating equal exits.");
+            var dropEdgeX = dropRouteDirection.x > 0f ? 6.1f : .9f;
+            groundObject.transform.position = new Vector3(dropEdgeX, 5.5f, 0f);
+            groundBody.position = new Vector2(dropEdgeX, 5.5f);
+            Physics2D.SyncTransforms();
+            var committedDropDirection = ground.NavigationDirection(
+                new Vector2(3.5f - dropEdgeX, -4f));
+            Require(Vector2.Dot(dropRouteDirection, committedDropDirection) > .9f,
+                "A grounded yokai crossing into the air cell above its landing must keep the committed drop direction until gravity completes the fall.");
+
+            groundBody.linearVelocity = new Vector2(1.25f, 2.5f);
             ground.SetEncounterPaused(true);
-            Require(!groundObject.GetComponent<Rigidbody2D>().simulated,
-                "Regular yokai paused for a boss encounter must leave physics simulation so they cannot block the boss.");
+            Require(!groundObject.GetComponent<Rigidbody2D>().simulated &&
+                    groundBody.linearVelocity == Vector2.zero,
+                "Regular yokai paused for a summoned-boss encounter must freeze outside physics simulation so they cannot block the boss.");
             ground.SetEncounterPaused(false);
-            Require(groundObject.GetComponent<Rigidbody2D>().simulated,
-                "Regular yokai must restore physics simulation when the boss encounter ends.");
+            Require(groundObject.GetComponent<Rigidbody2D>().simulated &&
+                    groundBody.linearVelocity == new Vector2(1.25f, 2.5f),
+                "Regular yokai must resume the exact pre-pause velocity when the summoned-boss encounter ends.");
 
             var passThroughPlayer = new GameObject("MobPassThroughPlayer", typeof(CircleCollider2D));
             var playerCollider = passThroughPlayer.GetComponent<CircleCollider2D>();
@@ -1958,7 +2320,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
             Physics2D.SyncTransforms();
             flying.ConfigureForRuntime(WorldMobLocomotion.Flying, navigationTiles);
             var detourDirection = flying.NavigationDirection(new Vector2(0f, -2f));
-            Require(detourDirection.x > .5f && Mathf.Abs(detourDirection.y) < .5f,
+            Require(detourDirection.x > .5f && Mathf.Abs(detourDirection.y) < .5f &&
+                    flying.NavigationFacingDirection.x > .9f,
                 "A flying yokai blocked by terrain must route toward the nearest opening instead of pushing into the direct wall.");
 
             var ledgeCells = new TileData[8, 6];
@@ -1973,6 +2336,33 @@ public static class NyangbingoDevBIntegrationRegressionTests
             var ledgeDirection = flying.NavigationDirection(new Vector2(2f, .45f));
             Require(ledgeDirection.y > .9f && Mathf.Abs(ledgeDirection.x) < .1f,
                 "A flying yokai below a ledge must rise to its current cell center before turning across the ledge.");
+
+            var playerBarrierCells = new TileData[5, 4];
+            var basicWallCell = new Vector3Int(1, 1, 0);
+            var ironWallCell = new Vector3Int(2, 1, 0);
+            var naturalWallCell = new Vector3Int(3, 1, 0);
+            playerBarrierCells[basicWallCell.x, basicWallCell.y] =
+                new TileData { elementType = "insul_wall", hardness = 1 };
+            playerBarrierCells[ironWallCell.x, ironWallCell.y] =
+                new TileData { elementType = "iron_insul_wall", hardness = 2 };
+            playerBarrierCells[naturalWallCell.x, naturalWallCell.y] =
+                new TileData { elementType = WorldTileTypes.Stone, hardness = 1 };
+            var playerBarrierTiles = new TileService(playerBarrierCells, null, null, 3);
+            System.Func<YokaiWallMaterial, bool> regularWallDamage =
+                material => material != YokaiWallMaterial.IronHeatWall;
+            ground.ConfigureForRuntime(
+                WorldMobLocomotion.Grounded, playerBarrierTiles, regularWallDamage);
+            var groundRoutesThroughBreakableWall =
+                ground.IsNavigationPassableCell(basicWallCell) &&
+                !ground.IsNavigationPassableCell(ironWallCell) &&
+                !ground.IsNavigationPassableCell(naturalWallCell);
+            flying.ConfigureForRuntime(
+                WorldMobLocomotion.Flying, playerBarrierTiles, regularWallDamage);
+            Require(groundRoutesThroughBreakableWall &&
+                    flying.IsNavigationPassableCell(basicWallCell) &&
+                    !flying.IsNavigationPassableCell(ironWallCell) &&
+                    !flying.IsNavigationPassableCell(naturalWallCell),
+                "Grounded and flying yokai navigation must ignore only player barriers that the current yokai can actually destroy.");
 
             var separatedTargetObject = new GameObject("VerticallySeparatedYokaiTarget");
             var separatedTarget = separatedTargetObject.AddComponent<Nyangbingo.Debugging.DevBTestYokaiTarget>();
@@ -2002,29 +2392,48 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     encounterSource.Contains("locomotion == WorldMobLocomotion.Grounded") &&
                     encounterSource.Contains("bootstrap.TileService") &&
                     encounterSource.Contains("new GameObject(\"BossHurtbox\")") &&
-                    encounterSource.Contains(
+                    encounterSource.Contains("var movementColliderScale = BossScale;") &&
+                    !encounterSource.Contains(
                         "locomotion == WorldMobLocomotion.Flying ? BossScale : 1f") &&
                     encounterSource.Contains("ConfigureDetachedHurtboxBody") &&
+                    encounterSource.Contains("usesGroundedVisualRoot") &&
+                    encounterSource.Contains("CalculateGroundedVisualLocalY") &&
+                    !encounterSource.Contains("GroundBossVisualLift") &&
                     encounterSource.Contains(
                         "Body and tail hurtboxes are created after the movement core"),
-                "MainGame encounter spawning must attach the shared world physics body to yokai and bosses.");
+                "MainGame encounter spawning must attach shared physics and ground every bottom-pivot visual at its collider foot.");
             var animatorSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
             Require(animatorSource.Contains("characterAnimator?.SetMoving(true)") &&
-                    animatorSource.Contains("characterAnimator?.SetFacing(ResolveFacingDirection(displacement))"),
-                "Physics-driven yokai movement must explicitly keep walk and flight animation state active.");
+                    animatorSource.Contains("physicsBody.NavigationFacingDirection") &&
+                    animatorSource.Contains("characterAnimator?.SetFacing(facingMovement)") &&
+                    !animatorSource.Contains("ResolveStableGroundFacing"),
+                "Physics-driven yokai movement must keep animation active and face the selected route segment instead of collision displacement.");
             var physicsSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/World/WorldMobPhysicsBody.cs");
             Require(physicsSource.Contains("NavigationReversalHoldSeconds") &&
                     physicsSource.Contains("PathTargetCellTolerance") &&
+                    physicsSource.Contains("groundPath[groundPathIndex]") &&
+                    physicsSource.Contains("groundPath.Reverse()") &&
+                    physicsSource.Contains("AdvanceGroundPath(startCell)") &&
+                    physicsSource.Contains("groundDropCommitted") &&
+                    physicsSource.Contains("Step jumps are also briefly airborne") &&
+                    physicsSource.Contains("WithNavigationFacing") &&
+                    physicsSource.Contains("Facing follows the selected route segment") &&
+                    physicsSource.Contains("GroundRouteHeuristic") &&
+                    physicsSource.Contains("TryAddGroundRouteNode") &&
                     physicsSource.Contains("targetActuallyCrossedBehind") &&
                     physicsSource.Contains("DirectPathConfirmationSeconds") &&
                     physicsSource.Contains(
-                        "transform.GetComponentsInChildren<Collider2D>(true)"),
+                        "transform.GetComponentsInChildren<Collider2D>(true)") &&
+                    physicsSource.Contains("var forwardProbe = (Vector2)bounds.center") &&
+                    physicsSource.Contains(
+                        "attachedCollider.bounds.min.y - GroundProbeDepth"),
                 "Moving targets must not cause equal detours to alternate every frame, while real target crossings still reverse pursuit immediately.");
-            Require(animatorSource.Contains("ResolveFacingDirection") &&
-                    animatorSource.Contains("targetOffset.magnitude > 1.5f"),
-                "A distant moving target must own horizontal facing so temporary detours do not visibly flip yokai every frame.");
+            Require(animatorSource.Contains("var hasClearAttackLine = physicsBody == null") &&
+                    animatorSource.Contains("physicsBody?.HasTraversableGroundRoute == true") &&
+                    physicsSource.Contains("NavigationFacingDirection"),
+                "All yokai must keep routing across blocked floors without playing wall attacks and face their selected ground or flying route.");
             var imugiBodySource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/World/RuntimeImugiBodyVisual.cs");
             Require(imugiBodySource.Contains("RigidbodyType2D.Kinematic") &&
@@ -2041,9 +2450,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     encounterSource.Contains("FindSprite(\"imugi_pre_tail\")") &&
                     encounterSource.Contains("FindSprite(\"imugi_post_tail\")"),
                 "The v34 Imugi boss must resolve its delivered head, body, pre-tail, and post-tail art and spawn facing right.");
+            UnityEngine.Object.DestroyImmediate(bottomPivotSprite);
+            UnityEngine.Object.DestroyImmediate(visualTexture);
         }
         finally
         {
+            if (movementObstacle != null)
+                UnityEngine.Object.DestroyImmediate(movementObstacle);
             UnityEngine.Object.DestroyImmediate(groundObject);
             UnityEngine.Object.DestroyImmediate(flyingObject);
         }
@@ -2084,6 +2497,35 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
         var craftingSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
+        var selectableEquipmentItem = ItemDefinition.CreateRuntime(
+            "equipment_click_item", "Clickable Equipment", 1,
+            ItemCategory.Equipment, ItemMvpScope.A);
+        var selectableEquipment = EquipmentDefinition.CreateRuntime(
+            selectableEquipmentItem.Id, EquipmentSlot.Head, false);
+        Require(MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    selectableEquipmentItem.Id,
+                    new[] { selectableEquipmentItem },
+                    new[] { selectableEquipment }) == 0 &&
+                MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    selectableEquipment.Id,
+                    Array.Empty<ItemDefinition>(),
+                    new[] { selectableEquipment }) == 0 &&
+                MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    "missing", new[] { selectableEquipmentItem },
+                    new[] { selectableEquipment }) == -1 &&
+                craftingSource.Contains(
+                    "button.onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex))"),
+            "Clicking a populated equipment visual slot must select its matching equipment entry.");
+        UnityEngine.Object.DestroyImmediate(selectableEquipment);
+        UnityEngine.Object.DestroyImmediate(selectableEquipmentItem);
+        var codexSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameCodexController.cs");
+        var sceneCreatorSource = System.IO.File.ReadAllText(
+            "Assets/Editor/NyangbingoMainGameSceneCreator.cs");
+        Require(!craftingSource.Contains("4/ESC 닫기") &&
+                !codexSource.Contains("4/ESC 닫기") &&
+                !sceneCreatorSource.Contains("4/ESC 닫기"),
+            "The codex title must not duplicate the close shortcut already shown by the bottom button.");
         Require(craftingSource.Contains("FindBossForSummonItem(item.Id)") &&
                 craftingSource.Contains("CanUseSummonItem(item.Id") &&
                 craftingSource.Contains("OpenSummonConfirmation(summonBoss)") &&
@@ -2127,16 +2569,69 @@ public static class NyangbingoDevBIntegrationRegressionTests
         foregroundField.SetValue(renderer, tilemap);
         var backgroundTilemap = backgroundObject.GetComponent<UnityEngine.Tilemaps.Tilemap>();
         backgroundField.SetValue(renderer, backgroundTilemap);
+        GameObject alignedVisual = null;
+        Texture2D alignmentTexture = null;
+        Sprite alignmentSprite = null;
         try
         {
+            renderer.EnsureWorldCoordinateContract();
+            Require(tilemap.tileAnchor == Nyangbingo.World.TilemapRenderer.TerrainVisualAnchor &&
+                    backgroundTilemap.tileAnchor ==
+                    Nyangbingo.World.TilemapRenderer.TerrainVisualAnchor,
+                "Bottom-pivot terrain art must render from the lower edge of its logical cell.");
             var cell = new Vector3Int(4, 7, 0);
             var center = renderer.GetCellCenterWorld(cell);
+            var visualAnchor = renderer.GetCellVisualAnchorWorld(cell);
             Require(renderer.WorldToCell(center) == cell,
                 "Tilemap cell center and world-to-cell conversion must be exact inverses.");
             var corners = new Vector3[4];
             renderer.GetCellWorldCorners(cell, corners);
             Require(Vector3.Distance((corners[0] + corners[2]) * .5f, center) < .0001f,
                 "Seal marker corners must share the authoritative Tilemap cell center.");
+            Require(Vector3.Distance((corners[0] + corners[1]) * .5f, visualAnchor) < .0001f,
+                "Bottom-pivot tile effects must share the rendered terrain's lower visual anchor.");
+            Require(Vector3.Distance(tilemap.GetCellCenterWorld(cell), center) > .1f,
+                "Gameplay cell centers must not inherit the bottom-pivot terrain visual anchor.");
+            var coordinateService = new TileService(new TileData[10, 10], renderer, null, 1);
+            var serviceBounds = coordinateService.GetCellWorldBounds(cell);
+            Require(Vector3.Distance(serviceBounds.center, center) < .0001f,
+                "Mining and placement reach must use the same transformed Grid bounds as collision.");
+            alignedVisual = new GameObject("BottomPivotCellVisual", typeof(SpriteRenderer));
+            alignedVisual.transform.position = center;
+            alignmentTexture = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+            alignmentSprite = Sprite.Create(
+                alignmentTexture, new Rect(0f, 0f, 8f, 8f), new Vector2(.5f, 0f), 8f);
+            var alignedRenderer = alignedVisual.GetComponent<SpriteRenderer>();
+            alignedRenderer.sprite = alignmentSprite;
+            coordinateService.AlignSpriteBoundsToCellBase(alignedRenderer, cell);
+            Require(Mathf.Abs(alignedRenderer.bounds.center.x - serviceBounds.center.x) < .0001f &&
+                    Mathf.Abs(alignedRenderer.bounds.min.y - serviceBounds.min.y) < .0001f,
+                "Bottom-pivot world art must center horizontally and sit on the logical cell base.");
+            var effectSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameEffectPresenter.cs");
+            var playerSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+            var environmentSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
+            var placementSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+            var decorationSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameWorldDecorationRenderer.cs");
+            Require(effectSource.Contains(
+                        "miningProgressRenderer.transform.position = CellVisualAnchor(cell)") &&
+                    effectSource.Contains("miningEffect.transform.position = visualAnchor") &&
+                    effectSource.Contains(
+                        "playerTransform.GetComponentInChildren<RuntimeCharacterSpriteAnimator>()") &&
+                    playerSource.Contains("new GameObject(\"Visual\")") &&
+                    playerSource.Contains("CalculateGroundedVisualLocalY"),
+                "Player art, claw effects, and mining cracks must follow the same grounded visual-anchor contract.");
+            Require(environmentSource.Contains("new GameObject(\"Art\")") &&
+                    environmentSource.Contains("AlignSpriteBoundsToCellBase(renderer, entry.Cell)") &&
+                    placementSource.Contains("placementPreviewVisual") &&
+                    placementSource.Contains("GetCellCenterWorld(placementCell)") &&
+                    decorationSource.Contains("AlignSurfaceVisual(renderer, supportCell)") &&
+                    decorationSource.Contains("AlignVisualToCellBase(renderer, chestCell)"),
+                "Placed objects, previews, chests, and harvestable decorations must share the cell-base visual contract.");
 
             var foregroundTile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
             var backgroundTile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
@@ -2174,6 +2669,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
         }
         finally
         {
+            if (alignedVisual != null) UnityEngine.Object.DestroyImmediate(alignedVisual);
+            if (alignmentSprite != null) UnityEngine.Object.DestroyImmediate(alignmentSprite);
+            if (alignmentTexture != null) UnityEngine.Object.DestroyImmediate(alignmentTexture);
             UnityEngine.Object.DestroyImmediate(gridObject);
         }
     }
@@ -2202,12 +2700,31 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(!turretSource.Contains("장독 창고 · 40슬롯") &&
                 !turretSource.Contains("좌클릭 설치 · ESC/우클릭 취소"),
             "Narrative interaction instructions were reintroduced into the world HUD.");
+        Require(MainGameTurretRuntime.NearbyInteractionPrompt ==
+                    "E · 상호작용    Shift+E · 회수" &&
+                paletteSource.Contains("\"PlacedObjectInteractionPrompt\"") &&
+                paletteSource.Contains("placementRuntime?.BindInteractionStatus(interactionPromptText)") &&
+                Mathf.Approximately(
+                    MainGameTilePaletteController.ResolveBottomStatusY(false),
+                    MainGameTilePaletteController.BottomStatusBaseY) &&
+                Mathf.Approximately(
+                    MainGameTilePaletteController.ResolveBottomStatusY(true),
+                    MainGameTilePaletteController.BottomStatusBaseY +
+                    MainGameTilePaletteController.BottomStatusLineHeight),
+            "Nearby placed-object controls must use the readable bottom prompt and stack older hotbar feedback one line above it.");
         Require(!turretSource.Contains("TryPlace(record, barrierActive: false)"),
             "Whitelisted insulation modules must remain eligible to seal after product placement.");
+        Require(!turretSource.Contains("설치 거리가 너무 멉니다 · 최대") &&
+                !paletteSource.Contains("설치 거리가 너무 멉니다 · 최대"),
+            "Placement-distance feedback must not append the numeric tile limit.");
         Require(!paletteSource.Contains("R · 반경 표시"),
             "Narrative range-toggle status was reintroduced into the tile palette HUD.");
         Require(playerSource.Contains("MainGameHudController.BlocksWorldPrimaryInput"),
             "Clicking the top-right seal thermometer must block claw attacks and mining input.");
+        Require(!playerSource.Contains("miningAllowedByLastSwing") &&
+                System.Text.RegularExpressions.Regex.IsMatch(playerSource,
+                    @"if \(attackCooldown <= 0f\)\s*TryBasicAttack\(\);\s*//[\s\S]{0,180}TickMining\(\);"),
+            "A successful claw hit must not reset or suppress mining held on the same primary input.");
         Require(System.Text.RegularExpressions.Regex.IsMatch(playerSource,
                     @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryOpenNearbyChest\(\)") &&
                 !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
@@ -2251,6 +2768,23 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Imugi must use the third Unity texture row of the boss health sheet.");
         Require(MainGameHudController.BossHealthArtRow("unknown") == -1,
             "Unknown bosses must not inherit another boss health frame.");
+        var motherDefinition = AssetDatabase.LoadAssetAtPath<BossDefinition>(
+            "Assets/Data/SO/Bosses/mother_bulgasari.asset");
+        var motherBossCombatSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossCombatController.cs");
+        var motherRaidTargetSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameRaidTarget.cs");
+        var motherEffectPresenterSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEffectPresenter.cs");
+        Require(motherDefinition != null &&
+                Mathf.Approximately(motherDefinition.SpecialKnockbackTiles, 4f) &&
+                motherDefinition.SpecialHasFireTag &&
+                motherBossCombatSource.Contains(
+                    "definition == null || definition.Kind != BossKind.MotherBulgasari") &&
+                motherRaidTargetSource.Contains(
+                    "MainGameEffectPresenter.BeginSuppressPlayerFireHitEffect()") &&
+                motherEffectPresenterSource.Contains("suppressPlayerFireHitEffectDepth <= 0"),
+            "Mother Bulgasari's fire-tagged special must launch the player four tiles without playing the head fire effect.");
         var bossHudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
         Require(bossHudSource.Contains("SpriteMeshType.FullRect, Vector4.zero, false"),
@@ -2504,6 +3038,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Gangcheori must bind all four delivered 0.1-second fire effect frames.");
         Require(characterCatalog?.Find("gaekgwi")?.SourceFacesRight == true,
             "The delivered Gaekgwi source frames face right and must not be mirrored against movement.");
+        Require(characterCatalog?.Find("club")?.SourceFacesRight == false,
+            "The delivered Club Goblin source frames face left and must visually follow its grounded route.");
+        Require(!RuntimeCharacterSpriteAnimator.ShouldFlipX(false, -1f) &&
+                RuntimeCharacterSpriteAnimator.ShouldFlipX(false, 1f),
+            "A left-facing Club Goblin source must remain unflipped while walking left and flip exactly once while walking right.");
         Require(gameplayCatalog != null &&
                 gameplayCatalog.PlayerFireHitFrames.Count == 3,
             "Fire damage must bind all three delivered player head effect frames.");
@@ -2528,7 +3067,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MainGameEffectPresenter.cs");
             Require(effectPresenterSource.Contains(
                         "if (tag == DamageTag.Fire && playerFireHitEffect != null)") &&
-                    effectPresenterSource.Contains("playerFireHitEffect.Play(.3f)") &&
+                    effectPresenterSource.Contains(
+                        "playerFireHitEffect.Play(PlayerFireHitDurationSeconds)") &&
+                    Mathf.Approximately(
+                        MainGameEffectPresenter.PlayerFireHitDurationSeconds, .8f) &&
                     MainGameEffectPresenter.PlayerFireHitHeadOffset > 0f &&
                     MainGameEffectPresenter.PlayerFireHitFallbackSortingOrder < 20 &&
                     effectPresenterSource.Contains("playerRenderer.sortingOrder - 1") &&
@@ -2545,6 +3087,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The countdown must use ceiling seconds so it does not show 00:00 before transition.");
         Require(MainGameHudController.FormatRemainingTime(-1f) == "00:00",
             "Negative remaining time must be clamped to 00:00.");
+        Require(DayNightService.CalculateDaysRemaining(100, 0) == 100 &&
+                DayNightService.CalculateDaysRemaining(100, 1) == 99 &&
+                DayNightService.CalculateDaysRemaining(100, 15) == 85 &&
+                DayNightService.CalculateDaysRemaining(100, 100) == 0 &&
+                DayNightService.CalculateDaysRemaining(100, 101) == 0,
+            "Title and in-game HUD must share one D-day calculation without a one-day offset.");
         var environment = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(
             "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset");
         Require(environment != null && environment.DayCounterScrollFrames.Count == 10,
@@ -2574,6 +3122,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 !MainGameHudController.ShouldShowBaekjungDayCounterFeedback(true, false, true) &&
                 !MainGameHudController.ShouldShowBaekjungDayCounterFeedback(false, false, false),
             "The Baekjung D-counter border must appear only before a boss is summoned.");
+        Require(MainGameHudController.GoalBadgeDayNightRhythmHint.Contains("낮") &&
+                MainGameHudController.GoalBadgeDayNightRhythmHint.Contains("밤") &&
+                MainGameHudController.GoalBadgeDayNightRhythmHint.Contains("방어"),
+            "The early goal badges must explain the day preparation and night defense rhythm in one line.");
         Require(MainGameHudController.BossFleeRollSeconds > 0f &&
                 Mathf.Approximately(MainGameHudController.CalculateBossFleeRollScale(
                     MainGameHudController.BossFleeRollSeconds, MainGameHudController.BossFleeRollSeconds), 1f) &&
@@ -2583,6 +3135,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(MainGameHudController.ResolveDayNightClockFrameIndex(0f, 1440f, 6) == 5 &&
                 MainGameHudController.ResolveDayNightClockFrameIndex(1439f, 1440f, 6) == 0 &&
                 MainGameHudController.ResolveDayNightClockFrameIndex(0f, 0f, 6) == -1 &&
+                MainGameHudController.IsSunsetWarningWindow(false, 60f) &&
+                MainGameHudController.IsSunsetWarningWindow(false, 0f) &&
+                !MainGameHudController.IsSunsetWarningWindow(false, 60.01f) &&
+                !MainGameHudController.IsSunsetWarningWindow(true, 30f) &&
+                MainGameHudController.IsSunsetWarningBrightPhase(0f) &&
+                !MainGameHudController.IsSunsetWarningBrightPhase(.5f) &&
                 MainGameHudController.ShouldShowNightSpawnLock(true, true, false) &&
                 MainGameHudController.ShouldShowNightSpawnLock(true, false, true) &&
                 !MainGameHudController.ShouldShowNightSpawnLock(true, false, false) &&
@@ -2593,6 +3151,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var hudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
         Require(presenterSource.Contains("IsFullyOpen => phase == PlaybackPhase.Holding") &&
+                presenterSource.Contains("public void SetColor(Color color)") &&
                 presenterSource.Contains("PlayDayChange(int daysRemaining)") &&
                 presenterSource.Contains("PresentationCompleted?.Invoke()") &&
                 hudSource.Contains("TimeService.Dawn += HandleDayCounterDawn") &&
@@ -2612,6 +3171,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             $"v29 inventory grid must have 10 columns (actual {MainGameCraftingUiController.InventoryGridColumns}).");
         Require(MainGameCraftingUiController.InventoryGridRows == 5,
             $"v29 inventory grid must have 5 rows (actual {MainGameCraftingUiController.InventoryGridRows}).");
+        Require(MainGameCraftingUiController.InventoryHotbarSlotCount == 8 &&
+                MainGameCraftingUiController.UnifiedTabLabel(0) == "인벤토리",
+            "The inventory must distinguish its first eight hotbar-linked slots and label F1 as inventory.");
         Require(Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f),
             $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
         Require(MainGameCraftingUiController.UsesIconOnlyCraftingList,
@@ -2626,6 +3188,16 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The four unified panels must be assigned to F1 through F4.");
         Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F5,
             "Crafting test grants must share modified F5 without reclaiming the F1-F4 product panel keys.");
+        Require(MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Furnace) &&
+                MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Foundry) &&
+                !MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Workbench),
+            "Furnaces and foundries must expose both their crafting and smelting routes.");
+        var craftingUiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
+        Require(craftingUiSource.Contains("F2 · 제작/제련") &&
+                craftingUiSource.Contains("showingSmelting = !showingSmelting") &&
+                craftingUiSource.Contains("F2 제작/제련 전환"),
+            "F2 must visibly toggle both ways between crafting and smelting at a shared station.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&
                 MainGameBossSummonUiController.DebugShortcutHelpPanelSize.y <=
@@ -2638,6 +3210,60 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var inventory = new Inventory(_ => null);
         Require(inventory.Capacity == 50 && inventory.Slots.Count == 50,
             $"A default runtime inventory must allocate 50 slots (actual {inventory.Capacity}).");
+
+        var hotbarItem = ItemDefinition.CreateRuntime("hotbar_route_test", "Hotbar Route Test");
+        var inventoryOnlyItem = ItemDefinition.CreateRuntime("inventory_route_test", "Inventory Route Test");
+        ItemDefinition FindRoutingItem(string id) =>
+            id == hotbarItem.Id ? hotbarItem : id == inventoryOnlyItem.Id ? inventoryOnlyItem : null;
+        var routedInventory = new Inventory(
+            FindRoutingItem, 12, MainGameCraftingUiController.InventoryHotbarSlotCount,
+            itemId => itemId == hotbarItem.Id);
+        Require(routedInventory.TryAdd(inventoryOnlyItem.Id, 1) &&
+                routedInventory.Slots.Take(MainGameCraftingUiController.InventoryHotbarSlotCount)
+                    .All(slot => string.IsNullOrEmpty(slot.itemId)) &&
+                routedInventory.Slots[MainGameCraftingUiController.InventoryHotbarSlotCount].itemId ==
+                    inventoryOnlyItem.Id,
+            "Items that cannot be selected on the hotbar must skip its first eight slots during acquisition.");
+        Require(routedInventory.TryAdd(hotbarItem.Id, 1) &&
+                routedInventory.Slots[0].itemId == hotbarItem.Id,
+            "Hotbar-selectable items must still auto-fill the first eight inventory slots.");
+        UnityEngine.Object.DestroyImmediate(hotbarItem);
+        UnityEngine.Object.DestroyImmediate(inventoryOnlyItem);
+    }
+
+    private static void TestRecipeProgressionUnlockContract()
+    {
+        var regular = RecipeDefinition.CreateRuntime(
+            "recipe_progression_regular", CraftingStation.Workbench,
+            new ItemAmount[0], default);
+        var altar = RecipeDefinition.CreateRuntime(
+            Nyangbingo.Crafting.RecipeUnlockPolicy.GangcheoriUnlockRecipeId,
+            CraftingStation.IceAnvil, new ItemAmount[0], default);
+        try
+        {
+            var book = new Nyangbingo.Crafting.RecipeBook();
+            Require(Nyangbingo.Crafting.RecipeUnlockPolicy.IsUnlocked(regular, book) &&
+                    !Nyangbingo.Crafting.RecipeUnlockPolicy.IsUnlocked(altar, book),
+                "Only the v34 ice-altar offering recipe must remain hidden before the first Gangcheori kill.");
+            book.Unlock(altar.Id);
+            Require(Nyangbingo.Crafting.RecipeUnlockPolicy.IsUnlocked(altar, book),
+                "The v34 ice-altar offering recipe must become permanently available after unlock.");
+
+            var runtimeSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameRuntimeServices.cs");
+            var saveSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/Save/MainGameSaveCoordinator.cs");
+            Require(runtimeSource.Contains("GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled") &&
+                    runtimeSource.Contains("definition.Kind != YokaiKind.Gangcheori") &&
+                    saveSource.Contains("RestoreStage(\"recipe progression\"") &&
+                    saveSource.Contains("record.kills <= 0"),
+                "Gangcheori recipe progression must unlock live and recover from pre-unlock save data.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(regular);
+            UnityEngine.Object.DestroyImmediate(altar);
+        }
     }
 
     private static void TestV29InventoryArtBindings()
@@ -2682,6 +3308,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameTilePaletteController.ShortcutKeyForSlot(7) == KeyCode.Alpha8 &&
                 MainGameTilePaletteController.ShortcutKeyForSlot(8) == KeyCode.None,
             "The eight visible tile-palette slots must be assigned to number keys 1 through 8.");
+        Require(Mathf.Approximately(MainGameTilePaletteController.PlacementReachTiles, 1.5f) &&
+                MainGameTilePaletteController.IsWithinPlacementReach(
+                    new Vector2(.5f, .5f), new Vector3Int(1, 0, 0), 1.5f) &&
+                !MainGameTilePaletteController.IsWithinPlacementReach(
+                    new Vector2(.5f, .5f), new Vector3Int(3, 0, 0), 1.5f),
+            "Foreground placement must use the same 1.5-tile reach as mining.");
         Require(MainGameTilePaletteController.IsDirectUseHotbarItem(
                     PlayerHealthRecoveryService.CatnipItemId) &&
                 !MainGameTilePaletteController.IsDirectUseHotbarItem(WorldTileTypes.Dirt),
@@ -2722,6 +3354,39 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameTilePaletteController.SupportsPalettePlacement("roof") &&
                 !MainGameTilePaletteController.SupportsPalettePlacement("workbench"),
             "The tile palette must route wallpaper and insulation boundary tiles, but not regular buildings.");
+        var runtimeStone = ItemDefinition.CreateRuntime(WorldTileTypes.Stone, "Stone", 99,
+            ItemCategory.Material, ItemMvpScope.A);
+        ItemDefinition FindItem(string id) =>
+            id == runtimeDirt.Id ? runtimeDirt : id == runtimeStone.Id ? runtimeStone : null;
+        var inventory = new Nyangbingo.Inventory.Inventory(FindItem, 10);
+        Require(inventory.TryAdd(runtimeDirt.Id, 2) &&
+                inventory.TryAdd(runtimeStone.Id, 3) &&
+                inventory.TrySwapSlots(1, 7) &&
+                inventory.Slots[1].amount == 0 &&
+                inventory.Slots[7].itemId == runtimeStone.Id &&
+                inventory.Slots[7].amount == 3 &&
+                !inventory.TrySwapSlots(7, 7),
+            "Shift-click inventory reordering must move stacks into and out of the first eight hotbar slots.");
+        var craftingSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        Require(craftingSource.Contains("TrySwapSlots(sourceIndex, index)") &&
+                craftingSource.Contains("Shift+다른 슬롯 클릭: 위치 교환") &&
+                !craftingSource.Contains("앞 8칸은 퀵슬롯") &&
+                craftingSource.Contains("\"HotbarShortcut\"") &&
+                craftingSource.Contains("shortcut.text = (index + 1).ToString()") &&
+                craftingSource.Contains("shortcutRect.anchorMin = Vector2.zero") &&
+                craftingSource.Contains("shortcutRect.anchorMax = Vector2.one") &&
+                !craftingSource.Contains("gameplayArtCatalog?.InventorySlotTopSelected") &&
+                craftingSource.Contains("F1 · 인벤토리") &&
+                paletteSource.Contains("설치 거리가 너무 멉니다") &&
+                !paletteSource.Contains("설치 거리가 너무 멉니다 · 최대") &&
+                paletteSource.Contains("퀵슬롯에서 선택할 수 없습니다") &&
+                !paletteSource.Contains("퀵슬롯에서 설치할 수 없습니다") &&
+                playerSource.Contains("채굴 도구 등급 부족") &&
+                playerSource.Contains("RaiseMiningTargetChanged"),
+            "Hotbar reordering, placement failures, mining target highlight, and hardness feedback must be visible.");
     }
 
     private static void TestIceStorageSealCoreLifecycle()
