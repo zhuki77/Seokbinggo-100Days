@@ -31,6 +31,18 @@ namespace Nyangbingo.World
         private bool explicitlyMoving;
         private bool configured;
 
+        public SpriteRenderer Renderer => spriteRenderer;
+
+        public static float CalculateGroundedVisualLocalY(
+            CircleCollider2D movementCollider, SpriteRenderer renderer)
+        {
+            if (movementCollider == null) return 0f;
+            var colliderBottom = movementCollider.offset.y - movementCollider.radius;
+            if (renderer?.sprite == null) return colliderBottom;
+            var spriteBottom = renderer.sprite.bounds.min.y * renderer.transform.localScale.y;
+            return colliderBottom - spriteBottom;
+        }
+
         public void Configure(CharacterArtCatalog.Entry artEntry, int sortingOrder)
         {
             entry = artEntry;
@@ -49,8 +61,11 @@ namespace Nyangbingo.World
         public void SetFacing(Vector2 direction)
         {
             if (!configured || spriteRenderer == null || Mathf.Abs(direction.x) <= Mathf.Epsilon) return;
-            spriteRenderer.flipX = entry.SourceFacesRight ? direction.x < 0f : direction.x > 0f;
+            spriteRenderer.flipX = ShouldFlipX(entry.SourceFacesRight, direction.x);
         }
+
+        public static bool ShouldFlipX(bool sourceFacesRight, float directionX) =>
+            sourceFacesRight ? directionX < 0f : directionX > 0f;
 
         public void SetMoving(bool moving)
         {
@@ -145,7 +160,7 @@ namespace Nyangbingo.World
             // correction can move the body by tiny alternating X deltas while idle, so only infer
             // facing from transform movement for actors that do not supply that explicit state.
             if (!hasExplicitMovementState && Mathf.Abs(delta.x) > Mathf.Epsilon)
-                spriteRenderer.flipX = entry.SourceFacesRight ? delta.x < 0f : delta.x > 0f;
+                spriteRenderer.flipX = ShouldFlipX(entry.SourceFacesRight, delta.x);
 
             if (deathLocked)
             {

@@ -67,7 +67,7 @@ namespace Nyangbingo.Debugging
             }
 
             var worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            lastHoverCell = new Vector3Int(Mathf.FloorToInt(worldPoint.x), Mathf.FloorToInt(worldPoint.y), 0);
+            lastHoverCell = harness.TileService.WorldToCell(worldPoint);
             hasHoverCell = true;
 
             if (Input.GetKeyDown(setCoreKey)) sealSystem.SetSealCoreCell(lastHoverCell);

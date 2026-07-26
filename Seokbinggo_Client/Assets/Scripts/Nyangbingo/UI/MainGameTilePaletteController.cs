@@ -32,9 +32,12 @@ namespace Nyangbingo.UI
         public const float PaletteLogicalWidth = 240f;
         public const float PaletteLogicalHeight = 34f;
         public const float SlotPixelSize = 27f;
+        public const float BottomStatusBaseY = 42f;
+        public const float BottomStatusLineHeight = 18f;
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
         public const int ShortcutSlotCount = 8;
+        public const float PlacementReachTiles = 1.5f;
 
         private static int escapeConsumedFrame = -1;
         private static bool foregroundPlacementActive;
@@ -54,9 +57,11 @@ namespace Nyangbingo.UI
         private RectTransform content;
         private GameShellController shell;
         private Camera worldCamera;
+        private Transform playerTransform;
         private MainGameEnvironmentState environmentState;
         private WorldRangeOverlayRenderer rangeOverlayRenderer;
         private Text rangeToggleStatusText;
+        private Text interactionPromptText;
         private SpriteRenderer foregroundPreview;
         private string selectedItemId = string.Empty;
         private int selectedSlotIndex = -1;
@@ -65,6 +70,7 @@ namespace Nyangbingo.UI
         private bool foregroundPlacementValid;
         private bool rangeOverlaysVisible;
         private float rangeToggleStatusUntil;
+        private bool productPlacementWasActive;
         private bool initialized;
 
         public static bool BlocksGameplayInput => foregroundPlacementActive;
@@ -96,6 +102,20 @@ namespace Nyangbingo.UI
         public static bool IsDirectUseHotbarItem(string itemId) =>
             string.Equals(itemId, PlayerHealthRecoveryService.CatnipItemId, StringComparison.Ordinal);
 
+        public static bool IsHotbarSelectable(ItemDefinition item, IEnumerable<RecipeDefinition> recipes) =>
+            item != null &&
+            (IsDirectUseHotbarItem(item.Id) ||
+             MainGameCraftingUiController.IsInventoryItemPlaceable(item, recipes));
+
+        public static bool ShouldHighlightSlot(
+            int slotIndex, int selectedIndex, string selectedItemId) =>
+            !string.IsNullOrEmpty(selectedItemId) && slotIndex == selectedIndex;
+
+        public static bool ShouldClearEndedProductSelection(
+            bool wasActive, bool isActive, bool foregroundActive, string selectedItemId) =>
+            wasActive && !isActive && !foregroundActive &&
+            !IsDirectUseHotbarItem(selectedItemId);
+
         public bool TryBeginPlacement(string itemId)
         {
             if (!initialized || string.IsNullOrEmpty(itemId) ||
@@ -116,7 +136,7 @@ namespace Nyangbingo.UI
                 if (!MainGameCraftingUiController.IsInventoryItemPlaceable(item, gameDataCatalog.Recipes) ||
                     placementRuntime == null || !placementRuntime.BeginPlacementPreview(itemId))
                 {
-                    selectedItemId = string.Empty;
+                    ClearSelectedSlot();
                     RefreshSlotVisuals();
                     return false;
                 }
@@ -134,6 +154,7 @@ namespace Nyangbingo.UI
                 }
             }
 
+            productPlacementWasActive = placementRuntime?.IsPlacementPreviewActive == true;
             RefreshSlotVisuals();
             return true;
         }
@@ -163,6 +184,10 @@ namespace Nyangbingo.UI
                 return true;
             }
 
+            var selectedItem = gameDataCatalog?.FindItem(itemId);
+            ShowPaletteStatus(selectedItem != null
+                ? $"{selectedItem.DisplayName}은(는) 퀵슬롯에서 선택할 수 없습니다."
+                : "이 아이템은 퀵슬롯에서 사용할 수 없습니다.");
             // 설치 불가 아이템이거나 배치 실패여도 해당 칸 선택은 유지한다(빈손 배치).
             SelectEmptySlot(slotIndex);
             return selectedSlotIndex == slotIndex;
@@ -191,6 +216,7 @@ namespace Nyangbingo.UI
             runtimeServices ??= FindAnyObjectByType<MainGameRuntimeServices>();
             placementRuntime ??= FindAnyObjectByType<MainGameTurretRuntime>();
             environmentState = FindAnyObjectByType<MainGameEnvironmentState>();
+            playerTransform = FindAnyObjectByType<MainGamePlayerController>()?.transform;
             shell = FindAnyObjectByType<GameShellController>();
             worldCamera = Camera.main;
             if (gameDataCatalog == null || bootstrap == null || runtimeServices == null ||
@@ -219,6 +245,9 @@ namespace Nyangbingo.UI
                                   !MainGameCraftingUiController.BlocksGameplayInput;
             if (paletteRoot != null && paletteRoot.activeSelf != gameplayVisible)
                 paletteRoot.SetActive(gameplayVisible);
+
+            SynchronizeProductPlacementSelection();
+            RefreshBottomStatusStacking();
 
             if (gameplayVisible && Time.timeScale > 0f && Input.GetKeyDown(RangeToggleKey))
             {
@@ -325,8 +354,8 @@ namespace Nyangbingo.UI
             statusObject.transform.SetParent(transform, false);
             var statusRect = (RectTransform)statusObject.transform;
             statusRect.anchorMin = statusRect.anchorMax = statusRect.pivot = new Vector2(.5f, 0f);
-            statusRect.anchoredPosition = new Vector2(0f, 42f);
-            statusRect.sizeDelta = new Vector2(PaletteLogicalWidth, 18f);
+            statusRect.anchoredPosition = new Vector2(0f, BottomStatusBaseY);
+            statusRect.sizeDelta = new Vector2(PaletteLogicalWidth, BottomStatusLineHeight);
             rangeToggleStatusText = statusObject.GetComponent<Text>();
             rangeToggleStatusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             rangeToggleStatusText.fontSize = 9;
@@ -334,6 +363,22 @@ namespace Nyangbingo.UI
             rangeToggleStatusText.color = Color.white;
             rangeToggleStatusText.raycastTarget = false;
             rangeToggleStatusText.gameObject.SetActive(false);
+
+            var promptObject = new GameObject(
+                "PlacedObjectInteractionPrompt", typeof(RectTransform), typeof(Text));
+            promptObject.transform.SetParent(transform, false);
+            var promptRect = (RectTransform)promptObject.transform;
+            promptRect.anchorMin = promptRect.anchorMax = promptRect.pivot = new Vector2(.5f, 0f);
+            promptRect.anchoredPosition = new Vector2(0f, BottomStatusBaseY);
+            promptRect.sizeDelta = new Vector2(PaletteLogicalWidth, BottomStatusLineHeight);
+            interactionPromptText = promptObject.GetComponent<Text>();
+            interactionPromptText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            interactionPromptText.fontSize = 9;
+            interactionPromptText.alignment = TextAnchor.MiddleCenter;
+            interactionPromptText.color = Color.white;
+            interactionPromptText.raycastTarget = false;
+            interactionPromptText.text = string.Empty;
+            placementRuntime?.BindInteractionStatus(interactionPromptText);
         }
 
         private void RefreshPalette()
@@ -354,7 +399,7 @@ namespace Nyangbingo.UI
                 !string.IsNullOrEmpty(selectedItemId) &&
                 !string.Equals(paletteItemIds[selectedSlotIndex], selectedItemId, StringComparison.Ordinal))
             {
-                selectedItemId = string.Empty;
+                ClearSelectedSlot();
                 placementRuntime?.CancelPlacementPreview();
                 CancelForegroundPlacement(clearSelection: false);
             }
@@ -493,7 +538,8 @@ namespace Nyangbingo.UI
                 if (view?.Button == null) continue;
                 if (index < paletteItemIds.Count) view.ItemId = paletteItemIds[index];
                 var isEmpty = string.IsNullOrEmpty(view.ItemId);
-                var selected = view.SlotIndex == selectedSlotIndex;
+                var selected = ShouldHighlightSlot(
+                    view.SlotIndex, selectedSlotIndex, selectedItemId);
                 var background = view.Button.targetGraphic as Image;
                 if (background != null)
                 {
@@ -554,9 +600,28 @@ namespace Nyangbingo.UI
         {
             placementRuntime?.CancelPlacementPreview();
             CancelForegroundPlacement(clearSelection: false);
-            selectedItemId = string.Empty;
+            ClearSelectedSlot();
             runtimeServices?.ActiveSlot?.SelectBareHands();
             RefreshSlotVisuals();
+        }
+
+        private void SynchronizeProductPlacementSelection()
+        {
+            var productPlacementActive = placementRuntime?.IsPlacementPreviewActive == true;
+            if (ShouldClearEndedProductSelection(
+                    productPlacementWasActive, productPlacementActive,
+                    IsForegroundPlacementActive, selectedItemId))
+            {
+                ClearSelectedSlot();
+                RefreshSlotVisuals();
+            }
+            productPlacementWasActive = productPlacementActive;
+        }
+
+        private void ClearSelectedSlot()
+        {
+            selectedItemId = string.Empty;
+            selectedSlotIndex = -1;
         }
 
         private void BeginForegroundPlacement(string itemId)
@@ -579,11 +644,23 @@ namespace Nyangbingo.UI
             var position = worldCamera != null
                 ? worldCamera.ScreenToWorldPoint(Input.mousePosition)
                 : Vector3.zero;
-            foregroundPlacementCell = new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
-            foregroundPreview.transform.position = new Vector3(foregroundPlacementCell.x + .5f,
-                foregroundPlacementCell.y + .5f, 0f);
             var tileService = bootstrap?.TileService;
+            foregroundPlacementCell = tileService != null
+                ? tileService.WorldToCell(position)
+                : new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+            var cellCenter = tileService != null
+                ? tileService.GetCellCenterWorld(foregroundPlacementCell)
+                : new Vector3(foregroundPlacementCell.x + .5f, foregroundPlacementCell.y + .5f, 0f);
+            foregroundPreview.transform.position = AlignSpriteBoundsToCellCenter(
+                foregroundPreview.sprite, cellCenter);
+            var withinReach = playerTransform != null &&
+                              IsWithinPlacementReach(
+                                  playerTransform.position,
+                                  tileService?.GetCellWorldBounds(foregroundPlacementCell) ??
+                                  new Bounds(cellCenter, new Vector3(1f, 1f, 0f)),
+                                  PlacementReachTiles);
             foregroundPlacementValid = tileService != null &&
+                                       withinReach &&
                                        (IsWallpaper(foregroundPlacementItemId)
                                            ? bootstrap.Session?.BackgroundPlacement?.CanPlaceWallpaper(
                                                foregroundPlacementCell) == true
@@ -597,7 +674,26 @@ namespace Nyangbingo.UI
 
         private void ConfirmForegroundPlacement()
         {
-            if (!foregroundPlacementValid) return;
+            if (!foregroundPlacementValid)
+            {
+                var reachTileService = bootstrap?.TileService;
+                var center = reachTileService != null
+                    ? reachTileService.GetCellCenterWorld(foregroundPlacementCell)
+                    : new Vector3(
+                        foregroundPlacementCell.x + .5f,
+                        foregroundPlacementCell.y + .5f,
+                        0f);
+                var withinReach = playerTransform != null &&
+                                  IsWithinPlacementReach(
+                                      playerTransform.position,
+                                      reachTileService?.GetCellWorldBounds(foregroundPlacementCell) ??
+                                      new Bounds(center, new Vector3(1f, 1f, 0f)),
+                                      PlacementReachTiles);
+                ShowPaletteStatus(withinReach
+                    ? "붉은 위치에는 블럭을 설치할 수 없습니다."
+                    : "설치 거리가 너무 멉니다.");
+                return;
+            }
             var tileService = bootstrap?.TileService;
             if (tileService == null) return;
             var placed = IsWallpaper(foregroundPlacementItemId)
@@ -618,7 +714,7 @@ namespace Nyangbingo.UI
             foregroundPlacementActive = false;
             foregroundPlacementItemId = string.Empty;
             foregroundPlacementValid = false;
-            if (clearSelection) selectedItemId = string.Empty;
+            if (clearSelection) ClearSelectedSlot();
             RefreshSlotVisuals();
         }
 
@@ -641,7 +737,9 @@ namespace Nyangbingo.UI
         {
             if (worldCamera == null) return false;
             var position = worldCamera.ScreenToWorldPoint(Input.mousePosition);
-            var cell = new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+            var cell = bootstrap?.TileService != null
+                ? bootstrap.TileService.WorldToCell(position)
+                : new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
             var placement = bootstrap?.Session?.BackgroundPlacement;
             if (placement == null || !placement.GetBackgroundState(cell).HasWallpaper) return false;
             if (!placement.TryRemoveWallpaper(cell)) return false;
@@ -677,9 +775,11 @@ namespace Nyangbingo.UI
             {
                 var rx = ReadGlobalFloat(GlobalKeys.SealWindowRadiusX, 28f);
                 var ry = ReadGlobalFloat(GlobalKeys.SealWindowRadiusY, 12f);
+                var coreCenter = bootstrap?.TileService != null
+                    ? (Vector2)bootstrap.TileService.GetCellCenterWorld(coreCell.Value)
+                    : new Vector2(coreCell.Value.x + .5f, coreCell.Value.y + .5f);
                 rangeOverlays.Add(new WorldRangeOverlay(
-                    new Vector2(coreCell.Value.x + .5f, coreCell.Value.y + .5f),
-                    rx, ry, WorldRangeShape.AxisAlignedRect));
+                    coreCenter, rx, ry, WorldRangeShape.AxisAlignedRect));
             }
             rangeOverlayRenderer.SetVisible(true);
             rangeOverlayRenderer.Render(rangeOverlays);
@@ -688,14 +788,72 @@ namespace Nyangbingo.UI
 
         private void ShowRangeToggleStatus(int visibleRangeCount)
         {
-            if (rangeToggleStatusText == null) return;
-            rangeToggleStatusText.text = !rangeOverlaysVisible
+            ShowPaletteStatus(!rangeOverlaysVisible
                 ? "R  ·  ○"
                 : visibleRangeCount > 0
                     ? $"R  ·  ●  ·  {visibleRangeCount}"
-                    : "R  ·  ●  ·  0";
+                    : "R  ·  ●  ·  0");
+        }
+
+        private void ShowPaletteStatus(string message)
+        {
+            if (rangeToggleStatusText == null || string.IsNullOrWhiteSpace(message)) return;
+            rangeToggleStatusText.text = message;
             rangeToggleStatusText.gameObject.SetActive(true);
             rangeToggleStatusUntil = Time.unscaledTime + 2f;
+            RefreshBottomStatusStacking();
+        }
+
+        public static float ResolveBottomStatusY(bool interactionPromptVisible) =>
+            BottomStatusBaseY + (interactionPromptVisible ? BottomStatusLineHeight : 0f);
+
+        private void RefreshBottomStatusStacking()
+        {
+            if (rangeToggleStatusText == null) return;
+            var rect = rangeToggleStatusText.rectTransform;
+            var targetY = ResolveBottomStatusY(
+                placementRuntime?.IsBottomInteractionPromptVisible == true);
+            if (!Mathf.Approximately(rect.anchoredPosition.y, targetY))
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, targetY);
+        }
+
+        public static bool IsWithinPlacementReach(
+            Vector2 playerPosition, Vector3Int cell, float reachTiles)
+        {
+            if (reachTiles <= 0f || float.IsNaN(reachTiles) || float.IsInfinity(reachTiles) ||
+                float.IsNaN(playerPosition.x) || float.IsInfinity(playerPosition.x) ||
+                float.IsNaN(playerPosition.y) || float.IsInfinity(playerPosition.y))
+                return false;
+            var closest = new Vector2(
+                Mathf.Clamp(playerPosition.x, cell.x, cell.x + 1f),
+                Mathf.Clamp(playerPosition.y, cell.y, cell.y + 1f));
+            return (closest - playerPosition).sqrMagnitude <= reachTiles * reachTiles;
+        }
+
+        public static bool IsWithinPlacementReach(
+            Vector2 playerPosition, Bounds cellBounds, float reachTiles)
+        {
+            if (reachTiles <= 0f || float.IsNaN(reachTiles) || float.IsInfinity(reachTiles) ||
+                float.IsNaN(playerPosition.x) || float.IsInfinity(playerPosition.x) ||
+                float.IsNaN(playerPosition.y) || float.IsInfinity(playerPosition.y))
+                return false;
+            var closest = cellBounds.ClosestPoint(playerPosition);
+            return ((Vector2)closest - playerPosition).sqrMagnitude <= reachTiles * reachTiles;
+        }
+
+        public static Vector3 AlignSpriteBoundsToCellCenter(Sprite sprite, Vector3 cellCenter) =>
+            sprite != null ? cellCenter - sprite.bounds.center : cellCenter;
+
+        public static bool IsWithinPlacementReach(
+            Vector2 playerPosition, Vector2 placementPosition, float reachTiles)
+        {
+            if (reachTiles <= 0f || float.IsNaN(reachTiles) || float.IsInfinity(reachTiles) ||
+                float.IsNaN(playerPosition.x) || float.IsInfinity(playerPosition.x) ||
+                float.IsNaN(playerPosition.y) || float.IsInfinity(playerPosition.y) ||
+                float.IsNaN(placementPosition.x) || float.IsInfinity(placementPosition.x) ||
+                float.IsNaN(placementPosition.y) || float.IsInfinity(placementPosition.y))
+                return false;
+            return (placementPosition - playerPosition).sqrMagnitude <= reachTiles * reachTiles;
         }
 
         private void AppendCircularRanges(string definitionId, float radius)

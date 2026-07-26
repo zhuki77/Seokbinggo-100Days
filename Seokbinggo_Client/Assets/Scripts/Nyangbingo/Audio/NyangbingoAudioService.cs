@@ -173,6 +173,8 @@ namespace Nyangbingo.Audio
         public const int SfxChannelCount = 8;
         public const float CrossfadeSeconds = 2f;
         public const float GlobalOutputLinearGain = .2f;
+        public const float WallDamagedCueGain = .35f;
+        public const float WallDamagedCueMinimumIntervalSeconds = .12f;
         public const string BgmVolumeParameter = "BGMVolume";
         public const string SfxVolumeParameter = "SFXVolume";
         public const string BgmVolumePreferenceKey = "Nyangbingo.Audio.BgmVolume";
@@ -199,6 +201,7 @@ namespace Nyangbingo.Audio
         private float fadeElapsed = CrossfadeSeconds;
         private bool initialized;
         private AudioClip runtimeDayFallback;
+        private float lastWallDamagedCueTime = float.NegativeInfinity;
 
         public MusicTrack CurrentTrack { get; private set; } = MusicTrack.Title;
         public float BgmVolume { get; private set; } = 1f;
@@ -440,6 +443,13 @@ namespace Nyangbingo.Audio
             if (this == null || !initialized ||
                 !clipsByCue.TryGetValue(cue, out var clip) || clip == null)
                 return;
+            if (cue == AudioCue.WallDamaged)
+            {
+                if (Time.unscaledTime - lastWallDamagedCueTime <
+                    WallDamagedCueMinimumIntervalSeconds)
+                    return;
+                lastWallDamagedCueTime = Time.unscaledTime;
+            }
             EnsureSfxSourcePool();
             AudioSource selected = null;
             for (var i = 0; i < sfxSources.Length; i++)
@@ -460,8 +470,11 @@ namespace Nyangbingo.Audio
             ConfigureSourceFor2D(selected, loop: false);
             selected.volume = CalculateSourceVolume(SfxVolume, HasSfxMixerRouting);
             selected.pitch = 1f;
-            selected.PlayOneShot(clip, 1f);
+            selected.PlayOneShot(clip, ResolveCueGain(cue));
         }
+
+        public static float ResolveCueGain(AudioCue cue) =>
+            cue == AudioCue.WallDamaged ? WallDamagedCueGain : 1f;
 
         private void BuildClipIndex()
         {

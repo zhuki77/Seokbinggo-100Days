@@ -28,6 +28,8 @@ namespace Nyangbingo.World
     /// </summary>
     public sealed class DayNightService : MonoBehaviour, IGameSecondsSource, ISaveableTimeSource
     {
+        public const int DefaultSurvivalDayLimit = 100;
+
         [Header("Official day-curve.csv catalog")]
         [SerializeField] private GameDataCatalog gameDataCatalog;
 
@@ -46,7 +48,7 @@ namespace Nyangbingo.World
         [SerializeField] private bool startAtNight;
 
         [Header("HUD용 — 생존 목표 D-day 표시 기준 (기획 정본: '백일폭염' 세계관, 100일 — 5 UI UX v15 QA-E / 1 개요 기준으로 확정)")]
-        [Min(1)][SerializeField] private int survivalDayLimit = 100;
+        [Min(1)][SerializeField] private int survivalDayLimit = DefaultSurvivalDayLimit;
 
         private float gameSeconds;
         private float timeOfDayGameSeconds;
@@ -73,7 +75,10 @@ namespace Nyangbingo.World
         public GlobalSettings OfficialGlobals => globalSettings;
 
         /// <summary>D-100 HUD 표시용 — 생존 목표일까지 남은 날짜(도달/초과 시 0).</summary>
-        public int DaysRemaining => Mathf.Max(0, survivalDayLimit - day);
+        public int DaysRemaining => CalculateDaysRemaining(survivalDayLimit, day);
+
+        public static int CalculateDaysRemaining(int targetDay, int currentDay) =>
+            Mathf.Max(0, Mathf.Max(0, targetDay) - Mathf.Max(0, currentDay));
 
         /// <summary>다음 경계(밤 시작 또는 새벽)까지 남은 게임 시간(초).</summary>
         public float SecondsUntilNextTransition =>

@@ -41,7 +41,7 @@ MonoBehaviour:
   wallDamageIronWall: 0
   contactDamage: 14
   specialDescription: "\uB2EC\uAD70 \uCF67\uAE40: \uD654\uC5FC\uD0DC\uADF8 \uBD80\uCC44\uAF344\uD0C0\uC77C
-    10/\uCD08x2\uCD08\xB7\uCFE86\uCD08"
+    10/\uCD08x2\uCD08\xB7\uC5D0\uC5B4\uBCF84\uD0C0\uC77C\xB7\uCFE86\uCD08"
   telegraphSeconds: 1
   specialShape: 1
   specialRangeTiles: 4
@@ -49,7 +49,7 @@ MonoBehaviour:
   specialDamagePerHit: 10
   specialDurationSeconds: 2
   specialTickSeconds: 1
-  specialKnockbackTiles: 0
+  specialKnockbackTiles: 4
   specialCooldownSeconds: 6
   specialHasFireTag: 1
   specialAimLocks: 1

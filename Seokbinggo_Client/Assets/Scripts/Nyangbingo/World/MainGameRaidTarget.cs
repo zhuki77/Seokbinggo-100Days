@@ -15,7 +15,7 @@ namespace Nyangbingo.World
     [RequireComponent(typeof(Health))]
     public sealed class MainGameRaidTarget : MonoBehaviour, IYokaiTarget, IWallMaterialTarget, IYokaiCombatTarget,
         IYokaiLootTarget, IYokaiTheftReceiptSource, IYokaiCounterSource,
-        Nyangbingo.Bosses.IBossCombatTarget
+        IYokaiBarrierTarget, Nyangbingo.Bosses.IBossCombatTarget
     {
         [SerializeField] private YokaiWallMaterial wallMaterial = YokaiWallMaterial.Ice;
         private Inventory.Inventory playerInventory;
@@ -104,9 +104,40 @@ namespace Nyangbingo.World
         public void DamageWall(float amount)
         {
             if (amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount)) return;
+            var adjusted = AdjustWallDamageForPace(amount);
+            AccumulatedWallDamage += adjusted;
+            WallDamaged?.Invoke(adjusted);
+        }
+
+        public bool TryFindBlockingWall(Vector3 attackerPosition, float searchRange,
+            out Vector3Int wallCell, out YokaiWallMaterial material)
+        {
+            wallCell = default;
+            material = YokaiWallMaterial.Default;
+            return bootstrap?.TileService?.TryFindDamageableWall(
+                attackerPosition, transform.position, searchRange,
+                out wallCell, out material) == true;
+        }
+
+        public bool TryDamageBlockingWall(Vector3Int wallCell, float amount)
+        {
+            if (amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount) ||
+                bootstrap?.TileService == null)
+                return false;
+            var adjusted = AdjustWallDamageForPace(amount);
+            if (!bootstrap.TileService.TryDamageWall(
+                    wallCell, adjusted, out var appliedDamage, out _))
+                return false;
+            AccumulatedWallDamage += appliedDamage;
+            WallDamaged?.Invoke(appliedDamage);
+            return appliedDamage > 0f;
+        }
+
+        private float AdjustWallDamageForPace(float amount)
+        {
             var timeService = bootstrap?.TimeService;
             var sealSystem = bootstrap?.SealSystem;
-            var adjusted = timeService?.CurrentDayCurve != null && sealSystem != null
+            return timeService?.CurrentDayCurve != null && sealSystem != null
                 ? CalculatePaceAdjustedWallDamage(
                     amount,
                     timeService.CurrentDayCurve.PaceSealPercent,
@@ -114,8 +145,6 @@ namespace Nyangbingo.World
                     timeService.Day,
                     sealPenaltyStartDay)
                 : amount;
-            AccumulatedWallDamage += adjusted;
-            WallDamaged?.Invoke(adjusted);
         }
 
         public static float CalculatePaceAdjustedWallDamage(
@@ -148,13 +177,24 @@ namespace Nyangbingo.World
 
         public bool TryApplyBossSpecialDamage(int amount, Nyangbingo.Core.DamageTag tag,
             Vector2 knockback,
-            Nyangbingo.Core.DamageDelivery delivery = Nyangbingo.Core.DamageDelivery.Direct)
+            Nyangbingo.Core.DamageDelivery delivery = Nyangbingo.Core.DamageDelivery.Direct,
+            bool showFireHitEffect = true)
         {
             if (amount <= 0) return false;
             var health = GetComponent<Health>();
             if (health == null || health.IsDead) return false;
             var before = health.Current;
-            health.ApplyDamage(amount, tag, delivery);
+            if (!showFireHitEffect)
+                MainGameEffectPresenter.BeginSuppressPlayerFireHitEffect();
+            try
+            {
+                health.ApplyDamage(amount, tag, delivery);
+            }
+            finally
+            {
+                if (!showFireHitEffect)
+                    MainGameEffectPresenter.EndSuppressPlayerFireHitEffect();
+            }
             if (health.Current >= before) return false;
             if (knockback.sqrMagnitude > Mathf.Epsilon)
             {

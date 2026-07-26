@@ -5,6 +5,7 @@ using Nyangbingo.Core;
 using Nyangbingo.Crafting;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
+using Nyangbingo.UI;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -107,7 +108,12 @@ namespace Nyangbingo.World
                 return false;
             }
 
-            PlayerInventory = new Inventory.Inventory(gameDataCatalog.FindItem, inventorySlots);
+            PlayerInventory = new Inventory.Inventory(
+                gameDataCatalog.FindItem,
+                inventorySlots,
+                MainGameCraftingUiController.InventoryHotbarSlotCount,
+                itemId => MainGameTilePaletteController.IsHotbarSelectable(
+                    gameDataCatalog.FindItem(itemId), gameDataCatalog.Recipes));
             if (!inventoryRuntime.ConfigureForRuntime(PlayerInventory))
             {
                 Debug.LogError("[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 연결에 실패했습니다.");
@@ -155,6 +161,7 @@ namespace Nyangbingo.World
 
             if (IsInitialized)
             {
+                GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled;
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
                           $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·휴대용 등불 Tick 소비자 6개 등록 완료.");
             }
@@ -270,6 +277,7 @@ namespace Nyangbingo.World
         private void OnDestroy()
         {
             IsInitialized = false;
+            GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
             PortableLantern?.Dispose();
             PortableLantern = null;
             PlayerHealthRecovery?.Dispose();
@@ -293,6 +301,20 @@ namespace Nyangbingo.World
                     bootstrap.TickDriver.Unregister(consumer);
             }
             registered.Clear();
+        }
+
+        private void HandleRecipeUnlockYokaiKilled(YokaiDefinition definition)
+        {
+            if (definition == null || definition.Kind != YokaiKind.Gangcheori || RecipeBook == null) return;
+            var recipe = gameDataCatalog?.FindRecipe(RecipeUnlockPolicy.GangcheoriUnlockRecipeId);
+            if (recipe == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: 강철이 처치 해금 레시피가 없습니다.");
+                return;
+            }
+            if (RecipeBook.IsUnlocked(recipe)) return;
+            RecipeBook.Unlock(recipe.Id);
+            Debug.Log($"[Nyangbingo] 강철이 최초 처치로 제작법을 해금했습니다: {recipe.Output.item.DisplayName}.");
         }
 
         private bool TryReadPositiveGlobal(string key, out float value)

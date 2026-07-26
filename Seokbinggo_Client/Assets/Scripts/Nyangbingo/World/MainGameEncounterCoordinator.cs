@@ -21,7 +21,6 @@ namespace Nyangbingo.World
         IRegularSpawnController, IForcedBossSpawnController, IBaekjungSpawnController
     {
         private const float BossScale = 2f;
-        private const float GroundBossVisualLift = .5f;
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
@@ -359,8 +358,11 @@ namespace Nyangbingo.World
             bossObject.transform.position = position;
             var health = bossObject.AddComponent<Health>();
             var collider = bossObject.AddComponent<CircleCollider2D>();
-            var movementColliderScale =
-                locomotion == WorldMobLocomotion.Flying ? BossScale : 1f;
+            // The boss root is enlarged for presentation. Divide every movement collider by
+            // that scale so the world-space radius remains the value returned by
+            // PhysicalRadiusForBoss; otherwise grounded bosses become 1.3 tiles wide and
+            // continuously detect ordinary terrain as a step obstacle.
+            var movementColliderScale = BossScale;
             collider.radius =
                 WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind) /
                 movementColliderScale;
@@ -382,15 +384,16 @@ namespace Nyangbingo.World
             }
             var visualObject = new GameObject("Visual");
             visualObject.transform.SetParent(bossObject.transform, false);
-            if (locomotion == WorldMobLocomotion.Grounded)
-                visualObject.transform.localPosition =
-                    Vector3.up * (GroundBossVisualLift / BossScale);
             var bossRenderer = visualObject.AddComponent<SpriteRenderer>();
             visualObject.AddComponent<RuntimeSpriteBoundsHurtbox>().Configure(bossRenderer);
             var bossArtId = definition.Kind == BossKind.Imugi ? "imugi" : definition.Id;
             var bossArt = characterArtCatalog != null ? characterArtCatalog.Find(bossArtId) : null;
             if (bossArt?.Sprite == null)
                 RuntimePlaceholderVisual.Configure(bossRenderer, new Color(1f, .25f, .2f), 1.3f, 15);
+            if (locomotion == WorldMobLocomotion.Grounded)
+                visualObject.transform.localPosition = Vector3.up *
+                    RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
+                        collider, bossRenderer);
             bossObject.AddComponent<RuntimeDamageFlash>();
             bossObject.AddComponent<RuntimeWorldDamagePopup>();
             health.ConfigureForRuntime(definition.HitPoints);
@@ -915,7 +918,7 @@ namespace Nyangbingo.World
                                  bootstrap.TimeService.Day * 31 ^
                                  (int)kind * 7919);
             var selected = candidates[new System.Random(seed).Next(candidates.Count)];
-            position = new Vector3(selected.x + .5f, selected.y + .5f, 0f);
+            position = tileService.GetCellCenterWorld(selected);
             return true;
         }
 
@@ -976,7 +979,8 @@ namespace Nyangbingo.World
             var tileService = bootstrap.TileService;
             var centerX = Mathf.Clamp(tileService.Width / 2, 1, tileService.Width - 2);
             var centerY = Mathf.Clamp(Mathf.RoundToInt(tileService.Height * .82f), 2, tileService.Height - 2);
-            raidTarget.transform.position = new Vector3(centerX + .5f, centerY + .5f, 0f);
+            raidTarget.transform.position =
+                tileService.GetCellCenterWorld(new Vector3Int(centerX, centerY, 0));
             runtimeServices.PlayerTemperature.SetTrackedTransform(raidTarget.transform);
             if (!restoringSnapshot)
             {
@@ -1172,11 +1176,19 @@ namespace Nyangbingo.World
             collider.radius = .42f;
             yokaiObject.AddComponent<Rigidbody2D>();
             var physicsBody = yokaiObject.AddComponent<WorldMobPhysicsBody>();
-            physicsBody.ConfigureForRuntime(WorldMobPhysicsBody.ForYokai(definition.Kind), bootstrap.TileService);
+            var locomotion = WorldMobPhysicsBody.ForYokai(definition.Kind);
+            physicsBody.ConfigureForRuntime(
+                locomotion,
+                bootstrap.TileService,
+                material => definition.WallDamageFor(material) > 0f);
             physicsBody.IgnoreCollisionWith(raidTarget.transform);
             var usesEoduksiniPresentation = definition.Kind == YokaiKind.Eoduksini;
-            var visualObject = usesEoduksiniPresentation ? new GameObject("Visual") : yokaiObject;
-            if (usesEoduksiniPresentation) visualObject.transform.SetParent(yokaiObject.transform, false);
+            var usesGroundedVisualRoot = locomotion == WorldMobLocomotion.Grounded;
+            var visualObject = usesEoduksiniPresentation || usesGroundedVisualRoot
+                ? new GameObject("Visual")
+                : yokaiObject;
+            if (visualObject != yokaiObject)
+                visualObject.transform.SetParent(yokaiObject.transform, false);
             var yokaiRenderer = visualObject.AddComponent<SpriteRenderer>();
             var yokaiArt = characterArtCatalog != null
                 ? characterArtCatalog.Find(definition.Id)
@@ -1184,6 +1196,10 @@ namespace Nyangbingo.World
             if (yokaiArt?.Sprite == null)
                 RuntimePlaceholderVisual.Configure(yokaiRenderer,
                     raid ? new Color(1f, .45f, .8f) : new Color(.8f, .35f, 1f), .8f, 10);
+            if (usesGroundedVisualRoot)
+                visualObject.transform.localPosition = Vector3.up *
+                    RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
+                        collider, yokaiRenderer);
             yokaiObject.AddComponent<RuntimeDamageFlash>();
             yokaiObject.AddComponent<RuntimeWorldDamagePopup>();
             var brain = yokaiObject.AddComponent<YokaiBrain>();
@@ -1274,7 +1290,7 @@ namespace Nyangbingo.World
         {
             position = default;
             if (bootstrap?.TileService == null || raidTarget == null) return false;
-            var center = Vector3Int.FloorToInt(raidTarget.transform.position);
+            var center = bootstrap.TileService.WorldToCell(raidTarget.transform.position);
             var maximumRange = Mathf.Max(minimumSpawnRange, maximumSpawnRange);
             var candidates = locomotion == WorldMobLocomotion.Grounded
                 ? bootstrap.TileService.GetValidSurfaceSpawnPositions(
@@ -1283,7 +1299,7 @@ namespace Nyangbingo.World
                     center, minimumSpawnRange, maximumRange);
             if (candidates.Count == 0) return false;
             var cell = candidates[spawnSequence % candidates.Count];
-            position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+            position = bootstrap.TileService.GetCellCenterWorld(cell);
             return true;
         }
 

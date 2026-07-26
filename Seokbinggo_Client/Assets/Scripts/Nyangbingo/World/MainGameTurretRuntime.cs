@@ -20,6 +20,8 @@ namespace Nyangbingo.World
     public sealed class MainGameTurretRuntime : MonoBehaviour, IGameSecondsTickable
     {
         public const bool ProductHudNarrativeTextEnabled = false;
+        public const string NearbyInteractionPrompt =
+            "E · 상호작용    Shift+E · 회수";
 
         private sealed class TurretEntry
         {
@@ -121,6 +123,7 @@ namespace Nyangbingo.World
         private MainGameCraftingUiController productCraftingUi;
         private BossManager bossManager;
         private GameObject placementPreview;
+        private Transform placementPreviewVisual;
         private SpriteRenderer placementPreviewRenderer;
         private LineRenderer placementRangeRenderer;
         private Material placementRangeMaterial;
@@ -138,6 +141,7 @@ namespace Nyangbingo.World
         public IReadOnlyList<CounterAura> ActiveCounterAuras => activeCounterAuras;
         public bool IsPlacementPreviewActive => placementPreview != null;
         public bool IsPlacementPreviewValid => IsPlacementPreviewActive && placementValid;
+        public bool IsBottomInteractionPromptVisible { get; private set; }
         public static bool BlocksCombatInput => anyPlacementPreviewActive ||
                                                 placementPointerConsumedFrame == Time.frameCount;
         public static bool ConsumedEscapeThisFrame => placementEscapeConsumedFrame == Time.frameCount;
@@ -162,10 +166,22 @@ namespace Nyangbingo.World
             playerController = player;
         }
 
-        public void BindInteractionStatus(Text statusText) => interactionStatusText = statusText;
+        public void BindInteractionStatus(Text statusText)
+        {
+            if (interactionStatusText != null && interactionStatusText != statusText)
+            {
+                interactionStatusText.text = string.Empty;
+                interactionStatusText.gameObject.SetActive(false);
+            }
+            interactionStatusText = statusText;
+            if (interactionStatusText != null)
+                interactionStatusText.gameObject.SetActive(true);
+            ConfigureBottomInteractionStatus();
+        }
 
         private void Start()
         {
+            ConfigureBottomInteractionStatus();
             projectilePool = new HomingProjectilePool(4);
             craftingStationUi = FindAnyObjectByType<MainGameBossSummonUiController>();
             productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
@@ -278,7 +294,10 @@ namespace Nyangbingo.World
             placementPreview = new GameObject($"{definitionId}PlacementPreview");
             placementCamera = Camera.main;
             anyPlacementPreviewActive = true;
-            placementPreviewRenderer = placementPreview.AddComponent<SpriteRenderer>();
+            var visualObject = new GameObject("Art");
+            visualObject.transform.SetParent(placementPreview.transform, false);
+            placementPreviewVisual = visualObject.transform;
+            placementPreviewRenderer = visualObject.AddComponent<SpriteRenderer>();
             placementPreviewRenderer.sortingOrder = 30;
             placementPreviewRenderer.sprite = buildingArtCatalog?.Find(definitionId)?.Sprite;
             if (placementPreviewRenderer.sprite == null)
@@ -315,7 +334,13 @@ namespace Nyangbingo.World
         {
             if (!IsPlacementPreviewActive || !placementValid)
             {
-                ShowMessage("붉은 미리보기 위치에는 설치할 수 없습니다.");
+                var withinReach = playerController != null &&
+                                  MainGameTilePaletteController.IsWithinPlacementReach(
+                                      playerController.transform.position, placementPosition,
+                                      MainGameTilePaletteController.PlacementReachTiles);
+                ShowMessage(withinReach
+                    ? "붉은 미리보기 위치에는 설치할 수 없습니다."
+                    : "설치 거리가 너무 멉니다.");
                 return false;
             }
             var placed = TryPlaceTurretAt(placementPosition);
@@ -328,6 +353,7 @@ namespace Nyangbingo.World
             if (placementPreview != null) Destroy(placementPreview);
             if (placementRangeMaterial != null) Destroy(placementRangeMaterial);
             placementPreview = null;
+            placementPreviewVisual = null;
             placementPreviewRenderer = null;
             placementRangeRenderer = null;
             placementRangeMaterial = null;
@@ -400,10 +426,23 @@ namespace Nyangbingo.World
             else
                 placementPosition = (Vector2)playerController.transform.position +
                                     playerController.HorizontalFacingDirection * 2f;
-            placementPosition = new Vector2(Mathf.Floor(placementPosition.x) + .5f,
-                Mathf.Floor(placementPosition.y) + .5f);
+            var tileService = environmentState?.TileService;
+            var placementCell = tileService != null
+                ? tileService.WorldToCell(placementPosition)
+                : new Vector3Int(Mathf.FloorToInt(placementPosition.x),
+                    Mathf.FloorToInt(placementPosition.y), 0);
+            placementPosition = tileService != null
+                ? (Vector2)tileService.GetCellCenterWorld(placementCell)
+                : new Vector2(placementCell.x + .5f, placementCell.y + .5f);
             placementPreview.transform.position = placementPosition;
-            placementValid = environmentState.CanPlaceDefinitionAt(
+            if (placementPreviewVisual != null)
+                placementPreviewVisual.localPosition = Vector3.zero;
+            tileService?.AlignSpriteBoundsToCellBase(
+                placementPreviewRenderer, placementCell);
+            placementValid = MainGameTilePaletteController.IsWithinPlacementReach(
+                                 playerController.transform.position, placementPosition,
+                                 MainGameTilePaletteController.PlacementReachTiles) &&
+                             environmentState.CanPlaceDefinitionAt(
                                  placementDefinitionId, placementPosition) &&
                              GetInventoryCount(placementDefinitionId) > 0;
             var color = placementValid ? new Color(.35f, 1f, .75f, .65f) : new Color(1f, .25f, .25f, .65f);
@@ -613,33 +652,33 @@ namespace Nyangbingo.World
             if (bossManager?.IsBossActive == true)
             {
                 interactionStatusText.text = string.Empty;
+                IsBottomInteractionPromptVisible = false;
                 return;
             }
-            if (TryGetNearestPlacedObject(out var record))
+            if (TryGetNearestPlacedObject(out _))
             {
-                var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
-                if (craftingStation != CraftingStation.None)
-                    interactionStatusText.text = "E  ·  ⇧E";
-                else if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
-                    interactionStatusText.text = $"{turret.Controller.FuelRemaining:0}  ·  E  ·  ⇧E";
-                else if (IsInstalledLanternDefinition(record.definitionId) &&
-                         lanterns.TryGetValue(record.objectId, out var lantern))
-                    interactionStatusText.text = $"{lantern.FuelRemaining:0}  ·  E  ·  ⇧E";
-                else if (record.definitionId == JangdokStorageRuntime.DefinitionId)
-                    interactionStatusText.text = "40  ·  E  ·  ⇧E";
-                else if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
-                             out var capPercent, out var active))
-                {
-                    var lifetime = float.IsPositiveInfinity(remaining) ? "∞" : $"{remaining:0}";
-                    interactionStatusText.text = $"{capPercent:0}%  ·  {(active ? lifetime : "0")}  ·  E  ·  ⇧E";
-                }
-                else
-                    interactionStatusText.text = "E  ·  ⇧E";
+                interactionStatusText.text = NearbyInteractionPrompt;
+                IsBottomInteractionPromptVisible = true;
                 return;
             }
             interactionStatusText.text = IsPlacementPreviewActive
-                ? $"{(placementValid ? "✓  ·  LMB" : "✕")}  ·  ESC/RMB"
+                ? $"{(placementValid ? "LMB · 설치" : "설치 불가")}    ESC/RMB · 취소"
                 : string.Empty;
+            IsBottomInteractionPromptVisible = !string.IsNullOrEmpty(interactionStatusText.text);
+        }
+
+        private void ConfigureBottomInteractionStatus()
+        {
+            if (interactionStatusText == null) return;
+            var rect = interactionStatusText.rectTransform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, MainGameTilePaletteController.BottomStatusBaseY);
+            rect.sizeDelta = new Vector2(MainGameTilePaletteController.PaletteLogicalWidth,
+                MainGameTilePaletteController.BottomStatusLineHeight);
+            rect.localScale = Vector3.one;
+            interactionStatusText.fontSize = 9;
+            interactionStatusText.alignment = TextAnchor.MiddleCenter;
+            interactionStatusText.raycastTarget = false;
         }
 
         private bool TryRegisterPlacedTurret(string objectId, int initialFuelUnits, out TurretEntry entry)

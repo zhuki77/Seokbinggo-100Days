@@ -230,14 +230,9 @@ namespace Nyangbingo.World
                 .BoundItemArtCatalog?.FindSprite(PlayerHealthRecoveryService.CatnipItemId);
             renderer.flipX = flipX;
             renderer.sortingOrder = 3;
-            if (renderer.sprite != null)
-                visual.transform.position = new Vector2(
-                    supportCell.x + .5f, ComputeSurfaceDecorationWorldY(supportCell.y, renderer.sprite));
-            else
-            {
-                visual.transform.position = new Vector2(supportCell.x + .5f, supportCell.y + 1.25f);
+            if (renderer.sprite == null)
                 RuntimePlaceholderVisual.Configure(renderer, new Color(.32f, .72f, .24f), .45f, 3);
-            }
+            AlignSurfaceVisual(renderer, supportCell);
             catnipPatches.Add(id, new CatnipPatch
             {
                 Id = id,
@@ -317,14 +312,9 @@ namespace Nyangbingo.World
             renderer.sprite = artCatalog.Find("hemp")?.Sprite;
             renderer.flipX = flipX;
             renderer.sortingOrder = 3;
-            if (renderer.sprite != null)
-                visual.transform.position = new Vector2(
-                    supportCell.x + .5f, ComputeSurfaceDecorationWorldY(supportCell.y, renderer.sprite));
-            else
-            {
-                visual.transform.position = new Vector2(supportCell.x + .5f, supportCell.y + 1.25f);
+            if (renderer.sprite == null)
                 RuntimePlaceholderVisual.Configure(renderer, new Color(.36f, .66f, .18f), .45f, 3);
-            }
+            AlignSurfaceVisual(renderer, supportCell);
             hempPatches.Add(id, new HempPatch
             {
                 Id = id,
@@ -553,9 +543,13 @@ namespace Nyangbingo.World
                 for (var height = 1; height <= 2; height++)
                 {
                     var candidateCell = tree.SupportCell + Vector3Int.up * height;
-                    var bounds = new Bounds(
-                        new Vector3(candidateCell.x + .5f, candidateCell.y + .5f, 0f),
-                        new Vector3(1f, 1f, 1f));
+                    var bounds = bootstrap?.TileService?.GetCellWorldBounds(candidateCell) ??
+                                 new Bounds(
+                                     new Vector3(
+                                         candidateCell.x + .5f,
+                                         candidateCell.y + .5f,
+                                         0f),
+                                     new Vector3(1f, 1f, 1f));
                     if (!bounds.IntersectRay(ray, out var distance) ||
                         distance < 0f || distance > nearestDistance)
                         continue;
@@ -598,9 +592,10 @@ namespace Nyangbingo.World
             {
                 if (!IsRebarAvailable(rebar) || rebar.Renderer == null) continue;
                 var cell = rebar.SupportCell;
-                var bounds = new Bounds(
-                    new Vector3(cell.x + .5f, cell.y + .5f, 0f),
-                    new Vector3(1f, 1f, 1f));
+                var bounds = bootstrap?.TileService?.GetCellWorldBounds(cell) ??
+                             new Bounds(
+                                 new Vector3(cell.x + .5f, cell.y + .5f, 0f),
+                                 new Vector3(1f, 1f, 1f));
                 if (!bounds.IntersectRay(ray, out var distance) ||
                     distance < 0f || distance > nearestDistance)
                     continue;
@@ -679,7 +674,6 @@ namespace Nyangbingo.World
                 chestCells.Add(chestCell);
                 var visual = new GameObject($"Chest_{chest.id}");
                 visual.transform.SetParent(decorationRoot, false);
-                visual.transform.position = new Vector2(chest.position.x + .5f, chest.position.y + .5f);
                 var renderer = visual.AddComponent<SpriteRenderer>();
                 renderer.sortingOrder = 11;
                 var opened = progress?.IsOpened(chest.id) == true;
@@ -688,6 +682,7 @@ namespace Nyangbingo.World
                 else
                     RuntimePlaceholderVisual.Configure(renderer,
                         opened ? new Color(.35f, .35f, .4f) : new Color(.85f, .58f, .16f), .75f, 11);
+                AlignVisualToCellBase(renderer, chestCell);
                 chestRenderers[chest.id] = renderer;
             }
         }
@@ -776,7 +771,9 @@ namespace Nyangbingo.World
                 if (tree.SupportCell != cell || tree.Harvested) continue;
                 var dropPosition = tree.Renderer != null
                     ? (Vector2)tree.Renderer.transform.position
-                    : new Vector2(cell.x + .5f, cell.y + 1.5f);
+                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
+                        cell + Vector3Int.up) ??
+                                new Vector3(cell.x + .5f, cell.y + 1f, 0f));
                 tree.Harvested = true;
                 if (tree.Renderer != null) tree.Renderer.gameObject.SetActive(false);
                 WorldItemDropRequest.Request(
@@ -787,7 +784,8 @@ namespace Nyangbingo.World
                 if (rebar.SupportCell != cell || rebar.Harvested) continue;
                 var dropPosition = rebar.Renderer != null
                     ? (Vector2)rebar.Renderer.transform.position
-                    : new Vector2(cell.x + .5f, cell.y + .5f);
+                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(cell) ??
+                                new Vector3(cell.x + .5f, cell.y, 0f));
                 rebar.Harvested = true;
                 if (rebar.Renderer != null) rebar.Renderer.gameObject.SetActive(false);
                 WorldItemDropRequest.Request(
@@ -803,7 +801,9 @@ namespace Nyangbingo.World
                 var shouldDrop = patch.HarvestedDay == 0;
                 var dropPosition = patch.Renderer != null
                     ? (Vector2)patch.Renderer.transform.position
-                    : new Vector2(cell.x + .5f, cell.y + 1.5f);
+                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
+                        cell + Vector3Int.up) ??
+                                new Vector3(cell.x + .5f, cell.y + 1f, 0f));
                 patch.HarvestedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
                 if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
                 if (shouldDrop)
@@ -817,7 +817,9 @@ namespace Nyangbingo.World
                 var shouldDrop = !patch.Harvested;
                 var dropPosition = patch.Renderer != null
                     ? (Vector2)patch.Renderer.transform.position
-                    : new Vector2(cell.x + .5f, cell.y + 1.5f);
+                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
+                        cell + Vector3Int.up) ??
+                                new Vector3(cell.x + .5f, cell.y + 1f, 0f));
                 patch.Harvested = true;
                 if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
                 if (shouldDrop)
@@ -908,9 +910,9 @@ namespace Nyangbingo.World
             var art = artCatalog.Find(id);
             if (art?.Sprite == null) return;
             // 전경 타일 비주얼 윗면(드롭과 동일 +0.5)에 스프라이트 하단(피벗 무관)을 맞춘다.
-            tree.Renderer = Spawn(id, art,
-                new Vector2(x + .5f, ComputeSurfaceDecorationWorldY(surfaceY, art.Sprite)),
+            tree.Renderer = Spawn(id, art, Vector2.zero,
                 random.Next(2) == 0, supportCell);
+            AlignSurfaceVisual(tree.Renderer, supportCell);
         }
 
         /// <summary>
@@ -921,6 +923,26 @@ namespace Nyangbingo.World
             var visibleSurfaceY = surfaceY + 1f + MainGameWorldDropRuntime.VisualSurfaceOffset;
             if (sprite == null) return visibleSurfaceY;
             return visibleSurfaceY - sprite.bounds.min.y;
+        }
+
+        private void AlignSurfaceVisual(SpriteRenderer spriteRenderer, Vector3Int supportCell) =>
+            AlignVisualToCellBase(spriteRenderer, supportCell + Vector3Int.up);
+
+        private void AlignVisualToCellBase(SpriteRenderer spriteRenderer, Vector3Int cell)
+        {
+            if (spriteRenderer == null) return;
+            var tileService = bootstrap?.TileService;
+            if (tileService != null)
+            {
+                tileService.AlignSpriteBoundsToCellBase(spriteRenderer, cell);
+                return;
+            }
+
+            var spriteBounds = spriteRenderer.bounds;
+            spriteRenderer.transform.position += new Vector3(
+                cell.x + .5f - spriteBounds.center.x,
+                cell.y - spriteBounds.min.y,
+                0f);
         }
 
         private void PlaceRuinDecorations(WorldGenerationResult result, System.Random random)
@@ -973,7 +995,9 @@ namespace Nyangbingo.World
             if (!HasSolidRuntimeSupport(supportCell)) return;
             var art = artCatalog.Find(id);
             if (art?.Sprite != null)
-                Spawn(id, art, new Vector2(cell.x + .5f, cell.y + .5f), flipX,
+                Spawn(id, art,
+                    bootstrap?.TileService?.GetCellVisualAnchorWorld(supportCell) ??
+                    new Vector3(cell.x + .5f, cell.y, 0f), flipX,
                     supportCell);
         }
 
@@ -991,7 +1015,8 @@ namespace Nyangbingo.World
             var art = artCatalog.Find("ruin_rebar");
             if (art?.Sprite == null) return;
             patch.Renderer = Spawn("ruin_rebar", art,
-                new Vector2(cell.x + .5f, cell.y + .5f), flipX, supportCell);
+                bootstrap?.TileService?.GetCellVisualAnchorWorld(supportCell) ??
+                new Vector3(cell.x + .5f, cell.y, 0f), flipX, supportCell);
         }
 
         private static List<Vector2Int> CollectConnectedRuin(TileData[,] tiles, int startX, int startY,

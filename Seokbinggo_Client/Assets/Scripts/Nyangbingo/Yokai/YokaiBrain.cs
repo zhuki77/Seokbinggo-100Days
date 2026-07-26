@@ -15,12 +15,20 @@ namespace Nyangbingo.Yokai
     public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxSlots, int maxAmount); }
     public interface IYokaiTheftReceiptSource { IReadOnlyList<ItemAmount> TakeStolenItems(); }
     public interface IWallMaterialTarget { YokaiWallMaterial WallMaterial { get; } }
+    public interface IYokaiBarrierTarget
+    {
+        bool TryFindBlockingWall(Vector3 attackerPosition, float searchRange,
+            out Vector3Int wallCell, out YokaiWallMaterial material);
+        bool TryDamageBlockingWall(Vector3Int wallCell, float amount);
+    }
 
     [RequireComponent(typeof(Health))]
     public sealed class YokaiBrain : MonoBehaviour, IGameSecondsTickable
     {
         private const float ContactAttackIntervalGameSeconds = 1f;
+        public const float WallAttackIntervalGameSeconds = 1f;
         private const float AttackRangeTolerance = .05f;
+        public const float BossEncounterPausedAlphaMultiplier = .35f;
         public const float GaekgwiTelegraphSeconds = 1f;
         public const float GaekgwiDashDistanceTiles = 3f;
         public const float GaekgwiDashSpeedMultiplier = 2.5f;
@@ -57,6 +65,7 @@ namespace Nyangbingo.Yokai
         private bool bossEncounterPaused;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
+        private bool pausedCharacterAnimatorWasEnabled;
         private GaekgwiPatternState gaekgwiPatternState;
         private float gaekgwiCooldownRemaining;
         private float gaekgwiTelegraphRemaining;
@@ -293,6 +302,11 @@ namespace Nyangbingo.Yokai
             physicsBody?.SetEncounterPaused(paused);
             if (paused)
             {
+                if (characterAnimator == null)
+                    characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+                pausedCharacterAnimatorWasEnabled =
+                    characterAnimator != null && characterAnimator.enabled;
+                if (characterAnimator != null) characterAnimator.enabled = false;
                 pausedRenderers = GetComponentsInChildren<SpriteRenderer>(true);
                 pausedRendererColors = new Color[pausedRenderers.Length];
                 for (var index = 0; index < pausedRenderers.Length; index++)
@@ -301,7 +315,7 @@ namespace Nyangbingo.Yokai
                     if (renderer == null) continue;
                     pausedRendererColors[index] = renderer.color;
                     var color = renderer.color;
-                    color.a = 0f;
+                    color.a *= BossEncounterPausedAlphaMultiplier;
                     renderer.color = color;
                 }
             }
@@ -311,6 +325,9 @@ namespace Nyangbingo.Yokai
                     if (pausedRenderers[index] != null) pausedRenderers[index].color = pausedRendererColors[index];
                 pausedRenderers = System.Array.Empty<SpriteRenderer>();
                 pausedRendererColors = System.Array.Empty<Color>();
+                if (characterAnimator != null)
+                    characterAnimator.enabled = pausedCharacterAnimatorWasEnabled;
+                pausedCharacterAnimatorWasEnabled = false;
             }
             bossEncounterPaused = paused;
             ResetGameSecondsSample();
@@ -462,11 +479,33 @@ namespace Nyangbingo.Yokai
             var attackRange = float.IsNaN(wallAttackRange) || float.IsInfinity(wallAttackRange)
                 ? 1f
                 : Mathf.Max(0f, wallAttackRange);
+            var hasClearAttackLine = physicsBody == null ||
+                                     physicsBody.HasClearAttackLine(targetPosition);
+            // A nearby player wall is a real attack target on the same level, even though
+            // navigation treats destroyable barriers as passable. On different floors,
+            // however, the selected platform route takes precedence so a wall beside the
+            // yokai is not mistaken for the floor/ledge that it should route around.
+            var isRoutingAcrossAnotherFloor =
+                !hasClearAttackLine &&
+                physicsBody?.HasTraversableGroundRoute == true &&
+                Mathf.Abs(targetOffset.y) > attackRange;
+            var barrierTarget = target as IYokaiBarrierTarget;
+            var blockingWallCell = default(Vector3Int);
+            var blockingWallMaterial = YokaiWallMaterial.Default;
+            // Natural floors are excluded by the barrier target itself. Player-built,
+            // damageable walls must still be attacked even though navigation deliberately
+            // plans through them toward the player.
+            var hasBlockingWall = !isRoutingAcrossAnotherFloor &&
+                                  barrierTarget != null &&
+                                  barrierTarget.TryFindBlockingWall(
+                                      currentPosition, attackRange,
+                                      out blockingWallCell, out blockingWallMaterial);
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - actionSeconds);
             switch (state)
             {
                 case State.Approach:
                     if (YokaiSpecialRules.ShouldAttemptTheft(definition.Kind, counters)) state = State.StealLoot;
+                    else if (hasBlockingWall) state = State.AttackWall;
                     else if (CanAttackTarget(targetPosition, attackRange)) state = State.AttackWall;
                     else if (MoveTowardAttackRange(direction, navigationDistance, attackRange, actionSeconds))
                         state = State.AttackWall;
@@ -489,6 +528,24 @@ namespace Nyangbingo.Yokai
                     }
                     break;
                 case State.AttackWall:
+                    if (hasBlockingWall)
+                    {
+                        var wallDamagePerSecond = definition.WallDamageFor(blockingWallMaterial);
+                        if (wallDamagePerSecond > 0f && !float.IsNaN(wallDamagePerSecond) &&
+                            !float.IsInfinity(wallDamagePerSecond) &&
+                            contactAttackRemaining <= .0001f)
+                        {
+                            var damage = wallDamagePerSecond * WallAttackIntervalGameSeconds;
+                            if (!float.IsNaN(damage) && !float.IsInfinity(damage) &&
+                                barrierTarget.TryDamageBlockingWall(blockingWallCell, damage))
+                            {
+                                contactAttackRemaining = WallAttackIntervalGameSeconds;
+                                Attacked?.Invoke();
+                                GameEvents.RaiseWallDamaged();
+                            }
+                        }
+                        break;
+                    }
                     if (!CanAttackTarget(targetPosition, attackRange))
                     {
                         state = State.Approach;
@@ -503,8 +560,10 @@ namespace Nyangbingo.Yokai
                     var combatTarget = target as IYokaiCombatTarget;
                     if (combatTarget != null)
                     {
-                        if (contactAttackRemaining <= .0001f && definition.ContactDamage > 0 &&
-                            combatTarget.TryApplyContactDamage(definition.ContactDamage))
+                        var contactDamage = YokaiSpecialRules.ContactDamage(
+                            definition, counters?.IsInLanternRange == true);
+                        if (contactAttackRemaining <= .0001f && contactDamage > 0 &&
+                            combatTarget.TryApplyContactDamage(contactDamage))
                         {
                             contactAttackRemaining = ContactAttackIntervalGameSeconds;
                             Attacked?.Invoke();
@@ -512,15 +571,17 @@ namespace Nyangbingo.Yokai
                         break;
                     }
                     var wall = target as IWallMaterialTarget;
-                    var wallDamagePerSecond = definition.WallDamageFor(
+                    var legacyWallDamagePerSecond = definition.WallDamageFor(
                         wall?.WallMaterial ?? YokaiWallMaterial.Default);
-                    if (wallDamagePerSecond > 0f && !float.IsNaN(wallDamagePerSecond) &&
-                        !float.IsInfinity(wallDamagePerSecond))
+                    if (legacyWallDamagePerSecond > 0f && !float.IsNaN(legacyWallDamagePerSecond) &&
+                        !float.IsInfinity(legacyWallDamagePerSecond) &&
+                        contactAttackRemaining <= .0001f)
                     {
-                        var damage = wallDamagePerSecond * actionSeconds;
+                        var damage = legacyWallDamagePerSecond * WallAttackIntervalGameSeconds;
                         if (!float.IsNaN(damage) && !float.IsInfinity(damage))
                         {
                             target.DamageWall(damage);
+                            contactAttackRemaining = WallAttackIntervalGameSeconds;
                             Attacked?.Invoke();
                             GameEvents.RaiseWallDamaged();
                         }
@@ -554,7 +615,15 @@ namespace Nyangbingo.Yokai
             if (moveSpeed <= 0f || float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed)) return false;
             var travelDistance = moveSpeed * actionSeconds;
             if (float.IsNaN(travelDistance) || float.IsInfinity(travelDistance)) return false;
-            var maximumDistance = Mathf.Max(0f, distance - attackRange);
+            // Straight-line range alone is not enough when the target is on another floor.
+            // Without a clear line, keep following the platform route even when the vertical
+            // separation happens to be shorter than the nominal contact range.
+            var hasClearAttackLine = physicsBody == null ||
+                                     physicsBody.HasClearAttackLine(
+                                         target.TargetTransform.position);
+            var maximumDistance = hasClearAttackLine
+                ? Mathf.Max(0f, distance - attackRange)
+                : travelDistance;
             var movedDistance = Mathf.Min(travelDistance, maximumDistance);
             MoveBy(direction * movedDistance);
             return CanAttackTarget(target.TargetTransform.position, attackRange);
@@ -575,7 +644,14 @@ namespace Nyangbingo.Yokai
             {
                 if (characterAnimator == null)
                     characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
-                characterAnimator?.SetFacing(ResolveFacingDirection(displacement));
+                var routeFacing = physicsBody != null
+                    ? physicsBody.NavigationFacingDirection
+                    : Vector2.zero;
+                var facingMovement = Mathf.Abs(routeFacing.x) > Mathf.Epsilon
+                    ? (Vector3)routeFacing
+                    : displacement;
+                if (Mathf.Abs(facingMovement.x) > .005f)
+                    characterAnimator?.SetFacing(facingMovement);
                 characterAnimator?.SetMoving(true);
             }
             return movedDistance;
@@ -750,15 +826,6 @@ namespace Nyangbingo.Yokai
             return speed > Mathf.Epsilon && !float.IsNaN(speed) && !float.IsInfinity(speed)
                 ? GaekgwiDashDistanceTiles / speed
                 : 0f;
-        }
-
-        private Vector2 ResolveFacingDirection(Vector3 movement)
-        {
-            if (target?.TargetTransform == null) return movement;
-            var targetOffset = target.TargetTransform.position - transform.position;
-            if (targetOffset.magnitude > 1.5f && Mathf.Abs(targetOffset.x) > .35f)
-                return targetOffset.x > 0f ? Vector2.right : Vector2.left;
-            return movement;
         }
 
         private void SetAnimationMoving(bool moving)

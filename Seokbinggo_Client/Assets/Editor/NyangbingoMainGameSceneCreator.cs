@@ -543,7 +543,7 @@ public static class NyangbingoMainGameSceneCreator
 
         var codexTitle = CreateHudText(codexWindow.transform, "Title", TextAnchor.UpperCenter,
             new Vector2(0f, -24f), new Vector2(500f, 52f), 34);
-        codexTitle.text = "요괴 도감  ·  4/ESC 닫기";
+        codexTitle.text = "요괴 도감";
 
         var gridObject = new GameObject("CardGrid", typeof(RectTransform));
         gridObject.transform.SetParent(codexWindow.transform, false);
@@ -888,6 +888,7 @@ public static class NyangbingoMainGameSceneCreator
         var layer = new GameObject(name);
         layer.transform.SetParent(parent, false);
         var tilemap = layer.AddComponent<Tilemap>();
+        tilemap.tileAnchor = WorldTilemapRenderer.TerrainVisualAnchor;
         var renderer = layer.AddComponent<UnityTilemapRenderer>();
         renderer.sortingOrder = sortingOrder;
         return tilemap;

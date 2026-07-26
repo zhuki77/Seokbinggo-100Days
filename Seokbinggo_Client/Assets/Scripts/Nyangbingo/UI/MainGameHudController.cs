@@ -32,7 +32,10 @@ namespace Nyangbingo.UI
         public const float DayCounterExpandedHeight = 32f;
         public const float DayCounterClockHeight = 10f;
         public const float DayCounterClockGap = 1f;
+        public const float SunsetWarningLeadSeconds = 60f;
+        public const float SunsetWarningFlashesPerSecond = 2f;
         public const float BaekjungDayCounterBorderPixels = 1f;
+        public const string GoalBadgeDayNightRhythmHint = "낮 · 채집/건설  |  밤 · 요괴 방어";
         public const float SealDiagnosticHoldSeconds = .6f;
         private const float SealLeakMarkerSeconds = 1.4f;
         private const float SealLeakMarkerVisualYOffset = .5f;
@@ -77,6 +80,7 @@ namespace Nyangbingo.UI
         private MainGameSaveCoordinator saveCoordinator;
         private GoalBadgeProgress goalBadgeProgress;
         private GameObject goalBadgeRoot;
+        private Text goalBadgeRhythmHint;
         private readonly Image[] goalBadgeBackgrounds = new Image[3];
         private readonly GameObject[] goalBadgeChecks = new GameObject[3];
         private const string BellRopeId = "bell_rope";
@@ -361,6 +365,7 @@ namespace Nyangbingo.UI
                     else dayClockText.text = clock;
                 }
                 RefreshDayNightClockArt();
+                RefreshSunsetWarning();
                 RefreshBaekjungDayCounterFeedback();
             }
             if (clawText != null) clawText.text = $"T{ResolveClawTier()}";
@@ -797,6 +802,10 @@ namespace Nyangbingo.UI
                 BuildGoalBadgeGlyph(rect, index);
                 goalBadgeChecks[index] = BuildGoalBadgeCheck(rect);
             }
+            goalBadgeRhythmHint = CreateStatusText(
+                rootRect, "DayNightRhythmHint", new Vector2(0f, -13f), new Vector2(112f, 9f), 6);
+            goalBadgeRhythmHint.text = GoalBadgeDayNightRhythmHint;
+            goalBadgeRhythmHint.color = new Color(.72f, .82f, .9f, .92f);
 
             if (goalBadgeProgress != null) goalBadgeProgress.Changed += RefreshGoalBadges;
             RefreshGoalBadges();
@@ -1217,6 +1226,22 @@ namespace Nyangbingo.UI
         public static bool ShouldShowNightSpawnLock(bool isNight, bool bossActive, bool baekjungActive) =>
             isNight && (bossActive || baekjungActive);
 
+        public static bool IsSunsetWarningWindow(bool isNight, float secondsUntilTransition)
+        {
+            if (isNight || float.IsNaN(secondsUntilTransition) ||
+                float.IsInfinity(secondsUntilTransition))
+                return false;
+            return secondsUntilTransition >= 0f &&
+                   secondsUntilTransition <= SunsetWarningLeadSeconds;
+        }
+
+        public static bool IsSunsetWarningBrightPhase(float gameSeconds)
+        {
+            if (float.IsNaN(gameSeconds) || float.IsInfinity(gameSeconds) || gameSeconds < 0f)
+                return false;
+            return Mathf.FloorToInt(gameSeconds * SunsetWarningFlashesPerSecond) % 2 == 0;
+        }
+
         public static string FormatRemainingTime(float seconds)
         {
             var totalSeconds = Mathf.Max(0, Mathf.CeilToInt(seconds));
@@ -1362,6 +1387,28 @@ namespace Nyangbingo.UI
                     bootstrap.TimeService.IsNight,
                     bossManager != null && bossManager.IsBossActive,
                     encounterCoordinator?.BaekjungScheduler?.IsActive == true));
+        }
+
+        private void RefreshSunsetWarning()
+        {
+            var timeService = bootstrap?.TimeService;
+            if (timeService == null || dayClockText == null) return;
+            var warning = IsSunsetWarningWindow(
+                timeService.IsNight, timeService.SecondsUntilNextTransition);
+            var bright = warning && IsSunsetWarningBrightPhase(timeService.GameSeconds);
+            var clockColor = !warning
+                ? new Color(.88f, .93f, 1f, 1f)
+                : bright
+                    ? new Color(1f, .42f, .16f, 1f)
+                    : new Color(1f, .68f, .34f, .5f);
+            dayClockText.color = clockColor;
+            dayClockGlyphs?.SetColor(clockColor);
+            if (dayNightClockArt != null)
+                dayNightClockArt.color = !warning
+                    ? Color.white
+                    : bright
+                        ? new Color(1f, .42f, .16f, 1f)
+                        : new Color(1f, .68f, .34f, .5f);
         }
 
         private static GameObject BuildNightSpawnLock(RectTransform parent)

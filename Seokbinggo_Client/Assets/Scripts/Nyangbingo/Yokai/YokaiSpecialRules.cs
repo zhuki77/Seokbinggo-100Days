@@ -22,6 +22,9 @@ namespace Nyangbingo.Yokai
 
     public static class YokaiSpecialRules
     {
+        public static int ContactDamage(YokaiDefinition definition, bool isInLanternRange) =>
+            definition != null ? Mathf.Max(0, definition.ContactDamageFor(isInLanternRange)) : 0;
+
         public static float DamageTakenMultiplier(YokaiDefinition definition, IYokaiCounterSource counters)
         {
             if (definition == null) return 1f;

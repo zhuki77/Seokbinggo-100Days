@@ -183,6 +183,7 @@ namespace Nyangbingo.World
 
             // A-16: 전경 diff와 분리된 배경 변경 이력. CaptureWorld 시그니처는 Dev B 호환을 위해 유지한다.
             save.backgroundChanges = new List<TileChangeRecord>(tileService.GetBackgroundChangeRecords());
+            save.wallDamage = tileService.ExportWallDamage();
             return true;
         }
 
@@ -229,6 +230,11 @@ namespace Nyangbingo.World
             if (!loadedTileService.RestoreBackgroundChanges(save.backgroundChanges))
             {
                 Debug.LogError("[Nyangbingo] WorldSessionController: 배경 변경 이력 재생에 실패해 로드를 중단합니다.");
+                return false;
+            }
+            if (!loadedTileService.RestoreWallDamage(save.wallDamage))
+            {
+                Debug.LogError("[Nyangbingo] WorldSessionController: 방벽 피해 상태 복원에 실패해 로드를 중단합니다.");
                 return false;
             }
 
