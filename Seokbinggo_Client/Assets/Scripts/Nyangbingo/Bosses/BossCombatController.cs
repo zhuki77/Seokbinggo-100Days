@@ -10,7 +10,8 @@ namespace Nyangbingo.Bosses
     public interface IBossCombatTarget : IYokaiCombatTarget
     {
         bool TryApplyBossSpecialDamage(int amount, DamageTag tag, Vector2 knockback,
-            DamageDelivery delivery = DamageDelivery.Direct);
+            DamageDelivery delivery = DamageDelivery.Direct,
+            bool showFireHitEffect = true);
     }
 
     [RequireComponent(typeof(Health))]
@@ -562,7 +563,8 @@ namespace Nyangbingo.Bosses
                 ? DamageDelivery.DamageOverTime
                 : DamageDelivery.Direct;
             var applied = combatTarget.TryApplyBossSpecialDamage(
-                amount, tag, knockback, delivery);
+                amount, tag, knockback, delivery,
+                definition == null || definition.Kind != BossKind.MotherBulgasari);
             if (applied) specialDefenseApplied = true;
             return applied;
         }

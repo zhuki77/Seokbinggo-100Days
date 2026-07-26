@@ -65,7 +65,7 @@ namespace Nyangbingo.Combat
 
         public void Strike(Vector2 direction, int overrideDamage, float overrideKnockback)
         {
-            StrikeInternal(direction, true, Mathf.Max(1, overrideDamage),
+            StrikeInternal(direction, true, Mathf.Max(0, overrideDamage),
                 float.IsNaN(overrideKnockback) || float.IsInfinity(overrideKnockback)
                     ? 0f
                     : Mathf.Max(0f, overrideKnockback));
@@ -142,7 +142,7 @@ namespace Nyangbingo.Combat
                 var health = hit.GetComponentInParent<Health>();
                 if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
                 var healthBeforeDamage = health.Current;
-                health.ApplyDamage(activeDamage, DamageTag.Melee);
+                if (activeDamage > 0) health.ApplyDamage(activeDamage, DamageTag.Melee);
                 if (health.Current < healthBeforeDamage)
                 {
                     GameEvents.RaiseYokaiDamaged();
@@ -162,7 +162,8 @@ namespace Nyangbingo.Combat
     public sealed class WireSnareAbility
     {
         public const float CooldownSeconds = 3f;
-        public const int Damage = 4;
+        public const int HapjukseonDamage = 0;
+        public const int CheolseonDamage = 4;
         public const float Knockback = 2f;
         private readonly MeleeArcAttack attack;
         private float remainingCooldown;
@@ -174,12 +175,14 @@ namespace Nyangbingo.Combat
             this.attack = attack;
         }
 
-        public bool TryUse(Vector2 direction)
+        public bool TryUse(Vector2 direction) => TryUse(direction, CheolseonDamage);
+
+        public bool TryUse(Vector2 direction, int damage)
         {
             if (attack == null || !IsReady || float.IsNaN(direction.x) || float.IsInfinity(direction.x) ||
                 float.IsNaN(direction.y) || float.IsInfinity(direction.y) ||
                 direction.sqrMagnitude <= Mathf.Epsilon) return false;
-            attack.Strike(direction, Damage, Knockback);
+            attack.Strike(direction, Mathf.Max(0, damage), Knockback);
             remainingCooldown = CooldownSeconds;
             return true;
         }

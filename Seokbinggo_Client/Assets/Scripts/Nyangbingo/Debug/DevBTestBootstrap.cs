@@ -2926,7 +2926,7 @@ namespace Nyangbingo.Debugging
             shell.RefreshTitle();
             var titleMatches = shell.Title.CanContinue && shell.Title.LatestSlot >= 0 &&
                                shell.Title.DaysUntilBaegilHeat >= 70 && shell.Title.DaysUntilBaegilHeat <= 100 &&
-                               GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat) == "D-86" &&
+                               GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat) == "D-85" &&
                                shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit && shell.CanShowFullscreenToggle;
 
             var newGameSlot = -1;

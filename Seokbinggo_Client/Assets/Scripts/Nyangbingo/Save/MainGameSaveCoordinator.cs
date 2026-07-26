@@ -311,6 +311,7 @@ namespace Nyangbingo.Save
                     PortableLanternSaveAdapter.Restore(save, runtimeServices.PortableLantern)) &&
                 RestoreStage("recipe book", () =>
                     RecipeBookSaveAdapter.Restore(save, runtimeServices.RecipeBook, FindRecipe)) &&
+                RestoreStage("recipe progression", () => RestoreRecipeProgression(save)) &&
                 RestoreStage("crafting process", () =>
                     CraftingProcessSaveAdapter.Restore(save, runtimeServices.CraftingProcess, FindRecipe)) &&
                 RestoreStage("utility cooldowns", () =>
@@ -427,6 +428,24 @@ namespace Nyangbingo.Save
             GetCatalog()?.FindEquipment(id);
         private Nyangbingo.Data.RecipeDefinition FindRecipe(string id) =>
             GetCatalog()?.FindRecipe(id);
+
+        private bool RestoreRecipeProgression(SaveGame save)
+        {
+            if (save?.dogam == null || runtimeServices?.RecipeBook == null) return false;
+            for (var index = 0; index < save.dogam.Count; index++)
+            {
+                var record = save.dogam[index];
+                if (record.kills <= 0) continue;
+                var yokai = GetCatalog()?.FindYokai(record.yokaiId);
+                if (yokai == null || yokai.Kind != Nyangbingo.Core.YokaiKind.Gangcheori) continue;
+                var recipe = FindRecipe(Nyangbingo.Crafting.RecipeUnlockPolicy.GangcheoriUnlockRecipeId);
+                if (recipe == null) return false;
+                runtimeServices.RecipeBook.Unlock(recipe.Id);
+                break;
+            }
+            return true;
+        }
+
         private Nyangbingo.Data.SmeltingDefinition FindSmelting(string id) =>
             GetCatalog()?.FindSmelting(id);
 

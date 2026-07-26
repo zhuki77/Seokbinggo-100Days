@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nyangbingo.Audio;
 using Nyangbingo.Core;
 using Nyangbingo.Save;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.UI
@@ -128,7 +129,12 @@ namespace Nyangbingo.UI
             SaveGame latest = null;
             Title.CanContinue = saveManager != null && saveManager.TryLoadLatest(out slot, out latest);
             Title.LatestSlot = Title.CanContinue ? slot : -1;
-            Title.DaysUntilBaegilHeat = Title.CanContinue ? Mathf.Max(0, 101 - latest.day) : 100;
+            var survivalDayLimit = timeSource is DayNightService dayNight
+                ? dayNight.SurvivalDayLimit
+                : DayNightService.DefaultSurvivalDayLimit;
+            Title.DaysUntilBaegilHeat = Title.CanContinue
+                ? DayNightService.CalculateDaysRemaining(survivalDayLimit, latest.day)
+                : survivalDayLimit;
         }
 
         public static string FormatTitleCountdown(int daysUntilBaegilHeat) =>

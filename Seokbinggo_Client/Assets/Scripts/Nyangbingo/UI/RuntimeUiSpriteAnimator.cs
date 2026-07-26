@@ -161,6 +161,7 @@ namespace Nyangbingo.UI
         private RectTransform content;
         private float glyphScale = 1f;
         private string displayedText = string.Empty;
+        private Color glyphColor = Color.white;
 
         public string DisplayedText => displayedText;
         public int VisibleGlyphCount => images.Count;
@@ -188,6 +189,13 @@ namespace Nyangbingo.UI
         {
             EnsureContent();
             content.gameObject.SetActive(visible && glyphs.Length == ExpectedGlyphCount);
+        }
+
+        public void SetColor(Color color)
+        {
+            glyphColor = color;
+            foreach (var image in images)
+                if (image != null) image.color = glyphColor;
         }
 
         public static int GlyphIndex(char character)
@@ -254,7 +262,7 @@ namespace Nyangbingo.UI
                 var imageObject = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
                 imageObject.transform.SetParent(content, false);
                 var image = imageObject.GetComponent<Image>();
-                image.color = Color.white;
+                image.color = glyphColor;
                 image.preserveAspect = true;
                 image.raycastTarget = false;
                 var rect = image.rectTransform;

@@ -137,6 +137,14 @@ namespace Nyangbingo.Save
     }
 
     [Serializable]
+    public struct WallDamageStateRecord
+    {
+        public int x;
+        public int y;
+        public float damageTaken;
+    }
+
+    [Serializable]
     public struct CatnipPatchStateRecord
     {
         public string patchId;
@@ -251,7 +259,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 20;
+        public const int CurrentSchemaVersion = 21;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -266,6 +274,7 @@ namespace Nyangbingo.Save
         public List<DeathTearPouchRecord> deathTearPouches = new List<DeathTearPouchRecord>();
         public List<WorldDropStateRecord> worldDrops = new List<WorldDropStateRecord>();
         public List<DoorStateRecord> doorStates = new List<DoorStateRecord>();
+        public List<WallDamageStateRecord> wallDamage = new List<WallDamageStateRecord>();
         public List<CatnipPatchStateRecord> catnipPatches = new List<CatnipPatchStateRecord>();
         public List<HempPatchStateRecord> hempPatches = new List<HempPatchStateRecord>();
         public List<TreeHarvestStateRecord> harvestedTrees = new List<TreeHarvestStateRecord>();
@@ -329,6 +338,7 @@ namespace Nyangbingo.Save
             if (deathTearPouches == null) deathTearPouches = new List<DeathTearPouchRecord>();
             if (worldDrops == null) worldDrops = new List<WorldDropStateRecord>();
             if (doorStates == null) doorStates = new List<DoorStateRecord>();
+            if (wallDamage == null) wallDamage = new List<WallDamageStateRecord>();
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();

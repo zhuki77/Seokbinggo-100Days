@@ -37,7 +37,9 @@ namespace Nyangbingo.World
         }
 
         public const float MagnetRadius = 1.5f;
-        public const float VisualSurfaceOffset = .5f;
+        // Terrain visuals now share the logical Grid boundary. This remains as a named value
+        // because vegetation and drop rendering use the same surface contract.
+        public const float VisualSurfaceOffset = 0f;
         public const bool DropToDropCollisionResponseEnabled = false;
         private const float MinimumLaunchAngle = 25f;
         private const float MaximumLaunchAngle = 155f;

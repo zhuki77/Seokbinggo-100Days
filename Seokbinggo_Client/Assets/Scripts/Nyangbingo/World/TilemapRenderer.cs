@@ -70,6 +70,7 @@ namespace Nyangbingo.World
 
         public Tilemap Foreground => foregroundTilemap;
         public Tilemap Background => backgroundTilemap;
+        public static readonly Vector3 TerrainVisualAnchor = new Vector3(.5f, 0f, 0f);
 
         /// <summary>
         /// Gameplay/world-visual coordinate contract. Callers must use the rendered foreground
@@ -81,9 +82,56 @@ namespace Nyangbingo.World
             ? foregroundTilemap.WorldToCell(worldPosition)
             : Vector3Int.FloorToInt(worldPosition);
 
-        public Vector3 GetCellCenterWorld(Vector3Int cell) => foregroundTilemap != null
-            ? foregroundTilemap.GetCellCenterWorld(cell)
-            : new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
+        public Vector3 GetCellCenterWorld(Vector3Int cell)
+        {
+            if (foregroundTilemap == null)
+                return new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
+
+            // Tilemap.GetCellCenterWorld follows Tilemap.tileAnchor. Delivered terrain uses a
+            // bottom pivot, so the visual anchor is (0.5, 0) while gameplay still needs the
+            // geometric cell center. Derive it from the Grid corners to keep rendering and
+            // collision coordinates independent.
+            var bottomLeft = foregroundTilemap.CellToWorld(cell);
+            var topRight = foregroundTilemap.CellToWorld(
+                cell + Vector3Int.right + Vector3Int.up);
+            return (bottomLeft + topRight) * .5f;
+        }
+
+        public Vector3 GetCellVisualAnchorWorld(Vector3Int cell)
+        {
+            if (foregroundTilemap == null)
+                return new Vector3(cell.x + .5f, cell.y, cell.z);
+            return foregroundTilemap.LocalToWorld(
+                foregroundTilemap.CellToLocalInterpolated(
+                    (Vector3)cell + foregroundTilemap.tileAnchor));
+        }
+
+        public Bounds GetCellWorldBounds(Vector3Int cell)
+        {
+            var bottomLeft = foregroundTilemap != null
+                ? foregroundTilemap.CellToWorld(cell)
+                : new Vector3(cell.x, cell.y, cell.z);
+            var topRight = foregroundTilemap != null
+                ? foregroundTilemap.CellToWorld(cell + Vector3Int.right + Vector3Int.up)
+                : new Vector3(cell.x + 1f, cell.y + 1f, cell.z);
+            var bounds = new Bounds((bottomLeft + topRight) * .5f, Vector3.zero);
+            bounds.Encapsulate(bottomLeft);
+            bounds.Encapsulate(topRight);
+            return bounds;
+        }
+
+        /// <summary>
+        /// Delivered terrain sprites are bottom-pivoted. Their Tilemap visual anchor therefore
+        /// belongs on the lower edge of the logical cell; collision and targeting remain based
+        /// on the geometric cell bounds.
+        /// </summary>
+        public void EnsureWorldCoordinateContract()
+        {
+            if (foregroundTilemap != null)
+                foregroundTilemap.tileAnchor = TerrainVisualAnchor;
+            if (backgroundTilemap != null)
+                backgroundTilemap.tileAnchor = TerrainVisualAnchor;
+        }
 
         public bool HasForegroundTile(Vector3Int cell) => foregroundTilemap != null &&
                                                           foregroundTilemap.HasTile(cell);
@@ -155,6 +203,7 @@ namespace Nyangbingo.World
 
         private void Awake()
         {
+            EnsureWorldCoordinateContract();
             RebuildLookupTable();
             EnsureForegroundCollision();
             EnsureEdgeOverlayWiring();
@@ -237,6 +286,7 @@ namespace Nyangbingo.World
             }
 
             if (_lookup == null) RebuildLookupTable();
+            EnsureWorldCoordinateContract();
             EnsureEdgeOverlayWiring();
 
             var width = tiles.GetLength(0);
@@ -322,7 +372,7 @@ namespace Nyangbingo.World
         /// A-17/A-21: 전경 Tilemap에 TilemapCollider2D + CompositeCollider2D + Static Rigidbody2D를 구성한다.
         /// 배경 Tilemap에는 Collider를 붙이지 않는다.
         /// 좌표 계약: 논리 셀 (x,y)의 월드 AABB는 Grid/Tilemap 기본 Cell Size(1,1) 기준 [x,x+1]×[y,y+1],
-        /// 중심 GetCellCenterWorld ≈ (x+0.5, y+0.5). Tile Anchor 기본 (0.5,0.5) — 아트 피벗이 바뀌어도
+        /// 중심 GetCellCenterWorld ≈ (x+0.5, y+0.5). 지형 시각 앵커는 하단 피벗 아트에 맞춰 (0.5,0)을 사용하며,
         /// Collider는 타일 점유 셀 경계를 따르며 스프라이트 피벗에 의존하지 않는다.
         /// </summary>
         public void EnsureForegroundCollision()

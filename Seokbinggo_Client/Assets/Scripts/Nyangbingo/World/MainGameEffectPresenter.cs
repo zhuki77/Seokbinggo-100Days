@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Combat;
 using Nyangbingo.Data;
@@ -5,12 +6,25 @@ using UnityEngine;
 
 namespace Nyangbingo.World
 {
+    [DefaultExecutionOrder(20)]
     public sealed class MainGameEffectPresenter : MonoBehaviour
     {
         internal const int WorldPopupFontSize = 64;
         internal const float WorldPopupCharacterSize = .12f;
         public const float PlayerFireHitHeadOffset = .65f;
+        public const float PlayerFireHitDurationSeconds = .8f;
         public const int PlayerFireHitFallbackSortingOrder = 19;
+        private static int suppressPlayerFireHitEffectDepth;
+        public const float WallDurabilityLabelSeconds = 1.25f;
+        public const float WallDurabilityLabelHeight = .72f;
+
+        private sealed class WallDurabilityLabel
+        {
+            public GameObject Root;
+            public TextMesh Text;
+            public TextMesh Shadow;
+            public float HideAt;
+        }
         [SerializeField] private GameplayArtCatalog artCatalog;
         [SerializeField] private Transform playerTransform;
         private RuntimeOneShotSpriteEffect miningEffect;
@@ -19,9 +33,15 @@ namespace Nyangbingo.World
         private RuntimeOneShotSpriteEffect playerFireHitEffect;
         private Health playerHealth;
         private SpriteRenderer miningProgressRenderer;
+        private SpriteRenderer miningTargetRenderer;
         private System.Collections.Generic.IReadOnlyList<Sprite> miningProgressFrames;
         private Vector3Int miningProgressCell;
         private MiningImpactSurface lastMiningSurface = MiningImpactSurface.Mineral;
+        private TilemapRenderer worldRenderer;
+        private readonly Dictionary<Vector3Int, WallDurabilityLabel> wallDurabilityLabels =
+            new Dictionary<Vector3Int, WallDurabilityLabel>();
+        private readonly List<Vector3Int> expiredWallDurabilityCells =
+            new List<Vector3Int>();
 
         public void ConfigureForScene(GameplayArtCatalog catalog, Transform player)
         {
@@ -32,16 +52,22 @@ namespace Nyangbingo.World
         private void Start()
         {
             if (artCatalog == null || playerTransform == null) return;
+            worldRenderer = FindAnyObjectByType<TilemapRenderer>();
             miningEffect = CreateEffect("MiningCrackEffect", transform, artCatalog.MiningCrackFrames, 24);
             miningBreakEffect = CreateEffect("MiningBreakEffect", transform, artCatalog.MiningBreakFrames, 29);
             miningCriticalEffect = CreateEffect("MiningCriticalEffect", transform,
                 artCatalog.MiningCriticalFrames, 30);
-            var playerRenderer = playerTransform.GetComponent<SpriteRenderer>();
+            var playerAnimator = playerTransform.GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
+            var playerRenderer = playerAnimator?.Renderer ??
+                                 playerTransform.GetComponentInChildren<SpriteRenderer>();
+            var playerVisualTransform = playerRenderer != null
+                ? playerRenderer.transform
+                : playerTransform;
             var fireSortingOrder = playerRenderer != null
                 ? playerRenderer.sortingOrder - 1
                 : PlayerFireHitFallbackSortingOrder;
             playerFireHitEffect = CreateEffect(
-                "PlayerFireHitEffect", playerTransform, artCatalog.PlayerFireHitFrames,
+                "PlayerFireHitEffect", playerVisualTransform, artCatalog.PlayerFireHitFrames,
                 fireSortingOrder);
             var fireRenderer = playerFireHitEffect.GetComponent<SpriteRenderer>();
             if (playerRenderer != null && fireRenderer != null)
@@ -56,10 +82,18 @@ namespace Nyangbingo.World
             miningProgressRenderer.sortingOrder = 25;
             miningProgressRenderer.enabled = false;
             miningProgressFrames = artCatalog.MiningCrackFrames;
+            var targetObject = new GameObject("MiningTargetOverlay");
+            targetObject.transform.SetParent(transform, false);
+            miningTargetRenderer = targetObject.AddComponent<SpriteRenderer>();
+            RuntimePlaceholderVisual.Configure(
+                miningTargetRenderer, new Color(.2f, .9f, 1f, .18f), 1.02f, 24);
+            miningTargetRenderer.enabled = false;
+            GameEvents.OnMiningTargetChanged += HandleMiningTargetChanged;
             GameEvents.OnMiningProgress += HandleMiningProgress;
             GameEvents.OnMiningImpact += HandleMiningImpact;
             GameEvents.OnTileBroken += HandleTileBroken;
             GameEvents.OnMiningResult += HandleMiningResult;
+            GameEvents.OnWallDurabilityChanged += HandleWallDurabilityChanged;
         }
 
 #if UNITY_EDITOR
@@ -82,13 +116,31 @@ namespace Nyangbingo.World
 
         private void HandleMiningImpact(MiningImpactSurface surface) => lastMiningSurface = surface;
 
+        private void HandleMiningTargetChanged(Vector3Int cell, bool visible, bool mineable)
+        {
+            if (miningTargetRenderer == null) return;
+            miningTargetRenderer.enabled = visible;
+            if (!visible) return;
+            miningTargetRenderer.transform.position = CellCenter(cell);
+            miningTargetRenderer.color = mineable
+                ? new Color(.2f, .9f, 1f, .18f)
+                : new Color(1f, .2f, .2f, .24f);
+        }
+
         private void HandlePlayerDamaged(DamageTag tag, int amount)
         {
             if (amount <= 0) return;
             CreatePlayerDamagePopup(amount);
-            if (tag == DamageTag.Fire && playerFireHitEffect != null)
-                playerFireHitEffect.Play(.3f);
+            if (tag == DamageTag.Fire && suppressPlayerFireHitEffectDepth <= 0 &&
+                playerFireHitEffect != null)
+                playerFireHitEffect.Play(PlayerFireHitDurationSeconds);
         }
+
+        public static void BeginSuppressPlayerFireHitEffect() =>
+            suppressPlayerFireHitEffectDepth++;
+
+        public static void EndSuppressPlayerFireHitEffect() =>
+            suppressPlayerFireHitEffectDepth = Mathf.Max(0, suppressPlayerFireHitEffectDepth - 1);
 
         private void CreatePlayerDamagePopup(int amount)
         {
@@ -116,7 +168,7 @@ namespace Nyangbingo.World
             }
 
             miningProgressCell = cell;
-            miningProgressRenderer.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+            miningProgressRenderer.transform.position = CellVisualAnchor(cell);
             var frameIndex = Mathf.Clamp(
                 Mathf.CeilToInt(Mathf.Clamp01(normalizedProgress) * miningProgressFrames.Count) - 1,
                 0, miningProgressFrames.Count - 1);
@@ -126,17 +178,98 @@ namespace Nyangbingo.World
 
         private void HandleTileBroken(Vector3Int cell)
         {
+            RemoveWallDurabilityLabel(cell);
             if (miningProgressRenderer != null && miningProgressRenderer.enabled && miningProgressCell == cell)
                 miningProgressRenderer.enabled = false;
             if (miningEffect == null) return;
-            miningEffect.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+            var visualAnchor = CellVisualAnchor(cell);
+            miningEffect.transform.position = visualAnchor;
             miningEffect.Play(.35f);
             if (miningBreakEffect != null && artCatalog.MiningBreakFrames.Count > 0)
             {
-                miningBreakEffect.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+                miningBreakEffect.transform.position = visualAnchor;
                 miningBreakEffect.Play(.2f);
             }
-            else RuntimeTileDebrisBurst.Create(transform, cell, lastMiningSurface);
+            else RuntimeTileDebrisBurst.Create(transform, CellCenter(cell), lastMiningSurface);
+        }
+
+        private void HandleWallDurabilityChanged(
+            Vector3Int cell, float current, float maximum, bool destroyed)
+        {
+            if (maximum <= 0f || float.IsNaN(maximum) || float.IsInfinity(maximum)) return;
+            if (!wallDurabilityLabels.TryGetValue(cell, out var label) || label?.Root == null)
+            {
+                label = CreateWallDurabilityLabel(cell);
+                wallDurabilityLabels[cell] = label;
+            }
+
+            label.Root.transform.position = CellCenter(cell) + Vector3.up * WallDurabilityLabelHeight;
+            var currentValue = Mathf.Clamp(Mathf.CeilToInt(current), 0, Mathf.CeilToInt(maximum));
+            var maximumValue = Mathf.Max(1, Mathf.CeilToInt(maximum));
+            var value = $"{currentValue} / {maximumValue}";
+            label.Text.text = value;
+            label.Shadow.text = value;
+            var ratio = Mathf.Clamp01(current / maximum);
+            label.Text.color = Color.Lerp(
+                new Color(1f, .22f, .16f, 1f),
+                new Color(.35f, 1f, .55f, 1f),
+                ratio);
+            label.HideAt = Time.unscaledTime +
+                           (destroyed ? .75f : WallDurabilityLabelSeconds);
+            label.Root.SetActive(true);
+        }
+
+        private WallDurabilityLabel CreateWallDurabilityLabel(Vector3Int cell)
+        {
+            var root = new GameObject($"WallDurability_{cell.x}_{cell.y}");
+            root.transform.SetParent(transform, false);
+            var text = root.AddComponent<TextMesh>();
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontSize = 48;
+            text.characterSize = .08f;
+            text.fontStyle = FontStyle.Bold;
+            var renderer = text.GetComponent<MeshRenderer>();
+            if (renderer != null) renderer.sortingOrder = 42;
+
+            var shadowObject = new GameObject("Shadow");
+            shadowObject.transform.SetParent(root.transform, false);
+            shadowObject.transform.localPosition = new Vector3(.02f, -.02f, .01f);
+            var shadow = shadowObject.AddComponent<TextMesh>();
+            shadow.anchor = TextAnchor.MiddleCenter;
+            shadow.alignment = TextAlignment.Center;
+            shadow.font = text.font;
+            shadow.fontSize = text.fontSize;
+            shadow.characterSize = text.characterSize;
+            shadow.fontStyle = text.fontStyle;
+            shadow.color = new Color(0f, 0f, 0f, .9f);
+            var shadowRenderer = shadow.GetComponent<MeshRenderer>();
+            if (shadowRenderer != null) shadowRenderer.sortingOrder = 41;
+
+            return new WallDurabilityLabel
+            {
+                Root = root,
+                Text = text,
+                Shadow = shadow
+            };
+        }
+
+        private void LateUpdate()
+        {
+            if (wallDurabilityLabels.Count == 0) return;
+            expiredWallDurabilityCells.Clear();
+            foreach (var pair in wallDurabilityLabels)
+                if (pair.Value?.Root == null || Time.unscaledTime >= pair.Value.HideAt)
+                    expiredWallDurabilityCells.Add(pair.Key);
+            for (var index = 0; index < expiredWallDurabilityCells.Count; index++)
+                RemoveWallDurabilityLabel(expiredWallDurabilityCells[index]);
+        }
+
+        private void RemoveWallDurabilityLabel(Vector3Int cell)
+        {
+            if (!wallDurabilityLabels.TryGetValue(cell, out var label)) return;
+            wallDurabilityLabels.Remove(cell);
+            if (label?.Root != null) Destroy(label.Root);
         }
 
         private void HandleMiningResult(Vector3Int cell, string itemName, int amount, bool critical)
@@ -144,7 +277,7 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(itemName) || amount <= 0) return;
             var popupObject = new GameObject("MiningResultPopup");
             popupObject.transform.SetParent(transform, false);
-            popupObject.transform.position = new Vector3(cell.x + .5f, cell.y + .85f, 0f);
+            popupObject.transform.position = CellCenter(cell) + Vector3.up * .35f;
             var text = popupObject.AddComponent<TextMesh>();
             text.text = $"+{itemName} ×{amount}";
             text.anchor = TextAnchor.MiddleCenter;
@@ -159,11 +292,19 @@ namespace Nyangbingo.World
             if (!critical) return;
             if (miningCriticalEffect != null && artCatalog.MiningCriticalFrames.Count > 0)
             {
-                miningCriticalEffect.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+                miningCriticalEffect.transform.position = CellVisualAnchor(cell);
                 miningCriticalEffect.Play(.3f);
             }
-            else RuntimeMiningCriticalSparkle.Create(transform, cell);
+            else RuntimeMiningCriticalSparkle.Create(transform, CellCenter(cell));
         }
+
+        private Vector3 CellCenter(Vector3Int cell) => worldRenderer != null
+            ? worldRenderer.GetCellCenterWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
+
+        private Vector3 CellVisualAnchor(Vector3Int cell) => worldRenderer != null
+            ? worldRenderer.GetCellVisualAnchorWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y, cell.z);
 
         private static RuntimeOneShotSpriteEffect CreateEffect(string name, Transform parent,
             System.Collections.Generic.IReadOnlyList<Sprite> frames, int sortingOrder)
@@ -179,10 +320,13 @@ namespace Nyangbingo.World
         private void OnDestroy()
         {
             if (playerHealth != null) playerHealth.Damaged -= HandlePlayerDamaged;
+            GameEvents.OnMiningTargetChanged -= HandleMiningTargetChanged;
             GameEvents.OnMiningProgress -= HandleMiningProgress;
             GameEvents.OnMiningImpact -= HandleMiningImpact;
             GameEvents.OnTileBroken -= HandleTileBroken;
             GameEvents.OnMiningResult -= HandleMiningResult;
+            GameEvents.OnWallDurabilityChanged -= HandleWallDurabilityChanged;
+            wallDurabilityLabels.Clear();
         }
     }
 
@@ -232,11 +376,11 @@ namespace Nyangbingo.World
             new System.Collections.Generic.List<SpriteRenderer>();
         private float remaining = .5f;
 
-        public static void Create(Transform parent, Vector3Int cell)
+        public static void Create(Transform parent, Vector3 worldPosition)
         {
             var root = new GameObject("MiningCriticalSparkle");
             root.transform.SetParent(parent, false);
-            root.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+            root.transform.position = worldPosition;
             var effect = root.AddComponent<RuntimeMiningCriticalSparkle>();
             effect.Build();
         }
@@ -288,11 +432,11 @@ namespace Nyangbingo.World
             new System.Collections.Generic.List<Piece>();
         private float remaining = .45f;
 
-        public static void Create(Transform parent, Vector3Int cell, MiningImpactSurface surface)
+        public static void Create(Transform parent, Vector3 worldPosition, MiningImpactSurface surface)
         {
             var root = new GameObject("TileDebrisBurst");
             root.transform.SetParent(parent, false);
-            root.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, 0f);
+            root.transform.position = worldPosition;
             var effect = root.AddComponent<RuntimeTileDebrisBurst>();
             effect.Build(surface);
         }

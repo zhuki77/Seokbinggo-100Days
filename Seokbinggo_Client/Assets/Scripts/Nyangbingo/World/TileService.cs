@@ -30,6 +30,9 @@ namespace Nyangbingo.World
         private readonly HashSet<Vector3Int> openDoors = new HashSet<Vector3Int>();
         private readonly Dictionary<Vector3Int, GameObject> openDoorVisuals =
             new Dictionary<Vector3Int, GameObject>();
+        private readonly Dictionary<Vector3Int, float> wallDamageTaken =
+            new Dictionary<Vector3Int, float>();
+        private Func<Vector3Int, bool> clayPlasterResolver;
 
         private readonly List<TileChangeRecord> changeLog = new List<TileChangeRecord>();
 
@@ -64,6 +67,10 @@ namespace Nyangbingo.World
             { "insul_wall", 1 }, { "door", 1 }, { "roof", 1 }, { "iron_insul_wall", 2 }
         };
 
+        public const float DefaultInsulationWallHitPoints = 600f;
+        public const float DefaultClayPlasteredWallHitPoints = 750f;
+        public const float DefaultIronInsulationWallHitPoints = 900f;
+
         public int Width { get; }
         public int Height { get; }
 
@@ -78,6 +85,9 @@ namespace Nyangbingo.World
         }
 
         public void BindRenderer(TilemapRenderer newRenderer) => renderer = newRenderer;
+
+        public void SetClayPlasterResolver(Func<Vector3Int, bool> resolver) =>
+            clayPlasterResolver = resolver;
 
         public void SetForegroundPlacementBlocker(Func<Vector3Int, bool> blocker)
         {
@@ -102,6 +112,158 @@ namespace Nyangbingo.World
 
         public TileData GetTile(Vector3Int cell) => InBounds(cell) ? tiles[cell.x, cell.y] : default;
 
+        public Vector3Int WorldToCell(Vector2 worldPosition) => renderer != null
+            ? renderer.WorldToCell(worldPosition)
+            : new Vector3Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y), 0);
+
+        public Vector3 GetCellCenterWorld(Vector3Int cell) => renderer != null
+            ? renderer.GetCellCenterWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
+
+        public Vector3 GetCellVisualAnchorWorld(Vector3Int cell) => renderer != null
+            ? renderer.GetCellVisualAnchorWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y, cell.z);
+
+        public void AlignSpriteBoundsToCellBase(SpriteRenderer spriteRenderer, Vector3Int cell)
+        {
+            if (spriteRenderer == null) return;
+            var cellBounds = GetCellWorldBounds(cell);
+            var spriteBounds = spriteRenderer.bounds;
+            spriteRenderer.transform.position += new Vector3(
+                cellBounds.center.x - spriteBounds.center.x,
+                cellBounds.min.y - spriteBounds.min.y,
+                0f);
+        }
+
+        public Bounds GetCellWorldBounds(Vector3Int cell) => renderer != null
+            ? renderer.GetCellWorldBounds(cell)
+            : new Bounds(
+                new Vector3(cell.x + .5f, cell.y + .5f, cell.z),
+                new Vector3(1f, 1f, 0f));
+
+        public bool TryFindDamageableWall(Vector2 attackerPosition, Vector2 targetPosition,
+            float searchRange, out Vector3Int wallCell, out YokaiWallMaterial material)
+        {
+            wallCell = default;
+            material = YokaiWallMaterial.Default;
+            if (!IsFinite(attackerPosition.x) || !IsFinite(attackerPosition.y) ||
+                !IsFinite(targetPosition.x) || !IsFinite(targetPosition.y) ||
+                !IsFinite(searchRange) || searchRange < 0f)
+                return false;
+
+            var towardTarget = targetPosition - attackerPosition;
+            if (towardTarget.sqrMagnitude <= Mathf.Epsilon) return false;
+            towardTarget.Normalize();
+
+            // Mob pivots sit near the middle of a tile while walls occupy a full grid cell.
+            // The half-tile allowance lets an adjacent mob reach the cell centre without
+            // allowing it to damage structures from multiple tiles away.
+            var effectiveRange = searchRange + .75f;
+            var extent = Mathf.CeilToInt(effectiveRange);
+            var center = new Vector3Int(
+                Mathf.FloorToInt(attackerPosition.x),
+                Mathf.FloorToInt(attackerPosition.y), 0);
+            var bestDistance = float.PositiveInfinity;
+            var found = false;
+            for (var y = center.y - extent; y <= center.y + extent; y++)
+            for (var x = center.x - extent; x <= center.x + extent; x++)
+            {
+                var candidate = new Vector3Int(x, y, 0);
+                if (!TryResolveWallMaterial(candidate, out var candidateMaterial)) continue;
+                var offset = (Vector2)GetCellCenterWorld(candidate) - attackerPosition;
+                var distance = offset.magnitude;
+                if (distance > effectiveRange || distance <= Mathf.Epsilon ||
+                    Vector2.Dot(offset / distance, towardTarget) < .25f ||
+                    distance >= bestDistance)
+                    continue;
+                found = true;
+                bestDistance = distance;
+                wallCell = candidate;
+                material = candidateMaterial;
+            }
+            return found;
+        }
+
+        public bool TryDamageWall(Vector3Int cell, float amount,
+            out float appliedDamage, out bool destroyed)
+        {
+            appliedDamage = 0f;
+            destroyed = false;
+            if (!IsFinite(amount) || amount <= 0f ||
+                !TryResolveWallMaterial(cell, out _))
+                return false;
+
+            var maximum = ResolveWallHitPoints(cell);
+            wallDamageTaken.TryGetValue(cell, out var currentDamage);
+            var remaining = Mathf.Max(0f, maximum - currentDamage);
+            if (remaining <= Mathf.Epsilon)
+            {
+                wallDamageTaken.Remove(cell);
+                destroyed = DestroyWallWithoutDrop(cell);
+                return destroyed;
+            }
+            appliedDamage = Mathf.Min(amount, remaining);
+            currentDamage += appliedDamage;
+            if (currentDamage + .0001f < maximum)
+            {
+                wallDamageTaken[cell] = currentDamage;
+                GameEvents.RaiseWallDurabilityChanged(
+                    cell, maximum - currentDamage, maximum, false);
+                return true;
+            }
+
+            wallDamageTaken.Remove(cell);
+            destroyed = DestroyWallWithoutDrop(cell);
+            if (destroyed)
+                GameEvents.RaiseWallDurabilityChanged(cell, 0f, maximum, true);
+            return destroyed;
+        }
+
+        public float GetWallRemainingHitPoints(Vector3Int cell)
+        {
+            if (!TryResolveWallMaterial(cell, out _)) return 0f;
+            wallDamageTaken.TryGetValue(cell, out var damage);
+            return Mathf.Max(0f, ResolveWallHitPoints(cell) - damage);
+        }
+
+        public List<WallDamageStateRecord> ExportWallDamage()
+        {
+            var records = new List<WallDamageStateRecord>(wallDamageTaken.Count);
+            foreach (var pair in wallDamageTaken.OrderBy(entry => entry.Key.x)
+                         .ThenBy(entry => entry.Key.y))
+            {
+                if (pair.Value <= 0f || !IsFinite(pair.Value) ||
+                    !TryResolveWallMaterial(pair.Key, out _))
+                    continue;
+                records.Add(new WallDamageStateRecord
+                {
+                    x = pair.Key.x,
+                    y = pair.Key.y,
+                    damageTaken = pair.Value
+                });
+            }
+            return records;
+        }
+
+        public bool RestoreWallDamage(IEnumerable<WallDamageStateRecord> records)
+        {
+            if (records == null) return true;
+            var restored = new Dictionary<Vector3Int, float>();
+            foreach (var record in records)
+            {
+                var cell = new Vector3Int(record.x, record.y, 0);
+                if (!IsFinite(record.damageTaken) || record.damageTaken <= 0f ||
+                    !TryResolveWallMaterial(cell, out _) ||
+                    record.damageTaken >= ResolveMaximumPossibleWallHitPoints(cell) ||
+                    restored.ContainsKey(cell))
+                    return false;
+                restored.Add(cell, record.damageTaken);
+            }
+            wallDamageTaken.Clear();
+            foreach (var pair in restored) wallDamageTaken.Add(pair.Key, pair.Value);
+            return true;
+        }
+
         /// <summary>
         /// 전경 타일 파괴(채굴). 성공 시 전경만 비우고 기존 배경·자연 배경 기준은 유지한다(A-16).
         /// </summary>
@@ -118,6 +280,7 @@ namespace Nyangbingo.World
             if (toolTier < current.hardness) return false;
 
             var minedElementType = current.elementType;
+            wallDamageTaken.Remove(cell);
             if (IsDoorOpen(cell)) RemoveOpenDoorState(cell);
             GameEvents.RaiseMiningImpact(minedElementType == WorldTileTypes.Dirt ||
                                           minedElementType == WorldTileTypes.Clay
@@ -166,6 +329,7 @@ namespace Nyangbingo.World
 
             if (consumeFrom != null && !consumeFrom.TryRemove(elementType, 1)) return false;
 
+            wallDamageTaken.Remove(cell);
             var hardness = hardnessOverride > 0 ? hardnessOverride : ResolvePlacementHardness(elementType);
             tiles[cell.x, cell.y] = new TileData
             {
@@ -182,6 +346,11 @@ namespace Nyangbingo.World
 
             RecordChange(cell, elementType, placed: true);
             GameEvents.RaiseTilePlaced(cell);
+            // Foreground insulation walls use the tile placement pipeline rather than the
+            // floor-standing environment pipeline. They must still satisfy the official
+            // "first wall placed" onboarding badge.
+            if (string.Equals(elementType, "insul_wall", StringComparison.Ordinal))
+                GameEvents.RaisePlacedObjectBuilt(elementType);
             return true;
         }
 
@@ -204,6 +373,10 @@ namespace Nyangbingo.World
 
         public bool IsDoorOpen(Vector3Int cell) => openDoors.Contains(cell);
 
+        public bool TryGetDamageableWallMaterial(
+            Vector3Int cell, out YokaiWallMaterial material) =>
+            TryResolveWallMaterial(cell, out material);
+
         public bool TryToggleNearestDoor(Vector2 origin, float radius, out bool isOpen)
         {
             isOpen = false;
@@ -211,8 +384,7 @@ namespace Nyangbingo.World
                 !IsFinite(radius) || radius < 0f)
                 return false;
             var extent = Mathf.CeilToInt(radius);
-            var center = new Vector3Int(
-                Mathf.FloorToInt(origin.x), Mathf.FloorToInt(origin.y), 0);
+            var center = WorldToCell(origin);
             var radiusSquared = radius * radius;
             var found = false;
             var nearest = default(Vector3Int);
@@ -224,7 +396,7 @@ namespace Nyangbingo.World
                 if (!InBounds(cell) ||
                     TileIdAlias.ToCanonical(GetTile(cell).elementType) != "door")
                     continue;
-                var delta = new Vector2(cell.x + .5f, cell.y + .5f) - origin;
+                var delta = (Vector2)GetCellCenterWorld(cell) - origin;
                 var distance = delta.sqrMagnitude;
                 if (distance > radiusSquared || found && distance >= nearestDistance)
                     continue;
@@ -310,7 +482,7 @@ namespace Nyangbingo.World
             RecordBackgroundChange(cell, removedId, placed: false);
             GameEvents.RaiseTileBroken(cell);
             if (TryResolveDrop(removedId, out var item, out var amount))
-                WorldItemDropRequest.Request(item, amount, new Vector2(cell.x + .5f, cell.y + .5f));
+                WorldItemDropRequest.Request(item, amount, GetCellCenterWorld(cell));
             return true;
         }
 
@@ -707,8 +879,8 @@ namespace Nyangbingo.World
             {
                 var visual = new GameObject($"OpenDoor_{cell.x}_{cell.y}");
                 visual.transform.SetParent(renderer.Foreground.transform, false);
-                visual.transform.position = renderer.GetCellCenterWorld(cell) +
-                                            new Vector3(0f, -.42f, 0f);
+                visual.transform.position = renderer.GetCellVisualAnchorWorld(cell) +
+                                            new Vector3(0f, .08f, 0f);
                 visual.transform.rotation = Quaternion.Euler(0f, 0f, -90f);
                 var spriteRenderer = visual.AddComponent<SpriteRenderer>();
                 spriteRenderer.sprite = sprite;
@@ -791,6 +963,70 @@ namespace Nyangbingo.World
         {
             var record = new TileChangeRecord { x = cell.x, y = cell.y, z = cell.z, tileId = tileId, placed = placed };
             backgroundChangeLog.Add(record);
+        }
+
+        private bool TryResolveWallMaterial(Vector3Int cell, out YokaiWallMaterial material)
+        {
+            material = YokaiWallMaterial.Default;
+            if (!InBounds(cell)) return false;
+            var id = TileIdAlias.ToCanonical(tiles[cell.x, cell.y].elementType);
+            if (string.Equals(id, "iron_insul_wall", StringComparison.Ordinal))
+            {
+                material = YokaiWallMaterial.IronHeatWall;
+                return true;
+            }
+            if (string.Equals(id, "door", StringComparison.Ordinal) && IsDoorOpen(cell))
+                return false;
+            return string.Equals(id, "insul_wall", StringComparison.Ordinal) ||
+                   string.Equals(id, "door", StringComparison.Ordinal) ||
+                   string.Equals(id, "roof", StringComparison.Ordinal);
+        }
+
+        private float ResolveWallHitPoints(Vector3Int cell)
+        {
+            var id = TileIdAlias.ToCanonical(GetTile(cell).elementType);
+            if (string.Equals(id, "iron_insul_wall", StringComparison.Ordinal))
+                return ReadPositiveGlobal("ice_storage_hp", DefaultIronInsulationWallHitPoints);
+            if (string.Equals(id, "insul_wall", StringComparison.Ordinal) &&
+                clayPlasterResolver?.Invoke(cell) == true)
+                return ReadPositiveGlobal("insul_clay_wall_hp", DefaultClayPlasteredWallHitPoints);
+            return ReadPositiveGlobal("ice_tile_hp", DefaultInsulationWallHitPoints);
+        }
+
+        private float ResolveMaximumPossibleWallHitPoints(Vector3Int cell)
+        {
+            var id = TileIdAlias.ToCanonical(GetTile(cell).elementType);
+            if (string.Equals(id, "iron_insul_wall", StringComparison.Ordinal))
+                return ReadPositiveGlobal("ice_storage_hp", DefaultIronInsulationWallHitPoints);
+            if (string.Equals(id, "insul_wall", StringComparison.Ordinal))
+                return ReadPositiveGlobal("insul_clay_wall_hp", DefaultClayPlasteredWallHitPoints);
+            return ReadPositiveGlobal("ice_tile_hp", DefaultInsulationWallHitPoints);
+        }
+
+        private float ReadPositiveGlobal(string key, float fallback)
+        {
+            var definition = catalog?.FindGlobal(key);
+            return definition != null && definition.TryGetFloat(out var value) &&
+                   IsFinite(value) && value > 0f
+                ? value
+                : fallback;
+        }
+
+        private bool DestroyWallWithoutDrop(Vector3Int cell)
+        {
+            if (!TryResolveWallMaterial(cell, out _)) return false;
+            var current = tiles[cell.x, cell.y];
+            var destroyedId = current.elementType;
+            if (IsDoorOpen(cell)) RemoveOpenDoorState(cell);
+            var cleared = current.WithoutForeground();
+            tiles[cell.x, cell.y] = cleared;
+            ApplyForegroundVisual(cell, null);
+            ApplyBackgroundVisual(cell, cleared.HasBackground ? cleared.backgroundElementType : null);
+            RefreshEdgeOverlayAround(cell);
+            renderer?.NotifyForegroundCollisionDirty();
+            RecordChange(cell, destroyedId, placed: false);
+            GameEvents.RaiseTileBroken(cell);
+            return true;
         }
 
         private static bool IsFinite(float value) =>

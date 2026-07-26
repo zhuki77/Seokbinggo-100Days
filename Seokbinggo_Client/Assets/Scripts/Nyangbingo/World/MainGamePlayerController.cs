@@ -41,6 +41,7 @@ namespace Nyangbingo.World
         // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
         // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
         private const float MiningReach = 1.5f;
+        public const float InsulationWallBareClawMiningSeconds = 3f;
         // DevA 테스트 하니스와 동일: 마우스 칸 우선 + 플레이어 인접 미개봉 상자.
         private const float ChestInteractReach = 1.75f;
         private const float CollapseSeconds = 1.5f;
@@ -92,7 +93,6 @@ namespace Nyangbingo.World
         private float bossKnockbackRemainingSeconds;
         private bool grounded;
         private bool airJumpConsumed;
-        private bool miningAllowedByLastSwing;
         private bool miningActive;
         private string miningTreeId = string.Empty;
         private string miningRebarId = string.Empty;
@@ -101,6 +101,11 @@ namespace Nyangbingo.World
         private bool miningHasCompanion;
         private float miningElapsedSeconds;
         private float miningRequiredSeconds;
+        private bool miningTargetVisible;
+        private bool miningTargetMineable;
+        private Vector3Int miningTargetCell;
+        private Vector3Int miningFailureCell;
+        private float miningFailureMessageUntil;
         private float baseMoveSpeed;
         private float currentMoveSpeed;
         private float attackCooldown;
@@ -121,6 +126,7 @@ namespace Nyangbingo.World
         private bool bodySimulationBeforeDeath;
         private Vector2 initialSpawnPosition;
         private SpriteRenderer playerRenderer;
+        private Transform playerVisualTransform;
         private Color aliveRendererColor;
         private Quaternion aliveRotation;
         private Image deathFadeImage;
@@ -238,21 +244,34 @@ namespace Nyangbingo.World
 
             ConfigurePhysicsBody(body, playerCollider);
             ApplyGeneratedWorldSpawn();
-            playerRenderer = GetComponent<SpriteRenderer>();
+            var legacyPlayerRenderer = GetComponent<SpriteRenderer>();
+            var visualObject = new GameObject("Visual");
+            visualObject.transform.SetParent(transform, false);
+            playerVisualTransform = visualObject.transform;
+            playerRenderer = visualObject.AddComponent<SpriteRenderer>();
+            if (legacyPlayerRenderer != null)
+            {
+                playerRenderer.sharedMaterial = legacyPlayerRenderer.sharedMaterial;
+                playerRenderer.sortingLayerID = legacyPlayerRenderer.sortingLayerID;
+                legacyPlayerRenderer.enabled = false;
+                legacyPlayerRenderer.sprite = null;
+            }
             var playerArt = characterArtCatalog != null ? characterArtCatalog.Find("player") : null;
             if (playerArt?.Sprite != null)
             {
-                characterAnimator = GetComponent<RuntimeCharacterSpriteAnimator>() ??
-                                    gameObject.AddComponent<RuntimeCharacterSpriteAnimator>();
+                characterAnimator = visualObject.AddComponent<RuntimeCharacterSpriteAnimator>();
                 characterAnimator.Configure(playerArt, 20);
             }
             else
                 RuntimePlaceholderVisual.Configure(playerRenderer, new Color(.25f, .85f, 1f), .8f, 20);
+            playerVisualTransform.localPosition = Vector3.up *
+                RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
+                    playerCollider, playerRenderer);
             initialSpawnPosition = transform.position;
             aliveRendererColor = playerRenderer.color;
             aliveRotation = transform.rotation;
             var indicatorObject = new GameObject("AttackIndicator");
-            indicatorObject.transform.SetParent(transform, false);
+            indicatorObject.transform.SetParent(playerVisualTransform, false);
             attackIndicator = indicatorObject.AddComponent<SpriteRenderer>();
             // The delivered art is rotated -90 degrees for a right-facing attack, so its
             // source Y axis becomes screen X. flipY is therefore the required screen-space
@@ -386,6 +405,7 @@ namespace Nyangbingo.World
             {
                 movementInput = Vector2.zero;
                 CancelMining();
+                HideMiningTargetFeedback();
                 TickDeathSequence(Time.deltaTime);
                 return;
             }
@@ -394,6 +414,7 @@ namespace Nyangbingo.World
             {
                 movementInput = Vector2.zero;
                 CancelMining();
+                HideMiningTargetFeedback();
                 characterAnimator?.SetMoving(false);
                 return;
             }
@@ -456,16 +477,15 @@ namespace Nyangbingo.World
             var buildingPlacementActive = MainGameTurretRuntime.BlocksCombatInput ||
                                           MainGameTilePaletteController.BlocksGameplayInput ||
                                           MainGameHudController.BlocksWorldPrimaryInput;
+            UpdateMiningTargetFeedback(pointerOverUi || buildingPlacementActive);
             var primaryHeld = Input.GetMouseButton(0);
             if (!buildingPlacementActive && !pointerOverUi && primaryHeld)
             {
                 if (attackCooldown <= 0f)
-                {
-                    var attacked = TryBasicAttack();
-                    miningAllowedByLastSwing = !attacked || attack.LastHitCount == 0;
-                }
-                if (miningAllowedByLastSwing) TickMining();
-                else ResetMiningProgress();
+                    TryBasicAttack();
+                // 좌클릭 공격이 요괴에게 명중해도 같은 방향의 채굴 진행은 끊지 않는다.
+                // 공격 쿨다운과 채굴 시간은 서로 독립적으로 누적된다.
+                TickMining();
             }
             else CancelMining();
             // 우클릭은 부채 액티브 전용이다. 상자와 설치물의 제품 상호작용은 E로 통합한다.
@@ -829,7 +849,7 @@ namespace Nyangbingo.World
 
         private bool TryBasicAttack()
         {
-            if (activeProfile == null || !activeProfile.HasBasicAttack || activeProfile.AttacksPerSecond <= 0f)
+            if (!AllowsPlayerBasicAttack(activeProfile))
                 return false;
             attack.Strike(SnapAttackFeedbackDirection(facing));
             characterAnimator?.PlayAttack();
@@ -865,11 +885,14 @@ namespace Nyangbingo.World
                 return;
             }
             var tile = tileService.GetTile(cell);
-            var definitionId = ResolveMiningDefinitionId(tile.elementType);
-            var definition = catalog?.FindMineralTier(definitionId);
-            var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
+            var requiredSeconds = ResolveTileMiningSeconds(catalog, tile.elementType, clawTier);
             if (!tileService.InBounds(cell) || tile.IsAir || clawTier < tile.hardness || requiredSeconds <= 0f)
             {
+                if (!tile.IsAir && clawTier < tile.hardness)
+                    ShowMiningFailure(cell,
+                        $"채굴 도구 등급 부족 · 필요 {tile.hardness}, 현재 {clawTier}");
+                else if (!tile.IsAir)
+                    ShowMiningFailure(cell, "현재 장비로 채굴할 수 없는 대상입니다.");
                 ResetMiningProgress();
                 return;
             }
@@ -939,6 +962,10 @@ namespace Nyangbingo.World
             return true;
         }
 
+        public static bool AllowsPlayerBasicAttack(CombatProfileDefinition profile) =>
+            profile != null && profile.HasBasicAttack && profile.AttacksPerSecond > 0f &&
+            profile.Id != HapjukseonId;
+
         private bool TryTickRebarMining(int clawTier, float miningDelta)
         {
             if (worldDecorationRenderer == null ||
@@ -1000,27 +1027,53 @@ namespace Nyangbingo.World
                 float.IsNaN(playerOrigin.y) || float.IsInfinity(playerOrigin.y))
                 return false;
 
-            // Mouse position already determines facing. Searching the cursor's neighboring cells
-            // made a horizontal swing mine the ground diagonally below it. Mine only the first
-            // foreground cell crossed by the same snapped eight-direction line as the claw.
-            _ = mouseWorld;
             var direction = SnapAttackFeedbackDirection(facing);
             // MeleeArcAttack and the player's Rigidbody2D both use playerOrigin. The visual claw
             // has a separate hand-height offset and must never raise the authoritative mining ray.
             var attackOrigin = playerOrigin;
             var reachSq = miningReach * miningReach;
+
+            // Cursor intent wins over geometric ray order. Near a tile corner, a diagonal ray
+            // enters the horizontal or vertical neighbor a fraction earlier and used to select
+            // that nearer cell even though the cursor was visibly over the diagonal tile.
+            if (mouseWorld.HasValue)
+            {
+                var cursorCell = tileService.WorldToCell(mouseWorld.Value);
+                if (IsMineableForegroundCell(tileService, cursorCell) &&
+                    IsWithinMiningReach(tileService, attackOrigin, cursorCell, reachSq))
+                {
+                    cell = cursorCell;
+                    return true;
+                }
+            }
+
+            // Preserve deterministic eight-direction targeting when the cursor is over air.
+            // This checks the intended adjacent octant before the fallback ray, preventing the
+            // player's support/side tile from winning merely because its boundary is closer.
+            var originCell = tileService.WorldToCell(attackOrigin);
+            var directionalCell = originCell + new Vector3Int(
+                Mathf.RoundToInt(direction.x), Mathf.RoundToInt(direction.y), 0);
+            if (directionalCell != originCell &&
+                IsMineableForegroundCell(tileService, directionalCell) &&
+                IsWithinMiningReach(tileService, attackOrigin, directionalCell, reachSq))
+            {
+                cell = directionalCell;
+                return true;
+            }
+
+            // For gaps wider than one cell, keep the existing first-solid fallback along the
+            // snapped claw direction.
             var steps = Mathf.Max(1, Mathf.CeilToInt(miningReach * 8f));
             var previousCell = new Vector3Int(int.MinValue, int.MinValue, 0);
             for (var step = 0; step <= steps; step++)
             {
                 var distance = miningReach * step / steps;
                 var sample = attackOrigin + direction * distance;
-                var candidate = new Vector3Int(
-                    Mathf.FloorToInt(sample.x), Mathf.FloorToInt(sample.y), 0);
+                var candidate = tileService.WorldToCell(sample);
                 if (candidate == previousCell) continue;
                 previousCell = candidate;
                 if (!IsMineableForegroundCell(tileService, candidate) ||
-                    !IsWithinMiningReach(attackOrigin, candidate, reachSq))
+                    !IsWithinMiningReach(tileService, attackOrigin, candidate, reachSq))
                     continue;
                 cell = candidate;
                 return true;
@@ -1034,11 +1087,10 @@ namespace Nyangbingo.World
             return !tileService.GetTile(cell).IsAir;
         }
 
-        private static bool IsWithinMiningReach(Vector2 playerOrigin, Vector3Int cell, float reachSq)
+        private static bool IsWithinMiningReach(
+            TileService tileService, Vector2 playerOrigin, Vector3Int cell, float reachSq)
         {
-            var closest = new Vector2(
-                Mathf.Clamp(playerOrigin.x, cell.x, cell.x + 1f),
-                Mathf.Clamp(playerOrigin.y, cell.y, cell.y + 1f));
+            var closest = (Vector2)tileService.GetCellWorldBounds(cell).ClosestPoint(playerOrigin);
             return (closest - playerOrigin).sqrMagnitude <= reachSq;
         }
 
@@ -1049,8 +1101,7 @@ namespace Nyangbingo.World
             if (tileService == null || !tileService.InBounds(cell)) return false;
             var tile = tileService.GetTile(cell);
             if (tile.IsAir || clawTier < tile.hardness) return false;
-            var definition = catalog?.FindMineralTier(ResolveMiningDefinitionId(tile.elementType));
-            requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
+            requiredSeconds = ResolveTileMiningSeconds(catalog, tile.elementType, clawTier);
             return requiredSeconds > 0f;
         }
 
@@ -1081,7 +1132,7 @@ namespace Nyangbingo.World
             if (item != null && totalAmount > 0)
             {
                 WorldItemDropRequest.Request(item, totalAmount,
-                    new Vector2(cell.x + .5f, cell.y + .5f));
+                    tileService.GetCellCenterWorld(cell));
                 Nyangbingo.Core.GameEvents.RaiseMiningResult(cell, item.DisplayName, totalAmount, critical);
             }
         }
@@ -1134,7 +1185,6 @@ namespace Nyangbingo.World
 
         private void CancelMining()
         {
-            miningAllowedByLastSwing = false;
             ResetMiningProgress();
         }
 
@@ -1150,6 +1200,45 @@ namespace Nyangbingo.World
             miningRequiredSeconds = 0f;
         }
 
+        private void UpdateMiningTargetFeedback(bool blocked)
+        {
+            var tileService = bootstrap?.TileService;
+            if (blocked || tileService == null || !TryResolveMiningCell(tileService, out var cell))
+            {
+                HideMiningTargetFeedback();
+                return;
+            }
+
+            var tile = tileService.GetTile(cell);
+            var clawTier = ResolveMiningClawTier();
+            var mineable = !tile.IsAir && clawTier >= tile.hardness &&
+                           ResolveTileMiningSeconds(catalog, tile.elementType, clawTier) > 0f;
+            if (miningTargetVisible && miningTargetCell == cell &&
+                miningTargetMineable == mineable)
+                return;
+            miningTargetVisible = true;
+            miningTargetCell = cell;
+            miningTargetMineable = mineable;
+            GameEvents.RaiseMiningTargetChanged(cell, true, mineable);
+        }
+
+        private void HideMiningTargetFeedback()
+        {
+            if (!miningTargetVisible) return;
+            miningTargetVisible = false;
+            GameEvents.RaiseMiningTargetChanged(miningTargetCell, false, false);
+        }
+
+        private void ShowMiningFailure(Vector3Int cell, string message)
+        {
+            if (string.IsNullOrWhiteSpace(message) ||
+                miningFailureCell == cell && Time.unscaledTime < miningFailureMessageUntil)
+                return;
+            miningFailureCell = cell;
+            miningFailureMessageUntil = Time.unscaledTime + 1.5f;
+            interactionMessages?.ShowExternalMessage(message);
+        }
+
         public static string ResolveMiningDefinitionId(string elementType) => elementType switch
         {
             WorldTileTypes.StoneMid => WorldTileTypes.Stone,
@@ -1158,6 +1247,22 @@ namespace Nyangbingo.World
             WorldTileTypes.IceLake => WorldTileTypes.IceShard,
             _ => elementType
         };
+
+        public static float ResolveTileMiningSeconds(
+            GameDataCatalog dataCatalog, string elementType, int clawTier)
+        {
+            if (string.Equals(elementType, "insul_wall", System.StringComparison.Ordinal))
+            {
+                if (clawTier < 1) return -1f;
+                // The approved seal-balance calculation fixes 25 T1 walls at 75 seconds.
+                // Preserve the standard claw progression where each tier halves mining time.
+                return InsulationWallBareClawMiningSeconds /
+                       Mathf.Pow(2f, Mathf.Clamp(clawTier - 1, 0, 2));
+            }
+
+            var definition = dataCatalog?.FindMineralTier(ResolveMiningDefinitionId(elementType));
+            return definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
+        }
 
         public static Vector3Int ResolveWideMiningCompanionCell(Vector3Int primaryCell, float playerWorldY)
         {
@@ -1194,8 +1299,13 @@ namespace Nyangbingo.World
         {
             if (activeProfile == null ||
                 (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId)) return;
-            if (wireSnare.TryUse(facing)) ShowAttackFeedback();
+            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id))) ShowAttackFeedback();
         }
+
+        public static int ResolveFanAbilityDamage(string combatProfileId) =>
+            combatProfileId == CheolseonId
+                ? WireSnareAbility.CheolseonDamage
+                : WireSnareAbility.HapjukseonDamage;
 
         private void ShowAttackFeedback()
         {
@@ -1653,12 +1763,15 @@ namespace Nyangbingo.World
             cell = default;
             var origin = (Vector2)transform.position;
             var reachSq = ChestInteractReach * ChestInteractReach;
+            var tileService = bootstrap?.TileService;
 
             if (followCamera != null)
             {
                 var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
-                var mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
-                if (IsChestCellInReach(origin, mouseCell, reachSq) &&
+                var mouseCell = tileService != null
+                    ? tileService.WorldToCell(mouse)
+                    : new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                if (IsChestCellInReach(tileService, origin, mouseCell, reachSq) &&
                     session.TryPeekChestAt(mouseCell))
                 {
                     cell = mouseCell;
@@ -1666,26 +1779,32 @@ namespace Nyangbingo.World
                 }
             }
 
-            var facingCell = Vector3Int.FloorToInt(origin +
-                (facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.right));
-            var currentCell = Vector3Int.FloorToInt(origin);
-            if (IsChestCellInReach(origin, facingCell, reachSq) &&
+            var facingPosition = origin +
+                (facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.right);
+            var facingCell = tileService != null
+                ? tileService.WorldToCell(facingPosition)
+                : Vector3Int.FloorToInt(facingPosition);
+            var currentCell = tileService != null
+                ? tileService.WorldToCell(origin)
+                : Vector3Int.FloorToInt(origin);
+            if (IsChestCellInReach(tileService, origin, facingCell, reachSq) &&
                 session.TryPeekChestAt(facingCell))
             {
                 cell = facingCell;
                 return true;
             }
-            if (IsChestCellInReach(origin, currentCell, reachSq) &&
+            if (IsChestCellInReach(tileService, origin, currentCell, reachSq) &&
                 session.TryPeekChestAt(currentCell))
             {
                 cell = currentCell;
                 return true;
             }
 
-            return TryFindNearestChestCell(session, origin, reachSq, out cell);
+            return TryFindNearestChestCell(session, tileService, origin, reachSq, out cell);
         }
 
-        private static bool TryFindNearestChestCell(WorldSessionController session, Vector2 origin,
+        private static bool TryFindNearestChestCell(
+            WorldSessionController session, TileService tileService, Vector2 origin,
             float reachSq, out Vector3Int cell)
         {
             cell = default;
@@ -1698,7 +1817,9 @@ namespace Nyangbingo.World
             {
                 var chest = chests[i];
                 var chestCell = new Vector3Int(chest.position.x, chest.position.y, 0);
-                var center = new Vector2(chestCell.x + .5f, chestCell.y + .5f);
+                var center = tileService != null
+                    ? (Vector2)tileService.GetCellCenterWorld(chestCell)
+                    : new Vector2(chestCell.x + .5f, chestCell.y + .5f);
                 var distSq = (center - origin).sqrMagnitude;
                 if (distSq > reachSq || distSq >= bestDist) continue;
                 bestDist = distSq;
@@ -1708,9 +1829,12 @@ namespace Nyangbingo.World
             return found;
         }
 
-        private static bool IsChestCellInReach(Vector2 origin, Vector3Int cell, float reachSq)
+        private static bool IsChestCellInReach(
+            TileService tileService, Vector2 origin, Vector3Int cell, float reachSq)
         {
-            var center = new Vector2(cell.x + .5f, cell.y + .5f);
+            var center = tileService != null
+                ? (Vector2)tileService.GetCellCenterWorld(cell)
+                : new Vector2(cell.x + .5f, cell.y + .5f);
             return (center - origin).sqrMagnitude <= reachSq;
         }
 
@@ -1766,6 +1890,7 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            HideMiningTargetFeedback();
             if (bootstrap != null) bootstrap.WorldReady -= RebindForegroundPlacementBlocker;
             placementBlockerTileService?.ClearForegroundPlacementBlocker(
                 IsPlayerOverlappingForegroundCell);

@@ -199,7 +199,10 @@ namespace Nyangbingo.UI
             var generator = bootstrap?.Session?.Generator;
             if (generator == null || playerTarget == null) return false;
             var altar = generator.AltarPosition;
-            var altarCenter = new Vector2(altar.x + .5f, altar.y + .5f);
+            var altarCenter = bootstrap?.TileService != null
+                ? (Vector2)bootstrap.TileService.GetCellCenterWorld(
+                    new Vector3Int(altar.x, altar.y, 0))
+                : new Vector2(altar.x + .5f, altar.y + .5f);
             return Vector2.Distance(playerTarget.transform.position, altarCenter) <= deepAltarInteractionRange;
         }
 
@@ -375,7 +378,10 @@ namespace Nyangbingo.UI
             var generator = bootstrap?.Session?.Generator;
             if (generator == null) { ShowMessage("깊은 제단 좌표를 찾을 수 없습니다."); return; }
             var altar = generator.AltarPosition;
-            var position = new Vector2(altar.x + .5f, altar.y + .5f);
+            var position = bootstrap?.TileService != null
+                ? (Vector2)bootstrap.TileService.GetCellCenterWorld(
+                    new Vector3Int(altar.x, altar.y, 0))
+                : new Vector2(altar.x + .5f, altar.y + .5f);
             MovePlayerForEditorTest(position);
             ShowMessage("Shift+F7: 깊은 얼음 제단으로 이동했습니다.");
         }

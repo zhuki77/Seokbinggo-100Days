@@ -54,6 +54,7 @@ namespace Nyangbingo.World
         public int HeatStageReduction => byObjectId.Values.Any(entry =>
             entry.Record.definitionId == ColdWaveCoreDefinitionId) ? 1 : 0;
         public BuildingArtCatalog BuildingArtCatalog => buildingArtCatalog;
+        public TileService TileService => bootstrap?.TileService;
         public bool IsInitialized { get; private set; }
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
@@ -102,6 +103,8 @@ namespace Nyangbingo.World
             coolingSources.ConsumableExpired += HandleConsumableExpired;
             bootstrap.TickDriver.Register(this);
             GameEvents.OnTileBroken += HandleAttachmentSupportBroken;
+            bootstrap.WorldReady += BindWallHealthRuntime;
+            BindWallHealthRuntime();
             IsInitialized = true;
             Debug.Log("[Nyangbingo] MainGameEnvironmentState: 공식 설치물 경계와 냉기원 상태를 " +
                       "메인 SealSystem에 연결 완료.");
@@ -124,6 +127,11 @@ namespace Nyangbingo.World
         public bool IsRecognizedBarrier(Vector3Int cell) =>
             byCell.TryGetValue(cell, out var entry) && entry.BarrierActive &&
             boundaryPolicy != null && boundaryPolicy.SealsPlacedElement(entry.Record.definitionId);
+
+        public bool HasPlacedDefinitionAtCell(Vector3Int cell, string definitionId) =>
+            !string.IsNullOrWhiteSpace(definitionId) &&
+            byCell.TryGetValue(cell, out var entry) &&
+            string.Equals(entry.Record.definitionId, definitionId, StringComparison.Ordinal);
 
         public bool TryPlace(PlacedObjectRecord record, bool barrierActive = true, bool coolingActive = false)
         {
@@ -502,6 +510,12 @@ namespace Nyangbingo.World
 
         private void InvalidateSeal() => bootstrap?.SealSystem?.InvalidateAll();
 
+        private void BindWallHealthRuntime()
+        {
+            bootstrap?.TileService?.SetClayPlasterResolver(cell =>
+                HasPlacedDefinitionAtCell(cell, ClayPlasterDefinitionId));
+        }
+
         private void CreateVisual(Entry entry)
         {
             var art = buildingArtCatalog?.Find(entry.Record.definitionId);
@@ -510,17 +524,20 @@ namespace Nyangbingo.World
             visual.transform.SetParent(transform, false);
             visual.transform.position = entry.Record.position;
             visual.transform.rotation = Quaternion.Euler(0f, 0f, entry.Record.rotationDegrees);
-            var renderer = visual.AddComponent<SpriteRenderer>();
+            var artObject = new GameObject("Art");
+            artObject.transform.SetParent(visual.transform, false);
+            var renderer = artObject.AddComponent<SpriteRenderer>();
             var sortingOrder = IsInsulationAttachment(entry.Record.definitionId) ? 13 : 12;
             renderer.sortingOrder = sortingOrder;
             if (art?.Sprite != null)
             {
                 renderer.sprite = art.Sprite;
-                visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
+                artObject.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
             }
             else
                 RuntimePlaceholderVisual.Configure(
                     renderer, new Color(.55f, .85f, 1f), .75f, sortingOrder);
+            TileService?.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
             visualsByObjectId.Add(entry.Record.objectId, visual);
         }
 
@@ -531,8 +548,9 @@ namespace Nyangbingo.World
             visualsByObjectId.Clear();
         }
 
-        private static Vector3Int CellFrom(Vector2 position) =>
-            new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+        private Vector3Int CellFrom(Vector2 position) => TileService != null
+            ? TileService.WorldToCell(position)
+            : new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
 
         private bool CanPlaceInsulationAt(string definitionId, Vector3Int cell,
             bool checkRuntimeOccupancy = true)
@@ -575,6 +593,8 @@ namespace Nyangbingo.World
         private void OnDestroy()
         {
             GameEvents.OnTileBroken -= HandleAttachmentSupportBroken;
+            if (bootstrap != null) bootstrap.WorldReady -= BindWallHealthRuntime;
+            bootstrap?.TileService?.SetClayPlasterResolver(null);
             bootstrap?.TickDriver?.Unregister(this);
             if (coolingSources != null) coolingSources.ConsumableExpired -= HandleConsumableExpired;
         }

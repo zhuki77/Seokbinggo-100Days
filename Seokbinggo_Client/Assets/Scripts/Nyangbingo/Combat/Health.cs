@@ -1,5 +1,6 @@
 using System;
 using Nyangbingo.Core;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.Combat
@@ -57,6 +58,8 @@ namespace Nyangbingo.Combat
         {
             if (knockbackImmune || float.IsNaN(impulse.x) || float.IsInfinity(impulse.x) ||
                 float.IsNaN(impulse.y) || float.IsInfinity(impulse.y)) return false;
+            var worldMobBody = GetComponent<WorldMobPhysicsBody>();
+            if (worldMobBody != null) return worldMobBody.TryApplyKnockback(impulse);
             var body = GetComponent<Rigidbody2D>();
             if (body == null) return false;
             body.AddForce(impulse, ForceMode2D.Impulse);
