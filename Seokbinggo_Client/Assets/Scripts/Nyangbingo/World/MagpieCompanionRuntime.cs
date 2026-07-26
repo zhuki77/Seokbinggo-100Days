@@ -45,7 +45,7 @@ namespace Nyangbingo.World
         private float dayFollowSide = -1f;
         private bool playerPositionInitialized;
         private bool disposed;
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private bool editorTestOverride;
 #endif
 
@@ -155,7 +155,7 @@ namespace Nyangbingo.World
             CancelCollection();
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool ToggleEditorTestOverride()
         {
             if (disposed) return false;
@@ -326,7 +326,7 @@ namespace Nyangbingo.World
         {
             get
             {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 return editorTestOverride;
 #else
                 return false;

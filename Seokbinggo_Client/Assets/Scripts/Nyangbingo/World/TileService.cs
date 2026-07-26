@@ -141,19 +141,18 @@ namespace Nyangbingo.World
                 new Vector3(cell.x + .5f, cell.y + .5f, cell.z),
                 new Vector3(1f, 1f, 0f));
 
-        public bool TryFindDamageableWall(Vector2 attackerPosition, Vector2 targetPosition,
+        public bool TryFindDamageableWall(Vector2 attackerPosition, Vector2 approachDirection,
             float searchRange, out Vector3Int wallCell, out YokaiWallMaterial material)
         {
             wallCell = default;
             material = YokaiWallMaterial.Default;
             if (!IsFinite(attackerPosition.x) || !IsFinite(attackerPosition.y) ||
-                !IsFinite(targetPosition.x) || !IsFinite(targetPosition.y) ||
+                !IsFinite(approachDirection.x) || !IsFinite(approachDirection.y) ||
                 !IsFinite(searchRange) || searchRange < 0f)
                 return false;
 
-            var towardTarget = targetPosition - attackerPosition;
-            if (towardTarget.sqrMagnitude <= Mathf.Epsilon) return false;
-            towardTarget.Normalize();
+            if (approachDirection.sqrMagnitude <= Mathf.Epsilon) return false;
+            approachDirection.Normalize();
 
             // Mob pivots sit near the middle of a tile while walls occupy a full grid cell.
             // The half-tile allowance lets an adjacent mob reach the cell centre without
@@ -173,7 +172,7 @@ namespace Nyangbingo.World
                 var offset = (Vector2)GetCellCenterWorld(candidate) - attackerPosition;
                 var distance = offset.magnitude;
                 if (distance > effectiveRange || distance <= Mathf.Epsilon ||
-                    Vector2.Dot(offset / distance, towardTarget) < .25f ||
+                    Vector2.Dot(offset / distance, approachDirection) < .25f ||
                     distance >= bestDistance)
                     continue;
                 found = true;

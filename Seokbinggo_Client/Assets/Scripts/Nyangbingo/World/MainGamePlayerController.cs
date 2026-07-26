@@ -418,7 +418,7 @@ namespace Nyangbingo.World
                 characterAnimator?.SetMoving(false);
                 return;
             }
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (Input.GetKeyDown(KeyCode.M) &&
                 (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)))
             {

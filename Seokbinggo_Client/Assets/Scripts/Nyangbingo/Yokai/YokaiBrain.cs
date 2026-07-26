@@ -17,7 +17,8 @@ namespace Nyangbingo.Yokai
     public interface IWallMaterialTarget { YokaiWallMaterial WallMaterial { get; } }
     public interface IYokaiBarrierTarget
     {
-        bool TryFindBlockingWall(Vector3 attackerPosition, float searchRange,
+        bool TryFindBlockingWall(Vector3 attackerPosition, Vector3 approachDirection,
+            float searchRange,
             out Vector3Int wallCell, out YokaiWallMaterial material);
         bool TryDamageBlockingWall(Vector3Int wallCell, float amount);
     }
@@ -479,27 +480,26 @@ namespace Nyangbingo.Yokai
             var attackRange = float.IsNaN(wallAttackRange) || float.IsInfinity(wallAttackRange)
                 ? 1f
                 : Mathf.Max(0f, wallAttackRange);
-            var hasClearAttackLine = physicsBody == null ||
-                                     physicsBody.HasClearAttackLine(targetPosition);
-            // A nearby player wall is a real attack target on the same level, even though
-            // navigation treats destroyable barriers as passable. On different floors,
-            // however, the selected platform route takes precedence so a wall beside the
-            // yokai is not mistaken for the floor/ledge that it should route around.
-            var isRoutingAcrossAnotherFloor =
-                !hasClearAttackLine &&
-                physicsBody?.HasTraversableGroundRoute == true &&
-                Mathf.Abs(targetOffset.y) > attackRange;
             var barrierTarget = target as IYokaiBarrierTarget;
             var blockingWallCell = default(Vector3Int);
             var blockingWallMaterial = YokaiWallMaterial.Default;
-            // Natural floors are excluded by the barrier target itself. Player-built,
-            // damageable walls must still be attacked even though navigation deliberately
-            // plans through them toward the player.
-            var hasBlockingWall = !isRoutingAcrossAnotherFloor &&
-                                  barrierTarget != null &&
-                                  barrierTarget.TryFindBlockingWall(
-                                      currentPosition, attackRange,
-                                      out blockingWallCell, out blockingWallMaterial);
+            var wallApproachDirection = direction.sqrMagnitude > Mathf.Epsilon
+                ? direction
+                : targetOffset;
+            // The selected route is authoritative even when a two-cell player wall makes
+            // the grounded path graph look like a transition to another floor. Natural
+            // terrain is excluded by the barrier target. A zero-DPS yokai must keep routing
+            // instead of entering AttackWall forever.
+            var foundBlockingWall = barrierTarget != null &&
+                                    barrierTarget.TryFindBlockingWall(
+                                        currentPosition, wallApproachDirection, attackRange,
+                                        out blockingWallCell, out blockingWallMaterial);
+            var blockingWallDamage = foundBlockingWall
+                ? definition.WallDamageFor(blockingWallMaterial)
+                : 0f;
+            var hasBlockingWall = blockingWallDamage > 0f &&
+                                  !float.IsNaN(blockingWallDamage) &&
+                                  !float.IsInfinity(blockingWallDamage);
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - actionSeconds);
             switch (state)
             {
@@ -530,12 +530,9 @@ namespace Nyangbingo.Yokai
                 case State.AttackWall:
                     if (hasBlockingWall)
                     {
-                        var wallDamagePerSecond = definition.WallDamageFor(blockingWallMaterial);
-                        if (wallDamagePerSecond > 0f && !float.IsNaN(wallDamagePerSecond) &&
-                            !float.IsInfinity(wallDamagePerSecond) &&
-                            contactAttackRemaining <= .0001f)
+                        if (contactAttackRemaining <= .0001f)
                         {
-                            var damage = wallDamagePerSecond * WallAttackIntervalGameSeconds;
+                            var damage = blockingWallDamage * WallAttackIntervalGameSeconds;
                             if (!float.IsNaN(damage) && !float.IsInfinity(damage) &&
                                 barrierTarget.TryDamageBlockingWall(blockingWallCell, damage))
                             {

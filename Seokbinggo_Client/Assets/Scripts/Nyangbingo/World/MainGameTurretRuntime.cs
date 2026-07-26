@@ -226,7 +226,7 @@ namespace Nyangbingo.World
                 RefreshInteractionStatus();
                 return;
             }
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (Input.GetKeyDown(KeyCode.F11))
             {
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
@@ -924,7 +924,7 @@ namespace Nyangbingo.World
 
         private void HandleInventoryChanged() => BuildStateChanged?.Invoke();
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void GrantTurretItemForEditorTest()
         {
             if (runtimeServices?.PlayerInventory != null &&

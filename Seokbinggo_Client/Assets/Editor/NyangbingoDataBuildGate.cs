@@ -16,7 +16,7 @@ public static class NyangbingoDataBuildGate
 {
     internal const string ManifestAssetPath =
         "ProjectSettings/NyangbingoDataImportManifest.txt";
-    private const string ManifestVersion = "nyangbingo-data-import-manifest-v1";
+    private const string ManifestVersion = "nyangbingo-data-import-manifest-v2";
     private const string CatalogAssetPath = "Assets/Data/SO/GameDataCatalog.asset";
 
     [MenuItem("Nyangbingo/Validate Product Data Freshness")]
@@ -199,9 +199,13 @@ public static class NyangbingoDataBuildGate
 
     private static string ComputeSha256(string path)
     {
-        using (var stream = File.OpenRead(path))
+        var normalizedText = File.ReadAllText(path, Encoding.UTF8)
+            .Replace("\r\n", "\n")
+            .Replace('\r', '\n');
+        var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+            .GetBytes(normalizedText);
         using (var sha256 = SHA256.Create())
-            return BitConverter.ToString(sha256.ComputeHash(stream))
+            return BitConverter.ToString(sha256.ComputeHash(bytes))
                 .Replace("-", string.Empty);
     }
 

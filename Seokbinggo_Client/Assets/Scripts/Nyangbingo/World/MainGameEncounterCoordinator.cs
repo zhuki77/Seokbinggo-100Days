@@ -158,7 +158,7 @@ namespace Nyangbingo.World
 
         private void Start() => Initialize();
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.F8))
@@ -479,7 +479,7 @@ namespace Nyangbingo.World
             if (health != null) Destroy(health.gameObject);
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool TryStartEditorBossEncounter(string preferredBossId = "king_dokkaebi")
         {
             if (!initialized || bossManager == null || bossManager.IsBossActive ||
