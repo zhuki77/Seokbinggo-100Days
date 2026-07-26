@@ -529,6 +529,25 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 dataMenuSource.Contains("NyangbingoDataBuildGate.WriteCurrentManifest()") &&
                 dataMenuSource.Contains("if (importHadErrors)"),
             "Only an error-free v34 reimport may refresh the product data manifest.");
+        Require(buildSource.Contains(".Replace(\"\\r\\n\", \"\\n\")") &&
+                buildSource.Contains(".Replace('\\r', '\\n')"),
+            "The product data manifest must normalize CSV line endings before hashing.");
+        var testShortcutSources = new[]
+        {
+            "Assets/Scripts/Nyangbingo/UI/MainGameBossSummonUiController.cs",
+            "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs",
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs",
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs",
+            "Assets/Scripts/Nyangbingo/World/MagpieCompanionRuntime.cs",
+            "Assets/Scripts/Nyangbingo/World/MainGameEffectPresenter.cs",
+            "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs"
+        };
+        Require(testShortcutSources.All(path =>
+                    System.IO.File.ReadAllText(path)
+                        .Contains("#if UNITY_EDITOR || DEVELOPMENT_BUILD")) &&
+                System.IO.File.ReadAllText(testShortcutSources[0])
+                    .Contains("DebugShortcutHelpKey = KeyCode.F5"),
+            "The Development Build must retain the F5 help and every product test shortcut while the release player compiles them out.");
     }
 
     private static void TestProductAudioMixerContract()
@@ -908,6 +927,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 gangcheori != null &&
                 gangcheori.SupportsSpawnTrack(YokaiSpawnTrack.Resident),
             "Eoduksini and Gangcheori must both use the resident encounter track.");
+        Require(Mathf.Approximately(
+                    gangcheori.WallDamageFor(YokaiWallMaterial.Default), 0f) &&
+                Mathf.Approximately(
+                    gangcheori.WallDamageFor(YokaiWallMaterial.Ice), 0f) &&
+                Mathf.Approximately(
+                    gangcheori.WallDamageFor(YokaiWallMaterial.IronHeatWall), 0f),
+            "Resident Gangcheori must preserve the v34.1 zero wall-DPS contract for every material.");
         Require(YokaiSpecialRules.ContactDamage(eoduksini, true) == 14 &&
                 YokaiSpecialRules.ContactDamage(eoduksini, false) == 21,
             "Eoduksini contact damage must use 14 inside lantern light and 21 outside it.");
@@ -984,10 +1010,33 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "A basic insulation wall must remain removable by the T1 bare claw in three seconds.");
         Require(
                 service.TryFindDamageableWall(
-                    new Vector2(1.5f, 1.5f), new Vector2(4.5f, 1.5f), 1f,
+                    new Vector2(1.5f, 1.5f), Vector2.right, 1f,
                     out var foundCell, out var material) &&
                 foundCell == wallCell && material == YokaiWallMaterial.Default,
             "A yokai must resolve an adjacent insulation wall between itself and the player.");
+        Require(
+                service.TryFindDamageableWall(
+                    new Vector2(3.5f, 1.5f), Vector2.left, 1f,
+                    out foundCell, out material) &&
+                foundCell == wallCell && material == YokaiWallMaterial.Default,
+            "A yokai must attack the wall on its selected route even when that route points away from the player's direct bearing.");
+        var upperWallCell = wallCell + Vector3Int.up;
+        Require(service.TryPlaceForeground(upperWallCell, "insul_wall") &&
+                service.TryFindDamageableWall(
+                    new Vector2(1.5f, 1.5f), Vector2.right, 1f,
+                    out foundCell, out material) &&
+                foundCell == wallCell && material == YokaiWallMaterial.Default,
+            "A grounded yokai must resolve the lower attack cell of a two-tile player wall instead of treating it as a step.");
+        var yokaiBrainSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
+        Require(yokaiBrainSource.Contains(
+                    "var wallApproachDirection = direction.sqrMagnitude") &&
+                yokaiBrainSource.Contains(
+                    "currentPosition, wallApproachDirection, attackRange") &&
+                yokaiBrainSource.Contains(
+                    "var blockingWallDamage = foundBlockingWall") &&
+                !yokaiBrainSource.Contains("var isRoutingAcrossAnotherFloor"),
+            "Wall attacks must follow the selected route at every height while zero-DPS yokai remain in pursuit.");
         var durabilityEvents = 0;
         var durabilityCell = default(Vector3Int);
         var durabilityCurrent = 0f;

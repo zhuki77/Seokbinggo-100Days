@@ -96,7 +96,7 @@ namespace Nyangbingo.World
             GameEvents.OnWallDurabilityChanged += HandleWallDurabilityChanged;
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void Update()
         {
             if (playerTransform == null || !Input.GetKeyDown(KeyCode.F10)) return;

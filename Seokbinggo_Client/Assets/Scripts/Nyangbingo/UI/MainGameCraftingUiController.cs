@@ -260,7 +260,7 @@ namespace Nyangbingo.UI
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.Q)) ToggleActiveSlotFromEquipmentPage();
                 if (openedFrame != Time.frameCount && Input.GetKeyDown(KeyCode.E)) TryPrimaryAction();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.R)) TryRefuelPortableLantern();
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (page != Page.Gathering && Input.GetKeyDown(DebugGrantRequirementsKey) &&
                     (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) ||
                      Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
@@ -2188,7 +2188,7 @@ namespace Nyangbingo.UI
             ? stationSource.NearbyCraftingStation
             : CraftingStation.None;
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void GrantSelectedRequirementsForEditorTest()
         {
             if (page == Page.Crafting && !showingSmelting)
@@ -2277,7 +2277,7 @@ namespace Nyangbingo.UI
         {
             if (page == Page.Crafting && CanToggleCraftingSmelting(NearbyStation()))
                 return "F2 제작/제련 전환 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else
             return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";

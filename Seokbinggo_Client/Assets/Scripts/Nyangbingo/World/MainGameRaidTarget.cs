@@ -109,13 +109,14 @@ namespace Nyangbingo.World
             WallDamaged?.Invoke(adjusted);
         }
 
-        public bool TryFindBlockingWall(Vector3 attackerPosition, float searchRange,
+        public bool TryFindBlockingWall(Vector3 attackerPosition, Vector3 approachDirection,
+            float searchRange,
             out Vector3Int wallCell, out YokaiWallMaterial material)
         {
             wallCell = default;
             material = YokaiWallMaterial.Default;
             return bootstrap?.TileService?.TryFindDamageableWall(
-                attackerPosition, transform.position, searchRange,
+                attackerPosition, approachDirection, searchRange,
                 out wallCell, out material) == true;
         }
 
