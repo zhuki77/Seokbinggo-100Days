@@ -25,6 +25,7 @@ namespace Nyangbingo.Data
         public const string BossFieldYokai = "boss_field_yokai";
         public const string CaveMaxHeight = "cave_max_height";
         public const string PlayerJumpHeightTiles = "player_jump_height_tiles";
+        public const string PlayerMiningReachTiles = "player_mining_reach_tiles";
         public const string PlayerGravity = "player_gravity";
         public const string PlayerMaxFallSpeed = "player_max_fall_speed";
         public const string PlayerJumpCut = "player_jump_cut";
@@ -33,6 +34,15 @@ namespace Nyangbingo.Data
         public const string ActiveSlotRule = "active_slot_rule";
         public const string PortableLanternRadius = "portable_lantern_radius";
         public const string JangdokStorageSlots = "jangdok_storage_slots";
+        public const string WaveNightPeriod = "wave_night_period";
+        public const string WaveNightOffset = "wave_night_offset";
+        public const string NightWaveTable = "night_wave_table";
+        public const string WaveMultTarget = "wave_mult_target";
+        public const string WaveAdvanceSec = "wave_advance_sec";
+        public const string YokaiCap = "yokai_cap";
+        public const string TurretSlotCap = "turret_slot_cap";
+        public const string TurretDamageSlotCap = "turret_damage_slot_cap";
+        public const string EvolutionBenchT456 = "evolution_bench_t456";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Global Value")]

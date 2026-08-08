@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Reflection;
 using Nyangbingo.Combat;
+using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.Save;
@@ -41,8 +42,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestDeliveredShellGlyphArtContract();
         TestCraftAndPlacementActionsRemainIndependent();
         TestMissingTileEdgeOverlayRemainsDisabled();
+        TestInsulationDoorToggleContract();
+        TestWaveNightRulesContract();
+        TestSeokbinggoP2RulesContract();
         TestDetailedDynamicSaveSchema();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (24/24).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (27/27).");
     }
 
     private static void TestBossPausedYokaiVisibilityContract()
@@ -113,7 +117,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
         Require(SaveManager.TryDeserialize(JsonUtility.ToJson(save), out var loaded),
             "Detailed dynamic save JSON must deserialize.");
-        Require(loaded.schemaVersion == 17 && loaded.regularEncounter.usesDetailedYokaiState &&
+        Require(loaded.schemaVersion == SaveGame.CurrentSchemaVersion && loaded.regularEncounter.usesDetailedYokaiState &&
                 loaded.regularEncounter.activeYokai.Count == 1 &&
                 loaded.regularEncounter.activeYokai[0].instanceId == "yokai_7" &&
                 loaded.regularEncounter.activeYokai[0].position == new Vector3(12.5f, 8.5f, 0f) &&
@@ -123,6 +127,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 loaded.regularEncounter.pendingRegularYokaiIds.Count == 1 &&
                 loaded.regularEncounter.pendingRaidYokaiIds.Count == 1,
             "Detailed yokai identity, position, HP, track, and queues must survive JSON.");
+        Require(loaded.seokbinggoStage == 0,
+            "Default seokbinggoStage must deserialize as 0.");
+        var withStage = new SaveGame { seokbinggoStage = 4 };
+        Require(SaveManager.TryDeserialize(JsonUtility.ToJson(withStage), out var staged) &&
+                staged.seokbinggoStage == 4,
+            "seokbinggoStage must survive JSON round-trip.");
         Require(loaded.worldDrops.Count == 1 && loaded.worldDrops[0].itemId == "stone" &&
                 loaded.worldDrops[0].amount == 3 &&
                 loaded.worldDrops[0].position == new Vector2(4.25f, 6.5f) &&
@@ -230,6 +240,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
         var shellSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        var flowSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/GameSceneFlow.cs");
+        var titleShellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/TitleShellUiController.cs");
         Require(shellSource.Contains("ConfigurePauseHoverIndicator") &&
                 shellSource.Contains("EventTriggerType.PointerEnter") &&
                 shellSource.Contains("checkmark.rectTransform.sizeDelta = offSize") &&
@@ -239,14 +253,18 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("StabilizeGameplayCamera();") &&
                 shellSource.Contains("shellLoadingImage.sprite = shellLoadingFrames[0]") &&
                 shellSource.Contains("yield return PlayShellLoadingReveal()") &&
-                shellSource.Contains("revealLoadingAfterReload = true") &&
                 shellSource.Contains("shell.RestoreTimeScaleAfterLoading()") &&
                 shellSource.Contains("saveManager.DeleteAll()") &&
-                shellSource.Contains("discardSaveAfterReload = true") &&
                 shellSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed)") &&
                 shellSource.Contains("CreateFreshInitialSave()") &&
                 shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
-                shellSource.Contains("LoadScene(SceneManager.GetActiveScene().name)") &&
+                shellSource.Contains("GameSceneFlow.GoToTitle") &&
+                shellSource.Contains("GameSceneFlow.GoToMainGame") &&
+                shellSource.Contains("ApplyPendingGameplayIntent") &&
+                flowSource.Contains("TitleSceneName = \"Title\"") &&
+                flowSource.Contains("MainGameSceneName = \"MainGame\"") &&
+                titleShellSource.Contains("GameSceneFlow.RequestNewGame") &&
+                titleShellSource.Contains("GameSceneFlow.GoToMainGame") &&
                 shellSource.IndexOf("completion?.Invoke();", shellSource.IndexOf(
                     "private IEnumerator PlayShellLoadingTransition", StringComparison.Ordinal),
                     StringComparison.Ordinal) <
@@ -257,7 +275,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("new Vector2(-112f, 82f)") &&
                 shellSource.Contains("new Vector2(96f, 96f)") &&
                 shellSource.Contains("new Vector2(176f, 97f)"),
-            "Shell art and loading must remain wired, with loading frozen before the post-load tear reveal.");
+            "Shell art and loading must remain wired, with Title↔MainGame scene flow instead of same-scene reload.");
 
         var hudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
@@ -356,54 +374,64 @@ public static class NyangbingoDevBIntegrationRegressionTests
     private static void TestMeleeArcAttackPhysicsQueryContract()
     {
         var root = new GameObject("MeleeArcPhysicsQueryContract");
+        // 에디터에 메인 씬이 열린 채 메뉴 테스트를 돌리면 (0,0) 주변 월드 콜라이더가
+        // OverlapBox에 섞여 LastHitCount가 부풀 수 있다. 격리된 좌표에서 검증한다.
+        var origin = new Vector3(5000f, 5000f, 0f);
+        root.transform.position = origin;
         try
         {
             var attacker = new GameObject("PlayerAttacker", typeof(Health), typeof(MeleeArcAttack));
             attacker.transform.SetParent(root.transform, false);
+            attacker.transform.position = origin;
             var attackerHealth = attacker.GetComponent<Health>();
             attackerHealth.ConfigureForRuntime(100);
 
-            var selfHurtbox = new GameObject("PlayerHurtbox", typeof(BoxCollider2D));
+            var selfHurtbox = new GameObject("PlayerHurtbox", typeof(BoxCollider2D), typeof(Rigidbody2D));
             selfHurtbox.transform.SetParent(attacker.transform, false);
             selfHurtbox.transform.localPosition = new Vector3(.25f, 0f, 0f);
             selfHurtbox.GetComponent<BoxCollider2D>().isTrigger = true;
+            ConfigureDetachedHurtboxBody(selfHurtbox.GetComponent<Rigidbody2D>());
 
             var yokai = new GameObject("GroundYokai", typeof(Health), typeof(BoxCollider2D));
             yokai.transform.SetParent(root.transform, false);
-            yokai.transform.position = new Vector3(.75f, 0f, 0f);
+            yokai.transform.position = origin + new Vector3(.75f, 0f, 0f);
             var yokaiHealth = yokai.GetComponent<Health>();
             yokaiHealth.ConfigureForRuntime(100);
             var yokaiDamageEvents = 0;
             yokaiHealth.Damaged += (_, __) => yokaiDamageEvents++;
 
-            var yokaiHurtbox = new GameObject("GroundYokaiHurtbox", typeof(BoxCollider2D));
+            var yokaiHurtbox = new GameObject("GroundYokaiHurtbox", typeof(BoxCollider2D), typeof(Rigidbody2D));
             yokaiHurtbox.transform.SetParent(yokai.transform, false);
             yokaiHurtbox.transform.localPosition = new Vector3(.05f, 0f, 0f);
             yokaiHurtbox.GetComponent<BoxCollider2D>().isTrigger = true;
+            ConfigureDetachedHurtboxBody(yokaiHurtbox.GetComponent<Rigidbody2D>());
 
             var boss = new GameObject("BossTarget", typeof(Health), typeof(CircleCollider2D));
             boss.transform.SetParent(root.transform, false);
-            boss.transform.position = new Vector3(2.8f, .1f, 0f);
+            boss.transform.position = origin + new Vector3(2.8f, .1f, 0f);
             boss.GetComponent<CircleCollider2D>().radius = .2f;
             var bossHealth = boss.GetComponent<Health>();
             bossHealth.ConfigureForRuntime(200);
             var bossDamageEvents = 0;
             bossHealth.Damaged += (_, __) => bossDamageEvents++;
-            var bossSpriteEdge = new GameObject("BossSpriteEdgeHurtbox", typeof(BoxCollider2D));
+            // 프로덕션 RuntimeSpriteBoundsHurtbox와 같이 kinematic RB가 있어야
+            // 이동 코어가 사거리 밖이어도 스프라이트 외곽 트리거가 Overlap에 잡힌다.
+            var bossSpriteEdge = new GameObject("BossSpriteEdgeHurtbox", typeof(BoxCollider2D), typeof(Rigidbody2D));
             bossSpriteEdge.transform.SetParent(boss.transform, false);
             bossSpriteEdge.transform.localPosition = new Vector3(-1f, 0f, 0f);
             bossSpriteEdge.GetComponent<BoxCollider2D>().size = new Vector2(.4f, 1f);
             bossSpriteEdge.GetComponent<BoxCollider2D>().isTrigger = true;
+            ConfigureDetachedHurtboxBody(bossSpriteEdge.GetComponent<Rigidbody2D>());
 
             var rearTarget = new GameObject("RearTarget", typeof(Health), typeof(BoxCollider2D));
             rearTarget.transform.SetParent(root.transform, false);
-            rearTarget.transform.position = new Vector3(-.6f, 0f, 0f);
+            rearTarget.transform.position = origin + new Vector3(-.6f, 0f, 0f);
             var rearHealth = rearTarget.GetComponent<Health>();
             rearHealth.ConfigureForRuntime(100);
 
             var distantTarget = new GameObject("DistantTarget", typeof(Health), typeof(BoxCollider2D));
             distantTarget.transform.SetParent(root.transform, false);
-            distantTarget.transform.position = new Vector3(3f, 0f, 0f);
+            distantTarget.transform.position = origin + new Vector3(3f, 0f, 0f);
             var distantHealth = distantTarget.GetComponent<Health>();
             distantHealth.ConfigureForRuntime(100);
 
@@ -415,14 +443,27 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
             Require(attackerHealth.Current == 100 && yokaiHealth.Current == 90 && bossHealth.Current == 190 &&
                     rearHealth.Current == 100 && distantHealth.Current == 100,
-                "A melee swing must damage only forward in-range yokai and boss targets, never self or excluded targets.");
+                "A melee swing must damage only forward in-range yokai and boss targets, never self or excluded targets." +
+                $" (attacker={attackerHealth.Current}, yokai={yokaiHealth.Current}, boss={bossHealth.Current}," +
+                $" rear={rearHealth.Current}, distant={distantHealth.Current})");
             Require(attack.LastHitCount == 2 && yokaiDamageEvents == 1 && bossDamageEvents == 1,
-                "A boss sprite edge hurtbox must take one melee hit even when its movement core is out of range.");
+                "A boss sprite edge hurtbox must take one melee hit even when its movement core is out of range." +
+                $" (hits={attack.LastHitCount}, yokaiEvents={yokaiDamageEvents}, bossEvents={bossDamageEvents})");
         }
         finally
         {
             UnityEngine.Object.DestroyImmediate(root);
         }
+    }
+
+    private static void ConfigureDetachedHurtboxBody(Rigidbody2D body)
+    {
+        body.bodyType = RigidbodyType2D.Kinematic;
+        body.simulated = true;
+        body.gravityScale = 0f;
+        body.constraints = RigidbodyConstraints2D.FreezeRotation;
+        body.collisionDetectionMode = CollisionDetectionMode2D.Discrete;
+        body.interpolation = RigidbodyInterpolation2D.None;
     }
 
     private static void TestPlayerPhysicsIntegrationContract()
@@ -1129,7 +1170,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(MainGameCraftingUiController.UsesIconOnlyCraftingList,
             "v28 crafting list must use icon and quantity presentation without narrative row text.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F5,
-            "MainGame Editor test shortcut help must be assigned to F5.");
+            "MainGame Editor/Development test shortcut help must be assigned to F5.");
         Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.F1 &&
                 MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.F2 &&
                 MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.F3 &&
@@ -1146,6 +1187,15 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The F5 help popup must use native 480x270 coordinates instead of legacy 1920x1080 sizing.");
         Require(MainGameCraftingUiController.SupportsDebugInstantCompletion,
             "The Editor must expose the crafting and smelting instant-completion test control.");
+        var encounterSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        var summonSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameBossSummonUiController.cs");
+        Require(encounterSource.Contains("#if UNITY_EDITOR || DEVELOPMENT_BUILD") &&
+                encounterSource.Contains("Input.GetKeyDown(KeyCode.J)") &&
+                summonSource.Contains("#if UNITY_EDITOR || DEVELOPMENT_BUILD") &&
+                summonSource.Contains("Input.GetKeyDown(DebugShortcutHelpKey)"),
+            "Windows Development test builds must compile J/F5 presentation shortcuts (not Editor-only).");
 
         var inventory = new Inventory(_ => null);
         Require(inventory.Capacity == 50 && inventory.Slots.Count == 50,
@@ -1229,6 +1279,183 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameTilePaletteController.SupportsPalettePlacement("roof") &&
                 !MainGameTilePaletteController.SupportsPalettePlacement("workbench"),
             "The tile palette must route wallpaper and insulation boundary tiles, but not regular buildings.");
+    }
+
+    private static void TestWaveNightRulesContract()
+    {
+        Require(WaveNightRules.IsBigNight(35, 10, 5) &&
+                WaveNightRules.IsBigNight(95, 10, 5) &&
+                !WaveNightRules.IsBigNight(50, 10, 5) &&
+                !WaveNightRules.IsBigNight(30, 10, 5),
+            "Big nights must be day%10==5 from day 31+, never invasion boss nights like 50.");
+        Require(WaveNightRules.BandOf(40) == "T4" &&
+                WaveNightRules.BandOf(60) == "T5" &&
+                WaveNightRules.BandOf(80) == "T6",
+            "Night-wave bands must follow T4/T5/T6 day ranges.");
+        Require(WaveNightRules.CurrentWave(0f, 1, 108f) == 1 &&
+                WaveNightRules.CurrentWave(108f, 1, 108f) == 1 &&
+                WaveNightRules.CurrentWave(108.1f, 1, 108f) == 2 &&
+                WaveNightRules.CurrentWave(50f, 3, 108f) == 3,
+            "currentWave must take max(scoreWave, ceil(t/advanceSec)).");
+        Require(Mathf.Approximately(WaveNightRules.MultForWave(1), 1f) &&
+                Mathf.Approximately(WaveNightRules.MultForWave(5), 2f) &&
+                Mathf.Approximately(WaveNightRules.ApplyHpMult(800f, 1.25f, "hp_only"), 1000f),
+            "Wave mult must grow by +0.25/wave and apply to HP only.");
+        Require(WaveNightRules.FreeSlots(8, 5) == 3 &&
+                WaveNightRules.MaxWaveForNight(false) == 2 &&
+                WaveNightRules.MaxWaveForNight(true) == 5,
+            "Spawn fill must honor yokai_cap free slots and regular/big wave caps.");
+
+        var csv = System.IO.File.ReadAllText("Assets/Data/CSV/night-waves.csv");
+        var rows = WaveNightRules.ParseCsv(csv);
+        Require(rows.Count == 15, "night-waves.csv must contain 15 data rows (v45).");
+        Require(WaveNightRules.TryFindRow(rows, 40, 1, out var t4w1) &&
+                t4w1.Composition == "club:4,bulgasari:2,yakwang:2" &&
+                Mathf.Approximately(t4w1.Mult, 1f),
+            "T4 wave 1 composition must match Notion v45.");
+        Require(WaveNightRules.TryFindRow(rows, 100, 5, out var t6w5) &&
+                t6w5.Composition == "eoduksini:8",
+            "T6 wave 5 must be eight eoduksini.");
+        var parsed = WaveNightRules.ParseComposition(t6w5.Composition);
+        Require(parsed.Length == 1 && parsed[0].kind == Nyangbingo.Core.YokaiKind.Eoduksini &&
+                parsed[0].amount == 8,
+            "Composition parser must map CSV yokai ids to YokaiKind.");
+
+        var controller = new WaveNightController(rows, 10, 5, 108f, 8, "hp_only");
+        Require(controller.BeginNight(35) && controller.IsBigNight && controller.MaxWave == 5,
+            "Day 35 must open as a big night with 5 waves.");
+        Require(controller.TryAdvance(0f, 0, out var first) && first.Count == 8 &&
+                controller.CurrentWave == 1,
+            "Wave 1 must fill yokai_cap free slots at night start.");
+        Require(!controller.TryAdvance(50f, 8, out _),
+            "A full field must not enqueue more until wave advances.");
+        Require(controller.TryAdvance(109f, 5, out var second) && second.Count == 3 &&
+                controller.CurrentWave == 2,
+            "Wave 2 must fill only free slots and never retroactively buff the living.");
+        Require(Mathf.Approximately(second[0].HpMult, 1.25f),
+            "Wave 2 HP mult must come from night-waves.csv.");
+        Require(controller.BeginNight(40) && !controller.IsBigNight && controller.MaxWave == 2,
+            "Ordinary nights after day 31 use at most 2 waves.");
+    }
+
+    private static void TestSeokbinggoP2RulesContract()
+    {
+        Require(SeokbinggoRules.IsSmithyUnlocked(3) == false &&
+                SeokbinggoRules.IsSmithyUnlocked(4) &&
+                SeokbinggoRules.IsSmithyUnlocked(6),
+            "Smithy must unlock at seokbinggo stage >= 4.");
+        Require(SeokbinggoRules.TurretSlotCap(0) == 0 &&
+                SeokbinggoRules.TurretSlotCap(2) == 2 &&
+                SeokbinggoRules.TurretSlotCap(6) == 6,
+            "Turret slot cap must equal seokbinggo stage.");
+        Require(!SeokbinggoRules.CanPlaceTurret(0, 0, true, 0, 3) &&
+                SeokbinggoRules.CanPlaceTurret(1, 0, true, 0, 3) &&
+                !SeokbinggoRules.CanPlaceTurret(2, 2, true, 2, 3) &&
+                !SeokbinggoRules.CanPlaceTurret(6, 2, true, 3, 3) &&
+                SeokbinggoRules.CanPlaceTurret(6, 2, true, 2, 3),
+            "Turret.canPlace must enforce stage cap and damage slot cap 3.");
+        Require(SeokbinggoRules.TryGetBuiltinMaterials(3, out var s3) &&
+                SeokbinggoRules.AssertStage3HasNoTears(s3),
+            "Stage 3 materials must contain no yokai_tear (30-day ledger guard).");
+        Require(SeokbinggoRules.TryGetBuiltinMaterials(4, out var s4) &&
+                s4[0].itemId == "yokai_tear" && s4[0].amount == 160 &&
+                SeokbinggoRules.TryGetBuiltinMaterials(5, out var s5) && s5[0].amount == 320 &&
+                SeokbinggoRules.TryGetBuiltinMaterials(6, out var s6) && s6[0].amount == 560,
+            "Stages 4~6 must consume yokai_tear 160/320/560 (v46 tear ledger).");
+        Require(SeokbinggoRules.IsUpgradeModuleId("seokbinggo_s4") &&
+                !SeokbinggoRules.IsUpgradeModuleId("ice_core"),
+            "Upgrade module ids must be filtered from win modulesDone.");
+        Require(MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.Smithy) == "smithy" &&
+                MainGameBossSummonUiController.StationForDefinitionId("smithy") == CraftingStation.Smithy &&
+                MainGameCraftingUiController.IsSmithyRecipeAllowed(CraftingStation.Smithy, false) == false &&
+                MainGameCraftingUiController.IsSmithyRecipeAllowed(CraftingStation.Smithy, true) &&
+                MainGameCraftingUiController.IsSmithyRecipeAllowed(CraftingStation.Workbench, false),
+            "Smithy station mapping and recipe gate must match P2.");
+
+        var modulesCsv = System.IO.File.ReadAllText("Assets/Data/CSV/modules.csv");
+        Require(modulesCsv.Contains("seokbinggo_s1") && modulesCsv.Contains("seokbinggo_s6") &&
+                modulesCsv.Contains("yokai_tear:160") && modulesCsv.Contains("yokai_tear:560"),
+            "modules.csv must list seokbinggo_s1~s6 with v46 tear costs.");
+        var globalsCsv = System.IO.File.ReadAllText("Assets/Data/CSV/globals.csv");
+        Require(globalsCsv.Contains("turret_slot_cap") &&
+                globalsCsv.Contains("turret_damage_slot_cap") &&
+                globalsCsv.Contains("evolution_bench_t456"),
+            "globals.csv must declare turret caps and smithy bench id.");
+    }
+
+    private static void TestInsulationDoorToggleContract()
+    {
+        Require(MainGameEnvironmentState.DoorDefinitionId == "door",
+            "Product insulation doors must keep the stable definition id `door`.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>("Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && catalog.SealWhitelist != null && catalog.SealWhitelist.Count > 0,
+            "Door seal toggle requires the product GameDataCatalog seal whitelist.");
+
+        var host = new GameObject("DevB_InsulationDoorToggle");
+        try
+        {
+            var environment = host.AddComponent<MainGameEnvironmentState>();
+            SetField(environment, "boundaryPolicy", new SealBoundaryPolicy(catalog.SealWhitelist));
+
+            var entryType = typeof(MainGameEnvironmentState).GetNestedType("Entry", BindingFlags.NonPublic)
+                            ?? throw new InvalidOperationException("MainGameEnvironmentState.Entry type not found.");
+            var entry = Activator.CreateInstance(entryType)
+                        ?? throw new InvalidOperationException("MainGameEnvironmentState.Entry could not be created.");
+            var doorCell = new Vector3Int(3, 3, 0);
+            SetField(entry, "Record", new PlacedObjectRecord
+            {
+                objectId = "door_1",
+                definitionId = MainGameEnvironmentState.DoorDefinitionId,
+                position = new Vector2(3.5f, 3.5f)
+            });
+            SetField(entry, "Cell", doorCell);
+            SetField(entry, "BarrierActive", true);
+
+            var byObjectId = (IDictionary)GetField(environment, "byObjectId");
+            var byCell = (IDictionary)GetField(environment, "byCell");
+            byObjectId.Add("door_1", entry);
+            byCell.Add(doorCell, entry);
+
+            Require(environment.IsRecognizedBarrier(doorCell),
+                "A closed insulation door must count as a seal barrier.");
+            Require(environment.TryToggleInsulationDoor("door_1", out var nowOpen) && nowOpen,
+                "E-equivalent toggle must open a closed insulation door.");
+            Require(!environment.IsRecognizedBarrier(doorCell) &&
+                    environment.TryGetBarrierActive("door_1", out var active) && !active,
+                    "An open insulation door must stop sealing until closed again.");
+            Require(environment.TryToggleInsulationDoor("door_1", out nowOpen) && !nowOpen &&
+                    environment.IsRecognizedBarrier(doorCell),
+                "Toggling again must close the door and restore seal recognition.");
+
+            var turretSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+            Require(turretSource.Contains("TryToggleInsulationDoor") &&
+                    turretSource.Contains("MainGameEnvironmentState.DoorDefinitionId"),
+                "Nearest-object E interaction must route insulation doors through the barrier toggle.");
+
+            var envSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
+            Require(envSource.Contains("TryRegisterTileDoor") &&
+                    envSource.Contains("tile_door_"),
+                "Foreground door tiles must register into EnvironmentState so E can toggle them.");
+            var tileSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/TileService.cs");
+            Require(TileService.DoorHeightCells == 2 &&
+                    TileService.DoorTopElementType == "door_top" &&
+                    tileSource.Contains("TryPlaceDoorFootprint") &&
+                    tileSource.Contains("TryEnsureDoorTop"),
+                "Insulation doors must occupy a 1x2 footprint (door + transparent door_top).");
+            var policySource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/SealBoundaryPolicy.cs");
+            Require(policySource.Contains("\"door\"") &&
+                    policySource.Contains("return false;"),
+                "Door tiles must not seal via Seals(tile) alone; closed state comes from BarrierActive.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(host);
+        }
     }
 
     private static void TestIceStorageSealCoreLifecycle()

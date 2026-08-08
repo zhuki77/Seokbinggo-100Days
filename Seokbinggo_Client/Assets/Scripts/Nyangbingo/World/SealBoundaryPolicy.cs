@@ -65,7 +65,10 @@ namespace Nyangbingo.World
             if (tile.isNaturalTerrain) return Resolve(NaturalTerrainElement);
 
             // Attachments modify a base wall instead of sealing as standalone tiles.
-            // Until door state exists, a placed door tile represents its closed state.
+            // 단열 문은 타일·설치물 모두 BarrierActive(닫힘)일 때만 밀폐한다.
+            // 전경 door/door_top 타일 자체는 여기서 밀폐하지 않고 ISealBarrierRegistry에 맡긴다.
+            if (string.Equals(tile.elementType, "door", StringComparison.Ordinal) ||
+                string.Equals(tile.elementType, "door_top", StringComparison.Ordinal)) return false;
             return SealsPlacedElement(tile.elementType);
         }
 

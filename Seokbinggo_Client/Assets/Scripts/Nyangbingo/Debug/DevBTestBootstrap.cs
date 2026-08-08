@@ -1120,7 +1120,7 @@ namespace Nyangbingo.Debugging
                 new[] { "ice_shard:20", "stone:10", "iron_ingot:2" }
             };
 
-            var valid = gameDataCatalog.Modules.Count == ids.Length;
+            var valid = gameDataCatalog.Modules.Count >= ids.Length;
             for (var i = 0; i < ids.Length; i++)
             {
                 var definition = gameDataCatalog.FindModule(ids[i]);
@@ -1134,8 +1134,20 @@ namespace Nyangbingo.Debugging
                          MatchesItemAmounts(recipe.Ingredients, materials[i]);
             }
 
+            if (gameDataCatalog.FindModule("seokbinggo_s1") != null)
+            {
+                for (var stage = 1; stage <= 6; stage++)
+                {
+                    var module = gameDataCatalog.FindModule($"seokbinggo_s{stage}");
+                    valid &= module != null && SeokbinggoRules.IsUpgradeModuleId(module.Id);
+                }
+            }
+
             if (valid)
-                Debug.Log("[Nyangbingo] Official five module definitions, recipes, priorities, and materials completed.");
+                Debug.Log("[Nyangbingo] Official five module definitions, recipes, priorities, and materials completed" +
+                          (gameDataCatalog.FindModule("seokbinggo_s1") != null
+                              ? " plus seokbinggo_s1~s6."
+                              : " (seokbinggo stages use Builtin until reimport)."));
             else Debug.LogError("[Nyangbingo] Imported module definition test failed.");
         }
 
@@ -1771,6 +1783,8 @@ namespace Nyangbingo.Debugging
                         "ice_anvil" &&
                         MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.Foundry) ==
                         "blast_furnace" &&
+                        MainGameBossSummonUiController.DefinitionIdForStation(CraftingStation.Smithy) ==
+                        "smithy" &&
                         string.IsNullOrEmpty(MainGameBossSummonUiController.DefinitionIdForStation(
                             CraftingStation.None)) &&
                         MainGameBossSummonUiController.StationForDefinitionId("workbench") ==
@@ -1781,12 +1795,16 @@ namespace Nyangbingo.Debugging
                         CraftingStation.IceAnvil &&
                         MainGameBossSummonUiController.StationForDefinitionId("blast_furnace") ==
                         CraftingStation.Foundry &&
+                        MainGameBossSummonUiController.StationForDefinitionId("smithy") ==
+                        CraftingStation.Smithy &&
                         MainGameBossSummonUiController.StationForDefinitionId("unknown") ==
                         CraftingStation.None &&
                         !MainGameCraftingUiController.IsSmeltingStation(CraftingStation.Workbench) &&
                         !MainGameCraftingUiController.IsSmeltingStation(CraftingStation.IceAnvil) &&
                         MainGameCraftingUiController.IsSmeltingStation(CraftingStation.Furnace) &&
                         MainGameCraftingUiController.IsSmeltingStation(CraftingStation.Foundry) &&
+                        MainGameCraftingUiController.IsSmithyRecipeAllowed(CraftingStation.Smithy, false) == false &&
+                        MainGameCraftingUiController.IsSmithyRecipeAllowed(CraftingStation.Smithy, true) &&
                         MainGameCraftingUiController.UnifiedTabCount == 4 &&
                         MainGameCraftingUiController.UnifiedTabLabel(0) == "채집" &&
                         MainGameCraftingUiController.UnifiedTabLabel(1) == "제작" &&

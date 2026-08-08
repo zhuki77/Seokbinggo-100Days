@@ -49,6 +49,13 @@ door,단열 문,placeable,99,A,모듈 P0 — 통행+밀폐 인정. modules.csv �
 roof,차열 지붕,placeable,99,A,모듈 P0 — 상부 밀폐. modules.csv 기존 id 승계
 jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 40슬롯(v29 확정). modules.csv 기존 id 승계
 ice_core,얼음 저장고,placeable,99,A,모듈 P0 — 체온 회복 거점. modules.csv 기존 id 승계. ⚠️ 한파 코어(cold_wave_core)와 다른 물건
+seokbinggo_s1,석빙고 1단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s1. kit 오면 덮어쓰기
+seokbinggo_s2,석빙고 2단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s2. kit 오면 덮어쓰기
+seokbinggo_s3,석빙고 3단계,material,99,A,석빙고 승급 모듈(비설치)·데모 승리선. kit 오면 덮어쓰기
+seokbinggo_s4,석빙고 4단계,material,99,A,석빙고 승급·대장간 해금 — yokai_tear 160(v46). kit 오면 덮어쓰기
+seokbinggo_s5,석빙고 5단계,material,99,A,석빙고 승급 — yokai_tear 320(v46). kit 오면 덮어쓰기
+seokbinggo_s6,석빙고 6단계,material,99,A,석빙고 승급 — yokai_tear 560(v46). kit 오면 덮어쓰기
+smithy,대장간,placeable,99,A,T4~T6 진화 제작대 — globals evolution_bench_t456. 석빙고 4단계 해금
 iron_insul_wall,무쇠 차열벽,placeable,99,A,HP900 — 불가사리 면역
 cold_device,냉기 장치,placeable,99,A,요괴 눈물 주 소비처(x40)
 dokkaebi_fire_tower,도깨비불 등탑,placeable,99,A,터렛 DPS10 유도·반경 8타일

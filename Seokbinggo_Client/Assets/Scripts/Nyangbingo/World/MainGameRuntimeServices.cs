@@ -41,6 +41,7 @@ namespace Nyangbingo.World
         public NapService NapService { get; private set; }
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
+        public SeokbinggoUpgradeService Seokbinggo { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
@@ -134,6 +135,7 @@ namespace Nyangbingo.World
                 return false;
             }
             JangdokStorage = new JangdokStorageRuntime(gameDataCatalog.FindItem, jangdokSlots);
+            Seokbinggo = new SeokbinggoUpgradeService(gameDataCatalog, () => PlayerInventory);
 
             Register(CraftingProcess);
             Register(UtilityService);
@@ -179,6 +181,7 @@ namespace Nyangbingo.World
             DeathTearPouches?.Dispose();
             DeathTearPouches = null;
             JangdokStorage = null;
+            Seokbinggo = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
             if (bootstrap?.TickDriver != null)

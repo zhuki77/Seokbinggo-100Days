@@ -91,7 +91,9 @@ namespace Nyangbingo.World
         public bool ConfigureOfficialData(GameDataCatalog catalog)
         {
             gameDataCatalog = catalog;
-            if (!ApplyOfficialGlobals() || CurrentDayCurve == null) return false;
+            // day-curve는 1~30일 MVP 정본. 31일 이후는 night-waves(WaveNight)가 담당하므로
+            // 현재 일차 곡선이 없어도 globals만 유효하면 시간 서비스는 기동한다.
+            if (!ApplyOfficialGlobals() || gameDataCatalog.FindDayCurve(1) == null) return false;
             if (gameSeconds <= 0f && day <= 1)
             {
                 isNight = startAtNight;

@@ -18,10 +18,11 @@ namespace Nyangbingo.World
     [DefaultExecutionOrder(-80)]
     [RequireComponent(typeof(MainGameBootstrap), typeof(MainGameRuntimeServices), typeof(BossManager))]
     public sealed class MainGameEncounterCoordinator : MonoBehaviour,
-        IRegularSpawnController, IForcedBossSpawnController, IBaekjungSpawnController
+        IRegularSpawnController, IForcedBossSpawnController, IBaekjungSpawnController, IGameSecondsTickable
     {
         private const float BossScale = 2f;
         private const float GroundBossVisualLift = .5f;
+        private const string NightWavesCsvPath = "Assets/Data/CSV/night-waves.csv";
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
@@ -30,10 +31,12 @@ namespace Nyangbingo.World
         [SerializeField] private MainGameRaidTarget raidTarget;
         [SerializeField] private CharacterArtCatalog characterArtCatalog;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
+        [SerializeField] private TextAsset nightWavesCsv;
         [Min(1)][SerializeField] private int minimumSpawnRange = 12;
         [Min(1)][SerializeField] private int maximumSpawnRange = 24;
 
         private readonly Queue<YokaiDefinition> pendingRegular = new Queue<YokaiDefinition>();
+        private readonly Queue<float> pendingRegularHpMult = new Queue<float>();
         private readonly List<SpawnedYokai> spawnedYokai = new List<SpawnedYokai>();
         private readonly List<ForcedBossEncounterBinding> forcedBossBindings = new List<ForcedBossEncounterBinding>();
         private readonly List<BossDefinition> forcedBossDefinitions = new List<BossDefinition>();
@@ -43,6 +46,7 @@ namespace Nyangbingo.World
         private BaekjungRegularSpawnGate baekjungRegularSpawnGate;
         private BaekjungRewardRules baekjungRewardRules;
         private DayCurveDefinition currentDayCurve;
+        private WaveNightController waveNight;
         private bool regularSpawningEnabled = true;
         private bool discardRegularForCurrentNight;
         private bool forcedBossSpawnPending;
@@ -56,6 +60,7 @@ namespace Nyangbingo.World
         private BossCombatController activeBossCombat;
         private MainGameTurretRuntime placedObjectRuntime;
         private readonly List<SpawnedYokai> bossPausedYokai = new List<SpawnedYokai>();
+        private float pendingSpawnHpMult = 1f;
 
         private sealed class SpawnedYokai
         {
@@ -114,7 +119,7 @@ namespace Nyangbingo.World
 
         private void Start() => Initialize();
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.F8))
@@ -172,7 +177,7 @@ namespace Nyangbingo.World
         {
             discardRegularForCurrentNight = true;
             regularSpawningEnabled = false;
-            pendingRegular.Clear();
+            ClearPendingRegular();
             var targets = spawnedYokai
                 .Where(entry => IsAlive(entry) && entry.health.gameObject.activeInHierarchy)
                 .Select(entry => entry.health)
@@ -209,12 +214,14 @@ namespace Nyangbingo.World
             }
 
             bossManager.ConfigureForRuntime(bootstrap.TimeService, this);
+            waveNight = CreateWaveNightController();
             baekjungScheduler = new BaekjungScheduler(gameDataCatalog.DayEvents);
             baekjungScheduler.Started += HandleBaekjungStarted;
             baekjungWaveSpawner = new BaekjungWaveSpawner(baekjungScheduler, this);
             baekjungRegularSpawnGate = new BaekjungRegularSpawnGate(baekjungScheduler, this);
             baekjungTimeBinding = new BaekjungTimeBinding(bootstrap.TimeService, baekjungScheduler);
             runtimeServices.Register(baekjungTimeBinding);
+            runtimeServices.Register(this);
 
             GameEvents.OnNightStart += HandleNightStart;
             GameEvents.OnDawnWarning += HandleDawnWarning;
@@ -244,10 +251,17 @@ namespace Nyangbingo.World
             if (!enabled && bossManager != null && bossManager.IsBossActive)
             {
                 discardRegularForCurrentNight = true;
-                pendingRegular.Clear();
+                ClearPendingRegular();
             }
             regularSpawningEnabled = enabled && bootstrap?.TimeService?.IsNight == true;
             if (IsRegularSpawningEnabled) TryFillRegularSlots();
+        }
+
+        public void Tick(float deltaGameSeconds)
+        {
+            if (!initialized || waveNight == null || !waveNight.IsActive) return;
+            if (bootstrap?.TimeService?.IsNight != true || !IsRegularSpawningEnabled) return;
+            TryAdvanceWaveNight();
         }
 
         public Health SpawnBoss(BossDefinition definition) => CreateBoss(definition, true);
@@ -366,7 +380,7 @@ namespace Nyangbingo.World
             if (health != null) Destroy(health.gameObject);
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool TryStartEditorBossEncounter(string preferredBossId = "king_dokkaebi")
         {
             if (!initialized || bossManager == null || bossManager.IsBossActive ||
@@ -430,7 +444,7 @@ namespace Nyangbingo.World
             restoringSnapshot = true;
             restoredDetailedEncounterDuringTransaction = false;
             restoredRegularEncounter = null;
-            pendingRegular.Clear();
+            ClearPendingRegular();
             ClearSpawnedYokai();
             return true;
         }
@@ -583,10 +597,15 @@ namespace Nyangbingo.World
 
         private bool RestoreRegularEncounter(RegularEncounterStateRecord state)
         {
-            pendingRegular.Clear();
+            ClearPendingRegular();
             currentDayCurve = gameDataCatalog.FindDayCurve(bootstrap.TimeService.Day);
             discardRegularForCurrentNight = state.discardRegularForCurrentNight;
             regularSpawningEnabled = !discardRegularForCurrentNight && baekjungScheduler?.IsActive != true;
+            var day = bootstrap.TimeService.Day;
+            if (waveNight != null && WaveNightRules.UsesNightWaves(day))
+                waveNight.BeginNight(day);
+            else
+                waveNight?.EndNight();
             if (state.usesDetailedYokaiState)
             {
                 for (var index = 0; index < state.activeYokai.Count; index++)
@@ -598,7 +617,8 @@ namespace Nyangbingo.World
                     }
                 if (regularSpawningEnabled)
                     for (var index = 0; index < state.pendingRegularYokaiIds.Count; index++)
-                        pendingRegular.Enqueue(gameDataCatalog.FindYokai(state.pendingRegularYokaiIds[index]));
+                        EnqueuePendingRegular(
+                            gameDataCatalog.FindYokai(state.pendingRegularYokaiIds[index]), 1f);
 
                 var pendingRaid = new List<YokaiDefinition>(state.pendingRaidYokaiIds.Count);
                 for (var index = 0; index < state.pendingRaidYokaiIds.Count; index++)
@@ -619,7 +639,8 @@ namespace Nyangbingo.World
             if (regularSpawningEnabled)
             {
                 for (var index = 0; index < state.remainingRegularYokaiIds.Count; index++)
-                    pendingRegular.Enqueue(gameDataCatalog.FindYokai(state.remainingRegularYokaiIds[index]));
+                    EnqueuePendingRegular(
+                        gameDataCatalog.FindYokai(state.remainingRegularYokaiIds[index]), 1f);
                 TryFillRegularSlots();
             }
             Debug.Log($"[Nyangbingo] MainGameEncounterCoordinator: saved regular encounter restored " +
@@ -644,8 +665,16 @@ namespace Nyangbingo.World
         {
             discardRegularForCurrentNight = false;
             regularSpawningEnabled = baekjungScheduler?.IsActive != true;
-            pendingRegular.Clear();
-            currentDayCurve = gameDataCatalog.FindDayCurve(bootstrap.TimeService.Day);
+            ClearPendingRegular();
+            var day = bootstrap != null && bootstrap.TimeService != null ? bootstrap.TimeService.Day : 0;
+            currentDayCurve = gameDataCatalog.FindDayCurve(day);
+
+            if (waveNight != null && waveNight.BeginNight(day))
+            {
+                TryAdvanceWaveNight();
+                return;
+            }
+
             if (currentDayCurve == null) return;
 
             var composition = currentDayCurve.SpawnComposition;
@@ -656,15 +685,16 @@ namespace Nyangbingo.World
                     candidate != null && candidate.Kind == group.kind &&
                     candidate.SupportsSpawnTrack(YokaiSpawnTrack.Raid));
                 for (var count = 0; definition != null && count < Math.Max(0, group.amount); count++)
-                    pendingRegular.Enqueue(definition);
+                    EnqueuePendingRegular(definition, 1f);
             }
             TryFillRegularSlots();
         }
 
         private void HandleDawnWarning()
         {
-            pendingRegular.Clear();
+            ClearPendingRegular();
             regularSpawningEnabled = false;
+            waveNight?.EndNight();
         }
 
         private void HandleBossStarted(BossDefinition definition)
@@ -677,7 +707,7 @@ namespace Nyangbingo.World
             PauseYokaiForBossEncounter();
             discardRegularForCurrentNight = true;
             regularSpawningEnabled = false;
-            pendingRegular.Clear();
+            ClearPendingRegular();
         }
 
         private void HandleBossEnded(BossDefinition definition, bool defeated)
@@ -732,16 +762,28 @@ namespace Nyangbingo.World
 
         private void TryFillRegularSlots()
         {
-            if (!IsRegularSpawningEnabled || currentDayCurve == null) return;
+            if (!IsRegularSpawningEnabled) return;
+            var usingWaveNight = waveNight != null && waveNight.IsActive;
+            if (!usingWaveNight && currentDayCurve == null) return;
             var reservesForcedBossSlot = gameDataCatalog.Bosses.Any(definition =>
                 definition != null && definition.ForcedDay > 0 &&
                 definition.ForcedDay == bootstrap.TimeService.Day);
-            var cap = Math.Max(0, currentDayCurve.MaxActive - (reservesForcedBossSlot ? 1 : 0));
+            var baseCap = usingWaveNight
+                ? waveNight.YokaiCap
+                : currentDayCurve.MaxActive;
+            var cap = Math.Max(0, baseCap - (reservesForcedBossSlot ? 1 : 0));
             while (pendingRegular.Count > 0 && ActiveRegularCount + ActiveRaidCount < cap)
             {
                 var definition = pendingRegular.Peek();
-                if (SpawnYokai(definition, false) == null) return;
+                pendingSpawnHpMult = pendingRegularHpMult.Count > 0 ? pendingRegularHpMult.Peek() : 1f;
+                if (SpawnYokai(definition, false) == null)
+                {
+                    pendingSpawnHpMult = 1f;
+                    return;
+                }
                 pendingRegular.Dequeue();
+                if (pendingRegularHpMult.Count > 0) pendingRegularHpMult.Dequeue();
+                pendingSpawnHpMult = 1f;
             }
         }
 
@@ -829,6 +871,15 @@ namespace Nyangbingo.World
                 ? new CounterAuraSensor(yokaiObject.transform, placedObjectRuntime.ActiveCounterAuras)
                 : null;
             brain.ConfigureForRuntime(definition, raidTarget, counters, YokaiSpawnTrack.Raid);
+            if (!raid && health != null && pendingSpawnHpMult > 0f &&
+                !Mathf.Approximately(pendingSpawnHpMult, 1f))
+            {
+                var scaledHp = waveNight != null
+                    ? Mathf.Max(1, Mathf.RoundToInt(
+                        waveNight.ApplyHpMult(definition.HitPoints, pendingSpawnHpMult)))
+                    : Mathf.Max(1, Mathf.RoundToInt(definition.HitPoints * pendingSpawnHpMult));
+                health.ConfigureForRuntime(scaledHp);
+            }
             if (usesEoduksiniPresentation)
             {
                 var presentation = visualObject.AddComponent<RuntimeEoduksiniVisual>();
@@ -836,23 +887,110 @@ namespace Nyangbingo.World
             }
             var healthBar = yokaiObject.AddComponent<RuntimeWorldHealthBar>();
             healthBar.ConfigureForRuntime(health, yokaiRenderer, usesEoduksiniPresentation ? 2f : 1f);
-            health.Died += () => HandleYokaiEnded(health);
-            brain.FledOffscreen += ignored => HandleYokaiEnded(health);
+            health.Died += () => HandleYokaiEnded(health, true);
+            brain.FledOffscreen += ignored => HandleYokaiEnded(health, false);
             spawnedYokai.Add(new SpawnedYokai
                 { instanceId = instanceId, health = health, brain = brain, raid = raid });
             runtimeServices.Register(brain);
             return brain;
         }
 
-        private void HandleYokaiEnded(Health health)
+        private void HandleYokaiEnded(Health health, bool killed)
         {
             var entry = spawnedYokai.FirstOrDefault(candidate => candidate.health == health);
             if (entry == null) return;
             spawnedYokai.Remove(entry);
             runtimeServices.Unregister(entry.brain);
             if (entry.raid) RaidSlotAvailable?.Invoke();
-            else TryFillRegularSlots();
+            else
+            {
+                if (killed && waveNight != null && waveNight.IsActive) waveNight.RegisterKill();
+                TryAdvanceWaveNight();
+                TryFillRegularSlots();
+            }
             if (health != null) Destroy(health.gameObject);
+        }
+
+        private void ClearPendingRegular()
+        {
+            pendingRegular.Clear();
+            pendingRegularHpMult.Clear();
+            pendingSpawnHpMult = 1f;
+        }
+
+        private void EnqueuePendingRegular(YokaiDefinition definition, float hpMult)
+        {
+            if (definition == null) return;
+            pendingRegular.Enqueue(definition);
+            pendingRegularHpMult.Enqueue(hpMult > 0f ? hpMult : 1f);
+        }
+
+        private void TryAdvanceWaveNight()
+        {
+            if (waveNight == null || !waveNight.IsActive || !IsRegularSpawningEnabled) return;
+            var elapsed = GetNightElapsedSeconds();
+            var alive = ActiveRegularCount + ActiveRaidCount;
+            if (!waveNight.TryAdvance(elapsed, alive, out var spawns) || spawns == null) return;
+            for (var i = 0; i < spawns.Count; i++)
+            {
+                var spawn = spawns[i];
+                var definition = gameDataCatalog.Yokai.FirstOrDefault(candidate =>
+                    candidate != null && candidate.Kind == spawn.Kind &&
+                    candidate.SupportsSpawnTrack(YokaiSpawnTrack.Raid));
+                EnqueuePendingRegular(definition, spawn.HpMult);
+            }
+            TryFillRegularSlots();
+        }
+
+        private float GetNightElapsedSeconds()
+        {
+            var time = bootstrap?.TimeService;
+            if (time == null || !time.IsNight) return 0f;
+            return Mathf.Max(0f, time.TimeOfDayGameSeconds - time.DayDurationSeconds);
+        }
+
+        private WaveNightController CreateWaveNightController()
+        {
+            var rows = LoadNightWaveRows();
+            var period = ReadGlobalInt(GlobalKeys.WaveNightPeriod, 10);
+            var offset = ReadGlobalInt(GlobalKeys.WaveNightOffset, 5);
+            var advance = ReadGlobalFloat(GlobalKeys.WaveAdvanceSec, 108f);
+            var cap = ReadGlobalInt(GlobalKeys.YokaiCap, 8);
+            var multTarget = ReadGlobalString(GlobalKeys.WaveMultTarget, "hp_only");
+            return new WaveNightController(rows, period, offset, advance, cap, multTarget);
+        }
+
+        private List<WaveNightRules.WaveRow> LoadNightWaveRows()
+        {
+            string csvText = null;
+            if (nightWavesCsv != null && !string.IsNullOrWhiteSpace(nightWavesCsv.text))
+                csvText = nightWavesCsv.text;
+#if UNITY_EDITOR
+            else if (System.IO.File.Exists(NightWavesCsvPath))
+                csvText = System.IO.File.ReadAllText(NightWavesCsvPath);
+#endif
+            var rows = WaveNightRules.ParseCsv(csvText);
+            return rows.Count > 0 ? rows : WaveNightRules.BuiltinCanonicalRows();
+        }
+
+        private int ReadGlobalInt(string key, int fallback)
+        {
+            var definition = gameDataCatalog != null ? gameDataCatalog.FindGlobal(key) : null;
+            return definition != null && definition.TryGetInt(out var value) ? value : fallback;
+        }
+
+        private float ReadGlobalFloat(string key, float fallback)
+        {
+            var definition = gameDataCatalog != null ? gameDataCatalog.FindGlobal(key) : null;
+            return definition != null && definition.TryGetFloat(out var value) ? value : fallback;
+        }
+
+        private string ReadGlobalString(string key, string fallback)
+        {
+            var definition = gameDataCatalog != null ? gameDataCatalog.FindGlobal(key) : null;
+            return definition != null && !string.IsNullOrWhiteSpace(definition.Value)
+                ? definition.Value
+                : fallback;
         }
 
         private bool TryGetSpawnPosition(out Vector3 position)
@@ -971,6 +1109,9 @@ namespace Nyangbingo.World
             baekjungWaveSpawner?.Dispose();
             baekjungTimeBinding?.Dispose();
             runtimeServices?.Unregister(baekjungTimeBinding);
+            runtimeServices?.Unregister(this);
+            waveNight?.EndNight();
+            ClearPendingRegular();
             ClearSpawnedYokai();
             bossPausedYokai.Clear();
             initialized = false;

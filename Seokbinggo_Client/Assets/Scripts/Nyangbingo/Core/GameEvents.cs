@@ -26,6 +26,8 @@ namespace Nyangbingo.Core
         public static event Action OnMiningCritical;
         public static event Action<Vector3Int, float> OnMiningProgress;
         public static event Action<Vector3Int, string, int, bool> OnMiningResult;
+        /// <summary>채굴 조준 하이라이트. visible=false면 숨김.</summary>
+        public static event Action<bool, Vector3Int> OnMiningTarget;
         public static event Action OnCraftingCompleted;
         public static event Action<RecipeDefinition> OnRecipeCrafted;
         public static event Action<string> OnPlacedObjectBuilt;
@@ -58,6 +60,8 @@ namespace Nyangbingo.Core
             OnMiningProgress?.Invoke(cell, Mathf.Clamp01(normalizedProgress));
         public static void RaiseMiningResult(Vector3Int cell, string itemName, int amount, bool critical) =>
             OnMiningResult?.Invoke(cell, itemName, amount, critical);
+        public static void RaiseMiningTarget(bool visible, Vector3Int cell = default) =>
+            OnMiningTarget?.Invoke(visible, cell);
         public static void RaiseCraftingCompleted(RecipeDefinition recipe = null)
         {
             OnCraftingCompleted?.Invoke();

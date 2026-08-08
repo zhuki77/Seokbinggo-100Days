@@ -63,6 +63,7 @@ cold_cap_icejar,50,pct,얼음 항아리 온도 상한 — day15 백중 권장 50
 cold_cap_icestorage,100,pct,얼음 저장고(코어) 온도 상한 — 완공 모듈이자 온도 축 종착
 cold_cap_frostcooler,100,pct,빙정 냉각로 온도 상한 — 보스 보상. 차별점은 기존 체온 회복 x2
 player_move_speed,3.0,tile_per_sec,플레이어 이동 속도(v22 정본화) — 6-7 요괴 이속이 강제: 야광귀3.5보다 느려야 체가 카운터로 성립·어둑시니2.5보다 빨라야 심층 탈출 가능. balance 추정 4.0은 야광귀를 따라잡아 체를 무의미하게 만들어 기각
+player_mining_reach_tiles,4.0,tile,채굴 사거리(가안) — 전투 rangeTiles(1.5)와 분리. 테라리아식 건설·굴착 자유도. 플레이어 중심↔타일 중심 거리
 player_jump_height_tiles,3.5,tile,플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·지상형 요괴/보스의 1칸 추격 점프는 별도 WorldMobPhysicsBody 계약 적용
 player_gravity,32,tile_per_sec2,플레이어 중력(가안 v7) — jump_height와 조합해 v0=sqrt(2gh)
 player_max_fall_speed,12,tile_per_sec,최대 낙하 속도(가안 v7) — 테라리아 체감 낙하 상한
@@ -92,3 +93,12 @@ furniture_mvp_scope,B,scope,기능 가구 2종(죽부인·대발)의 MVP 범위(
 inventory_slots,50,count,플레이어 인벤토리 10×5 그리드(v29 확정) — 테라리아 본체 인벤 동일 규격이며 최상단 행 핫바는 도입하지 않는다. 기존 12슬롯 세이브는 뒤를 빈 칸으로 패딩한다
 active_slot_rule,weapon_or_tool_1,rule,활성 슬롯(v28 확정) = 장비 탭 무기·도구 1칸. 방망이·합죽선·철선·서리발톱 장갑·휴대 등불 중 1개를 장착하며 빈 슬롯은 맨 발톱이다. PC Q키로 발톱과 장착물을 토글하고 휴대 등불은 활성 중에만 연료를 소모한다
 jangdok_storage_slots,40,count,장독 창고 보관 슬롯 수(v29 확정) — 구 12슬롯에서 40슬롯으로 확장하며 아이템·레시피·아트는 유지한다
+wave_night_period,10,day,큰 밤 주기(v45) — day % period == offset 이면 큰 밤
+wave_night_offset,5,day,큰 밤 오프셋(v45) — 35·45·55·65·75·85·95. 보스 내습(50·60·90·100)과 겹치면 안 됨
+night_wave_table,night-waves.csv,file,31~100일 밤 조합 정본(v45) — day-curve는 1~30일만
+wave_mult_target,hp_only,rule,파도 배율은 HP에만 곱한다(v36 B-5) — 접촉·벽 DPS 고정
+wave_advance_sec,108,sec,파도 시간 임계(v46 하드코딩 금지) — 540÷5. currentWave = max(점수파도, ceil(t/이값))
+turret_slot_cap,0,count,터렛 동시 가동 상한(v46 하드코딩 금지) — 런타임 소스는 석빙고 Stage. CSV는 문서·초기값
+turret_damage_slot_cap,3,count,화력형 터렛 상한(v46) — 유틸 터렛에 자리를 남긴다
+evolution_bench_t456,smithy,rule,T4~T6 진화 제작대 id — Smithy.isUnlocked = seokbinggo_stage>=4
+

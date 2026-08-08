@@ -253,7 +253,7 @@ namespace Nyangbingo.UI
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.Q)) ToggleActiveSlotFromEquipmentPage();
                 if (openedFrame != Time.frameCount && Input.GetKeyDown(KeyCode.E)) TryPrimaryAction();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.R)) TryRefuelPortableLantern();
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (page != Page.Gathering && Input.GetKeyDown(DebugGrantRequirementsKey) &&
                     (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) ||
                      Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
@@ -274,6 +274,9 @@ namespace Nyangbingo.UI
         public static bool IsRecipeVisibleAtStation(CraftingStation requiredStation,
             CraftingStation nearbyStation) =>
             requiredStation == CraftingStation.None || requiredStation == nearbyStation;
+
+        public static bool IsSmithyRecipeAllowed(CraftingStation recipeStation, bool smithyUnlocked) =>
+            recipeStation != CraftingStation.Smithy || smithyUnlocked;
 
         public bool TryOpenForStation(CraftingStation station)
         {
@@ -947,10 +950,13 @@ namespace Nyangbingo.UI
         private void RebuildFilteredRecipes(CraftingStation nearbyStation)
         {
             filteredRecipes.Clear();
+            var smithyUnlocked = runtimeServices?.Seokbinggo?.IsSmithyUnlocked == true;
             for (var index = 0; index < visibleRecipes.Count; index++)
             {
                 var recipe = visibleRecipes[index];
-                if (recipe != null && IsRecipeVisibleAtStation(recipe.Station, nearbyStation))
+                if (recipe == null) continue;
+                if (!IsSmithyRecipeAllowed(recipe.Station, smithyUnlocked)) continue;
+                if (IsRecipeVisibleAtStation(recipe.Station, nearbyStation))
                     filteredRecipes.Add(recipe);
             }
             selectedIndex = filteredRecipes.Count > 0
@@ -1037,6 +1043,12 @@ namespace Nyangbingo.UI
             var nearby = NearbyStation();
             if (recipe.Station != CraftingStation.None && recipe.Station != nearby)
             { ShowMessage($"{StationLabel(recipe.Station)} 근처에서 제작해야 합니다."); return; }
+            if (recipe.Station == CraftingStation.Smithy &&
+                runtimeServices?.Seokbinggo?.IsSmithyUnlocked != true)
+            {
+                ShowMessage("대장간은 석빙고 4단계 이상에서 해금됩니다.");
+                return;
+            }
 
             var succeeded = recipe.DurationSeconds > 0f
                 ? runtimeServices.CraftingProcess.TryStart(recipe, recipe.Station)
@@ -2006,7 +2018,7 @@ namespace Nyangbingo.UI
             ? stationSource.NearbyCraftingStation
             : CraftingStation.None;
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void GrantSelectedRequirementsForEditorTest()
         {
             if (page == Page.Crafting && !showingSmelting)
@@ -2093,7 +2105,7 @@ namespace Nyangbingo.UI
 
         private static string DefaultHelpText()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else
             return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
@@ -2128,6 +2140,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Furnace: return "화로";
                 case CraftingStation.IceAnvil: return "얼음 모루";
                 case CraftingStation.Foundry: return "용광로";
+                case CraftingStation.Smithy: return "대장간";
                 default: return station.ToString();
             }
         }

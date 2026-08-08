@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: player_mining_reach_tiles
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: player_mining_reach_tiles
+  value: 4.0
+  unit: tile
+  note: "\uCC44\uAD74 \uC0AC\uAC70\uB9AC(\uAC00\uC548) \u2014 \uC804\uD22C rangeTiles(1.5)\uC640
+    \uBD84\uB9AC. \uD14C\uB77C\uB9AC\uC544\uC2DD \uAC74\uC124\xB7\uAD74\uCC29 \uC790\uC720\uB3C4.
+    \uD50C\uB808\uC774\uC5B4 \uC911\uC2EC\u2194\uD0C0\uC77C \uC911\uC2EC \uAC70\uB9AC"

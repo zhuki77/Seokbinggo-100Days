@@ -125,9 +125,11 @@ namespace Nyangbingo.World
             layer.transform.SetParent(groundCoverRoot.transform, false);
             var tilemap = layer.GetComponent<Tilemap>();
             surfaceGroundCoverTilemap = tilemap;
-            // 전경 타일과 동일한 기본 앵커를 유지한다. (0.5,0으로 바꾸면 풀이 반 칸 내려가 보인다.)
+            // 전경과 동일한 tileAnchor를 유지한다(기본 0.5,0.5).
             if (bootstrap?.WorldRenderer?.Foreground != null)
                 tilemap.tileAnchor = bootstrap.WorldRenderer.Foreground.tileAnchor;
+            else
+                tilemap.tileAnchor = TilemapRenderer.DefaultTileAnchor;
             layer.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder = 1;
             grassSurfaceTile = CreateRuntimeTile("RuntimeGrassSurface", grass);
             dryGrassSurfaceTile = CreateRuntimeTile("RuntimeDryGrassSurface", dryGrass);
@@ -161,9 +163,9 @@ namespace Nyangbingo.World
 
         private void HandleTileBroken(Vector3Int cell)
         {
+            // 지표면 풀은 고체 지표 칸(surfaceY)에 겹쳐 그린다. 그 칸을 캘 때만 지운다.
+            // 아래 칸을 캘 때 cell+up까지 지우면 초록 지표가 흙만 남은 것처럼 보인다.
             ClearGroundCoverAt(cell);
-            // 지표 흙을 파면 그 위 공기 칸에 걸쳐 보이던 풀도 같이 제거한다.
-            ClearGroundCoverAt(cell + Vector3Int.up);
             RemoveDecorationsSupportedBy(cell);
         }
 

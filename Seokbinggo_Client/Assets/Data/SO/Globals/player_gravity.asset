@@ -15,4 +15,5 @@ MonoBehaviour:
   key: player_gravity
   value: 32
   unit: tile_per_sec2
-  note: "\uD50C\uB808\uC774\uC5B4 \uC911\uB825(\uAC00\uC548 v7)"
+  note: "\uD50C\uB808\uC774\uC5B4 \uC911\uB825(\uAC00\uC548 v7) \u2014 jump_height\uC640
+    \uC870\uD569\uD574 v0=sqrt(2gh)"

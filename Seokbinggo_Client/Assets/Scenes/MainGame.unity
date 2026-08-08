@@ -9305,6 +9305,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.MainGameEffectPresenter
   artCatalog: {fileID: 11400000, guid: 11237b8f5160baa4790e27c90f0fe2a4, type: 2}
   playerTransform: {fileID: 1914613486}
+  bootstrap: {fileID: 1401646100}
 --- !u!114 &1401646112
 MonoBehaviour:
   m_ObjectHideFlags: 0

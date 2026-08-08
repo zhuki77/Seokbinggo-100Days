@@ -72,7 +72,9 @@ namespace Nyangbingo.World
             Bedrock, RuinWall, IceLake, IceAltar,
             BackgroundDirt, BackgroundStone, BackgroundDeep,
             OfficialBackgroundDirt, OfficialBackgroundStone, OfficialBackgroundDeep,
-            Wallpaper
+            Wallpaper,
+            // 플레이어 설치 전경(차열 경계). door_top은 1x2 문 위칸 충돌 전용.
+            "insul_wall", "iron_insul_wall", "roof", "door", "door_top"
         };
 
         public static bool IsBackgroundId(string elementType)

@@ -198,7 +198,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 17;
+        public const int CurrentSchemaVersion = 18;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -216,6 +216,7 @@ namespace Nyangbingo.Save
         /// <summary>A-16: 배경(벽지) 변경 이력. 구버전 세이브에서는 null일 수 있으며 NormalizeAfterLoad가 빈 목록으로 채운다.</summary>
         public List<TileChangeRecord> backgroundChanges = new List<TileChangeRecord>();
         public List<string> modulesDone = new List<string>();
+        public int seokbinggoStage;
         public float sealPct;
         public int yokaiTears;
         public List<BossRecord> bossRecords = new List<BossRecord>();
@@ -319,6 +320,7 @@ namespace Nyangbingo.Save
             }
             if (loadedSchemaVersion < 7) MigrateHapjukseonIds();
             if (loadedSchemaVersion < 8) MigrateV24Ids();
+            seokbinggoStage = Math.Clamp(seokbinggoStage, 0, 6);
             if (schemaVersion < CurrentSchemaVersion) schemaVersion = CurrentSchemaVersion;
         }
 

@@ -16,7 +16,7 @@ namespace Nyangbingo.UI
         {
             "king_dokkaebi", "mother_bulgasari", "imugi", "gangcheol_boss"
         };
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private static readonly string[] DeliveredInventoryArtTestItemIds =
         {
             // bare_claw is an innate body weapon (maxStack 0), so it never belongs in inventory.
@@ -59,7 +59,7 @@ namespace Nyangbingo.UI
         private float transientMessageUntil;
         private bool initialized;
         private GameShellController gameShell;
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private GameObject debugShortcutHelpRoot;
         private float debugShortcutHelpPreviousTimeScale = 1f;
         private static bool debugShortcutHelpOpen;
@@ -70,7 +70,7 @@ namespace Nyangbingo.UI
         public const KeyCode DebugShortcutHelpKey = KeyCode.F5;
         public static readonly Vector2 DebugShortcutHelpPanelSize = new Vector2(230f, 190f);
         public const int DebugShortcutHelpBodyFontSize = 6;
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         public static bool IsDebugShortcutHelpOpen => debugShortcutHelpOpen;
 #else
         public static bool IsDebugShortcutHelpOpen => false;
@@ -78,7 +78,7 @@ namespace Nyangbingo.UI
 
         public static bool ConsumeEscapeIfDebugHelpOpen()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (debugShortcutHelpEscapeConsumedFrame == Time.frameCount) return true;
             if (!debugShortcutHelpOpen || !Input.GetKeyDown(KeyCode.Escape) ||
                 debugShortcutHelpInstance == null) return false;
@@ -132,7 +132,7 @@ namespace Nyangbingo.UI
                 encounterCoordinator.BossManager.BossStarted += HandleBossStateChanged;
                 encounterCoordinator.BossManager.BossEnded += HandleBossStateChanged;
             }
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             debugShortcutHelpInstance = this;
             BuildDebugShortcutHelp();
 #endif
@@ -144,7 +144,7 @@ namespace Nyangbingo.UI
         private void Update()
         {
             if (!initialized) return;
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (ConsumeEscapeIfDebugHelpOpen()) return;
             if (Input.GetKeyDown(DebugShortcutHelpKey) &&
                 !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&
@@ -159,7 +159,7 @@ namespace Nyangbingo.UI
 #endif
             if (Time.timeScale <= 0f) return;
             if (MainGameCraftingUiController.BlocksGameplayInput) return;
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (Input.GetKeyDown(KeyCode.B))
             {
                 selectedIndex = (selectedIndex + 1) % BossIds.Length;
@@ -300,7 +300,7 @@ namespace Nyangbingo.UI
             else ShowMessage("재료 또는 인벤토리 공간이 부족합니다.");
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool TeleportToCraftingStationForEditorTest(CraftingStation station)
         {
             var definitionId = DefinitionIdForStation(station);
@@ -400,7 +400,7 @@ namespace Nyangbingo.UI
             var stations = new[]
             {
                 CraftingStation.Workbench, CraftingStation.Furnace,
-                CraftingStation.IceAnvil, CraftingStation.Foundry
+                CraftingStation.IceAnvil, CraftingStation.Foundry, CraftingStation.Smithy
             };
             foreach (var station in stations)
             {
@@ -419,6 +419,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Furnace: return "furnace";
                 case CraftingStation.IceAnvil: return "ice_anvil";
                 case CraftingStation.Foundry: return "blast_furnace";
+                case CraftingStation.Smithy: return "smithy";
                 default: return string.Empty;
             }
         }
@@ -431,6 +432,7 @@ namespace Nyangbingo.UI
                 case "furnace": return CraftingStation.Furnace;
                 case "ice_anvil": return CraftingStation.IceAnvil;
                 case "blast_furnace": return CraftingStation.Foundry;
+                case "smithy": return CraftingStation.Smithy;
                 default: return CraftingStation.None;
             }
         }
@@ -443,6 +445,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Furnace: return "화로";
                 case CraftingStation.IceAnvil: return "얼음 모루";
                 case CraftingStation.Foundry: return "용광로";
+                case CraftingStation.Smithy: return "대장간";
                 default: return station.ToString();
             }
         }
@@ -464,14 +467,14 @@ namespace Nyangbingo.UI
                 return;
             }
             if (!string.IsNullOrEmpty(transientMessage)) { statusText.text = transientMessage; return; }
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             statusText.text = string.Empty;
 #else
             statusText.text = string.Empty;
 #endif
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void BuildDebugShortcutHelp()
         {
             var canvas = statusText != null ? statusText.GetComponentInParent<Canvas>() : null;
@@ -561,7 +564,7 @@ namespace Nyangbingo.UI
 
         private void OnDestroy()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (debugShortcutHelpOpen)
             {
                 Time.timeScale = debugShortcutHelpPreviousTimeScale;

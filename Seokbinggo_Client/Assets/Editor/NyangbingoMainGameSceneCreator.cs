@@ -569,7 +569,7 @@ public static class NyangbingoMainGameSceneCreator
         codexPanel.SetActive(false);
 
         var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel", new Color(.02f, .035f, .05f, 1f));
-        var titleLabel = CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(0f, 180f),
+        CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(0f, 180f),
             new Vector2(620f, 80f), 48);
         var titleContinue = CreateMenuButton(titlePanel.transform, "Continue", "이어하기",
             new Vector2(0f, 60f), new Vector2(300f, 58f));
@@ -577,6 +577,8 @@ public static class NyangbingoMainGameSceneCreator
             new Vector2(0f, -10f), new Vector2(300f, 58f));
         var titleQuit = CreateMenuButton(titlePanel.transform, "Quit", "게임 종료",
             new Vector2(0f, -80f), new Vector2(300f, 58f));
+        // Title UI lives in Title.unity; keep inactive stubs so legacy MainGame scenes still serialize.
+        titlePanel.SetActive(false);
 
         var pausePanel = CreateOverlayPanel(canvasObject.transform, "PausePanel", new Color(.025f, .035f, .05f, .94f));
         CreateMenuText(pausePanel.transform, "Title", "일시정지", new Vector2(0f, 250f),
@@ -634,7 +636,7 @@ public static class NyangbingoMainGameSceneCreator
             new Vector2(0f, -30f), new Vector2(260f, 54f));
 
         var shell = canvasObject.AddComponent<GameShellController>();
-        shell.ConfigureViews(titlePanel, pausePanel, resultPanel, settingsPanel, confirmationPanel);
+        shell.ConfigureViews(null, pausePanel, resultPanel, settingsPanel, confirmationPanel);
         codexController.ConfigureGameShell(shell);
         var shellUi = canvasObject.AddComponent<MainGameShellUiController>();
         shellUi.ConfigureForScene(shell, saveCoordinator, saveManager, audioService, dayNight, codexController,
@@ -877,10 +879,18 @@ public static class NyangbingoMainGameSceneCreator
 
     private static void AddSceneToBuildSettings()
     {
-        var scenes = EditorBuildSettings.scenes
-            .Where(entry => entry.path != ScenePath)
-            .ToList();
-        scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
-        EditorBuildSettings.scenes = scenes.ToArray();
+        const string titlePath = "Assets/Scenes/Title.unity";
+        var ordered = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+        if (System.IO.File.Exists(titlePath) ||
+            AssetDatabase.LoadAssetAtPath<SceneAsset>(titlePath) != null)
+            ordered.Add(new EditorBuildSettingsScene(titlePath, true));
+        ordered.Add(new EditorBuildSettingsScene(ScenePath, true));
+        foreach (var entry in EditorBuildSettings.scenes)
+        {
+            if (entry.path == ScenePath || entry.path == titlePath) continue;
+            ordered.Add(entry);
+        }
+
+        EditorBuildSettings.scenes = ordered.ToArray();
     }
 }

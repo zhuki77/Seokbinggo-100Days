@@ -65,9 +65,9 @@ MonoBehaviour:
     - {fileID: -763224725659438747, guid: 39f5fdcf377562042aeb8006d00ff413, type: 3}
   - id: door
     frames:
-    - {fileID: -5507390125393122560, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
-    - {fileID: 136116307881855951, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
     - {fileID: -6588802959034415043, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
+    - {fileID: 136116307881855951, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
+    - {fileID: -5507390125393122560, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
   - id: jangdok
     frames:
     - {fileID: -52303854080169221, guid: f0ff94d9e2aff4940be25ce3c694fb74, type: 3}

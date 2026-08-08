@@ -109,18 +109,21 @@ public static class NyangbingoDataMenu
             rootDirectory + "/Recipes/wallpaper.asset");
         var jangdok = AssetDatabase.LoadAssetAtPath<ModuleDefinition>(
             rootDirectory + "/Modules/jangdok.asset");
-        if (items.Length != 86 || recipes.Length != 54 || globals.Length != 93 || sealRules.Length != 23 ||
+        // v29 baseline was 86/54/93/23. P2 adds seokbinggo_s1~s6 + smithy (items 93+) and WaveNight/turret globals (93+).
+        if (items.Length < 93 || recipes.Length != 54 || globals.Length < 93 || sealRules.Length != 23 ||
             wallpaper == null || wallpaper.Output.item == null || wallpaper.Output.item.Id != "wallpaper" ||
             wallpaper.Output.amount != 16 || jangdok == null || jangdok.Role != "보관함 40슬롯(v29 확정)")
         {
-            Debug.LogError("[Nyangbingo] v29 data bundle reimport failed its 86/54/93/23, wallpaper x16, " +
-                           "or jangdok 40-slot check.");
+            Debug.LogError(
+                $"[Nyangbingo] v29 data bundle reimport failed its item/recipe/global/seal, wallpaper x16, " +
+                $"or jangdok 40-slot check (items={items.Length}, recipes={recipes.Length}, " +
+                $"globals={globals.Length}, seal={sealRules.Length}).");
             return;
         }
 
         RebuildGameDataCatalog();
-        Debug.Log("[Nyangbingo] v29 data bundle reimport completed: 86 items, 54 recipes, " +
-                  "93 globals, 23 seal rules, wallpaper output 16, jangdok storage 40.");
+        Debug.Log($"[Nyangbingo] v29 data bundle reimport completed: {items.Length} items, {recipes.Length} recipes, " +
+                  $"{globals.Length} globals, {sealRules.Length} seal rules, wallpaper output 16, jangdok storage 40.");
     }
 
     [MenuItem("Nyangbingo/Validate CSV Data")]
@@ -1697,16 +1700,16 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 93 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count < 93 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain the v29 official rows plus player physics (93 rows).");
+            Debug.LogError("[Nyangbingo] globals.csv must contain at least the v29 official 93 rows (WaveNight keys may add more).");
             return;
         }
 
         var textUnits = new HashSet<string>(System.StringComparer.Ordinal)
-            { "ore:ingot", "recipe", "rule", "scope" };
+            { "ore:ingot", "recipe", "rule", "scope", "file" };
         var integerUnits = new HashSet<string>(System.StringComparer.Ordinal)
-            { "count", "day", "gauge", "hp", "person", "px", "tile" };
+            { "count", "day", "gauge", "hp", "person", "px" };
         var keys = new HashSet<string>(System.StringComparer.Ordinal);
         var numeric = new Dictionary<string, float>(System.StringComparer.Ordinal);
         var values = new Dictionary<string, string>(System.StringComparer.Ordinal);

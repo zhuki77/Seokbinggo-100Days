@@ -34,9 +34,11 @@ namespace Nyangbingo.World
         private readonly Dictionary<Vector3Int, Entry> byCell = new Dictionary<Vector3Int, Entry>();
         private readonly Dictionary<string, GameObject> visualsByObjectId =
             new Dictionary<string, GameObject>(StringComparer.Ordinal);
+        private readonly HashSet<Vector3Int> tileDoorCells = new HashSet<Vector3Int>();
         private SealBoundaryPolicy boundaryPolicy;
         private CoolingSourceRuntime coolingSources;
         private float wallpaperDurationMultiplier = 1.25f;
+        private bool suppressTileDoorSync;
 
         public bool IsColdSourceActive { get; private set; }
         public float CoolingCapPercent { get; private set; }
@@ -44,6 +46,9 @@ namespace Nyangbingo.World
         public int ActiveCoolingSourceCount { get; private set; }
         public BuildingArtCatalog BuildingArtCatalog => buildingArtCatalog;
         public bool IsInitialized { get; private set; }
+
+        public const string DoorDefinitionId = "door";
+        public const float OpenDoorVisualAlpha = .45f;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             BuildingArtCatalog artCatalog = null)
@@ -86,7 +91,11 @@ namespace Nyangbingo.World
                 wallpaperDurationMultiplier = 1f + Mathf.Max(0f, bonusPercent) * .01f;
             coolingSources.ConsumableExpired += HandleConsumableExpired;
             bootstrap.TickDriver.Register(this);
+            GameEvents.OnTilePlaced += HandleTilePlaced;
+            GameEvents.OnTileBroken += HandleTileBroken;
+            bootstrap.WorldReady += HandleWorldReady;
             IsInitialized = true;
+            if (bootstrap.TileService != null) SyncTileDoorsFromWorld();
             Debug.Log("[Nyangbingo] MainGameEnvironmentState: 공식 설치물 경계와 냉기원 상태를 " +
                       "메인 SealSystem에 연결 완료.");
             return true;
@@ -100,9 +109,16 @@ namespace Nyangbingo.World
             for (var index = 0; index < boundaryIds.Length; index++)
             {
                 var entry = buildingArtCatalog.Find(boundaryIds[index]);
-                if (entry?.Sprite != null)
-                    renderer.RegisterRuntimeForegroundTile(boundaryIds[index], entry.Sprite);
+                if (entry?.Sprite == null) continue;
+                // 문은 닫힘 프레임을 타일 기본 스프라이트로 쓴다(카탈로그 Frames[0]=닫힘).
+                var sprite = string.Equals(boundaryIds[index], DoorDefinitionId, StringComparison.Ordinal)
+                    ? ResolveDoorSprite(entry, open: false) ?? entry.Sprite
+                    : entry.Sprite;
+                renderer.RegisterRuntimeForegroundTile(boundaryIds[index], sprite);
             }
+
+            // 1x2 문 위칸: 비주얼은 아래 door 타일이 담당, 위는 충돌·밀폐만.
+            renderer.RegisterRuntimeColliderOnlyForegroundTile(TileService.DoorTopElementType);
         }
 
         public bool IsRecognizedBarrier(Vector3Int cell) =>
@@ -139,6 +155,11 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(objectId) || !byObjectId.TryGetValue(objectId, out var entry)) return false;
             byObjectId.Remove(objectId);
             byCell.Remove(entry.Cell);
+            var head = entry.Cell + Vector3Int.up;
+            if (byCell.TryGetValue(head, out var headEntry) && ReferenceEquals(headEntry, entry))
+                byCell.Remove(head);
+            tileDoorCells.Remove(entry.Cell);
+            tileDoorCells.Remove(head);
             coolingSources?.Remove(objectId);
             if (visualsByObjectId.TryGetValue(objectId, out var visual))
             {
@@ -153,9 +174,172 @@ namespace Nyangbingo.World
         {
             if (!byObjectId.TryGetValue(objectId, out var entry) ||
                 !boundaryPolicy.SealsPlacedElement(entry.Record.definitionId)) return false;
-            if (entry.BarrierActive == active) return true;
+            var changed = entry.BarrierActive != active;
             entry.BarrierActive = active;
+            // 타일 문 개폐는 BarrierActive가 이미 맞춰진 뒤에도 오버레이를 반드시 갱신해야 한다.
+            if (string.Equals(entry.Record.definitionId, DoorDefinitionId, StringComparison.Ordinal))
+                RefreshDoorVisual(objectId, active);
+            else if (changed)
+                RefreshDoorVisual(objectId, active);
+            if (changed) InvalidateSeal();
+            return true;
+        }
+
+        /// <summary>
+        /// 단열 문(설치물·전경 타일) 개폐. BarrierActive=true는 닫힘(밀폐 인정), false는 개방(밀폐 미인정).
+        /// 전경 타일 문은 1x2(door+door_top)를 함께 치우거나 복구하고, 열린 모습은 반투명 오버레이로 남긴다.
+        /// </summary>
+        public bool TryToggleInsulationDoor(string objectId, out bool nowOpen)
+        {
+            nowOpen = false;
+            if (!byObjectId.TryGetValue(objectId, out var entry) ||
+                !string.Equals(entry.Record.definitionId, DoorDefinitionId, StringComparison.Ordinal))
+                return false;
+
+            var nextClosed = !entry.BarrierActive;
+            if (tileDoorCells.Contains(entry.Cell))
+            {
+                var tileService = bootstrap?.TileService;
+                if (tileService == null) return false;
+                suppressTileDoorSync = true;
+                try
+                {
+                    if (nextClosed)
+                    {
+                        if (!tileService.TryRestoreForeground(entry.Cell, DoorDefinitionId)) return false;
+                    }
+                    else if (!tileService.TryClearForegroundWithoutDrop(entry.Cell, raiseBrokenEvent: false))
+                        return false;
+                }
+                finally
+                {
+                    suppressTileDoorSync = false;
+                }
+            }
+
+            if (!SetBarrierActive(objectId, nextClosed)) return false;
+            nowOpen = !nextClosed;
+            return true;
+        }
+
+        public static string TileDoorObjectId(Vector3Int cell) =>
+            $"tile_door_{cell.x}_{cell.y}";
+
+        public bool TryRegisterTileDoor(Vector3Int cell, bool closed = true)
+        {
+            if (!IsInitialized && !Initialize()) return false;
+            // door_top 클릭/이벤트가 와도 기준 칸은 아래 door 셀이다.
+            var tileService = bootstrap?.TileService;
+            if (tileService != null)
+            {
+                var tile = tileService.GetTile(cell);
+                if (string.Equals(tile.elementType, TileService.DoorTopElementType, StringComparison.Ordinal))
+                    cell = cell + Vector3Int.down;
+            }
+
+            var objectId = TileDoorObjectId(cell);
+            var head = cell + Vector3Int.up;
+            if (byObjectId.ContainsKey(objectId))
+            {
+                tileDoorCells.Add(cell);
+                tileDoorCells.Add(head);
+                if (byObjectId.TryGetValue(objectId, out var existing) && !byCell.ContainsKey(head))
+                    byCell[head] = existing;
+                return true;
+            }
+
+            if (byCell.ContainsKey(cell)) return false;
+            if (byCell.ContainsKey(head)) return false;
+            var record = new PlacedObjectRecord
+            {
+                objectId = objectId,
+                definitionId = DoorDefinitionId,
+                position = new Vector2(cell.x + .5f, cell.y + .5f),
+                rotationDegrees = 0f
+            };
+            var entry = new Entry
+            {
+                Record = record,
+                Cell = cell,
+                BarrierActive = closed && boundaryPolicy.SealsPlacedElement(DoorDefinitionId),
+                CoolingActive = false
+            };
+            byObjectId.Add(objectId, entry);
+            byCell.Add(cell, entry);
+            byCell.Add(head, entry);
+            tileDoorCells.Add(cell);
+            tileDoorCells.Add(head);
             InvalidateSeal();
+            return true;
+        }
+
+        public bool TryUnregisterTileDoor(Vector3Int cell)
+        {
+            var tileService = bootstrap?.TileService;
+            if (tileService != null)
+            {
+                var tile = tileService.GetTile(cell);
+                if (string.Equals(tile.elementType, TileService.DoorTopElementType, StringComparison.Ordinal) ||
+                    (tile.IsAir && tileDoorCells.Contains(cell + Vector3Int.down)))
+                    cell = cell + Vector3Int.down;
+            }
+
+            var objectId = TileDoorObjectId(cell);
+            var head = cell + Vector3Int.up;
+            tileDoorCells.Remove(cell);
+            tileDoorCells.Remove(head);
+            if (byCell.TryGetValue(head, out var headEntry) &&
+                headEntry != null &&
+                string.Equals(headEntry.Record.objectId, objectId, StringComparison.Ordinal))
+                byCell.Remove(head);
+            return TryRemove(objectId);
+        }
+
+        private void HandleWorldReady() => SyncTileDoorsFromWorld();
+
+        private void HandleTilePlaced(Vector3Int cell)
+        {
+            if (suppressTileDoorSync || bootstrap?.TileService == null) return;
+            var tile = bootstrap.TileService.GetTile(cell);
+            if (string.Equals(tile.elementType, DoorDefinitionId, StringComparison.Ordinal))
+            {
+                bootstrap.TileService.TryEnsureDoorTop(cell);
+                TryRegisterTileDoor(cell, closed: true);
+            }
+            else if (string.Equals(tile.elementType, TileService.DoorTopElementType, StringComparison.Ordinal))
+                TryRegisterTileDoor(cell + Vector3Int.down, closed: true);
+            else if (tileDoorCells.Contains(cell) && tile.IsAir == false)
+                TryUnregisterTileDoor(cell);
+        }
+
+        private void HandleTileBroken(Vector3Int cell)
+        {
+            if (suppressTileDoorSync) return;
+            if (!tileDoorCells.Contains(cell)) return;
+            TryUnregisterTileDoor(cell);
+        }
+
+        private void SyncTileDoorsFromWorld()
+        {
+            var tileService = bootstrap?.TileService;
+            if (tileService == null) return;
+            for (var x = 0; x < tileService.Width; x++)
+            for (var y = 0; y < tileService.Height; y++)
+            {
+                var cell = new Vector3Int(x, y, 0);
+                var tile = tileService.GetTile(cell);
+                if (!string.Equals(tile.elementType, DoorDefinitionId, StringComparison.Ordinal)) continue;
+                tileService.TryEnsureDoorTop(cell);
+                TryRegisterTileDoor(cell, closed: true);
+            }
+        }
+
+        public bool TryGetBarrierActive(string objectId, out bool active)
+        {
+            active = false;
+            if (string.IsNullOrWhiteSpace(objectId) || !byObjectId.TryGetValue(objectId, out var entry))
+                return false;
+            active = entry.BarrierActive;
             return true;
         }
 
@@ -399,14 +583,96 @@ namespace Nyangbingo.World
             visual.transform.rotation = Quaternion.Euler(0f, 0f, entry.Record.rotationDegrees);
             var renderer = visual.AddComponent<SpriteRenderer>();
             renderer.sortingOrder = 12;
+            var isDoor = string.Equals(entry.Record.definitionId, DoorDefinitionId, StringComparison.Ordinal);
             if (art?.Sprite != null)
             {
-                renderer.sprite = art.Sprite;
-                visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
+                // 문은 개폐 프레임 시트가 있어 루프 애니를 붙이면 닫힘/열림이 깜빡인다.
+                renderer.sprite = isDoor
+                    ? ResolveDoorSprite(art, open: false) ?? art.Sprite
+                    : art.Sprite;
+                if (!isDoor && art.Frames != null && art.Frames.Count > 0)
+                    visual.AddComponent<RuntimeBuildingSpriteAnimator>().Configure(art.Frames);
             }
             else
                 RuntimePlaceholderVisual.Configure(renderer, new Color(.55f, .85f, 1f), .75f, 12);
             visualsByObjectId.Add(entry.Record.objectId, visual);
+            if (isDoor)
+                RefreshDoorVisual(entry.Record.objectId, entry.BarrierActive);
+        }
+
+        private void RefreshDoorVisual(string objectId, bool barrierActive)
+        {
+            if (!byObjectId.TryGetValue(objectId, out var entry)) return;
+            var isTileDoor = tileDoorCells.Contains(entry.Cell);
+
+            if (isTileDoor)
+            {
+                if (barrierActive)
+                {
+                    HideTileDoorOpenVisual(objectId);
+                    return;
+                }
+
+                ShowTileDoorOpenVisual(entry);
+                return;
+            }
+
+            if (!visualsByObjectId.TryGetValue(objectId, out var visual) || visual == null) return;
+            var leftoverAnimator = visual.GetComponent<RuntimeBuildingSpriteAnimator>();
+            if (leftoverAnimator != null) Destroy(leftoverAnimator);
+            var renderer = visual.GetComponent<SpriteRenderer>();
+            if (renderer == null) return;
+            var sprite = ResolveDoorSprite(buildingArtCatalog?.Find(DoorDefinitionId), open: !barrierActive);
+            if (sprite != null) renderer.sprite = sprite;
+            var color = renderer.color;
+            color.a = barrierActive ? 1f : OpenDoorVisualAlpha;
+            renderer.color = color;
+        }
+
+        private void ShowTileDoorOpenVisual(Entry entry)
+        {
+            if (entry == null) return;
+            // 닫힌 door 타일과 동일: 하단 피벗을 tileAnchor(셀 중심)에 둔다.
+            var worldPosition = bootstrap?.WorldRenderer != null
+                ? bootstrap.WorldRenderer.GetTilePivotWorld(entry.Cell)
+                : new Vector3(entry.Cell.x + .5f, entry.Cell.y + .5f, 0f);
+            if (!visualsByObjectId.TryGetValue(entry.Record.objectId, out var visual) || visual == null)
+            {
+                visual = new GameObject($"OpenDoor_{entry.Record.objectId}");
+                visual.transform.SetParent(transform, false);
+                visual.transform.position = worldPosition;
+                visual.AddComponent<SpriteRenderer>().sortingOrder = 13;
+                visualsByObjectId[entry.Record.objectId] = visual;
+            }
+
+            // 이전 빌드에서 붙인 루프 애니메이터가 있으면 제거한다.
+            var leftoverAnimator = visual.GetComponent<RuntimeBuildingSpriteAnimator>();
+            if (leftoverAnimator != null) Destroy(leftoverAnimator);
+
+            visual.SetActive(true);
+            visual.transform.position = worldPosition;
+            var spriteRenderer = visual.GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null) return;
+            // 문은 개폐 프레임이 들어 있어 루프 애니메이션하면 깜빡인다. 열린 모습은 마지막 프레임 고정.
+            var openSprite = ResolveDoorSprite(buildingArtCatalog?.Find(DoorDefinitionId), open: true);
+            if (openSprite != null) spriteRenderer.sprite = openSprite;
+            else RuntimePlaceholderVisual.Configure(spriteRenderer, new Color(.55f, .85f, 1f), .75f, 13);
+            var color = spriteRenderer.color;
+            color.a = OpenDoorVisualAlpha;
+            spriteRenderer.color = color;
+        }
+
+        private void HideTileDoorOpenVisual(string objectId)
+        {
+            if (!visualsByObjectId.TryGetValue(objectId, out var visual) || visual == null) return;
+            visual.SetActive(false);
+        }
+
+        private static Sprite ResolveDoorSprite(BuildingArtCatalog.Entry art, bool open)
+        {
+            if (art == null || art.Frames == null || art.Frames.Count == 0) return null;
+            if (!open) return art.Frames[0];
+            return art.Frames[art.Frames.Count - 1];
         }
 
         private void ClearVisuals()
@@ -429,6 +695,9 @@ namespace Nyangbingo.World
         private void OnDestroy()
         {
             bootstrap?.TickDriver?.Unregister(this);
+            GameEvents.OnTilePlaced -= HandleTilePlaced;
+            GameEvents.OnTileBroken -= HandleTileBroken;
+            if (bootstrap != null) bootstrap.WorldReady -= HandleWorldReady;
             if (coolingSources != null) coolingSources.ConsumableExpired -= HandleConsumableExpired;
         }
     }

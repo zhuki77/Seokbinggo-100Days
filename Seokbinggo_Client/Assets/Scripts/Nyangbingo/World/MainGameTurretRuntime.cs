@@ -122,6 +122,20 @@ namespace Nyangbingo.World
                                         buildingArtCatalog != null && playerController != null &&
                                         interactionStatusText != null;
         public int ActiveTurretCount => turrets.Count;
+        public int ActiveDamageTurretCount
+        {
+            get
+            {
+                var count = 0;
+                foreach (var pair in turrets)
+                {
+                    if (pair.Value?.Controller == null) continue;
+                    // Turret map currently only holds damage towers (dokkaebi_fire_tower).
+                    count++;
+                }
+                return count;
+            }
+        }
         public IReadOnlyList<CounterAura> ActiveCounterAuras => activeCounterAuras;
         public bool IsPlacementPreviewActive => placementPreview != null;
         public bool IsPlacementPreviewValid => IsPlacementPreviewActive && placementValid;
@@ -136,6 +150,37 @@ namespace Nyangbingo.World
 
         public int GetInventoryCount(string itemId) =>
             string.IsNullOrEmpty(itemId) ? 0 : runtimeServices?.PlayerInventory?.Count(itemId) ?? 0;
+
+        public bool CanPlaceByTurretSlots(string definitionId, out string reason)
+        {
+            reason = null;
+            if (string.IsNullOrEmpty(definitionId) ||
+                (!SeokbinggoRules.IsDamageTurret(definitionId) &&
+                 !string.Equals(definitionId, TurretItemId, StringComparison.Ordinal)))
+                return true;
+
+            var stage = runtimeServices?.Seokbinggo?.Stage ?? 0;
+            var damageCap = SeokbinggoRules.DefaultDamageSlotCap;
+            var damageGlobal = gameDataCatalog?.FindGlobal(GlobalKeys.TurretDamageSlotCap);
+            if (damageGlobal != null && damageGlobal.TryGetInt(out var configuredCap) && configuredCap >= 0)
+                damageCap = configuredCap;
+
+            var isDamage = SeokbinggoRules.IsDamageTurret(definitionId);
+            if (SeokbinggoRules.CanPlaceTurret(stage, ActiveTurretCount, isDamage, ActiveDamageTurretCount,
+                    damageCap))
+                return true;
+
+            if (ActiveTurretCount >= SeokbinggoRules.TurretSlotCap(stage))
+            {
+                reason = stage <= 0
+                    ? "석빙고를 승급해야 터렛을 설치할 수 있습니다."
+                    : $"터렛 슬롯 가득 ({ActiveTurretCount}/{SeokbinggoRules.TurretSlotCap(stage)}) · 석빙고 {stage}단계";
+                return false;
+            }
+
+            reason = $"화력 터렛 상한 ({ActiveDamageTurretCount}/{damageCap})";
+            return false;
+        }
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameRuntimeServices services,
             MainGameEnvironmentState environment, GameplayArtCatalog gameplayArt,
@@ -197,7 +242,7 @@ namespace Nyangbingo.World
                 RefreshInteractionStatus();
                 return;
             }
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (Input.GetKeyDown(KeyCode.F11))
             {
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
@@ -390,7 +435,8 @@ namespace Nyangbingo.World
                 Mathf.Floor(placementPosition.y) + .5f);
             placementPreview.transform.position = placementPosition;
             placementValid = environmentState.CanPlaceAt(placementPosition) &&
-                             GetInventoryCount(placementDefinitionId) > 0;
+                             GetInventoryCount(placementDefinitionId) > 0 &&
+                             CanPlaceByTurretSlots(placementDefinitionId, out _);
             var color = placementValid ? new Color(.35f, 1f, .75f, .65f) : new Color(1f, .25f, .25f, .65f);
             if (placementPreviewRenderer != null) placementPreviewRenderer.color = color;
             if (placementRangeRenderer != null)
@@ -405,6 +451,11 @@ namespace Nyangbingo.World
             var definitionId = placementDefinitionId;
             var item = gameDataCatalog?.FindItem(definitionId);
             if (item == null || item.MvpScope == ItemMvpScope.B) return false;
+            if (!CanPlaceByTurretSlots(definitionId, out var slotReason))
+            {
+                ShowMessage(slotReason);
+                return false;
+            }
             var record = new PlacedObjectRecord
             {
                 objectId = $"{definitionId}_{Guid.NewGuid():N}",
@@ -479,6 +530,26 @@ namespace Nyangbingo.World
                 TryRefuelIceJar(record);
                 return true;
             }
+            if (string.Equals(record.definitionId, SeokbinggoRules.IceCoreDefinitionId, StringComparison.Ordinal))
+            {
+                TryUpgradeSeokbinggo(record.objectId);
+                return true;
+            }
+            if (string.Equals(record.definitionId, MainGameEnvironmentState.DoorDefinitionId,
+                    StringComparison.Ordinal))
+            {
+                if (environmentState != null &&
+                    environmentState.TryToggleInsulationDoor(record.objectId, out var nowOpen))
+                {
+                    ShowMessage(nowOpen
+                        ? "단열 문 개방 · 밀폐 보정 일시 정지"
+                        : "단열 문 닫힘 · 밀폐 인정");
+                    BuildStateChanged?.Invoke();
+                    return true;
+                }
+                ShowMessage("단열 문을 조작할 수 없습니다.");
+                return true;
+            }
             if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
                     out var capPercent, out var active))
             {
@@ -547,8 +618,45 @@ namespace Nyangbingo.World
                 return;
             }
             environmentState.TryGetCoolingStatus(record.objectId, out remaining, out capPercent, out _);
-            ShowMessage($"얼음 조각 1개 투입 · 냉각 상한 {capPercent:0}% · 연료 {remaining:0}초");
+            ShowMessage($"얼음 항아리 · 얼음 조각 1개 투입 · 연료 {remaining:0}초 · 상한 {capPercent:0}%");
             BuildStateChanged?.Invoke();
+        }
+
+        private void TryUpgradeSeokbinggo(string iceCoreObjectId)
+        {
+            var service = runtimeServices?.Seokbinggo;
+            if (service == null)
+            {
+                ShowMessage("석빙고 승급 서비스를 찾을 수 없습니다.");
+                return;
+            }
+
+            if (service.TryUpgrade(out var message))
+            {
+                ShowMessage(message);
+                BuildStateChanged?.Invoke();
+                return;
+            }
+
+            if (service.IsMaxStage)
+            {
+                if (!string.IsNullOrEmpty(iceCoreObjectId) && environmentState != null &&
+                    environmentState.TryGetCoolingStatus(iceCoreObjectId, out var remaining, out var capPercent,
+                        out var active))
+                {
+                    var lifetime = float.IsPositiveInfinity(remaining) ? "영구" : $"{remaining:0}초";
+                    ShowMessage($"석빙고 {service.Stage}단계(최고) · 냉각 상한 {capPercent:0}% · " +
+                                $"{(active ? $"가동 중 ({lifetime})" : "정지")}");
+                    return;
+                }
+
+                ShowMessage($"석빙고 {service.Stage}단계(최고) · 터렛 슬롯 {service.TurretSlotCap}");
+                return;
+            }
+
+            ShowMessage(string.IsNullOrEmpty(message)
+                ? $"석빙고 {service.Stage}단계 · 다음 승급 재료가 부족합니다."
+                : message);
         }
 
         public bool TryRecoverNearestPlacedObject()
@@ -782,7 +890,7 @@ namespace Nyangbingo.World
 
         private void HandleInventoryChanged() => BuildStateChanged?.Invoke();
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void GrantTurretItemForEditorTest()
         {
             if (runtimeServices?.PlayerInventory != null &&

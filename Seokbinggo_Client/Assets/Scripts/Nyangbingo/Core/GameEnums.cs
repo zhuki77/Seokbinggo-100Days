@@ -1,6 +1,6 @@
 namespace Nyangbingo.Core
 {
-    public enum CraftingStation { None, Workbench, Furnace, IceAnvil, Foundry }
+    public enum CraftingStation { None, Workbench, Furnace, IceAnvil, Foundry, Smithy }
     public enum YokaiKind { ClubGoblin, Bulgasari, Yagwanggwi, Eoduksini, Gangcheori }
     public enum BossKind { GoblinChief, MotherBulgasari, Imugi, Gangcheori }
     public enum DamageTag { Melee, Fire, Ice }

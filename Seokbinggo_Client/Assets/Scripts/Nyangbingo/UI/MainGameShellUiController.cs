@@ -122,7 +122,10 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
-            var shouldCreateFreshInitialSave = discardSaveAfterReload;
+            var pendingKind = GameSceneFlow.ConsumePending(out var pendingSlot, out var pendingDemoDay,
+                out var revealLoading);
+            var shouldCreateFreshInitialSave = discardSaveAfterReload ||
+                                              pendingKind == GameSceneFlow.IntentKind.NewGame;
             if (shouldCreateFreshInitialSave && saveManager != null)
             {
                 saveManager.DeleteAll();
@@ -139,7 +142,7 @@ namespace Nyangbingo.UI
             }
 
             audioService.Initialize();
-            audioService.EnsureAudiblePlayback(MusicTrack.Title);
+            DeactivateLegacyTitlePanel();
             shell.ConfigureForRuntime(saveManager, audioService, timeService, saveCoordinator.CaptureSnapshot(),
                 Application.isMobilePlatform, Debug.isDebugBuild || Application.isEditor);
             shell.NewGameRequested += HandleNewGameRequested;
@@ -161,12 +164,15 @@ namespace Nyangbingo.UI
             ResolveShellArtCatalogs();
             ApplyDeliveredShellArt();
             EnsureShellLoadingOverlay();
-            var shouldEnterGameplay = enterGameplayAfterReload;
-            var shouldRevealLoading = revealLoadingAfterReload;
+
+            var shouldRevealLoading = revealLoading || revealLoadingAfterReload;
             enterGameplayAfterReload = false;
             revealLoadingAfterReload = false;
-            if (shouldEnterGameplay) shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
-            else shell.EnterTitle();
+
+            var enteredGameplay = ApplyPendingGameplayIntent(pendingKind, pendingSlot, pendingDemoDay);
+            if (!enteredGameplay)
+                shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
+
             if (shouldCreateFreshInitialSave)
                 CreateFreshInitialSave();
             RefreshTitleControls();
@@ -174,7 +180,65 @@ namespace Nyangbingo.UI
             IsInitialized = true;
             if (shouldRevealLoading)
                 StartCoroutine(PlayShellLoadingReveal());
-            Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지 4항목·현재 슬롯 저장·설정·타이틀 셸 연결 완료.");
+            Debug.Log("[Nyangbingo] MainGameShellUiController: MainGame 셸 연결 완료 (Title 씬 분리).");
+        }
+
+        private void DeactivateLegacyTitlePanel()
+        {
+            if (titleNewGameButton != null)
+            {
+                var titlePanel = titleNewGameButton.transform.parent;
+                if (titlePanel != null) titlePanel.gameObject.SetActive(false);
+            }
+
+            if (shell == null || resumeButton == null) return;
+            var pause = resumeButton.transform.parent != null
+                ? resumeButton.transform.parent.gameObject
+                : null;
+            var result = resultTitleButton != null && resultTitleButton.transform.parent != null
+                ? resultTitleButton.transform.parent.gameObject
+                : null;
+            var settings = settingsApplyButton != null && settingsApplyButton.transform.parent != null
+                ? settingsApplyButton.transform.parent.gameObject
+                : null;
+            var confirmation = confirmButton != null && confirmButton.transform.parent != null
+                ? confirmButton.transform.parent.gameObject
+                : null;
+            // Drop titleCanvas so ReturnToTitle/ShowTitle cannot flash the legacy MainGame title panel.
+            shell.ConfigureViews(null, pause, result, settings, confirmation);
+        }
+
+        private bool ApplyPendingGameplayIntent(GameSceneFlow.IntentKind kind, int slot, int demoDay)
+        {
+            switch (kind)
+            {
+                case GameSceneFlow.IntentKind.NewGame:
+                    shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
+                    return true;
+                case GameSceneFlow.IntentKind.Continue:
+                    if (!saveCoordinator.TryLoad(slot))
+                    {
+                        Debug.LogError("[Nyangbingo] Continue load failed; returning to Title.");
+                        GameSceneFlow.GoToTitle(revealLoading: false);
+                        return true;
+                    }
+
+                    shell.EnterGameplay(saveCoordinator.CaptureSnapshot());
+                    return true;
+                case GameSceneFlow.IntentKind.DemoDay:
+                    if (saveManager.TryCopyDemoToAutoSave(demoDay, out var demo) &&
+                        saveCoordinator.TryApplyDemoSnapshot(demo))
+                    {
+                        shell.EnterGameplay(demo);
+                        return true;
+                    }
+
+                    Debug.LogError("[Nyangbingo] Demo load failed; returning to Title.");
+                    GameSceneFlow.GoToTitle(revealLoading: false);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private void CreateFreshInitialSave()
@@ -780,11 +844,15 @@ namespace Nyangbingo.UI
             settingsBackButton.onClick.AddListener(() => shell.CloseSettings());
             confirmButton.onClick.AddListener(ConfirmPendingAction);
             cancelButton.onClick.AddListener(() => shell.CancelConfirmation());
-            titleContinueButton.onClick.AddListener(() =>
-                SetStatus(shell.TryContinue() ? "불러오는 중..." : "저장 파일이 없습니다."));
-            titleNewGameButton.onClick.AddListener(() => shell.RequestNewGame());
-            titleQuitButton.onClick.AddListener(() => shell.RequestQuit());
-            resultTitleButton.onClick.AddListener(() => shell.ReturnFromResultToTitle());
+            if (titleContinueButton != null)
+                titleContinueButton.onClick.AddListener(() =>
+                    SetStatus(shell.TryContinue() ? "불러오는 중..." : "저장 파일이 없습니다."));
+            if (titleNewGameButton != null)
+                titleNewGameButton.onClick.AddListener(() => shell.RequestNewGame());
+            if (titleQuitButton != null)
+                titleQuitButton.onClick.AddListener(() => shell.RequestQuit());
+            if (resultTitleButton != null)
+                resultTitleButton.onClick.AddListener(() => shell.ReturnFromResultToTitle());
         }
 
         private void ConfigurePauseMenuLayout()
@@ -1030,10 +1098,7 @@ namespace Nyangbingo.UI
                 {
                     if (demoLoadApplied) SetStatus($"{demoDay}일차 데모 불러오기 완료");
                     else
-                    {
-                        shell.EnterTitle();
                         SetStatus($"{demoDay}일차 데모 월드 복원 실패 · 데모 세이브를 다시 생성하세요.");
-                    }
                 }
                 return;
             }
@@ -1097,12 +1162,10 @@ namespace Nyangbingo.UI
                 if (saveManager.TryLoad(GameShellController.AutoSaveSlot, out var previousSave))
                     previousSeed = previousSave.seed;
                 saveManager.DeleteAll();
-                enterGameplayAfterReload = true;
-                revealLoadingAfterReload = true;
                 discardSaveAfterReload = true;
                 MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed);
-                Time.timeScale = 1f;
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                GameSceneFlow.RequestNewGame(revealLoading: true);
+                GameSceneFlow.GoToMainGame();
             });
         }
 
@@ -1112,9 +1175,6 @@ namespace Nyangbingo.UI
                 if (!saveCoordinator.TryLoad(slot))
                 {
                     Time.timeScale = 0f;
-                    shell.EnterTitle();
-                    shell.RefreshTitle();
-                    RefreshTitleControls();
                     SetStatus("저장 데이터 복원에 실패했습니다.");
                     return;
                 }
@@ -1128,9 +1188,17 @@ namespace Nyangbingo.UI
             {
                 demoLoadApplied = saveCoordinator.TryApplyDemoSnapshot(demo);
                 if (demoLoadApplied) shell.EnterGameplay(demo);
-                else shell.EnterTitle();
+                else SetStatus("데모 월드 복원에 실패했습니다.");
                 Time.timeScale = 1f;
             });
+
+        private void HandleTitleRequested()
+        {
+            BeginShellLoadingTransition(() =>
+            {
+                GameSceneFlow.GoToTitle(revealLoading: true);
+            });
+        }
 
         private void HandleMvpDawn()
         {
@@ -1237,17 +1305,6 @@ namespace Nyangbingo.UI
             resultTeaserText.text = DemoResultState.Teaser;
         }
 
-        private void HandleTitleRequested()
-        {
-            BeginShellLoadingTransition(() =>
-            {
-                enterGameplayAfterReload = false;
-                revealLoadingAfterReload = true;
-                discardSaveAfterReload = false;
-                Time.timeScale = 1f;
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-            });
-        }
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
 
         private void OnDestroy()

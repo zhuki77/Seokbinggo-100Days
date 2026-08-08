@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: wave_night_offset
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: wave_night_offset
+  value: 5
+  unit: day
+  note: "\uD070 \uBC24 \uC624\uD504\uC14B(v45) \u2014 35\xB745\xB755\xB765\xB775\xB785\xB795.
+    \uBCF4\uC2A4 \uB0B4\uC2B5(50\xB760\xB790\xB7100)\uACFC \uACB9\uCE58\uBA74 \uC548
+    \uB428"

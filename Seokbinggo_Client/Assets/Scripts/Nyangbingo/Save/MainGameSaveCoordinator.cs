@@ -173,12 +173,14 @@ namespace Nyangbingo.Save
             var catalog = GetCatalog();
             save.modulesDone = catalog.Modules
                 .Where(module => module != null && module.Item != null &&
+                                 !SeokbinggoRules.IsUpgradeModuleId(module.Id) &&
                                  save.placedObjectRecords.Any(record =>
                                      record.definitionId == module.Item.Id))
                 .Select(module => module.Id)
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .ToList();
+            save.seokbinggoStage = runtimeServices.Seokbinggo?.Stage ?? 0;
             save.coolingSources = environmentState.ExportCoolingSources();
             save.jangdokStorages = runtimeServices.JangdokStorage.Export();
             save.deathTearPouches = runtimeServices.DeathTearPouches.Export();
@@ -285,6 +287,7 @@ namespace Nyangbingo.Save
                  runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
                 runtimeServices.DeathTearPouches.Restore(save.deathTearPouches) &&
                 RestoreWorldDrops(save.worldDrops) &&
+                RestoreSeokbinggoStage(save) &&
                 encounterCoordinator.RestoreProgress(save) &&
                  environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources) &&
                  runtimeServices.JangdokStorage.TryRestore(save.jangdokStorages,
@@ -356,6 +359,13 @@ namespace Nyangbingo.Save
         {
             var runtime = ResolveWorldDropRuntime();
             return runtime != null ? runtime.Restore(records, FindItem) : records != null && records.Count == 0;
+        }
+
+        private bool RestoreSeokbinggoStage(SaveGame save)
+        {
+            if (runtimeServices?.Seokbinggo == null) return false;
+            runtimeServices.Seokbinggo.RestoreStage(save?.seokbinggoStage ?? 0);
+            return true;
         }
 
         private bool ResetPlayerTransientState()

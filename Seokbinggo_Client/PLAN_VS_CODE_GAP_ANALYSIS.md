@@ -1,29 +1,37 @@
 # 기획 ↔ 코드 정밀 대조 검증 리포트 (Plan vs Code Gap Analysis)
 
-> 작성일: 2026-07-16 · 작성자: 개발 A파트 (본 리포트는 자가 검증용이며, "구현 완료"로 뭉뚱그리지 않고 **기획 폴더 원문 수치와 코드 라인을 1:1로 대조**한 결과만 기록합니다.
+> 작성일: 2026-07-16 · **재검증: 2026-08-08 (v46 continue)** · 작성자: 개발 A파트  
+> 본 리포트는 자가 검증용이며, 아래 §0·§4는 2026-08-08 코드/`MainGame` 씬 기준으로 상태를 갱신했습니다.  
+> §1~§3 본문의 7/16 원문 인용은 역사 기록으로 유지하되, **현재 구현 판정은 §0·§4를 우선**합니다.
 >
-> **대조 대상 기획 폴더**: `ExportBlock-f9c1a2b3-5728-4090-ab2f-afd1682fe106-Part-1/` (Notion 내보내기, 07/13~07/16 일자별 문서 47종)
-> **정본 판단 원칙**: 같은 항목에 대해 여러 문서가 다른 값을 말하면 (1) 결재 브리프/오너 승인 로그 → (2) 가장 최근 날짜 문서 → (3) GDD 본문(`1 개요`~`9 기술`) 순으로 우선순위를 매겼습니다. 충돌이 발견된 항목은 감추지 않고 표에 그대로 남겼습니다.
+> **⚠️ 2026-08-08 Notion 정렬**: 100일 정식판의 **현행 기획 정본은 Notion [개발 명세서 ⑤ (v46)](https://app.notion.com/p/8cfae468d16b8200b98d01b38164d4ad) + [문서 지도](https://app.notion.com/p/97bae468d16b831db3a201caf3c81515)** 이다.  
+> 본 파일 §0~§5는 **초기 MVP/데모 층(낮밤·밀폐·상자·세이브)** 갭을 다룬다. **v46 모듈 20종·CSV 재임포트·파도 밤**은 [`V46_CONTINUE_HANDOFF.md`](V46_CONTINUE_HANDOFF.md) §2를 본다.  
+> 수치 충돌 시 **CSV가 최종 정본** (문서 지도 규칙).
+>
+> **대조 대상 기획 폴더(당시)**: `ExportBlock-f9c1a2b3-5728-4090-ab2f-afd1682fe106-Part-1/` (Notion 내보내기, 07/13~07/16 일자별 문서 47종)
+> **정본 판단 원칙**: 같은 항목에 대해 여러 문서가 다른 값을 말하면 (1) 결재 브리프/오너 승인 로그 → (2) 가장 최근 날짜 문서 → (3) GDD 본문(`1 개요`~`9 기술`) 순으로 우선순위를 매겼습니다.
 
 ---
 
-## 0. 총평 (요약)
+## 0. 총평 (요약) — 2026-08-08 재검증
 
 | 영역 | 상태 |
 |---|---|
 | 낮 900초 / 밤 540초 타이머 | ✅ **완전 일치** |
 | `day++` 타이밍(새벽에만 증가) | ✅ **완전 일치** |
 | `Time.timeScale` 금지 규칙 준수 | ✅ **완전 일치** (커스텀 `timeScale` 계수 방식) |
-| **새벽 경고 리드타임** | 🔴 **불일치 발견** — 코드 기본값 30초, 기획 정본은 180초(3분) |
-| **D-30 HUD 카운터** | 🟡 **의미 불일치 발견** — 기획 최신 UI 정본은 D-100 |
-| **새벽 자동 저장(DawnAutoSave)** | 🔴 **미연결** — B파트 컴포넌트는 존재, A파트 배선 없음 |
-| 밀폐 판정 — 자연 지형 인정 | 🟡 **부분 일치, 화이트리스트 범위 축소** — 차열벽 등 인공 모듈 미반영 |
-| **밀폐율(SealPercent) 산식** | 🔴 **불일치 발견** — 코드는 구 비율식, 기획 정본은 처방 C(`region_cells/240`) |
-| 밀폐 재계산 트리거 | 🟡 **부분 일치** — 타일 이벤트는 O, 밤 시작 트리거는 누락 |
+| **새벽 경고 리드타임** | ✅ **완료** — `DayNightService.dawnWarningLeadSeconds = 180` (씬도 180) |
+| **D-100 HUD 카운터** | ✅ **완료** — `survivalDayLimit = 100`, HUD D-100 |
+| **새벽 자동 저장(DawnAutoSave)** | ✅ **완료** — `MainGameSaveCoordinator` + `DawnAutoSave` MainGame 배선 |
+| 밀폐 판정 — 화이트리스트 | ✅ **완료** — `SealBoundaryPolicy` + `MainGameEnvironmentState` 레지스트리 |
+| **밀폐율(SealPercent) 산식** | ✅ **완료** — 처방 C (`region_cells / 240`) |
+| 밀폐 재계산 트리거 | ✅ **완료** — 타일 이벤트 + `OnNightStart` → `InvalidateAll()` |
 | 보물상자 20개(폐허4·상층6·중층6·심층4) | ✅ **완전 일치** |
 | 상자 중복 개봉 방지("재출현 없음") | ✅ **완전 일치** |
-| 세이브/로드 복원 순서 4단계 | ✅ **완전 일치** (기획의 추상 단계를 구체 기술로 세분화) |
-| 세이브 스키마(`openedChests`) | ✅ **문제 없음** — 코드가 기획 문서 간 표기 차이를 이미 흡수 |
+| 세이브/로드 복원 순서 4단계 | ✅ **완전 일치** |
+| 세이브 스키마(`openedChests`) | ✅ **문제 없음** |
+| **단열 문 개폐 UX** | ✅ **완료** — placed `door` E 토글 (`TryToggleInsulationDoor` / `SetBarrierActive`) |
+| **아트 최종 통합 (P3)** | 🟢 **열림** — `Assets/Tiles/Temp` 등 외부 납품 대기 |
 
 아래부터 각 항목의 **원문 인용 + 코드 라인 대조**를 상세히 남깁니다.
 
@@ -300,53 +308,73 @@ if (opened) save.openedChestIds.Add(chestId);
 
 ---
 
-## 4. ⚠️ 기획서 대비 "연결 대기" 갭 및 복귀 후 우선순위
+## 4. 갭 추적 — 2026-08-08 재검증 결과
 
-### 4-1. 🔴 [P0] 새벽 자동 저장(DawnAutoSave) 씬 배선
+### 4-1. ✅ [P0] 새벽 자동 저장(DawnAutoSave) — DONE
 
-- **B파트 상태**: `DawnAutoSave` 컴포넌트 자체와 `ISaveSnapshotProvider` 인터페이스는 `DEV_B_TO_DEV_A_HANDOFF.md` §11.4에 이미 정의·완성되어 있음.
-- **A파트 상태**: `DayNightService`는 `ITimeSource.Dawn`을 이미 정확히 구현했으나, `WorldSessionController`를 `ISaveSnapshotProvider`(`SaveGame CaptureSnapshot()`)로 감싸는 MonoBehaviour 어댑터가 없어 `DawnAutoSave`를 씬에 붙일 수 없음.
-- **해야 할 일**: 얇은 `MonoBehaviour` 어댑터(예: `WorldSessionSaveProviderAdapter`)를 만들어 `ISaveSnapshotProvider.CaptureSnapshot()` 안에서 `WorldSessionController.CaptureSnapshot(SaveGame)`을 호출하도록 연결하고, 씬에 `DawnAutoSave` + 이 어댑터 + `DayNightService`를 배선. **가장 명확하고 작은 작업**이라 최우선 권장.
+- `MainGameSaveCoordinator`가 `ISaveSnapshotProvider`를 구현하고 `DawnAutoSave.Configure(...)`로 연결.
+- MainGame 씬에 `MainGameSaveCoordinator` + `DawnAutoSave` 배선됨.
+- 테스트/하니스용 얇은 어댑터: `WorldSessionSaveProviderAdapter`.
 
-### 4-2. 🔴 [P0] `dawnWarningLeadSeconds` 기본값 30 → 180 수정
+### 4-2. ✅ [P0] `dawnWarningLeadSeconds` 180 — DONE
 
-- §1-5 참고. 1줄 수정이지만 5개 문서가 일치하는 확정 수치이므로 즉시 반영 권장.
+- `DayNightService` 기본값 `180f`, MainGame 씬 직렬화 값도 180.
 
-### 4-3. 🔴 [P1] SealSystem 밀폐율 산식을 처방 C(`region_cells/240`)로 교체
+### 4-3. ✅ [P1] SealPercent 처방 C — DONE
 
-- §2-2 참고. HUD 밀폐도 게이지가 직접 읽는 값이라 B파트 온도 시스템과의 연동 정확도에 직결됨.
-- 선행 조건: "냉기원 가동 여부"를 SealSystem에 주입할 인터페이스를 B파트와 합의해야 함(현재 온도/냉기원 시스템이 A파트 프로젝트에 아직 없음 — B파트에 문의 필요).
+- `SealSystem`: `leak_faces==0 ? min(1, region_cells/seal_target_cells) : 0` (기본 분모 240).
+- 냉기원은 `TemperaturePercent` + `ICoolingSourceProvider`로 분리.
 
-### 4-4. 🟡 [P1] 차열벽·차열 지붕·단열 문의 밀폐 화이트리스트 반영
+### 4-4. ✅ [P1] 차열 화이트리스트 — DONE
 
-- §2-1 참고. 이 구조물들이 `TileData[,]` 그리드의 일부인지, 별도 설치물 오브젝트 목록인지 B파트와 확정 필요. 확정되면 `SealSystem`에 자연 지형 외의 "인정 화이트리스트" 검사를 추가.
+- `SealBoundaryPolicy` + SO `SealWhitelist` + `MainGameEnvironmentState` 레지스트리.
+- 제품 설치물 `insul_wall` / `door` / `roof` 등 인정.
 
-### 4-5. 🟡 [P2] SealSystem에 `OnNightStart` 재계산 트리거 추가
+### 4-5. ✅ [P2] `OnNightStart` 재계산 — DONE
 
-- §2-4 참고. `GameEvents.OnNightStart += HandleTileChanged;` 한 줄 추가 + 캐시 전체 무효화 여부만 결정하면 됨. 비교적 가벼운 작업.
+- `SealSystem`이 `GameEvents.OnNightStart` 구독 → `InvalidateAll()`.
 
-### 4-6. 🟡 [P2] D-30 vs D-100 HUD 표기 방식 기획팀 재확인
+### 4-6. ✅ [P2] D-100 HUD — DONE
 
-- §1-7 참고. 코드/기획 어느 쪽의 결함이 아니라 기획 문서 간 표기가 갈린 상태. `survivalDayLimit` 필드명·기본값과 HUD 라벨링 방향(카운트다운 시작값)을 최종 확정받아야 함.
+- `survivalDayLimit = 100`, HUD D-100 표기.
 
-### 4-7. 🟢 [P2, 기존 인수인계 문서에서 이미 식별됨 — 재확인] 제작 트리·제련 틱 연동
+### 4-7. ✅ [P2] 제작·제련 틱 연동 — DONE
 
-- **기획 원문**: `개발 가이드 ④`: "`Tick(게임시간): 진행중.남은시간 -= dt` … **함정**: 게임시간 기준(냥잠 가속 적용) — 실시간 아님." / `개발 가이드 ①`: "시계는 하나다 … 제련도 TimeManager의 gameSeconds를 조회."
-- **상태**: B파트 `SmeltingStation`/`CraftingStation` 로직 자체는 존재하나, 매 프레임 `DayNightService.GameSeconds`의 델타를 주입하는 중앙 업데이트 루프가 씬에 아직 없음. `DEV_A_HANDOFF_REPORT.md`에서 이미 1순위로 지정한 항목과 동일하며, 본 조사에서도 기획 원문("게임시간 기준, 실시간 아님"이라는 "함정" 경고)까지 재확인되어 우선순위가 다시 한번 뒷받침됨.
+- MainGame `CentralTickDriver` + `MainGameRuntimeServices`에 Furnace/Foundry/CraftingProcess 등록.
 
-### 4-8. 🟢 [P3] 12슬롯 인벤토리 UI + HUD(체온·석빙고 온도계·발톱 티어) 데이터 바인딩
+### 4-8. ✅ [P3] HUD/인벤 바인딩 — DONE (슬롯 수는 v29=50으로 확장)
 
-- **기획 원문**: `5 UI UX`(v15 QA-E 정본): HUD 레이아웃(체온 바 좌상단, D-카운터 상단 중앙, **석빙고 온도계**(v17 — 구 "밀폐도 게이지"를 UI만 개칭) 상단 우측) / `개발 가이드 ④` HUD 바인딩 표: "체온바 | TemperatureSystem.temp | 매 프레임", "밀폐도 게이지 | SealSystem.sealPct | OnSealChanged".
-- **상태**: 인벤토리(12슬롯, 확정 수치 일치)·HUD 위젯 자체는 B파트에서 준비되었을 가능성이 높으나, 실제 프리팹/씬 드래그앤드롭 바인딩은 확인되지 않음. `SealSystem.sealPct` 값 자체가 아직 §2-2의 산식 문제를 안고 있으므로, **§4-3(산식 수정)을 먼저 끝내고 HUD 바인딩을 진행하는 순서**를 권장.
+- 체온·밀폐·D-100·발톱 HUD 바인딩 완료. 기획 초안 12슬롯 → 런타임 50슬롯은 제품 확정 수치.
 
-### 4-9. 🟢 [P3] 아트 리소스 최종 통합
+### 4-9. 🟢 [P3] 아트 리소스 최종 통합 — OPEN
 
-- 임시 18종 타일을 실제 광물/제작대/지하/도구 티어 스프라이트로 교체. `10 일정`은 7/21, `개발 명세서 v9` §4는 D7(7/20)로 날짜가 다르게 적혀 있으나(§D3 일정 충돌), 어느 쪽이든 후순위 작업으로 무리 없음.
+- `Assets/Tiles/Temp` 등 임시 타일·외부 납품 아트 교체 대기. 코드 갭이 아니라 에셋 갭.
+
+### 4-10. ✅ [잔여] 단열 문 개폐 UX — v46에서 채움
+
+- placed object `door`에 대해 E → `SetBarrierActive` 토글.
+- 열림(`BarrierActive=false`): 밀폐 미인정. 닫힘: 밀폐 인정.
+- 전경 타일 `door` elementType 개폐 상태는 별도 필드가 없어 이번 범위 제외(제품 경로는 placed object).
 
 ---
 
-## 5. 결론
+## 5. 결론 (2026-08-08)
 
-- **완전히 일치하는 항목**(900/540초 타이머, day++ 타이밍, Time.timeScale 회피, 상자 20개 지역별 배분, 상자 중복 개봉 방지, 세이브 4단계 순서)은 모두 코드 라인 단위로 재확인했습니다.
-- 반면 이번 정밀 대조에서 **기존에 "완료"로 보고했던 두 시스템(낮밤 사이클의 새벽 경고 리드타임, SealSystem의 밀폐율 산식)에 실제로는 구체적인 수치·산식 불일치가 있었음을 확인**했습니다. 두 항목 모두 원인과 정확한 수정 방향을 특정했으므로 복귀 후 바로 착수 가능합니다.
-- SealSystem의 "인공 벽 화이트리스트" 범위는 애초 사용자님의 최초 지시("자연 지형만 인정")를 코드가 충실히 따른 결과이지만, 기획 폴더의 최신 v15 QA-F 결론과는 다르므로 **팀 차원의 재확인이 필요한 정책 결정 사안**으로 명확히 구분해 두었습니다.
+- 7/16 리포트에서 열었던 P0~P2 수치·배선 갭은 **현재 코드/씬에서 모두 닫혔습니다.**
+- 남은 열림은 주로 **아트 최종 통합(P3)** 과 발표용 Development 빌드 단축키 재빌드 확인입니다.
+- 역사적 상세 인용(§1~§3)은 보관용으로 유지합니다. 작업 우선순위는 이 §4를 따르세요.
+
+---
+
+## 6. Notion v46 (100일 정식판) — 2026-08-08 정렬 요약
+
+정본: [개발 명세서 ⑤](https://app.notion.com/p/8cfae468d16b8200b98d01b38164d4ad) · [문서 지도](https://app.notion.com/p/97bae468d16b831db3a201caf3c81515)
+
+| 층 | 상태 |
+|----|------|
+| MVP 코어 (§0~§4) | ✅ 대체로 닫힘 |
+| v46 CSV (items 160, bosses 10, modules 11, night-waves 15 등) | 🔴 로컬 `Assets/Data/CSV`는 데모 규모 (items≈86, bosses≈4, modules≈5, **night-waves 없음**) |
+| v46 모듈 20종 (WaveNight·FrostSpread·대장간·진화·DayLight assert 등) | 🔴 대부분 미착수 / 부분만 존재 |
+| 문서 지도 열린 판단 3건 (아티팩트 equipment·AccessoryTwo 데이터·T4~T6 세트) | 🟡 AccessoryTwo는 코드에 있음, 데이터·세트는 열림 |
+
+상세 표·다음 순서는 **`V46_CONTINUE_HANDOFF.md`** 에 둔다. 파트 A/B는 Notion상 파일 소유 표기이며 저장소는 통합 `main`이다.

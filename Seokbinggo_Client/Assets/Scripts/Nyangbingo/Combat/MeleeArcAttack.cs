@@ -117,16 +117,10 @@ namespace Nyangbingo.Combat
             if (effectiveTargetLayers.value == 0) effectiveTargetLayers = Physics2D.AllLayers;
 
             // 스폰 직후·transform 이동만 한 요괴 트리거가 물리 월드에 안 잡히는 경우를 막는다.
+            // ContactFilter 경로 대신 OverlapBoxAll + SyncTransforms를 쓰면
+            // ProjectSettings.QueriesHitTriggers와 스프라이트 외곽 트리거 히트가 안정적으로 맞는다.
             Physics2D.SyncTransforms();
-            var filter = new ContactFilter2D
-            {
-                useLayerMask = true,
-                useTriggers = true,
-                useDepth = false
-            };
-            filter.SetLayerMask(effectiveTargetLayers);
-            var overlapHits = new List<Collider2D>(16);
-            Physics2D.OverlapBox(queryCenter, querySize, queryAngle, filter, overlapHits);
+            var overlapHits = Physics2D.OverlapBoxAll(queryCenter, querySize, queryAngle, effectiveTargetLayers);
 
             foreach (var hit in overlapHits)
             {
