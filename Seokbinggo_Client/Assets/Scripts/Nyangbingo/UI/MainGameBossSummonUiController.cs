@@ -401,7 +401,8 @@ namespace Nyangbingo.UI
             var stations = new[]
             {
                 CraftingStation.Workbench, CraftingStation.Furnace,
-                CraftingStation.IceAnvil, CraftingStation.Foundry
+                CraftingStation.IceAnvil, CraftingStation.Foundry,
+                CraftingStation.Smithy
             };
             foreach (var station in stations)
             {
@@ -420,6 +421,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Furnace: return "furnace";
                 case CraftingStation.IceAnvil: return "ice_anvil";
                 case CraftingStation.Foundry: return "blast_furnace";
+                case CraftingStation.Smithy: return "smithy";
                 default: return string.Empty;
             }
         }
@@ -432,6 +434,7 @@ namespace Nyangbingo.UI
                 case "furnace": return CraftingStation.Furnace;
                 case "ice_anvil": return CraftingStation.IceAnvil;
                 case "blast_furnace": return CraftingStation.Foundry;
+                case "smithy": return CraftingStation.Smithy;
                 default: return CraftingStation.None;
             }
         }
@@ -444,6 +447,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Furnace: return "화로";
                 case CraftingStation.IceAnvil: return "얼음 모루";
                 case CraftingStation.Foundry: return "용광로";
+                case CraftingStation.Smithy: return "대장간";
                 default: return station.ToString();
             }
         }

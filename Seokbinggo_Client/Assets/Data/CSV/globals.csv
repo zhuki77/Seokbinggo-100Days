@@ -87,7 +87,7 @@ wallpaper_coldsource_bonus,25,pct,벽지 100% 도포 시 그 구역 냉기원 �
 wallpaper_remove_rule,restore_original,rule,벽지 제거 시 그 칸은 '원래 있던 것'으로 돌아간다(v26) — 지하(원래 자연 배경벽 자리)=자연 배경벽 복원 / 지상(원래 하늘)=빈 칸. 회의에서 '자연벽 복원'과 '빈 칸' 두 안이 충돌했으나 각각 다른 상황을 본 것이라 통합 규칙 하나로 해소
 boss_field_yokai,freeze_resume,rule,소환 보스 등장 시 이미 필드에 있던 일반 요괴 처리(v27) — 행동 정지+반투명 표시 후 보스전 종료 시 이동 방향·속도 유지한 채 재개. 새 스폰은 그 밤 없음(boss_night_spawn=discard 유지). ⚠️ 내습 보스(30일차 이무기)는 invasion_boss_in_cap=1로 공존이라 이 규칙 대상이 아니다
 cave_max_height,12,tile,동굴 공동 하나의 최대 세로 길이 [가안] — 지표(surface_y=20) 관통 금지용. 2D 펄린 공동이 세로 연결돼 맵 중앙에 거대 수직 구멍이 생기는 것을 막는다(v27·개발 실측). 개발 A가 튜닝 후 확정값 확정
-furniture_mvp_scope,B,scope,기능 가구 2종(죽부인·대발)의 MVP 범위(v27 확정) — B = 제작 UI 미노출·데이터만 유지. jukbuin_regen_mult·daebal_flame_cut·daebal_radius 수치는 남기되 items.csv 미등재·레시피 없음·아트 발주 없음. 확장(31일~) 승격 시 id·레시피·도트 2장을 함께 신설한다
+furniture_mvp_scope,A,scope,기능 가구 2종(죽부인·대발) MVP 범위 — A = items·레시피·제작 UI 노출(v46 승격). jukbuin_regen_mult·daebal_flame_cut·daebal_radius·jukbuin_radius 수치 유지
 inventory_slots,50,count,플레이어 인벤토리 10×5 그리드(GDD 5장 ③ v29 — 테라리아 본체 인벤 동일 규격·핫바 미도입. 구 12슬롯에서 7/20 오너 확정 확장). 장독 창고와 별개
 jangdok_storage_slots,40,count,장독 창고(보관 상자) 슬롯 수(GDD 6-5 v29 — 7/20 오너 확정, 구 12슬롯). 인벤 50과의 역전 해소·평범한 상자 역할. modules.csv jangdok의 보관 UI 용량. 아트·재료·시간 불변
 active_slot_rule,weapon_or_tool_1,rule,활성 슬롯(v28) = 장비 탭 무기·도구 칸 1개 — 방망이/합죽선/철선/장갑/휴대 등불 중 1개 장착. 빈 슬롯 = 맨 발톱(신체 기본). PC Q키 토글·모바일 팔레트 좌측 끝 인라인 아이콘. 휴대 등불 연료는 이 슬롯에 든 동안만 소모(3-5)
@@ -99,3 +99,17 @@ resident_respawn_rule,next_day_dawn,rule,v34.1 처치한 상주 엘리트는 다
 resident_min_player_distance,24,tile,v34.1 상주 엘리트 생성 지점과 플레이어의 최소 거리
 resident_min_between_distance,12,tile,v34.1 어둑시니와 강철이 생성 지점 사이의 최소 거리
 resident_save_policy,last_killed_day,rule,v34.1 개체 위치 HP 상태를 저장하지 않고 종별 마지막 처치 일차만 저장
+day_brightness_by_stage,1.00/1.05/1.10/1.15/1.20/1.25/1.30/1.35/1.40/1.45,curve,v41
+armor_def_by_tier,3/6/10/13/16/19,list,v40
+boss_contact_by_tier,8/10/12/14/16/18/20/22/24/24,list,v40
+boss_dodge_sec_curve,20/30/40/60/70/80/90/100/110/120,sec,v38
+wave_night_period,10,day,v45
+wave_night_offset,5,day,v45
+wave_threshold_sec,108,sec,v36
+wave_mult_target,hp_only,rule,v36
+turret_damage_slot_cap,3,count,v38
+night_wave_table,night-waves,ref,v45
+jukbuin_radius,2,tile,v41
+gimmick_weapon_bonus,1.10,mult,v38/v46
+turret_slot_cap,stage,rule,v38 (=석빙고단계)
+evolution_bench,smithy,ref,v46

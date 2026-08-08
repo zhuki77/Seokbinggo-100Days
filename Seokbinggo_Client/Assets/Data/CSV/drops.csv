@@ -9,3 +9,10 @@ king_dokkaebi,boss,도깨비 대장(보스),3,0,dokkaebi_fire_essence,도깨비�
 mother_bulgasari,boss,어미 불가사리(보스),4,0,iron_forge_core,무쇠 용광심+비늘x4,1.00,none,iron_scale:4,신기전 화차(터렛)
 imugi,yokai,이무기(최종보스·v34),8,0,yeouiju,여의주,1.00,none,,여의주=빙정 냉각로(엔드 냉각 재료)
 imugi_boss,boss,이무기(보스),8,0,yeouiju,여의주,1.00,none,,빙정 냉각로(엔드 냉각)
+jigwi,boss,지귀(보스),5,0,jigwi_ember_mat,지귀의 잉걸,1.00,none,,지귀의 잉걸(재료)
+sangun,boss,산군(보스),6,0,sangun_talon,산군의 발톱,1.00,none,,산군 발톱·아티팩트 재료
+samdugumi,boss,삼두구미(보스),6,0,three_horn_mat,세 갈래 뿔,1.00,none,,세 갈래 뿔(재료)
+eop_guryeongi,boss,업구렁이(보스),7,0,eop_scale_mat,업의 비늘,1.00,none,,업의 비늘(재료)
+yeongno,boss,영노(보스),7,0,yeongno_mask_mat,영노의 탈,1.00,none,,영노의 탈(재료)
+gangcheol_blaze,boss,불볕 강철이(보스),8,0,blaze_yeokrin,불볕 역린,1.00,none,,불볕 역린(재료)
+gangcheol_perfect,boss,강철이 완전체(보스),8,0,perfect_heart,완전체 심장,1.00,none,,완전체 심장(재료)

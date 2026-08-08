@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: seokbinggo_s3
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: seokbinggo_s3
+  station: 2
+  ingredients:
+  - item: {fileID: 11400000, guid: 2fb77bca93d4e9a42874825576ffcd9d, type: 2}
+    amount: 40
+  - item: {fileID: 11400000, guid: 6eafd891183383d40b146faf9d5b99c9, type: 2}
+    amount: 20
+  - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
+    amount: 4
+  output:
+    item: {fileID: 11400000, guid: 8f7d9a8e7ffd4b84b83433b9b0a619c4, type: 2}
+    amount: 1
+  durationSeconds: 120
+  type: 10
+  mvpScope: 1
+  note: "\uC11D\uBE59\uACE0 \uB370\uBAA8 \uC2B9\uB9AC\uC120 (v46)"

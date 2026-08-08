@@ -1,6 +1,6 @@
 namespace Nyangbingo.Core
 {
-    public enum CraftingStation { None, Workbench, Furnace, IceAnvil, Foundry }
+    public enum CraftingStation { None, Workbench, Furnace, IceAnvil, Foundry, Smithy }
     public enum YokaiKind
     {
         ClubGoblin,
@@ -11,7 +11,20 @@ namespace Nyangbingo.Core
         Gaekgwi,
         Imugi
     }
-    public enum BossKind { GoblinChief, MotherBulgasari, Imugi, Gangcheori }
+    public enum BossKind
+    {
+        GoblinChief,
+        MotherBulgasari,
+        Imugi,
+        Gangcheori,
+        Jigwi,
+        Sangun,
+        Samdugumi,
+        EopGuryeongi,
+        Yeongno,
+        GangcheolBlaze,
+        GangcheolPerfect
+    }
     public enum DamageTag { Melee, Fire, Ice, Fall }
     public enum DamageDelivery { Direct, DamageOverTime, Structure, Environmental }
     public enum EquipmentSlot { Head, Body, Feet, AccessoryOne, AccessoryTwo }

@@ -94,11 +94,11 @@ public static class NyangbingoDataMenu
     [MenuItem("Nyangbingo/Reimport v34 Data Bundle")]
     public static void ReimportV34DataBundle()
     {
-        var importHadErrors = false;
-        Application.LogCallback captureImportError = (_, _, type) =>
+        var importErrors = new System.Collections.Generic.List<string>();
+        Application.LogCallback captureImportError = (condition, _, type) =>
         {
             if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
-                importHadErrors = true;
+                importErrors.Add(condition ?? string.Empty);
         };
         Application.logMessageReceived += captureImportError;
         try
@@ -110,16 +110,22 @@ public static class NyangbingoDataMenu
             Application.logMessageReceived -= captureImportError;
         }
 
-        if (importHadErrors)
+        if (importErrors.Count > 0)
         {
-            Debug.LogError("[Nyangbingo] v34 data import logged an error. " +
-                           "The product data freshness manifest was not updated.");
+            var first = importErrors[0];
+            // 요약만 남기고, 원인 로그와 중복되는 자체 LogError는 피한다.
+            // (원인 LogError가 이미 importErrors에 잡혀 있음)
+            Debug.LogWarning(
+                $"[Nyangbingo] v34 data import stopped with {importErrors.Count} error(s). " +
+                "Product data freshness manifest was NOT updated. " +
+                $"First error: {first}");
             return;
         }
 
         try
         {
             NyangbingoDataBuildGate.WriteCurrentManifest();
+            Debug.Log("[Nyangbingo] v34/v46 data import succeeded and freshness manifest was updated.");
         }
         catch (System.Exception exception)
         {
@@ -151,6 +157,7 @@ public static class NyangbingoDataMenu
         ReimportMineralTiers();
         ReimportSmelting();
         ReimportEquipment();
+        ReimportAccessoriesAsEquipment();
         ReimportPlayerCombat();
         ReimportUtilities();
         ReimportYokaiStats();
@@ -181,18 +188,20 @@ public static class NyangbingoDataMenu
             rootDirectory + "/Recipes/wallpaper.asset");
         var jangdok = AssetDatabase.LoadAssetAtPath<ModuleDefinition>(
             rootDirectory + "/Modules/jangdok.asset");
-        if (items.Length != 86 || recipes.Length != 53 || globals.Length != 100 || sealRules.Length != 23 ||
+        // v46 kit 정본: items 160 · crafting-tree 90 · globals 114 · seal 23
+        // accessories→equipment 병합 후 equipment SO는 24(armor+악세) + 20(아티팩트) = 44.
+        if (items.Length != 160 || recipes.Length != 90 || globals.Length != 114 || sealRules.Length != 23 ||
             wallpaper == null || wallpaper.Output.item == null || wallpaper.Output.item.Id != "wallpaper" ||
             wallpaper.Output.amount != 16 || jangdok == null || !jangdok.Role.Contains("40슬롯"))
         {
-            Debug.LogError("[Nyangbingo] v34.1 data bundle reimport failed its 86/53/100/23, wallpaper x16, " +
+            Debug.LogError("[Nyangbingo] v46 data bundle reimport failed its 160/90/114/23, wallpaper x16, " +
                            "or jangdok 40-slot check.");
             return;
         }
 
         RebuildGameDataCatalog();
-        Debug.Log("[Nyangbingo] v34.1 data bundle reimport completed: 86 items, 53 recipes, " +
-                  "100 globals, 23 seal rules, wallpaper output 16, jangdok storage 40.");
+        Debug.Log("[Nyangbingo] v46 data bundle reimport completed: 160 items, 90 recipes, " +
+                  "114 globals, 23 seal rules, wallpaper output 16, jangdok storage 40.");
     }
 
     private static void DeleteAssetIfExists(string assetPath)
@@ -692,8 +701,14 @@ public static class NyangbingoDataMenu
                          TryParseFiniteFloat(row["claw_t2_sec"], out tierTwoSeconds[i]) &&
                          TryParseFiniteFloat(row["claw_t3_sec"], out tierThreeSeconds[i]) &&
                          TryParseFiniteFloat(row["freq_per_100tiles"], out frequencies[i]) && frequencies[i] >= 0f;
-            if (!parsed || tierTwoSeconds[i] <= 0f || tierThreeSeconds[i] <= 0f ||
-                (minimumClawTiers[i] == 1 ? tierOneSeconds[i] <= 0f : tierOneSeconds[i] != -1f))
+            if (!parsed ||
+                tierThreeSeconds[i] <= 0f ||
+                (minimumClawTiers[i] >= 2
+                    ? !Mathf.Approximately(tierOneSeconds[i], -1f)
+                    : tierOneSeconds[i] <= 0f) ||
+                (minimumClawTiers[i] >= 3
+                    ? !Mathf.Approximately(tierTwoSeconds[i], -1f)
+                    : tierTwoSeconds[i] <= 0f))
             {
                 Debug.LogError($"[Nyangbingo] Mineral tier '{id}' has invalid identity, layer, gate, or numeric data.");
                 return;
@@ -1143,6 +1158,78 @@ public static class NyangbingoDataMenu
         Debug.Log($"[Nyangbingo] Equipment CSV reimport completed: {rows.Count} assets.");
     }
 
+    /// <summary>
+    /// accessories.csv 중 equipment에 아직 없는 id를 AccessoryOne 장신구 EquipmentDefinition으로 임포트.
+    /// </summary>
+    [MenuItem("Nyangbingo/Reimport Accessories As Equipment")]
+    private static void ReimportAccessoriesAsEquipment()
+    {
+        const string accessoriesPath = "Assets/Data/CSV/accessories.csv";
+        const string equipmentDirectory = "Assets/Data/SO/Equipment";
+        if (!File.Exists(accessoriesPath))
+        {
+            Debug.LogError("[Nyangbingo] accessories.csv was not found.");
+            return;
+        }
+
+        List<Dictionary<string, string>> rows;
+        try
+        {
+            rows = NyangbingoCsvUtility.ReadRows(accessoriesPath);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError($"[Nyangbingo] Accessories CSV validation failed: {exception.Message}");
+            return;
+        }
+
+        EnsureFolder(equipmentDirectory);
+        var created = 0;
+        var skipped = 0;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var id = rows[i]["id"];
+            if (string.IsNullOrWhiteSpace(id) || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                Debug.LogError($"[Nyangbingo] Accessory '{id}' has an unsafe ID.");
+                return;
+            }
+
+            var assetPath = $"{equipmentDirectory}/{id}.asset";
+            if (AssetDatabase.LoadAssetAtPath<EquipmentDefinition>(assetPath) != null)
+            {
+                skipped++;
+                continue;
+            }
+
+            var definition = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            AssetDatabase.CreateAsset(definition, assetPath);
+            var serialized = new SerializedObject(definition);
+            serialized.FindProperty("id").stringValue = id;
+            serialized.FindProperty("slot").enumValueIndex = (int)Nyangbingo.Core.EquipmentSlot.AccessoryOne;
+            serialized.FindProperty("accessory").boolValue = true;
+            serialized.FindProperty("defense").intValue = 0;
+            serialized.FindProperty("movementBonus").floatValue = 0f;
+            serialized.FindProperty("miningCriticalBonus").floatValue = 0f;
+            serialized.FindProperty("temperatureRiseModifier").floatValue = 0f;
+            serialized.FindProperty("fireDamageModifier").floatValue = 0f;
+            serialized.FindProperty("grantsDoubleJump").boolValue = false;
+            serialized.FindProperty("doubleJumpHeightRatio").floatValue = 0f;
+            serialized.FindProperty("visionRadiusBonus").floatValue = 0f;
+            serialized.FindProperty("blocksInventoryTheft").boolValue = false;
+            serialized.FindProperty("setId").stringValue = string.Empty;
+            serialized.FindProperty("setTemperatureRiseModifier").floatValue = 0f;
+            serialized.FindProperty("setFireDamageModifier").floatValue = 0f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(definition);
+            created++;
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[Nyangbingo] Accessories-as-equipment import completed: created={created}, skippedExisting={skipped}.");
+    }
+
     [MenuItem("Nyangbingo/Reimport Player Combat CSV")]
     private static void ReimportPlayerCombat()
     {
@@ -1161,7 +1248,10 @@ public static class NyangbingoDataMenu
         var expectedIds = new HashSet<string>(System.StringComparer.Ordinal)
         {
             "bare_claw", "iron_claw", "icesteel_claw", "dokkaebi_club",
-            FanItemIds.Cheolseon, "frostclaw_gauntlet", FanItemIds.Hapjukseon
+            FanItemIds.Cheolseon, "frostclaw_gauntlet", FanItemIds.Hapjukseon,
+            "straw_sling", "gakgung", "singijeon_sondae", "seonge_gakgung",
+            "ice_root_bow", "cold_wave_singijeon", "seonge_fan", "ice_root_whipfan",
+            "cold_wave_fan", "sangun_claw", "perfect_claw"
         };
         var ids = new string[rows.Count];
         var tiers = new string[rows.Count];
@@ -1193,7 +1283,7 @@ public static class NyangbingoDataMenu
                 !TryParseFiniteFloat(row["dps"], out damagePerSecond[i]) || damagePerSecond[i] < 0f ||
                 !TryParseFiniteFloat(row["knockback_tiles"], out knockbacks[i]) || knockbacks[i] < 0f ||
                 !TryParseFiniteFloat(row["range_tiles"], out ranges[i]) || ranges[i] <= 0f ||
-                !TryParseFiniteFloat(row["arc_deg"], out arcs[i]) || arcs[i] < 1f || arcs[i] > 180f ||
+                !TryParseFiniteFloat(row["arc_deg"], out arcs[i]) || arcs[i] < 0f || arcs[i] > 180f ||
                 (row["multi_target"] != "0" && row["multi_target"] != "1") ||
                 (row["hits_walls"] != "0" && row["hits_walls"] != "1"))
             {
@@ -1384,9 +1474,9 @@ public static class NyangbingoDataMenu
         var aimLocks = new bool[rows.Count];
         var mvpScopes = new ItemMvpScope[rows.Count];
         var seenBossIds = new HashSet<string>(System.StringComparer.Ordinal);
-        if (rows.Count != 3)
+        if (rows.Count != 10)
         {
-            Debug.LogError($"[Nyangbingo] bosses.csv must contain exactly three v34 bosses, but found {rows.Count}.");
+            Debug.LogError($"[Nyangbingo] bosses.csv must contain exactly ten v46 bosses, but found {rows.Count}.");
             return;
         }
         for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
@@ -1398,8 +1488,15 @@ public static class NyangbingoDataMenu
                 case "king_dokkaebi": kinds[rowIndex] = Nyangbingo.Core.BossKind.GoblinChief; break;
                 case "mother_bulgasari": kinds[rowIndex] = Nyangbingo.Core.BossKind.MotherBulgasari; break;
                 case "imugi_boss": kinds[rowIndex] = Nyangbingo.Core.BossKind.Imugi; break;
+                case "jigwi": kinds[rowIndex] = Nyangbingo.Core.BossKind.Jigwi; break;
+                case "sangun": kinds[rowIndex] = Nyangbingo.Core.BossKind.Sangun; break;
+                case "samdugumi": kinds[rowIndex] = Nyangbingo.Core.BossKind.Samdugumi; break;
+                case "eop_guryeongi": kinds[rowIndex] = Nyangbingo.Core.BossKind.EopGuryeongi; break;
+                case "yeongno": kinds[rowIndex] = Nyangbingo.Core.BossKind.Yeongno; break;
+                case "gangcheol_blaze": kinds[rowIndex] = Nyangbingo.Core.BossKind.GangcheolBlaze; break;
+                case "gangcheol_perfect": kinds[rowIndex] = Nyangbingo.Core.BossKind.GangcheolPerfect; break;
                 default:
-                    Debug.LogError($"[Nyangbingo] Boss '{id}' is not one of the three v34 boss IDs.");
+                    Debug.LogError($"[Nyangbingo] Boss '{id}' is not one of the ten v46 boss IDs.");
                     return;
             }
             displayNames[rowIndex] = row["name_ko"];
@@ -1461,32 +1558,61 @@ public static class NyangbingoDataMenu
             fireTags[rowIndex] = row["fire_tag"] == "1";
             aimLocks[rowIndex] = row["aim_lock"] == "1";
 
-            summonItems[rowIndex] = FindItem(itemDirectory, row["summon_item_id"]);
-            if (summonItems[rowIndex] == null || summonItems[rowIndex].Id != row["summon_item_id"] ||
-                !TryParseCraftingStationId(row["station_id"], out summonStations[rowIndex]))
+            var summonItemId = row.TryGetValue("summon_item_id", out var rawSummonItem)
+                ? rawSummonItem?.Trim() ?? string.Empty
+                : string.Empty;
+            var hasSummonItem = !string.IsNullOrWhiteSpace(summonItemId);
+            if (hasSummonItem)
             {
-                Debug.LogError($"[Nyangbingo] Boss '{id}' has an unknown summon item or station. Reimport Items CSV first.");
-                return;
-            }
-
-            var encodedMaterials = row["summon_materials"].Split(',');
-            var parsedMaterials = new ItemAmount[encodedMaterials.Length];
-            var uniqueMaterialIds = new HashSet<string>(System.StringComparer.Ordinal);
-            for (var materialIndex = 0; materialIndex < encodedMaterials.Length; materialIndex++)
-            {
-                var parts = encodedMaterials[materialIndex].Split(':');
-                var material = parts.Length == 2 ? FindItem(itemDirectory, parts[0]) : null;
-                if (parts.Length != 2 || material == null || material.Id != parts[0] ||
-                    !uniqueMaterialIds.Add(parts[0]) ||
-                    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var amount) ||
-                    amount <= 0)
+                summonItems[rowIndex] = FindItem(itemDirectory, summonItemId);
+                if (summonItems[rowIndex] == null || summonItems[rowIndex].Id != summonItemId ||
+                    !TryParseCraftingStationId(row["station_id"], out summonStations[rowIndex]))
                 {
-                    Debug.LogError($"[Nyangbingo] Boss '{id}' has invalid summon material '{encodedMaterials[materialIndex]}'.");
+                    Debug.LogError($"[Nyangbingo] Boss '{id}' has an unknown summon item or station. Reimport Items CSV first.");
                     return;
                 }
-                parsedMaterials[materialIndex] = new ItemAmount { item = material, amount = amount };
             }
-            summonMaterials[rowIndex] = parsedMaterials;
+            else
+            {
+                // 침공 보스: 소환 아이템/재료 없음. station_id 만 선택적으로 파싱.
+                summonItems[rowIndex] = null;
+                if (string.IsNullOrWhiteSpace(row["station_id"]))
+                    summonStations[rowIndex] = Nyangbingo.Core.CraftingStation.None;
+                else if (!TryParseCraftingStationId(row["station_id"], out summonStations[rowIndex]))
+                {
+                    Debug.LogError($"[Nyangbingo] Boss '{id}' has an unknown station_id.");
+                    return;
+                }
+            }
+
+            var materialsRaw = row.TryGetValue("summon_materials", out var rawMaterials)
+                ? rawMaterials?.Trim() ?? string.Empty
+                : string.Empty;
+            if (string.IsNullOrWhiteSpace(materialsRaw))
+            {
+                summonMaterials[rowIndex] = System.Array.Empty<ItemAmount>();
+            }
+            else
+            {
+                var encodedMaterials = materialsRaw.Split(',');
+                var parsedMaterials = new ItemAmount[encodedMaterials.Length];
+                var uniqueMaterialIds = new HashSet<string>(System.StringComparer.Ordinal);
+                for (var materialIndex = 0; materialIndex < encodedMaterials.Length; materialIndex++)
+                {
+                    var parts = encodedMaterials[materialIndex].Split(':');
+                    var material = parts.Length == 2 ? FindItem(itemDirectory, parts[0]) : null;
+                    if (parts.Length != 2 || material == null || material.Id != parts[0] ||
+                        !uniqueMaterialIds.Add(parts[0]) ||
+                        !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var amount) ||
+                        amount <= 0)
+                    {
+                        Debug.LogError($"[Nyangbingo] Boss '{id}' has invalid summon material '{encodedMaterials[materialIndex]}'.");
+                        return;
+                    }
+                    parsedMaterials[materialIndex] = new ItemAmount { item = material, amount = amount };
+                }
+                summonMaterials[rowIndex] = parsedMaterials;
+            }
 
             if (!bossDropRows.TryGetValue(id, out var dropRow) ||
                 !int.TryParse(dropRow["tears"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tears) ||
@@ -1779,14 +1905,14 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 100 || !HasColumns(rows[0], "key", "value", "unit", "note"))
+        if (rows.Count != 114 || !HasColumns(rows[0], "key", "value", "unit", "note"))
         {
-            Debug.LogError("[Nyangbingo] globals.csv must contain exactly 100 v34.1 rows.");
+            Debug.LogError("[Nyangbingo] globals.csv must contain exactly 114 v46 rows.");
             return;
         }
 
         var textUnits = new HashSet<string>(System.StringComparer.Ordinal)
-            { "ore:ingot", "recipe", "rule", "scope" };
+            { "ore:ingot", "recipe", "rule", "scope", "ref", "mult", "curve", "list" };
         var integerUnits = new HashSet<string>(System.StringComparer.Ordinal)
             { "count", "day", "gauge", "person", "px", "tile" };
         var keys = new HashSet<string>(System.StringComparer.Ordinal);
@@ -1799,10 +1925,11 @@ public static class NyangbingoDataMenu
             var value = row["value"];
             var unit = row["unit"];
             var isWaveTimes = key == "baekjung_wave_times_sec";
+            var isSlashList = value.IndexOf('/') >= 0;
             var valid = IsSnakeCaseId(key) && keys.Add(key) && !string.IsNullOrWhiteSpace(value) &&
                         !string.IsNullOrWhiteSpace(unit) && !string.IsNullOrWhiteSpace(row["note"]);
             if (valid && unit == "bool") valid = value == "0" || value == "1";
-            else if (valid && !textUnits.Contains(unit) && !isWaveTimes)
+            else if (valid && !textUnits.Contains(unit) && !isWaveTimes && !isSlashList)
             {
                 valid = TryParseFiniteFloat(value, out var parsed);
                 if (valid)
@@ -1841,7 +1968,7 @@ public static class NyangbingoDataMenu
                                   numeric.TryGetValue(GlobalKeys.CaveMaxHeight, out var caveMaxHeight) &&
                                   Mathf.Approximately(caveMaxHeight, 12f) &&
                                   values.TryGetValue(GlobalKeys.FurnitureMvpScope, out var furnitureScope) &&
-                                  furnitureScope == "B" &&
+                                  furnitureScope == "A" &&
                                   numeric.TryGetValue(GlobalKeys.InventorySlots, out var inventorySlots) &&
                                   Mathf.Approximately(inventorySlots, 50f) &&
                                   values.TryGetValue(GlobalKeys.ActiveSlotRule, out var activeSlotRule) &&
@@ -2497,6 +2624,7 @@ public static class NyangbingoDataMenu
             case "furnace": station = Nyangbingo.Core.CraftingStation.Furnace; return true;
             case "ice_anvil": station = Nyangbingo.Core.CraftingStation.IceAnvil; return true;
             case "blast_furnace": station = Nyangbingo.Core.CraftingStation.Foundry; return true;
+            case "smithy": station = Nyangbingo.Core.CraftingStation.Smithy; return true;
             default: station = default; return false;
         }
     }

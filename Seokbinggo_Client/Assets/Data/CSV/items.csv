@@ -85,3 +85,77 @@ ice_heart_norigae,얼음 심장 노리개,equipment,1,A,낮 체온 상승 -15% �
 bokjumeoni,복주머니,equipment,1,A,채굴 크리티컬 +10%p — 상자 전용
 dokkaebi_gamtu,도깨비 감투,equipment,1,A,야광귀 인벤 절도 무효 — 상자 전용
 wallpaper,벽지,placeable,99,A,플레이어가 바르는 배경 벽지(v26) — 밀폐 구역 빈 칸을 100% 덮으면 그 구역 냉기원 지속시간 +25%. 1회 제작 16장 산출(crafting-tree output_count). 지하 자연 배경벽(t_bg_*)은 이미 덮인 것으로 계수한다
+jukbuin,죽부인,placeable,99,A,보금자리 반경 내 자연재생 x1.5 (v41 승격)
+daebal,대발,placeable,99,A,반경 4 낮 화염 경감 25% (v41 승격)
+seokbinggo_s1,석빙고 1단계,placeable,99,A,석빙고 기지 기반 모듈 (v46)
+seokbinggo_s2,석빙고 2단계,placeable,99,A,석빙고 확장 모듈 (v46)
+seokbinggo_s3,석빙고 3단계,placeable,99,A,석빙고 데모 승리선 모듈 (v46)
+seokbinggo_s4,석빙고 4단계,placeable,99,A,석빙고 대장간 해금 모듈 (v46)
+seokbinggo_s5,석빙고 5단계,placeable,99,A,석빙고 상위 모듈 (v46)
+seokbinggo_s6,석빙고 6단계,placeable,99,A,석빙고 최종 모듈 (v46)
+seonge_ore,성에 광석,resource,99,A,v46 T4 광석
+ice_root_ore,얼음뿌리,resource,99,A,v46 T5 광석
+cold_wave_ore,한파석,resource,99,A,v46 T6 광석
+seonge_ingot,성에 주괴,material,99,A,대장간 - 성에 광석 제련
+ice_root_bundle,얼음뿌리 다발,material,99,A,대장간 - 얼음뿌리 가공
+cold_wave_ingot,한파석 주괴,material,99,A,대장간 - 한파석 제련
+jigwi_ember_mat,지귀의 잉걸,material,99,A,지귀 보스 확정 재료
+blaze_yeokrin,불볕 역린,material,99,A,불볕 강철이 보스 확정 재료
+sangun_talon,산군의 발톱,material,99,A,산군 보스 확정 재료
+three_horn_mat,세 갈래 뿔,material,99,A,삼두구미 보스 확정 재료
+eop_scale_mat,업의 비늘,material,99,A,업구렁이 보스 확정 재료
+yeongno_mask_mat,영노의 탈,material,99,A,영노 보스 확정 재료
+perfect_heart,완전체 심장,material,99,A,강철이 완전체 보스 확정 재료
+seonge_helm,성에 투구,equipment,1,A,방어 4 - T4
+seonge_armor,성에 갑옷,equipment,1,A,방어 5 - T4
+seonge_boots,성에 신발,equipment,1,A,방어 4 - T4
+ice_root_helm,얼음뿌리 투구,equipment,1,A,방어 5 - T5
+ice_root_armor,얼음뿌리 갑옷,equipment,1,A,방어 6 - T5
+ice_root_boots,얼음뿌리 신발,equipment,1,A,방어 5 - T5
+cold_wave_helm,한파 투구,equipment,1,A,방어 6 - T6
+cold_wave_armor,한파 갑옷,equipment,1,A,방어 7 - T6
+cold_wave_boots,한파 신발,equipment,1,A,방어 6 - T6
+straw_sling,짚 투석기,weapon,1,A,T1 원거리 DPS 10.0
+gakgung,각궁,weapon,1,A,T2 원거리 DPS 16.8
+singijeon_sondae,신기전 손대,weapon,1,A,T3 원거리 DPS 28.0
+seonge_gakgung,성에 각궁,weapon,1,A,T4 원거리 DPS 40.5
+ice_root_bow,도관 노,weapon,1,A,T5 원거리 DPS 42.5
+cold_wave_singijeon,한파 신기전,weapon,1,A,T6 원거리 DPS 44.6
+seonge_fan,서리 부채,weapon,1,A,T3 부채 DPS 29.0
+ice_root_whipfan,얼음뿌리 채찍선,weapon,1,A,T5 부채 DPS 31.5
+cold_wave_fan,한파 부채,weapon,1,A,T6 부채 DPS 33.1
+sangun_claw,산군 발톱,weapon,1,A,T5 발톱 DPS 94.5
+perfect_claw,완전체 발톱,weapon,1,A,T6 발톱 DPS 99.2
+first_frost_claw,첫서리 발톱,weapon,1,A,기믹 보상 무기
+baekjung_bundle,백중 보따리,weapon,1,A,기믹 보상 무기
+yeouiju_claw,여의주 발톱,weapon,1,A,기믹 보상 무기
+jigwi_ash,지귀의 재,weapon,1,A,기믹 보상 무기
+sangun_whisker,산군의 수염,weapon,1,A,기믹 보상 무기
+yeongno_tooth,영노의 이빨,weapon,1,A,기믹 보상 무기
+seonge_tower,성에 등탑,placeable,99,A,터렛 - 성에 계열
+cold_wave_tower,한파 등탑,placeable,99,A,터렛 - 한파 계열
+ice_root_battery,도관 포대,placeable,99,A,터렛 - 도관 계열
+cold_wave_battery,한파 포대,placeable,99,A,터렛 - 한파 포대
+scarecrow,허수아비,placeable,99,A,유틸 설치물 DPS 0
+ice_trap,얼음 함정,placeable,99,A,유틸 설치물 DPS 0
+smithy,대장간,station,99,A,T4~T6 진화 전용 제작대 (v46)
+ssireum_knot,씨름 샅바 매듭,equipment,1,A,아티팩트 - 밀치기 계열 넉백 대상 1초 붙잡기
+iron_appetite,무쇠 식성,equipment,1,A,아티팩트 - 철 계열 타일 채굴 시 광맥 방향 청각
+yeouiju_shard,여의주 파편,equipment,1,A,아티팩트 - 냉각로 반경 6→10 / 얼음 용해 절반
+jigwi_ember,지귀의 잉걸(아티팩트),equipment,1,A,아티팩트 - 낮 지상 그림자 안 체온 상승 차단
+drought_heart_shard,가뭄 심장 조각,equipment,1,A,아티팩트 - 낮 지상 화염 -25% / 이속
+tiger_gait,산군 걸음,equipment,1,A,아티팩트 - 지상 요괴 선제 공격 방지
+three_horn,세 갈래 뿔(아티팩트),equipment,1,A,아티팩트 - 활 장전 중 이동 가능
+eop_scale,업의 비늘(아티팩트),equipment,1,A,아티팩트 - 모듈 정지 후 60초 기능 유지
+yeongno_mask,영노의 탈(아티팩트),equipment,1,A,아티팩트 - 삼킴 즉시 탈출(하루 1회)
+perfect_core,완전체 핵,equipment,1,A,아티팩트 - 한파 코어 1기 이전 설치
+clay_hand,옹기장이 손,equipment,1,A,아티팩트 - 점토 계열 제작 시간 절반
+skate_pad,살얼음 발판,equipment,1,A,아티팩트 - 미끄러짐 중 방향 전환
+magpie_bell,까치 방울,equipment,1,A,아티팩트 - 까치 줍기 반경 10→16
+old_key,옛 열쇠,equipment,1,A,아티팩트 - 장독 창고 원격 개방(하루 3회)
+minhwa_ink,민화 먹,equipment,1,A,아티팩트 - 도감 등재 시 눈물 +1
+vault_seal,창고 봉인,equipment,1,A,아티팩트 - 설치물 철거 회수율 50→100%
+gate_mark,빙암 표식,equipment,1,A,아티팩트 - 심층 시야 반경 +3
+dry_trace,마른 궤적,equipment,1,A,아티팩트 - 화염 태그 피해 -10%(곱연산)
+altar_echo,제단 메아리,equipment,1,A,아티팩트 - 봉헌 재료 요괴 눈물 30→20
+frost_map,서리 지도,equipment,1,A,아티팩트 - 이미 판 통로 화면 가장자리 표시

@@ -169,8 +169,10 @@ namespace Nyangbingo.World
             if (amount <= 0) return false;
             var health = GetComponent<Health>();
             if (health == null || health.IsDead) return false;
+            var defense = equipmentSystem != null ? equipmentSystem.TotalDefense : 0;
+            var effective = ArmorRules.EffectiveDamage(amount, defense);
             var before = health.Current;
-            health.ApplyDamage(amount, Nyangbingo.Core.DamageTag.Melee);
+            health.ApplyDamage(effective, Nyangbingo.Core.DamageTag.Melee);
             if (health.Current >= before) return false;
             Nyangbingo.Core.GameEvents.RaisePlayerDamaged();
             return true;

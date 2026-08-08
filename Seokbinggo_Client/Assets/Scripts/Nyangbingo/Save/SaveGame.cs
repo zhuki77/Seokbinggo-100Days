@@ -259,7 +259,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 21;
+        public const int CurrentSchemaVersion = 22;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -285,6 +285,10 @@ namespace Nyangbingo.Save
         public List<string> modulesDone = new List<string>();
         public float sealPct;
         public int yokaiTears;
+        public int seokbinggoStage = 1;
+        public int altarClears;
+        public List<string> gimmickWeaponsGranted = new List<string>();
+        public List<string> frostPendingCells = new List<string>();
         public List<BossRecord> bossRecords = new List<BossRecord>();
         public List<ForcedBossEncounterRecord> forcedBossEncounters = new List<ForcedBossEncounterRecord>();
         public List<CodexRecord> dogam = new List<CodexRecord>();
@@ -342,6 +346,12 @@ namespace Nyangbingo.Save
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
+            if (gimmickWeaponsGranted == null) gimmickWeaponsGranted = new List<string>();
+            if (frostPendingCells == null) frostPendingCells = new List<string>();
+            seokbinggoStage = Math.Max(1, seokbinggoStage);
+            altarClears = Math.Max(0, altarClears);
+            gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
+            frostPendingCells.RemoveAll(string.IsNullOrWhiteSpace);
             if (bossRecords == null) bossRecords = new List<BossRecord>();
             if (forcedBossEncounters == null) forcedBossEncounters = new List<ForcedBossEncounterRecord>();
             if (dogam == null) dogam = new List<CodexRecord>();

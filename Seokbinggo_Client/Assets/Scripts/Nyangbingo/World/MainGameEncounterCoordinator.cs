@@ -48,6 +48,9 @@ namespace Nyangbingo.World
         private bool discardRegularForCurrentNight;
         private bool forcedBossSpawnPending;
         private bool activeBossIsForcedInvasion;
+        private readonly NightWaveTable nightWaveTable = WaveNight.CreateCanonicalV46Table();
+        private int activeNightWave = 1;
+        private bool waveNightMode;
         private bool initialized;
         private bool restoringSnapshot;
         private bool restoredDetailedEncounterDuringTransaction;
@@ -997,11 +1000,22 @@ namespace Nyangbingo.World
             discardRegularForCurrentNight = false;
             regularSpawningEnabled = baekjungScheduler?.IsActive != true;
             pendingRegular.Clear();
-            currentDayCurve = gameDataCatalog.FindDayCurve(bootstrap.TimeService.Day);
+            activeNightWave = 1;
+            var day = bootstrap.TimeService.Day;
+            waveNightMode = WaveNight.BandOf(day) != null;
+            currentDayCurve = gameDataCatalog.FindDayCurve(day);
+
+            if (waveNightMode)
+            {
+                EnqueueWaveNightComposition(day, activeNightWave);
+                TryFillRegularSlots();
+                return;
+            }
+
             if (currentDayCurve == null) return;
 
             var includesForcedInvasionBoss = TryGetForcedInvasionCompositionKind(
-                bootstrap.TimeService.Day, out var forcedInvasionKind);
+                day, out var forcedInvasionKind);
             var composition = currentDayCurve.SpawnComposition;
             for (var groupIndex = 0; groupIndex < composition.Length; groupIndex++)
             {
@@ -1016,6 +1030,19 @@ namespace Nyangbingo.World
                     pendingRegular.Enqueue(definition);
             }
             TryFillRegularSlots();
+        }
+
+        private void EnqueueWaveNightComposition(int day, int wave)
+        {
+            var composition = WaveNight.CompositionFor(nightWaveTable, day, wave);
+            foreach (var pair in composition)
+            {
+                var definition = gameDataCatalog.FindYokai(pair.Key);
+                if (definition == null || !definition.SupportsSpawnTrack(YokaiSpawnTrack.Raid))
+                    continue;
+                for (var count = 0; count < pair.Value; count++)
+                    pendingRegular.Enqueue(definition);
+            }
         }
 
         private void HandleDawnWarning()
@@ -1089,16 +1116,48 @@ namespace Nyangbingo.World
 
         private void TryFillRegularSlots()
         {
-            if (!IsRegularSpawningEnabled || currentDayCurve == null) return;
-            var reservesForcedBossSlot = TryGetForcedInvasionCompositionKind(
+            if (!IsRegularSpawningEnabled) return;
+            if (!waveNightMode && currentDayCurve == null) return;
+
+            MaybeAdvanceWaveNight();
+
+            var reservesForcedBossSlot = !waveNightMode && TryGetForcedInvasionCompositionKind(
                 bootstrap.TimeService.Day, out _);
-            var cap = ResolveRegularSpawnCap(currentDayCurve.MaxActive, reservesForcedBossSlot);
+            var baseCap = waveNightMode
+                ? 8
+                : currentDayCurve.MaxActive;
+            var cap = ResolveRegularSpawnCap(baseCap, reservesForcedBossSlot);
             while (pendingRegular.Count > 0 && ActiveRegularCount + ActiveRaidCount < cap)
             {
                 var definition = pendingRegular.Peek();
                 if (SpawnYokai(definition, false) == null) return;
                 pendingRegular.Dequeue();
             }
+        }
+
+        private void MaybeAdvanceWaveNight()
+        {
+            if (!waveNightMode || bootstrap?.TimeService == null || !bootstrap.TimeService.IsNight)
+                return;
+
+            var settings = bootstrap.TimeService.OfficialGlobals;
+            if (settings == null ||
+                !settings.TryGetInt(GlobalKeys.WaveNightPeriod, out var period) || period <= 0 ||
+                !settings.TryGetInt(GlobalKeys.WaveNightOffset, out var offset) || offset < 0 ||
+                !settings.TryGetFloat(GlobalKeys.WaveThresholdSec, out var threshold) || threshold <= 0f)
+                return;
+
+            var day = bootstrap.TimeService.Day;
+            var maxWave = WaveNight.IsBigNight(day, period, offset) ? 5 : 2;
+            var nightElapsed = Mathf.Max(0f,
+                bootstrap.TimeService.TimeOfDayGameSeconds - bootstrap.TimeService.DayDurationSeconds);
+            var desired = Mathf.Clamp(
+                WaveNight.CurrentWave(nightElapsed, activeNightWave, threshold), 1, maxWave);
+            if (desired <= activeNightWave) return;
+
+            activeNightWave = desired;
+            // 빈 슬롯만 채우도록 대기열을 새 파도 구성으로 보충한다(필드 개체 소급 강화 없음).
+            EnqueueWaveNightComposition(day, activeNightWave);
         }
 
         private bool TryGetForcedInvasionCompositionKind(int day, out YokaiKind kind)
@@ -1232,6 +1291,12 @@ namespace Nyangbingo.World
                     placedObjectRuntime.ActiveCounterAuras, targetCounters)
                 : targetCounters;
             brain.ConfigureForRuntime(definition, raidTarget, counters, instanceSpawnTrack);
+            if (waveNightMode && string.IsNullOrWhiteSpace(restoredInstanceId))
+            {
+                var scaled = Mathf.Max(1, Mathf.RoundToInt(
+                    WaveNight.ApplyHpMult(definition.HitPoints, activeNightWave)));
+                health.ConfigureForRuntime(scaled);
+            }
             if (definition.Kind == YokaiKind.Gangcheori)
             {
                 var breath = yokaiObject.AddComponent<GangcheoriBreathController>();

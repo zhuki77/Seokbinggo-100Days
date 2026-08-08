@@ -14,3 +14,12 @@ bokjumeoni,AccessoryOne,true,0,0,0.10,0,0,false,0,0,false,none,0,0,복주머니 
 wind_daenggi,AccessoryOne,true,0,0.15,0,0,0,false,0,0,false,none,0,0,바람 댕기 - 이동 속도 15% 증가
 tiger_eye_bead,AccessoryOne,true,0,0,0,0,0,false,0,3,false,none,0,0,호랑이 눈 구슬 - 시야 반경 3타일 증가
 dokkaebi_gamtu,AccessoryOne,true,0,0,0,0,0,false,0,0,true,none,0,0,도깨비 감투 - 야광귀 인벤토리 절도 무효
+seonge_helm,Head,false,4,0,0,0,0,false,0,0,false,none,0,0,성에 투구 - 방어 4 (T4)
+seonge_armor,Body,false,5,0,0,0,0,false,0,0,false,none,0,0,성에 갑옷 - 방어 5 (T4)
+seonge_boots,Feet,false,4,0,0,0,0,false,0,0,false,none,0,0,성에 신발 - 방어 4 (T4)
+ice_root_helm,Head,false,5,0,0,0,0,false,0,0,false,none,0,0,얼음뿌리 투구 - 방어 5 (T5)
+ice_root_armor,Body,false,6,0,0,0,0,false,0,0,false,none,0,0,얼음뿌리 갑옷 - 방어 6 (T5)
+ice_root_boots,Feet,false,5,0,0,0,0,false,0,0,false,none,0,0,얼음뿌리 신발 - 방어 5 (T5)
+cold_wave_helm,Head,false,6,0,0,0,0,false,0,0,false,none,0,0,한파 투구 - 방어 6 (T6)
+cold_wave_armor,Body,false,7,0,0,0,0,false,0,0,false,none,0,0,한파 갑옷 - 방어 7 (T6)
+cold_wave_boots,Feet,false,6,0,0,0,0,false,0,0,false,none,0,0,한파 신발 - 방어 6 (T6)

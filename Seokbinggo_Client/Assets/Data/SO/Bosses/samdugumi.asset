@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: samdugumi
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: samdugumi
+  displayName: "\uC0BC\uB450\uAD6C\uBBF8"
+  kind: 6
+  hitPoints: 12500
+  expectedCombatSeconds: 240
+  summonItem: {fileID: 0}
+  summonMaterials: []
+  summonStation: 5
+  recommendedDay: "~55\uC77C\uCC28"
+  requiresDeepAltar: 0
+  forcedDay: 0
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 6
+  - item: {fileID: 11400000, guid: 8382d2dfe7db50148bfb6f6469ef8f19, type: 2}
+    amount: 1
+  wallDamageDefault: 28
+  wallDamageIce: 28
+  wallDamageIronWall: 28
+  contactDamage: 18
+  specialDescription: "\uC0BC\uB450 \uBD84\uAE30: \uB4F1\uBD88/\uCCB4/\uB109\uBC31
+    \uB300\uC751 \uBA38\uB9AC\uBCC4 \uD2B9\uC218\xB7\uCFE88\uCD08"
+  telegraphSeconds: 1
+  specialShape: 1
+  specialRangeTiles: 4
+  specialArcDegrees: 90
+  specialDamagePerHit: 12
+  specialDurationSeconds: 2
+  specialTickSeconds: 1
+  specialKnockbackTiles: 3
+  specialCooldownSeconds: 8
+  specialHasFireTag: 0
+  specialAimLocks: 1
+  mvpScope: 1

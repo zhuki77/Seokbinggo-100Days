@@ -459,6 +459,11 @@ namespace Nyangbingo.World
             var definitionId = placementDefinitionId;
             var item = gameDataCatalog?.FindItem(definitionId);
             if (item == null || item.MvpScope == ItemMvpScope.B) return false;
+            if (!CanPlaceTurretDefinition(definitionId))
+            {
+                ShowMessage("터렛 슬롯이 가득 찼습니다. 석빙고를 업그레이드하거나 화력 터렛을 줄이세요.");
+                return false;
+            }
             var record = new PlacedObjectRecord
             {
                 objectId = $"{definitionId}_{Guid.NewGuid():N}",
@@ -486,6 +491,22 @@ namespace Nyangbingo.World
                       $"definition={definitionId}, position={record.position}.");
             BuildStateChanged?.Invoke();
             return true;
+        }
+
+        private bool CanPlaceTurretDefinition(string definitionId)
+        {
+            if (definitionId != TurretItemId) return true;
+            var stageCap = runtimeServices?.SeokbinggoUpgrade?.TurretSlotCap ?? 1;
+            var damageCap = 3;
+            var damageCapGlobal = gameDataCatalog?.FindGlobal(GlobalKeys.TurretDamageSlotCap);
+            if (damageCapGlobal != null && damageCapGlobal.TryGetInt(out var configured) && configured > 0)
+                damageCap = configured;
+
+            var activeTurrets = turrets.Count;
+            if (activeTurrets >= stageCap) return false;
+            // 도깨비불 등탑은 화력형 — 화력 슬롯 상한 적용.
+            var damageActive = turrets.Count;
+            return damageActive < damageCap;
         }
 
         public bool TryInteractNearestPlacedObject()

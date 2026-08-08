@@ -49,7 +49,14 @@ public static class NyangbingoV24DataValidator
         {
             "king_dokkaebi",
             "mother_bulgasari",
-            "imugi_boss"
+            "imugi_boss",
+            "jigwi",
+            "sangun",
+            "samdugumi",
+            "eop_guryeongi",
+            "yeongno",
+            "gangcheol_blaze",
+            "gangcheol_perfect"
         };
         var officialYokaiIds = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -63,7 +70,7 @@ public static class NyangbingoV24DataValidator
         };
         if (!bossIds.SetEquals(officialBossIds))
             throw new InvalidDataException(
-                "bosses.csv must contain the three v34 bosses, including 'imugi_boss'.");
+                "bosses.csv must contain the ten v46 bosses, including 'imugi_boss' and invasion set.");
         if (!yokaiIds.SetEquals(officialYokaiIds))
             throw new InvalidDataException(
                 "yokai-stats.csv must contain the seven v34 yokai.");
@@ -115,10 +122,23 @@ public static class NyangbingoV24DataValidator
                 if (row.ContainsKey("drops"))
                     throw new InvalidDataException("bosses.csv uses the obsolete machine-readable 'drops' column.");
             }
-            var summonItemId = Value(row, "summon_item_id", "bosses.csv");
+            var summonItemId = row.TryGetValue("summon_item_id", out var rawSummon)
+                ? (rawSummon ?? string.Empty).Trim()
+                : string.Empty;
             var stationId = Value(row, "station_id", "bosses.csv");
-            RequireItem(itemIds, summonItemId, "bosses.csv", "summon_item_id");
             RequireOptionalItem(itemIds, stationId, "bosses.csv", "station_id");
+            // 침공 보스(v46): 소환 아이템/재료가 비어 있을 수 있다.
+            if (string.IsNullOrWhiteSpace(summonItemId))
+            {
+                var emptyMaterials = OptionalValue(row, "summon_materials");
+                if (!string.IsNullOrWhiteSpace(emptyMaterials))
+                    throw new InvalidDataException(
+                        $"Boss '{Value(row, "id", "bosses.csv")}' has summon materials without summon_item_id.");
+                referenceCount += 1;
+                continue;
+            }
+
+            RequireItem(itemIds, summonItemId, "bosses.csv", "summon_item_id");
             var bossMaterials = ValidateItemPairs(itemIds, Value(row, "summon_materials", "bosses.csv"),
                 "bosses.csv", "summon_materials");
             referenceCount += 2 + bossMaterials.Count;
@@ -149,8 +169,25 @@ public static class NyangbingoV24DataValidator
             referenceCount += ValidateItemPairs(itemIds, Value(row, "bonus_items", "chests.csv"),
                 "chests.csv", "bonus_items").Count;
         }
-        if (!chestAccessoryIds.SetEquals(accessoryIds))
-            throw new InvalidDataException("Chest accessory pools do not exactly cover accessories.csv IDs.");
+        if (!chestAccessoryIds.IsSubsetOf(accessoryIds))
+            throw new InvalidDataException("Chest accessory pools reference IDs missing from accessories.csv.");
+        // 상자 풀은 수치형 악세(기존 6종)를 모두 커버해야 한다. 전투수치 0 아티팩트는 보스/기믹 경로라 제외.
+        var numericAccessoryIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var row in accessories)
+        {
+            var id = Value(row, "id", "accessories.csv");
+            var abs = Math.Abs(Finite(Value(row, "move_speed_bonus", "accessories.csv"), "accessories.csv", "move_speed_bonus")) +
+                      Math.Abs(Finite(Value(row, "vision_radius_tiles", "accessories.csv"), "accessories.csv", "vision_radius_tiles")) +
+                      Math.Abs(Finite(Value(row, "day_temp_rise_mult", "accessories.csv"), "accessories.csv", "day_temp_rise_mult")) +
+                      Math.Abs(Finite(Value(row, "mining_crit_bonus", "accessories.csv"), "accessories.csv", "mining_crit_bonus")) +
+                      Math.Abs(Finite(Value(row, "inventory_theft_immune", "accessories.csv"), "accessories.csv", "inventory_theft_immune")) +
+                      Math.Abs(Finite(Value(row, "double_jump", "accessories.csv"), "accessories.csv", "double_jump")) +
+                      Math.Abs(Finite(Value(row, "double_jump_height_ratio", "accessories.csv"), "accessories.csv", "double_jump_height_ratio"));
+            if (abs > 0d) numericAccessoryIds.Add(id);
+        }
+        if (!numericAccessoryIds.IsSubsetOf(chestAccessoryIds))
+            throw new InvalidDataException(
+                "Chest accessory pools must cover every numeric accessory; verb-only artifacts may stay outside chests.");
 
         var stationBatchCaps = new Dictionary<string, int>(StringComparer.Ordinal);
         var smeltingIds = isV241
@@ -322,8 +359,13 @@ public static class NyangbingoV24DataValidator
                 "accessories.csv", "double_jump");
             var jumpRatio = FiniteNonNegative(Value(row, "double_jump_height_ratio", "accessories.csv"),
                 "accessories.csv", "double_jump_height_ratio");
-            if (absoluteTotal <= 0d || (doubleJump == 0 && jumpRatio != 0d) || (doubleJump == 1 && jumpRatio <= 0d))
+            // v46 아티팩트 A안: 전투 수치 0 · 동사(effect_ko)만 있는 행을 허용한다.
+            var effectKo = OptionalValue(row, "effect_ko");
+            var verbOnlyArtifact = absoluteTotal <= 0d && !string.IsNullOrWhiteSpace(effectKo);
+            if (!verbOnlyArtifact && absoluteTotal <= 0d)
                 throw new InvalidDataException($"accessories.csv accessory '{id}' has inconsistent numeric effects.");
+            if (doubleJump == 0 && jumpRatio != 0d || doubleJump == 1 && jumpRatio <= 0d)
+                throw new InvalidDataException($"accessories.csv accessory '{id}' has inconsistent jump data.");
             if (theftImmune == 1 && doubleJump == 1)
                 throw new InvalidDataException($"accessories.csv accessory '{id}' enables unrelated binary effects.");
         }
@@ -448,6 +490,7 @@ public static class NyangbingoV24DataValidator
             case "device":
             case "evo":
             case "insulation":
+            case "material":
             case "module":
             case "placeable":
             case "station":

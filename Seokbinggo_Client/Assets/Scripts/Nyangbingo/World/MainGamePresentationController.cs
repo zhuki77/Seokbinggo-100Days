@@ -19,9 +19,6 @@ namespace Nyangbingo.World
         // and a dimmer underground ambient so portable lanterns actually matter.
         private const float TransitionSeconds = 90f;
 
-        private static readonly Color DayStage1Color = HtmlColor("#FFF6E8");
-        private static readonly Color DayStage2Color = HtmlColor("#FFE2B8");
-        private static readonly Color DayStage3Color = HtmlColor("#FFC994");
         private static readonly Color NightColor = HtmlColor("#6B7FA8");
         private static readonly Color UndergroundColor = HtmlColor("#3E4A5C");
         private static readonly Color BaekjungNightColor = HtmlColor("#7A6BA8");
@@ -116,13 +113,20 @@ namespace Nyangbingo.World
 
         public static (Color color, float intensity) EvaluateLighting(DayNightService clock, bool underground)
         {
-            if (underground) return (UndergroundColor, .22f);
-            if (clock == null) return (NightColor, .62f);
+            DayLight.AssertInvariants();
+            var settings = clock?.OfficialGlobals;
+            var baekjung = IsBaekjungNight(clock);
+            if (underground)
+                return (UndergroundColor, DayLight.IntensityFor(
+                    clock?.Day ?? 1, clock != null && !clock.IsNight, false, baekjung, settings));
+            if (clock == null)
+                return (NightColor, DayLight.NightIntensity);
 
-            var dayState = DayLighting(clock.CurrentDayCurve?.HeatStage ?? 1);
-            var nightState = IsBaekjungNight(clock)
-                ? (BaekjungNightColor, .58f)
-                : (NightColor, .62f);
+            var dayIntensity = DayLight.IntensityFor(clock.Day, true, true, false, settings);
+            var dayState = (DayLight.DayColor, dayIntensity);
+            var nightState = baekjung
+                ? (BaekjungNightColor, DayLight.BaekjungIntensity)
+                : (NightColor, DayLight.NightIntensity);
 
             if (clock.IsNight) return nightState;
 
@@ -133,16 +137,6 @@ namespace Nyangbingo.World
             if (remaining < TransitionSeconds)
                 return Lerp(dayState, nightState, SmoothStep(1f - remaining / TransitionSeconds));
             return dayState;
-        }
-
-        private static (Color color, float intensity) DayLighting(int heatStage)
-        {
-            switch (Mathf.Clamp(heatStage, 1, 3))
-            {
-                case 2: return (DayStage2Color, 1.12f);
-                case 3: return (DayStage3Color, 1.2f);
-                default: return (DayStage1Color, 1.05f);
-            }
         }
 
         private static float SmoothStep(float t)

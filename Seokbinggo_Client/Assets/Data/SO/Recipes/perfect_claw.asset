@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: perfect_claw
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: perfect_claw
+  station: 5
+  ingredients:
+  - item: {fileID: 11400000, guid: 6ff5872955600fd44b9ec58690a9b982, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 0372d6bd05e244541bf6f7e30b65f0b4, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: d06812cf1f19d00469409c83f6ed8b11, type: 2}
+    amount: 2
+  output:
+    item: {fileID: 11400000, guid: fb0d4288015d8294aba76b4febd3e298, type: 2}
+    amount: 1
+  durationSeconds: 150
+  type: 7
+  mvpScope: 1
+  note: "\uBC1C\uD1B1 T6 - \uC644\uC804\uCCB4 \uC7AC\uB8CC"

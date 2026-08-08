@@ -165,22 +165,23 @@ public static class NyangbingoDataBuildGate
             ["chests"] = catalog.Chests.Count,
             ["day events"] = catalog.DayEvents.Count
         };
+        // v46 kit 정본. equipment = equipment.csv 24 + accessories 아티팩트 20(중복 악세 6은 skip).
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["items"] = 86,
-            ["recipes"] = 53,
-            ["modules"] = 5,
-            ["mineral tiers"] = 12,
+            ["items"] = 160,
+            ["recipes"] = 90,
+            ["modules"] = 11,
+            ["mineral tiers"] = 15,
             ["seal rules"] = 23,
             ["ID migrations"] = 26,
             ["day curves"] = 30,
-            ["globals"] = 100,
+            ["globals"] = 114,
             ["smelting"] = 3,
-            ["equipment"] = 15,
+            ["equipment"] = 44,
             ["utilities"] = 2,
-            ["combat profiles"] = 7,
+            ["combat profiles"] = 18,
             ["yokai"] = 7,
-            ["bosses"] = 3,
+            ["bosses"] = 10,
             ["chests"] = 4,
             ["day events"] = 1
         };
@@ -194,7 +195,7 @@ public static class NyangbingoDataBuildGate
             .ToArray();
         if (mismatches.Length > 0)
             throw new InvalidDataException(
-                $"Generated v34.1 catalog count mismatch: {string.Join(", ", mismatches)}.");
+                $"Generated v46 catalog count mismatch: {string.Join(", ", mismatches)}.");
     }
 
     private static string ComputeSha256(string path)

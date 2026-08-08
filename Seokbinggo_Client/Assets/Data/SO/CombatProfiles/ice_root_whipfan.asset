@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c65a54549d049ba83ababea58bec7ac, type: 3}
+  m_Name: ice_root_whipfan
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
+  id: ice_root_whipfan
+  tier: 5
+  hasBasicAttack: 1
+  attackDamage: 21
+  attacksPerSecond: 1.5
+  damagePerSecond: 31.5
+  knockbackTiles: 1.5
+  rangeTiles: 2.5
+  arcDegrees: 90
+  multiTarget: 1
+  hitsWalls: 0
+  note: "v46 \uBD80\uCC44 T5"

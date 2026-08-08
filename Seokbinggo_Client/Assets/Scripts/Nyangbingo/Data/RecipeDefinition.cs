@@ -18,6 +18,7 @@ namespace Nyangbingo.Data
         Device,
         Evo,
         Insulation,
+        Material,
         Module,
         Placeable,
         Station,

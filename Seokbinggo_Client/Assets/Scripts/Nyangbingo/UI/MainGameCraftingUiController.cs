@@ -1064,12 +1064,20 @@ namespace Nyangbingo.UI
                 var recipe = visibleRecipes[index];
                 if (recipe != null &&
                     IsRecipeVisibleAtStation(recipe.Station, nearbyStation) &&
-                    RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook))
+                    RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook) &&
+                    IsSmithyRecipeAvailable(recipe))
                     filteredRecipes.Add(recipe);
             }
             selectedIndex = filteredRecipes.Count > 0
                 ? Mathf.Clamp(selectedIndex, 0, filteredRecipes.Count - 1)
                 : 0;
+        }
+
+        private bool IsSmithyRecipeAvailable(RecipeDefinition recipe)
+        {
+            if (recipe == null || recipe.Station != CraftingStation.Smithy) return true;
+            return runtimeServices?.SeokbinggoUpgrade != null &&
+                   runtimeServices.SeokbinggoUpgrade.IsSmithyUnlocked;
         }
 
         private void TryPrimaryAction()
@@ -1160,6 +1168,13 @@ namespace Nyangbingo.UI
             var nearby = NearbyStation();
             if (recipe.Station != CraftingStation.None && recipe.Station != nearby)
             { ShowMessage($"{StationLabel(recipe.Station)} 근처에서 제작해야 합니다."); return; }
+            if (recipe.Station == CraftingStation.Smithy &&
+                (runtimeServices.SeokbinggoUpgrade == null ||
+                 !runtimeServices.SeokbinggoUpgrade.IsSmithyUnlocked))
+            {
+                ShowMessage("대장간은 석빙고 4단계 이상에서 해금됩니다.");
+                return;
+            }
 
             var succeeded = recipe.DurationSeconds > 0f
                 ? runtimeServices.CraftingProcess.TryStart(recipe, recipe.Station)
@@ -2312,6 +2327,7 @@ namespace Nyangbingo.UI
                 case CraftingStation.Furnace: return "화로";
                 case CraftingStation.IceAnvil: return "얼음 모루";
                 case CraftingStation.Foundry: return "용광로";
+                case CraftingStation.Smithy: return "대장간";
                 default: return station.ToString();
             }
         }

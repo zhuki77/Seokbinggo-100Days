@@ -23,6 +23,7 @@ namespace Nyangbingo.World
         private float secondsSinceDamage;
         private float fractionalHealing;
         private bool disposed;
+        private Func<float> regenMultiplierProvider;
 
         public PlayerHealthRecoveryService(Inventory.Inventory playerInventory, Health playerHealth,
             float delaySeconds, float ratePerSecond, int catnipHeal)
@@ -36,7 +37,20 @@ namespace Nyangbingo.World
             regenDelaySeconds = delaySeconds;
             regenPerSecond = ratePerSecond;
             catnipHealAmount = catnipHeal;
+            regenMultiplierProvider = null;
             health.Damaged += HandleDamaged;
+        }
+
+        public void SetRegenMultiplierProvider(Func<float> provider) => regenMultiplierProvider = provider;
+
+        private float regenMultiplier
+        {
+            get
+            {
+                if (regenMultiplierProvider == null) return 1f;
+                var value = regenMultiplierProvider();
+                return float.IsNaN(value) || float.IsInfinity(value) || value <= 0f ? 1f : value;
+            }
         }
 
         public Health Health => health;
@@ -63,7 +77,7 @@ namespace Nyangbingo.World
 
             var eligibleSeconds = Mathf.Max(0f, secondsSinceDamage - Mathf.Max(previousElapsed, regenDelaySeconds));
             if (eligibleSeconds <= 0f) return;
-            fractionalHealing += eligibleSeconds * regenPerSecond;
+            fractionalHealing += eligibleSeconds * regenPerSecond * regenMultiplier;
             var wholeHealth = Mathf.FloorToInt(fractionalHealing);
             if (wholeHealth <= 0) return;
             var restored = health.Heal(wholeHealth);

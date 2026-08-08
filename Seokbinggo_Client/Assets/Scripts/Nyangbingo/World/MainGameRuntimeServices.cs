@@ -54,9 +54,13 @@ namespace Nyangbingo.World
         public MagpieCompanionRuntime MagpieCompanion { get; private set; }
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
+        public SeokbinggoUpgradeService SeokbinggoUpgrade { get; private set; }
+        public FrostSpreadService FrostSpread { get; private set; }
+        public GimmickWeaponProgress GimmickWeapons { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
+        private bool worldLoadedHooked;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             InventoryRuntime itemReceiver)
@@ -124,6 +128,11 @@ namespace Nyangbingo.World
             CraftingProcess = new CraftingProcess(CraftingService);
             UtilityService = new UtilityService(PlayerInventory);
             EquipmentSystem = new EquipmentSystem();
+            SeokbinggoUpgrade = new SeokbinggoUpgradeService(1);
+            FrostSpread = new FrostSpreadService();
+            GimmickWeapons = new GimmickWeaponProgress(gameDataCatalog.FindItem);
+            GameEvents.OnBaekjungEnd += HandleGimmickBaekjungSurvived;
+            GameEvents.OnBossDefeated += HandleGimmickBossDefeated;
             EquipmentCollection = new EquipmentCollection(gameDataCatalog.FindEquipment);
             ActiveSlot = new ActiveSlotSystem(PlayerInventory, gameDataCatalog.FindItem);
             var lanternRadiusDefinition = gameDataCatalog.FindGlobal(GlobalKeys.PortableLanternRadius);
@@ -162,6 +171,13 @@ namespace Nyangbingo.World
             if (IsInitialized)
             {
                 GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled;
+                BindFrostSpreadToWorld();
+                if (bootstrap != null && !worldLoadedHooked)
+                {
+                    bootstrap.WorldReady += BindFrostSpreadToWorld;
+                    worldLoadedHooked = true;
+                }
+                SyncStageFromEnvironment();
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
                           $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·휴대용 등불 Tick 소비자 6개 등록 완료.");
             }
@@ -278,6 +294,15 @@ namespace Nyangbingo.World
         {
             IsInitialized = false;
             GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
+            GameEvents.OnBaekjungEnd -= HandleGimmickBaekjungSurvived;
+            GameEvents.OnBossDefeated -= HandleGimmickBossDefeated;
+            if (bootstrap != null && worldLoadedHooked)
+            {
+                bootstrap.WorldReady -= BindFrostSpreadToWorld;
+                worldLoadedHooked = false;
+            }
+            if (bootstrap?.TileService != null && ReferenceEquals(bootstrap.TileService.FrostSpread, FrostSpread))
+                bootstrap.TileService.FrostSpread = null;
             PortableLantern?.Dispose();
             PortableLantern = null;
             PlayerHealthRecovery?.Dispose();
@@ -302,6 +327,30 @@ namespace Nyangbingo.World
             }
             registered.Clear();
         }
+
+        public void SyncStageFromModules(IEnumerable<string> placedIds)
+        {
+            SeokbinggoUpgrade?.SyncFromPlacedModuleIds(placedIds);
+        }
+
+        public void SyncStageFromEnvironment()
+        {
+            if (SeokbinggoUpgrade == null || environmentState == null) return;
+            var ids = environmentState.ExportPlacedObjects()
+                .Select(record => record.definitionId);
+            SyncStageFromModules(ids);
+        }
+
+        private void BindFrostSpreadToWorld()
+        {
+            if (FrostSpread == null || bootstrap?.TileService == null) return;
+            bootstrap.TileService.FrostSpread = FrostSpread;
+        }
+
+        private void HandleGimmickBaekjungSurvived() => GimmickWeapons?.NotifyBaekjungSurvived();
+
+        private void HandleGimmickBossDefeated(BossDefinition definition) =>
+            GimmickWeapons?.NotifyBossDefeated(definition);
 
         private void HandleRecipeUnlockYokaiKilled(YokaiDefinition definition)
         {

@@ -316,8 +316,26 @@ namespace Nyangbingo.World
             var hasIceCrystalCooler = byObjectId.Values.Any(entry =>
                 entry.Record.definitionId == CoolingSourceRuntime.IceCrystalCoolerId &&
                 interiorCells.Contains(entry.Cell));
-            var multiplier = CalculateSealedRecoveryMultiplier(
-                pieces, strawInsulationBonusPerPiece, hasIceCrystalCooler);
+
+            var panelTiers = new List<int>();
+            foreach (var entry in byObjectId.Values)
+            {
+                if (!boundaryCells.Contains(entry.Cell)) continue;
+                var definitionId = entry.Record.definitionId;
+                if (definitionId != StrawInsulationDefinitionId &&
+                    definitionId != ClayPlasterDefinitionId)
+                    continue;
+                panelTiers.Add(InsulationPanels.TierForDefinition(definitionId));
+            }
+
+            GlobalSettings insulationSettings = null;
+            if (gameDataCatalog != null && gameDataCatalog.Globals != null && gameDataCatalog.Globals.Count > 0)
+                insulationSettings = new GlobalSettings(gameDataCatalog.Globals);
+            var insulationBonus = panelTiers.Count > 0
+                ? InsulationPanels.Total(panelTiers, insulationSettings)
+                : InsulationPanels.Total(
+                    CreateUniformTiers(pieces, 1), insulationSettings);
+            var multiplier = CalculateSealedRecoveryMultiplier(insulationBonus, hasIceCrystalCooler);
             var tileService = bootstrap?.TileService;
             var hasUnpaperedOpenDoor = tileService != null && boundaryCells.Any(cell =>
                 tileService.IsDoorOpen(cell) &&
@@ -337,11 +355,28 @@ namespace Nyangbingo.World
         }
 
         public static float CalculateSealedRecoveryMultiplier(
+            float insulationBonusTotal, bool hasIceCrystalCooler)
+        {
+            if (float.IsNaN(insulationBonusTotal) || float.IsInfinity(insulationBonusTotal))
+                insulationBonusTotal = 0f;
+            var insulationMultiplier = 1f + Mathf.Clamp01(insulationBonusTotal);
+            return insulationMultiplier * (hasIceCrystalCooler ? 2f : 1f);
+        }
+
+        public static float CalculateSealedRecoveryMultiplier(
             int attachedStrawPieces, float strawBonusPerPiece, bool hasIceCrystalCooler)
         {
             var insulationMultiplier = CalculateStrawInsulationRecoveryMultiplier(
                 attachedStrawPieces, strawBonusPerPiece);
             return insulationMultiplier * (hasIceCrystalCooler ? 2f : 1f);
+        }
+
+        private static List<int> CreateUniformTiers(int count, int tier)
+        {
+            var list = new List<int>(Mathf.Max(0, count));
+            for (var i = 0; i < count; i++)
+                list.Add(Mathf.Max(1, tier));
+            return list;
         }
 
         public static float CalculateDoorAdjustedRecoveryMultiplier(

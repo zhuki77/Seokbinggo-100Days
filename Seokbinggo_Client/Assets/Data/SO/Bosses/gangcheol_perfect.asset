@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: gangcheol_perfect
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: gangcheol_perfect
+  displayName: "\uAC15\uCCA0\uC774 \uC644\uC804\uCCB4"
+  kind: 10
+  hitPoints: 18000
+  expectedCombatSeconds: 277
+  summonItem: {fileID: 0}
+  summonMaterials: []
+  summonStation: 5
+  recommendedDay: "~90\uC77C\uCC28"
+  requiresDeepAltar: 0
+  forcedDay: 0
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 8
+  - item: {fileID: 11400000, guid: 0372d6bd05e244541bf6f7e30b65f0b4, type: 2}
+    amount: 1
+  wallDamageDefault: 40
+  wallDamageIce: 56
+  wallDamageIronWall: 24
+  contactDamage: 22
+  specialDescription: "\uBC31\uC5F4 \uBC29\uC804: \uC608\uACE01.5\uCD08 \uD6C4 3x3
+    22\uD53C\uD574+\uB109\uBC314\xB7\uCFE811\uCD08"
+  telegraphSeconds: 1.5
+  specialShape: 0
+  specialRangeTiles: 3
+  specialArcDegrees: 0
+  specialDamagePerHit: 22
+  specialDurationSeconds: 0
+  specialTickSeconds: 0
+  specialKnockbackTiles: 4
+  specialCooldownSeconds: 11
+  specialHasFireTag: 1
+  specialAimLocks: 1
+  mvpScope: 1

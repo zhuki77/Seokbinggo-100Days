@@ -42,6 +42,25 @@ namespace Nyangbingo.Data
         public const string ResidentMinPlayerDistance = "resident_min_player_distance";
         public const string ResidentMinBetweenDistance = "resident_min_between_distance";
         public const string ResidentSavePolicy = "resident_save_policy";
+        public const string HeatStagePeriod = "heat_stage_period";
+        public const string DayBrightnessByStage = "day_brightness_by_stage";
+        public const string ArmorDefByTier = "armor_def_by_tier";
+        public const string BossContactByTier = "boss_contact_by_tier";
+        public const string BossDodgeSecCurve = "boss_dodge_sec_curve";
+        public const string WaveNightPeriod = "wave_night_period";
+        public const string WaveNightOffset = "wave_night_offset";
+        public const string WaveThresholdSec = "wave_threshold_sec";
+        public const string WaveMultTarget = "wave_mult_target";
+        public const string TurretDamageSlotCap = "turret_damage_slot_cap";
+        public const string NightWaveTable = "night_wave_table";
+        public const string JukbuinRadius = "jukbuin_radius";
+        public const string JukbuinRegenMult = "jukbuin_regen_mult";
+        public const string DaebalFlameCut = "daebal_flame_cut";
+        public const string DaebalRadius = "daebal_radius";
+        public const string InsulStrawBonus = "insul_straw_bonus";
+        public const string GimmickWeaponBonus = "gimmick_weapon_bonus";
+        public const string TurretSlotCap = "turret_slot_cap";
+        public const string EvolutionBench = "evolution_bench";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Global Value")]

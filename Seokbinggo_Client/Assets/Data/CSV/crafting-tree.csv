@@ -52,3 +52,40 @@ icesteel_boots,armor,얼음강철 신발,ice_anvil,icesteel_ingot:2,1,60,A,방�
 water_jar,coldsource,물단지,workbench,"clay:2,stone:2",1,5,A,소모형 냉기원 180초·온도 상한 25% — 1일차 밤(작업대 직후)·전부 상층 T1. 젖은 옹기가 마르며 시원해지고 다 마르면 사라진다
 ice_jar,coldsource,얼음 항아리,workbench,"clay:3,ice_shard:2",1,10,A,연료형 냉기원 얼음1=300초·온도 상한 50% — 2일차 낮(중층 왕복 필요)
 wallpaper,placeable,벽지,workbench,"clay:3,wood:5",16,5,A,v26 신설 — 1회 16장 산출. 240칸 방 완전 도포 = 15회(점토45·나무75). 회의의 '점토2+나무3→8장' 감축안은 30회 필요(점토60·나무90)로 자원을 33% 더 먹어 기각
+jukbuin,placeable,죽부인,workbench,"wood:6,hemp_stalk:8",1,15,A,보금자리 반경 내 자연재생 x1.5 — v41/v46 승격
+daebal,placeable,대발,workbench,"hemp_stalk:8,wood:4",1,15,A,반경 4 낮 화염 경감 25% — 해태 저가 약화판·v41/v46 승격
+seokbinggo_s1,module,석빙고 1단계,workbench,"stone:20,dirt:10,wood:8",1,60,A,석빙고 기지 기반 (v46)
+seokbinggo_s2,module,석빙고 2단계,furnace,"stone:30,ice_shard:10,iron_ingot:2",1,90,A,석빙고 확장 (v46)
+seokbinggo_s3,module,석빙고 3단계,furnace,"stone:40,clay:20,iron_ingot:4",1,120,A,석빙고 데모 승리선 (v46)
+seokbinggo_s4,module,석빙고 4단계,ice_anvil,"yokai_tear:160,icesteel_ingot:6,stone:50",1,180,A,석빙고 대장간 해금 (v46)
+seokbinggo_s5,module,석빙고 5단계,ice_anvil,"yokai_tear:320,icesteel_ingot:10,frost_essence:4",1,240,A,석빙고 상위 (v46)
+seokbinggo_s6,module,석빙고 6단계,ice_anvil,"yokai_tear:560,icesteel_ingot:16,frost_essence:8",1,300,A,석빙고 최종 (v46)
+smithy,station,대장간,ice_anvil,"stone:30,iron_ingot:8,icesteel_ingot:4,coal:10",1,90,A,T4~T6 진화 전용 (v46)
+seonge_helm,evo,성에 투구,smithy,"icesteel_helm:1,seonge_ingot:2",1,90,A,T4 갑옷 진화 - 원본 소모
+seonge_armor,evo,성에 갑옷,smithy,"icesteel_armor:1,seonge_ingot:3",1,90,A,T4 갑옷 진화 - 원본 소모
+seonge_boots,evo,성에 신발,smithy,"icesteel_boots:1,seonge_ingot:2",1,90,A,T4 갑옷 진화 - 원본 소모
+ice_root_helm,evo,얼음뿌리 투구,smithy,"seonge_helm:1,ice_root_bundle:2",1,120,A,T5 갑옷 진화 - 원본 소모
+ice_root_armor,evo,얼음뿌리 갑옷,smithy,"seonge_armor:1,ice_root_bundle:3",1,120,A,T5 갑옷 진화 - 원본 소모
+ice_root_boots,evo,얼음뿌리 신발,smithy,"seonge_boots:1,ice_root_bundle:2",1,120,A,T5 갑옷 진화 - 원본 소모
+cold_wave_helm,evo,한파 투구,smithy,"ice_root_helm:1,cold_wave_ingot:2",1,150,A,T6 갑옷 진화 - 원본 소모
+cold_wave_armor,evo,한파 갑옷,smithy,"ice_root_armor:1,cold_wave_ingot:3",1,150,A,T6 갑옷 진화 - 원본 소모
+cold_wave_boots,evo,한파 신발,smithy,"ice_root_boots:1,cold_wave_ingot:2",1,150,A,T6 갑옷 진화 - 원본 소모
+straw_sling,weapon,짚 투석기,workbench,"hemp_stalk:6,wood:4,stone:2",1,15,A,T1 원거리
+gakgung,evo,각궁,furnace,"straw_sling:1,iron_ingot:2,wood:4",1,30,A,원거리 사슬 T2
+singijeon_sondae,evo,신기전 손대,ice_anvil,"gakgung:1,icesteel_ingot:2,copper_ingot:2",1,60,A,원거리 사슬 T3
+seonge_gakgung,evo,성에 각궁,smithy,"singijeon_sondae:1,seonge_ingot:2",1,90,A,원거리 사슬 T4
+ice_root_bow,evo,도관 노,smithy,"seonge_gakgung:1,ice_root_bundle:2,three_horn_mat:1",1,120,A,원거리 사슬 T5 - 삼두구미 재료
+cold_wave_singijeon,evo,한파 신기전,smithy,"ice_root_bow:1,cold_wave_ingot:2,eop_scale_mat:1",1,150,A,원거리 사슬 T6 - 업구렁이 재료
+seonge_fan,evo,서리 부채,smithy,"cheolseon:1,seonge_ingot:2",1,90,A,부채 사슬 T3→성에
+ice_root_whipfan,evo,얼음뿌리 채찍선,smithy,"seonge_fan:1,ice_root_bundle:2,sangun_talon:1",1,120,A,부채 사슬 T5 - 산군 재료
+cold_wave_fan,evo,한파 부채,smithy,"ice_root_whipfan:1,cold_wave_ingot:2,yeongno_mask_mat:1",1,150,A,부채 사슬 T6 - 영노 재료
+sangun_claw,evo,산군 발톱,smithy,"icesteel_claw:1,sangun_talon:1,ice_root_bundle:2",1,120,A,발톱 T5 - 산군 재료
+perfect_claw,evo,완전체 발톱,smithy,"sangun_claw:1,perfect_heart:1,cold_wave_ingot:2",1,150,A,발톱 T6 - 완전체 재료
+seonge_tower,turret,성에 등탑,smithy,"dokkaebi_fire_tower:1,seonge_ingot:3,jigwi_ember_mat:1",1,90,A,등탑 진화 - 지귀 재료
+cold_wave_tower,turret,한파 등탑,smithy,"seonge_tower:1,cold_wave_ingot:3,blaze_yeokrin:1",1,120,A,등탑 진화 - 불볕 역린
+ice_root_battery,turret,도관 포대,smithy,"singijeon_cart:1,ice_root_bundle:3,three_horn_mat:1",1,120,A,포대 - 삼두구미 재료
+cold_wave_battery,turret,한파 포대,smithy,"ice_root_battery:1,cold_wave_ingot:3,perfect_heart:1",1,150,A,포대 - 완전체 재료
+scarecrow,placeable,허수아비,workbench,"hemp_stalk:8,wood:6,dirt:4",1,20,A,유틸 설치물 DPS 0
+ice_root_bundle,material,얼음뿌리 다발,smithy,"ice_root_ore:3,hemp_stalk:2",1,30,A,얼음뿌리 가공
+seonge_ingot,material,성에 주괴,smithy,"seonge_ore:2,coal:1",1,30,A,성에 광석 제련
+cold_wave_ingot,material,한파석 주괴,smithy,"cold_wave_ore:2,coal:2",1,45,A,한파석 제련

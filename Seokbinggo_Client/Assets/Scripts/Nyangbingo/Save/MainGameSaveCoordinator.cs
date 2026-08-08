@@ -225,6 +225,11 @@ namespace Nyangbingo.Save
             if (!encounterCoordinator.CaptureProgress(save))
                 return CaptureFailed("encounter progress");
 
+            save.seokbinggoStage = runtimeServices.SeokbinggoUpgrade?.Stage ?? 1;
+            save.altarClears = runtimeServices.FrostSpread?.AltarClears ?? 0;
+            save.gimmickWeaponsGranted = runtimeServices.GimmickWeapons?.Export() ?? new List<string>();
+            save.frostPendingCells = runtimeServices.FrostSpread?.ExportPendingCells() ?? new List<string>();
+
             save.NormalizeAfterLoad();
             return save;
         }
@@ -335,6 +340,7 @@ namespace Nyangbingo.Save
                 RestoreStage("encounters", () => encounterCoordinator.RestoreProgress(save)) &&
                 RestoreStage("placed objects", () =>
                     environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources)) &&
+                RestoreStage("v46 frost/gimmick/stage", () => RestoreV46Progress(save)) &&
                 RestoreStage("magpie companion", () =>
                     runtimeServices.MagpieCompanion == null ||
                     runtimeServices.MagpieCompanion.Restore(save)) &&
@@ -358,6 +364,31 @@ namespace Nyangbingo.Save
             if (!succeeded)
                 Debug.LogError($"[Nyangbingo] Save restore failed at stage '{stage}'.");
             return succeeded;
+        }
+
+        private bool RestoreV46Progress(SaveGame save)
+        {
+            if (save == null || runtimeServices == null) return false;
+
+            runtimeServices.SeokbinggoUpgrade?.SetStage(Mathf.Max(1, save.seokbinggoStage));
+            runtimeServices.SyncStageFromEnvironment();
+
+            var frost = runtimeServices.FrostSpread;
+            if (frost != null)
+            {
+                frost.SetAltarClears(save.altarClears);
+                frost.RestorePendingCells(save.frostPendingCells);
+                var tiles = bootstrap?.TileService;
+                if (tiles != null)
+                {
+                    tiles.FrostSpread = frost;
+                    if (save.altarClears >= 3)
+                        FrostSpreadService.UnsealBedrockLayer(tiles);
+                }
+            }
+
+            runtimeServices.GimmickWeapons?.Restore(save.gimmickWeaponsGranted);
+            return true;
         }
 
         public static bool ShouldResolveSafePlayerSpawn(bool forceSafeSurfaceSpawn,

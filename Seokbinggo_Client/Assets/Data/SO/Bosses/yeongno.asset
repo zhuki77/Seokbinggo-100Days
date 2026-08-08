@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: yeongno
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: yeongno
+  displayName: "\uC601\uB178"
+  kind: 8
+  hitPoints: 14500
+  expectedCombatSeconds: 264
+  summonItem: {fileID: 0}
+  summonMaterials: []
+  summonStation: 5
+  recommendedDay: "~70\uC77C\uCC28"
+  requiresDeepAltar: 0
+  forcedDay: 0
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 7
+  - item: {fileID: 11400000, guid: 694810a3422ebf84daf1a60f3d49ccb0, type: 2}
+    amount: 1
+  wallDamageDefault: 32
+  wallDamageIce: 32
+  wallDamageIronWall: 32
+  contactDamage: 20
+  specialDescription: "\uC0BC\uD0A4\uAE30: \uC785\uC774 \uBC8C\uC5B4\uC9C0\uBA70
+    1\uD0C0\uC77C \uD3EC\uD68D \uD6C4 18\uD53C\uD574\xB7\uCFE814\uCD08"
+  telegraphSeconds: 1.5
+  specialShape: 0
+  specialRangeTiles: 2
+  specialArcDegrees: 0
+  specialDamagePerHit: 18
+  specialDurationSeconds: 0
+  specialTickSeconds: 0
+  specialKnockbackTiles: 4
+  specialCooldownSeconds: 14
+  specialHasFireTag: 0
+  specialAimLocks: 1
+  mvpScope: 1

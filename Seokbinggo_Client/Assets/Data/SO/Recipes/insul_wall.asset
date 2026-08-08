@@ -23,6 +23,6 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: d515f81a8fa6fe4479af60aa2f16216a, type: 2}
     amount: 1
   durationSeconds: 5
-  type: 9
+  type: 10
   mvpScope: 1
   note: "HP600 \uAE30\uBCF8 \uBC29\uBCBD"

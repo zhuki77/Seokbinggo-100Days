@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: ice_root_bow
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: ice_root_bow
+  station: 5
+  ingredients:
+  - item: {fileID: 11400000, guid: 2a70827837c61174c8384d9908c9028e, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 6eba8fff30b98a44c9e525990ad81c42, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 8382d2dfe7db50148bfb6f6469ef8f19, type: 2}
+    amount: 1
+  output:
+    item: {fileID: 11400000, guid: d44109a27c154784493959a44dc3b2b0, type: 2}
+    amount: 1
+  durationSeconds: 120
+  type: 7
+  mvpScope: 1
+  note: "\uC6D0\uAC70\uB9AC \uC0AC\uC2AC T5 - \uC0BC\uB450\uAD6C\uBBF8 \uC7AC\uB8CC"

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c65a54549d049ba83ababea58bec7ac, type: 3}
+  m_Name: singijeon_sondae
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
+  id: singijeon_sondae
+  tier: 3
+  hasBasicAttack: 1
+  attackDamage: 19
+  attacksPerSecond: 1.5
+  damagePerSecond: 28.5
+  knockbackTiles: 0.5
+  rangeTiles: 10
+  arcDegrees: 0
+  multiTarget: 0
+  hitsWalls: 0
+  note: "v46 \uC6D0\uAC70\uB9AC T3 (\uC544\uD2B8 DPS28 \uADFC\uC0AC)"

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: ice_root_boots
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: ice_root_boots
+  station: 5
+  ingredients:
+  - item: {fileID: 11400000, guid: 1972d45b6871fda4280c97660f70922b, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 6eba8fff30b98a44c9e525990ad81c42, type: 2}
+    amount: 2
+  output:
+    item: {fileID: 11400000, guid: fe35fecfd0de3184e8c29391da831da4, type: 2}
+    amount: 1
+  durationSeconds: 120
+  type: 7
+  mvpScope: 1
+  note: "T5 \uAC11\uC637 \uC9C4\uD654 - \uC6D0\uBCF8 \uC18C\uBAA8"

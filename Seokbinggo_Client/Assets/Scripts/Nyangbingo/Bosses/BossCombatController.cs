@@ -170,6 +170,9 @@ namespace Nyangbingo.Bosses
             RefreshWarningPosition();
         }
 
+        private float fightElapsedSeconds;
+        private float dodgeWindowSeconds;
+
         public bool ConfigureForRuntime(BossDefinition value, MonoBehaviour target)
         {
             definition = value;
@@ -196,9 +199,18 @@ namespace Nyangbingo.Bosses
             imugiPhaseAttack = ImugiPhaseAttack.None;
             imugiLakePulsesRemaining = 0;
             specialEffectPlaybackRemaining = 0f;
+            fightElapsedSeconds = 0f;
+            dodgeWindowSeconds = BossDodgePhase.DodgeSecondsForBossIndex(0, null);
+            health.SetDamageTakenMultiplier(1f);
             EnsureTelegraphRenderer();
             SetTelegraphVisible(false);
             return true;
+        }
+
+        public void ConfigureDodgeWindow(float seconds)
+        {
+            dodgeWindowSeconds = Mathf.Max(0f, seconds);
+            RefreshDodgeInvulnerability();
         }
 
         public void Tick(float deltaGameSeconds)
@@ -206,6 +218,8 @@ namespace Nyangbingo.Bosses
             SetAnimationMoving(false);
             if (!IsFinite(deltaGameSeconds) || deltaGameSeconds < 0f || definition == null ||
                 targetTransform == null || combatTarget == null || health == null || health.IsDead) return;
+            fightElapsedSeconds += deltaGameSeconds;
+            RefreshDodgeInvulnerability();
             TickSpecialEffect(deltaGameSeconds);
 
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - deltaGameSeconds);
@@ -775,6 +789,13 @@ namespace Nyangbingo.Bosses
             enter = Mathf.Max(enter, first);
             exit = Mathf.Min(exit, second);
             return enter <= exit;
+        }
+
+        private void RefreshDodgeInvulnerability()
+        {
+            if (health == null) return;
+            health.SetDamageTakenMultiplier(
+                BossDodgePhase.DamageMultiplier(fightElapsedSeconds, dodgeWindowSeconds));
         }
 
         private void EnsureTelegraphRenderer()
