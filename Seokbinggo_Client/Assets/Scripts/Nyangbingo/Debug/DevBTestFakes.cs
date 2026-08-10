@@ -186,4 +186,33 @@ namespace Nyangbingo.Debugging
             return true;
         }
     }
+
+    public sealed class DevBTestGaekgwiTarget : MonoBehaviour, IYokaiTarget, IBossCombatTarget
+    {
+        public Transform TargetTransform => transform;
+        public int SpecialHitCount { get; private set; }
+        public int LastDamage { get; private set; }
+        public DamageTag LastDamageTag { get; private set; }
+        public DamageDelivery LastDamageDelivery { get; private set; }
+        public Vector2 LastKnockback { get; private set; }
+        public bool LastShowFireHitEffect { get; private set; }
+
+        public void DamageWall(float amount) { }
+
+        public bool TryApplyContactDamage(int amount) => amount > 0;
+
+        public bool TryApplyBossSpecialDamage(int amount, DamageTag tag, Vector2 knockback,
+            DamageDelivery delivery = DamageDelivery.Direct,
+            bool showFireHitEffect = true)
+        {
+            if (amount <= 0) return false;
+            SpecialHitCount++;
+            LastDamage = amount;
+            LastDamageTag = tag;
+            LastDamageDelivery = delivery;
+            LastKnockback = knockback;
+            LastShowFireHitEffect = showFireHitEffect;
+            return true;
+        }
+    }
 }

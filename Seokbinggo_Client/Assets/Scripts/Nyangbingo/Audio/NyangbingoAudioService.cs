@@ -24,7 +24,6 @@ namespace Nyangbingo.Audio
         BossAppearedOrFled,
         EoduksiniBloomed,
         PlayerHeatPanting,
-        NapStarted,
         GoalBadgeCompleted
     }
 
@@ -40,7 +39,7 @@ namespace Nyangbingo.Audio
     public sealed class AudioEventRouter : IDisposable
     {
         public const int P1CueCount = 13;
-        public const int P2CueCount = 4;
+        public const int P2CueCount = 3;
 
         private bool disposed;
         private bool isNight;
@@ -72,7 +71,6 @@ namespace Nyangbingo.Audio
             GameEvents.OnBossFled += HandleBossFled;
             GameEvents.OnEoduksiniBloomed += HandleEoduksiniBloomed;
             GameEvents.OnPlayerHeatPanting += HandlePlayerHeatPanting;
-            GameEvents.OnNapStarted += HandleNapStarted;
             GameEvents.OnGoalBadgeCompleted += HandleGoalBadgeCompleted;
         }
 
@@ -99,7 +97,6 @@ namespace Nyangbingo.Audio
             GameEvents.OnBossFled -= HandleBossFled;
             GameEvents.OnEoduksiniBloomed -= HandleEoduksiniBloomed;
             GameEvents.OnPlayerHeatPanting -= HandlePlayerHeatPanting;
-            GameEvents.OnNapStarted -= HandleNapStarted;
             GameEvents.OnGoalBadgeCompleted -= HandleGoalBadgeCompleted;
         }
 
@@ -168,7 +165,6 @@ namespace Nyangbingo.Audio
         private void HandleWallDamaged() => CueRequested?.Invoke(AudioCue.WallDamaged);
         private void HandleEoduksiniBloomed() => CueRequested?.Invoke(AudioCue.EoduksiniBloomed);
         private void HandlePlayerHeatPanting() => CueRequested?.Invoke(AudioCue.PlayerHeatPanting);
-        private void HandleNapStarted() => CueRequested?.Invoke(AudioCue.NapStarted);
         private void HandleGoalBadgeCompleted() => CueRequested?.Invoke(AudioCue.GoalBadgeCompleted);
     }
 
@@ -176,8 +172,13 @@ namespace Nyangbingo.Audio
     {
         public const int SfxChannelCount = 8;
         public const float CrossfadeSeconds = 2f;
+        public const float GlobalOutputLinearGain = .2f;
+        public const float WallDamagedCueGain = .35f;
+        public const float WallDamagedCueMinimumIntervalSeconds = .12f;
         public const string BgmVolumeParameter = "BGMVolume";
         public const string SfxVolumeParameter = "SFXVolume";
+        public const string BgmVolumePreferenceKey = "Nyangbingo.Audio.BgmVolume";
+        public const string SfxVolumePreferenceKey = "Nyangbingo.Audio.SfxVolume";
 
         [SerializeField] private AudioMixer audioMixer;
         [SerializeField] private AudioMixerGroup bgmOutput;
@@ -200,6 +201,7 @@ namespace Nyangbingo.Audio
         private float fadeElapsed = CrossfadeSeconds;
         private bool initialized;
         private AudioClip runtimeDayFallback;
+        private float lastWallDamagedCueTime = float.NegativeInfinity;
 
         public MusicTrack CurrentTrack { get; private set; } = MusicTrack.Title;
         public float BgmVolume { get; private set; } = 1f;
@@ -221,8 +223,6 @@ namespace Nyangbingo.Audio
         {
             Initialize();
             EnsureListenerAlive();
-            if (BgmVolume <= 0.0001f || SfxVolume <= 0.0001f)
-                TrySetBusVolumes(Mathf.Max(BgmVolume, 1f), Mathf.Max(SfxVolume, 1f));
             EnsureClips(forceReloadFromResources: false);
             if (!IsPlayable(ResolveTrackClip(track)))
                 EnsureClips(forceReloadFromResources: true);
@@ -232,12 +232,25 @@ namespace Nyangbingo.Audio
 
         private void OnDestroy()
         {
-            router?.Dispose();
+            Shutdown();
             if (runtimeDayFallback != null)
             {
                 Destroy(runtimeDayFallback);
                 runtimeDayFallback = null;
             }
+        }
+
+        public void Shutdown()
+        {
+            if (router != null)
+            {
+                router.CueRequested -= PlayCue;
+                router.MusicRequested -= RequestMusic;
+                router.BaekjungPercussionRequested -= SetBaekjungPercussion;
+                router.Dispose();
+                router = null;
+            }
+            initialized = false;
         }
 
         public void Initialize()
@@ -254,7 +267,10 @@ namespace Nyangbingo.Audio
             router.CueRequested += PlayCue;
             router.MusicRequested += RequestMusic;
             router.BaekjungPercussionRequested += SetBaekjungPercussion;
-            TrySetBusVolumes(1f, 1f);
+            ApplyBusVolumes(
+                PlayerPrefs.GetFloat(BgmVolumePreferenceKey, 1f),
+                PlayerPrefs.GetFloat(SfxVolumePreferenceKey, 1f),
+                persist: false);
             PlayTrackNow(MusicTrack.Title);
         }
 
@@ -262,6 +278,9 @@ namespace Nyangbingo.Audio
         {
             // 한 프레임 기다려 오디오 디바이스·리스너가 준비된 뒤 재생한다.
             yield return null;
+            // The mixer start snapshot can overwrite exposed parameters set during Awake.
+            // Reapply the stored user settings after the first frame in both Editor Play and builds.
+            ApplyBusVolumes(BgmVolume, SfxVolume, persist: false);
             EnsureAudiblePlayback();
             yield return null;
             if (musicSources == null || !musicSources[activeMusicSource].isPlaying)
@@ -271,6 +290,22 @@ namespace Nyangbingo.Audio
         public bool TrySetBusVolumes(float bgmNormalized, float sfxNormalized)
         {
             if (!IsNormalized(bgmNormalized) || !IsNormalized(sfxNormalized)) return false;
+            ApplyBusVolumes(bgmNormalized, sfxNormalized, persist: true);
+            return true;
+        }
+
+        public bool TryPreviewBusVolumes(float bgmNormalized, float sfxNormalized)
+        {
+            if (!IsNormalized(bgmNormalized) || !IsNormalized(sfxNormalized)) return false;
+            ApplyBusVolumes(bgmNormalized, sfxNormalized, persist: false);
+            return true;
+        }
+
+        private void ApplyBusVolumes(float bgmNormalized, float sfxNormalized, bool persist)
+        {
+            bgmNormalized = Mathf.Clamp01(bgmNormalized);
+            sfxNormalized = Mathf.Clamp01(sfxNormalized);
+            AudioListener.volume = GlobalOutputLinearGain;
             BgmVolume = bgmNormalized;
             SfxVolume = sfxNormalized;
             if (audioMixer != null)
@@ -279,12 +314,25 @@ namespace Nyangbingo.Audio
                 audioMixer.SetFloat(SfxVolumeParameter, NormalizedToDecibels(sfxNormalized));
             }
 
+            if (persist)
+            {
+                PlayerPrefs.SetFloat(BgmVolumePreferenceKey, bgmNormalized);
+                PlayerPrefs.SetFloat(SfxVolumePreferenceKey, sfxNormalized);
+                PlayerPrefs.Save();
+            }
             ApplySourceVolumes(fadeElapsed >= CrossfadeSeconds ? 1f : fadeElapsed / CrossfadeSeconds);
-            return true;
         }
 
         public static float NormalizedToDecibels(float normalized)
             => normalized <= .0001f ? -80f : Mathf.Log10(Mathf.Clamp01(normalized)) * 20f;
+
+        public static float CalculateEffectiveOutputVolume(float userVolume) =>
+            Mathf.Clamp01(userVolume) * GlobalOutputLinearGain;
+
+        public static float CalculateSourceVolume(float userVolume, bool routedThroughMixer) =>
+            routedThroughMixer
+                ? 1f
+                : Mathf.Clamp01(userVolume);
 
         private void Update()
         {
@@ -297,11 +345,14 @@ namespace Nyangbingo.Audio
 
         private void LateUpdate()
         {
-            // Keep the host glued to the listener so 2D playback never depends on world position.
-            var listener = FindAnyObjectByType<AudioListener>();
-            if (listener == null || audioHost == null) return;
-            if (audioHost.parent != listener.transform)
-                audioHost.SetParent(listener.transform, false);
+            // This is the final master gain for every game AudioSource, including any source
+            // that is not routed through the product mixer.
+            AudioListener.volume = GlobalOutputLinearGain;
+            // All channels are 2D. Keep the host owned by this service so destroying the
+            // service cannot leave pooled AudioSources or event callbacks behind.
+            if (audioHost == null) return;
+            if (audioHost.parent != transform)
+                audioHost.SetParent(transform, false);
             audioHost.localPosition = Vector3.zero;
         }
 
@@ -327,10 +378,16 @@ namespace Nyangbingo.Audio
 
             var source = musicSources[activeMusicSource];
             ConfigureSourceFor2D(source, loop: true);
+            if (source.clip == clip && source.isPlaying)
+            {
+                ApplySourceVolumes(fadeElapsed >= CrossfadeSeconds
+                    ? 1f
+                    : fadeElapsed / CrossfadeSeconds);
+                return;
+            }
             source.clip = clip;
-            source.volume = Mathf.Clamp01(BgmVolume);
+            source.volume = CalculateSourceVolume(BgmVolume, HasBgmMixerRouting);
             source.pitch = 1f;
-            if (source.isPlaying) source.Stop();
             source.Play();
             fadeElapsed = CrossfadeSeconds;
             Debug.Log(
@@ -376,17 +433,29 @@ namespace Nyangbingo.Audio
             if (percussionSource.isPlaying) return;
             percussionSource.clip = baekjungPercussion;
             percussionSource.spatialBlend = 0f;
-            percussionSource.volume = BgmVolume;
+            percussionSource.volume =
+                CalculateSourceVolume(BgmVolume, HasBgmMixerRouting);
             percussionSource.Play();
         }
 
         private void PlayCue(AudioCue cue)
         {
-            if (!clipsByCue.TryGetValue(cue, out var clip) || clip == null) return;
+            if (this == null || !initialized ||
+                !clipsByCue.TryGetValue(cue, out var clip) || clip == null)
+                return;
+            if (cue == AudioCue.WallDamaged)
+            {
+                if (Time.unscaledTime - lastWallDamagedCueTime <
+                    WallDamagedCueMinimumIntervalSeconds)
+                    return;
+                lastWallDamagedCueTime = Time.unscaledTime;
+            }
+            EnsureSfxSourcePool();
             AudioSource selected = null;
             for (var i = 0; i < sfxSources.Length; i++)
             {
                 var index = (sfxCursor + i) % sfxSources.Length;
+                if (sfxSources[index] == null) continue;
                 if (sfxSources[index].isPlaying) continue;
                 selected = sfxSources[index];
                 sfxCursor = (index + 1) % sfxSources.Length;
@@ -397,11 +466,15 @@ namespace Nyangbingo.Audio
                 selected = sfxSources[sfxCursor];
                 sfxCursor = (sfxCursor + 1) % sfxSources.Length;
             }
+            if (selected == null) return;
             ConfigureSourceFor2D(selected, loop: false);
-            selected.volume = Mathf.Clamp01(SfxVolume);
+            selected.volume = CalculateSourceVolume(SfxVolume, HasSfxMixerRouting);
             selected.pitch = 1f;
-            selected.PlayOneShot(clip, Mathf.Clamp01(SfxVolume));
+            selected.PlayOneShot(clip, ResolveCueGain(cue));
         }
+
+        public static float ResolveCueGain(AudioCue cue) =>
+            cue == AudioCue.WallDamaged ? WallDamagedCueGain : 1f;
 
         private void BuildClipIndex()
         {
@@ -461,15 +534,26 @@ namespace Nyangbingo.Audio
 
         private void EnsureAudioHost()
         {
-            if (audioHost != null) return;
+            if (audioHost != null)
+            {
+                if (audioHost.parent != transform)
+                    audioHost.SetParent(transform, false);
+                return;
+            }
             EnsureListenerAlive();
-            var listener = FindAnyObjectByType<AudioListener>();
             var hostObject = new GameObject("NyangbingoAudioHost");
-            // 리스너 자식으로 두면 카메라 이동과 무관하게 2D 재생이 안정적이다.
-            if (listener != null) hostObject.transform.SetParent(listener.transform, false);
-            else hostObject.transform.SetParent(transform, false);
+            // 모든 채널은 2D AudioSource이므로 리스너 위치를 따라갈 필요가 없다.
+            // 서비스가 호스트와 풀의 생명주기를 직접 소유해야 파괴 시 함께 정리된다.
+            hostObject.transform.SetParent(transform, false);
             hostObject.transform.localPosition = Vector3.zero;
             audioHost = hostObject.transform;
+        }
+
+        private void EnsureSfxSourcePool()
+        {
+            for (var index = 0; index < sfxSources.Length; index++)
+                if (sfxSources[index] == null)
+                    sfxSources[index] = CreateSource(sfxOutput, false);
         }
 
         private static void EnsureListenerAlive()
@@ -525,13 +609,17 @@ namespace Nyangbingo.Audio
         {
             if (musicSources == null) return;
             fadeT = Mathf.Clamp01(fadeT);
-            musicSources[activeMusicSource].volume = fadeT * BgmVolume;
+            var bgmSourceVolume = CalculateSourceVolume(BgmVolume, HasBgmMixerRouting);
+            musicSources[activeMusicSource].volume = fadeT * bgmSourceVolume;
             var fadingOut = 1 - activeMusicSource;
             if (musicSources[fadingOut].isPlaying)
-                musicSources[fadingOut].volume = (1f - fadeT) * BgmVolume;
+                musicSources[fadingOut].volume = (1f - fadeT) * bgmSourceVolume;
             if (percussionSource != null && percussionSource.isPlaying)
-                percussionSource.volume = BgmVolume;
+                percussionSource.volume = bgmSourceVolume;
         }
+
+        private bool HasBgmMixerRouting => audioMixer != null && bgmOutput != null;
+        private bool HasSfxMixerRouting => audioMixer != null && sfxOutput != null;
 
         private AudioSource CreateSource(AudioMixerGroup output, bool loop)
         {

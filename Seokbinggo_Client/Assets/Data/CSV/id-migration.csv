@@ -21,8 +21,7 @@ tiger_eye_orb,tiger_eye_bead,item,rename,
 goblin_hat,dokkaebi_gamtu,item,rename,
 club_goblin,club,yokai,rename,
 yagwanggwi,yakwang,yokai,rename,
-gangcheori,gangcheol,yokai,rename,개체 도메인: 30일차 밤 스폰 개체·킬 카운트·도감 항목·처치 드랍 이력 = gangcheol
+gangcheori,gangcheol,yokai,rename,개체 도메인: 심층 정예(v34 교체) 스폰 개체·킬 카운트·도감 항목·처치 드랍 이력 = gangcheol
 goblin_chief,king_dokkaebi,boss,rename,
-gangcheori,gangcheol_boss,boss,rename,보스전 도메인: 격퇴 플래그(가뭄 부적 해금 조건 — 30일차 내습 격퇴 포함)·재소환 이력 = gangcheol_boss. 활성 보스 상태는 boss_save_policy=no_serialize라 저장 자체가 없다
 smelt_ice_steel,smelt_icesteel,smelting,rename,v24 명명 규칙 정합(icesteel_*와 동일 — ice_steel 표기는 전 도메인에서 icesteel로 통일)
 fox_rain_charm,,item,remove_refund,"여우비 부적 — 오너 기각(2026-07-14 22:47 결정 원장, GDD 3-5b 제목 명기). 대체재 없음(철선은 합죽선 진화 계열로 별개). 세이브 정책: 인벤 보유분 1개당 yokai_tear:3 환불(제작비 전액 — GDD v11 눈물×3), 쿨다운·사용 상태 전부 폐기. 레시피·도감 항목도 제거"

@@ -240,7 +240,7 @@ namespace Nyangbingo.UI
             var title = window.Find("Title")?.GetComponent<Text>();
             if (title != null)
             {
-                title.text = "요괴 도감  ·  카드 클릭 확대  ·  4/ESC 닫기";
+                title.text = "요괴 도감  ·  카드 클릭 확대";
                 title.fontSize = 14;
                 title.alignment = TextAnchor.MiddleCenter;
                 title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(.5f, 1f);

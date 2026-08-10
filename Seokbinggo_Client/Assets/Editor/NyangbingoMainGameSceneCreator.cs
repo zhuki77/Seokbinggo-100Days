@@ -11,6 +11,7 @@ using Nyangbingo.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
@@ -280,6 +281,7 @@ public static class NyangbingoMainGameSceneCreator
         var dawnAutoSave = root.AddComponent<DawnAutoSave>();
         var saveCoordinator = root.AddComponent<MainGameSaveCoordinator>();
         var audioService = root.AddComponent<NyangbingoAudioService>();
+        ConfigureAudioMixer(audioService);
         var bossManager = root.AddComponent<BossManager>();
         var bossRewardReceiver = root.AddComponent<BossRewardReceiver>();
         var encounterCoordinator = root.AddComponent<MainGameEncounterCoordinator>();
@@ -342,6 +344,22 @@ public static class NyangbingoMainGameSceneCreator
         EditorUtility.SetDirty(raidTarget);
         EditorUtility.SetDirty(playerController);
         EditorUtility.SetDirty(hud);
+    }
+
+    private static void ConfigureAudioMixer(NyangbingoAudioService audioService)
+    {
+        var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>(
+            NyangbingoAudioMixerIntegrator.MixerPath);
+        if (mixer == null || audioService == null) return;
+        var bgm = mixer.FindMatchingGroups(NyangbingoAudioMixerIntegrator.BgmGroupName)
+            .FirstOrDefault(group => group.name == NyangbingoAudioMixerIntegrator.BgmGroupName);
+        var sfx = mixer.FindMatchingGroups(NyangbingoAudioMixerIntegrator.SfxGroupName)
+            .FirstOrDefault(group => group.name == NyangbingoAudioMixerIntegrator.SfxGroupName);
+        var serialized = new SerializedObject(audioService);
+        serialized.FindProperty("audioMixer").objectReferenceValue = mixer;
+        serialized.FindProperty("bgmOutput").objectReferenceValue = bgm;
+        serialized.FindProperty("sfxOutput").objectReferenceValue = sfx;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static MainGameHudController CreateHud(GameDataCatalog catalog, ItemArtCatalog itemArtCatalog,
@@ -525,7 +543,7 @@ public static class NyangbingoMainGameSceneCreator
 
         var codexTitle = CreateHudText(codexWindow.transform, "Title", TextAnchor.UpperCenter,
             new Vector2(0f, -24f), new Vector2(500f, 52f), 34);
-        codexTitle.text = "요괴 도감  ·  4/ESC 닫기";
+        codexTitle.text = "요괴 도감";
 
         var gridObject = new GameObject("CardGrid", typeof(RectTransform));
         gridObject.transform.SetParent(codexWindow.transform, false);
@@ -872,6 +890,7 @@ public static class NyangbingoMainGameSceneCreator
         var layer = new GameObject(name);
         layer.transform.SetParent(parent, false);
         var tilemap = layer.AddComponent<Tilemap>();
+        tilemap.tileAnchor = WorldTilemapRenderer.TerrainVisualAnchor;
         var renderer = layer.AddComponent<UnityTilemapRenderer>();
         renderer.sortingOrder = sortingOrder;
         return tilemap;

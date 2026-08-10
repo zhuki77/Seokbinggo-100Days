@@ -1,4 +1,4 @@
-id,station,input,inputAmount,fuel,fuelAmount,output,outputAmount,durationSeconds,batchCapacity,note
-smelt_iron,Furnace,iron_ore,2,coal,1,iron_ingot,1,20,6,풀배치 120초 방치
-smelt_copper,Furnace,copper_ore,2,coal,1,copper_ingot,1,20,6,철과 동일 규격
-smelt_icesteel,Foundry,icesteel_ore,2,coal,2,icesteel_ingot,1,45,4,상위 제련 석탄 2배
+id,station_id,output_id,output_ko,input_id,input_count,fuel_coal,time_sec_per_ingot,batch_cap,note
+smelt_iron,furnace,iron_ingot,철 주괴,iron_ore,2,1,20,6,풀배치 120초 방치 — 무쇠 발톱 재료 1배치
+smelt_copper,furnace,copper_ingot,구리 주괴,copper_ore,2,1,20,6,철과 동일 규격 — 구현 1벌
+smelt_icesteel,blast_furnace,icesteel_ingot,얼음강철 주괴,icesteel_ore,2,2,45,4,상위 제련 석탄 2배 — 얼음 모루 재료 1배치

@@ -18,6 +18,7 @@ namespace Nyangbingo.Data
         public const string SealWindowRadiusY = "seal_window_ry";
         public const string SealCap = "seal_cap";
         public const string SealTargetCells = "seal_target_cells";
+        public const string SealPenaltyStartDay = "seal_penalty_start_day";
         public const string BossSavePolicy = "boss_save_policy";
         public const string BaekjungWaveOverflow = "baekjung_wave_overflow";
         public const string BadgeWallCount = "badge_wall_count";
@@ -47,6 +48,14 @@ namespace Nyangbingo.Data
         public const string DayBrightnessByStage = "day_brightness_by_stage";
         public const string InsulStrawBonus = "insul_straw_bonus";
         public const string GimmickWeaponBonus = "gimmick_weapon_bonus";
+        public const string LayerT2Depth = "layer_t2_depth";
+        public const string LayerT3Depth = "layer_t3_depth";
+        public const string ResidentMaxPerSpecies = "resident_max_per_species";
+        public const string ResidentSpawnAt = "resident_spawn_at";
+        public const string ResidentRespawnRule = "resident_respawn_rule";
+        public const string ResidentMinPlayerDistance = "resident_min_player_distance";
+        public const string ResidentMinBetweenDistance = "resident_min_between_distance";
+        public const string ResidentSavePolicy = "resident_save_policy";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Global Value")]
@@ -124,5 +133,56 @@ namespace Nyangbingo.Data
             return false;
         }
         public string GetString(string key) => Find(key)?.Value;
+    }
+
+    /// <summary>v34.1 resident-elite rules shared by Eoduksini and Gangcheori.</summary>
+    public sealed class ResidentYokaiRules
+    {
+        public const string DayDawn = "day_dawn";
+        public const string NextDayDawn = "next_day_dawn";
+        public const string LastKilledDay = "last_killed_day";
+
+        private ResidentYokaiRules(int maxPerSpecies, int minPlayerDistance, int minBetweenDistance,
+            int minDepth, int maxDepth)
+        {
+            MaxPerSpecies = maxPerSpecies;
+            MinPlayerDistance = minPlayerDistance;
+            MinBetweenDistance = minBetweenDistance;
+            MinDepth = minDepth;
+            MaxDepth = maxDepth;
+        }
+
+        public int MaxPerSpecies { get; }
+        public int MinPlayerDistance { get; }
+        public int MinBetweenDistance { get; }
+        public int MinDepth { get; }
+        public int MaxDepth { get; }
+
+        public static ResidentYokaiRules CreateConfirmedV341Defaults() =>
+            new ResidentYokaiRules(1, 24, 12, 91, 135);
+
+        public static bool TryCreate(
+            IReadOnlyList<GlobalDefinition> definitions, out ResidentYokaiRules rules)
+        {
+            rules = null;
+            var settings = new GlobalSettings(definitions);
+            if (!settings.IsValid ||
+                !settings.TryGetInt(GlobalKeys.ResidentMaxPerSpecies, out var maxPerSpecies) ||
+                !settings.TryGetInt(GlobalKeys.ResidentMinPlayerDistance, out var minPlayerDistance) ||
+                !settings.TryGetInt(GlobalKeys.ResidentMinBetweenDistance, out var minBetweenDistance) ||
+                !settings.TryGetInt(GlobalKeys.LayerT2Depth, out var layerT2Depth) ||
+                !settings.TryGetInt(GlobalKeys.LayerT3Depth, out var layerT3Depth) ||
+                maxPerSpecies != 1 || minPlayerDistance != 24 || minBetweenDistance != 12 ||
+                layerT2Depth < 1 || layerT3Depth <= layerT2Depth ||
+                settings.GetString(GlobalKeys.ResidentSpawnAt) != DayDawn ||
+                settings.GetString(GlobalKeys.ResidentRespawnRule) != NextDayDawn ||
+                settings.GetString(GlobalKeys.ResidentSavePolicy) != LastKilledDay)
+                return false;
+
+            rules = new ResidentYokaiRules(
+                maxPerSpecies, minPlayerDistance, minBetweenDistance,
+                layerT2Depth + 1, layerT3Depth);
+            return true;
+        }
     }
 }

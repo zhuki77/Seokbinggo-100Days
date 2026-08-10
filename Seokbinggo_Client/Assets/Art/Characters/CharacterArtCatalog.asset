@@ -33,6 +33,8 @@ MonoBehaviour:
     - {fileID: 1130828046401245130, guid: 165d7959e7d287c429c86a94daae1422, type: 3}
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: club
     sprite: {fileID: -3345761594423181008, guid: fd2d5e057f22a414fb61e5efde7e9c09, type: 3}
@@ -54,6 +56,8 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: bulgasari
     sprite: {fileID: 8935077127667771586, guid: 1fa7b90ffe80a8c4fa7bc61291282c29, type: 3}
@@ -75,6 +79,8 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: yakwang
     sprite: {fileID: 6090872912781367872, guid: 4aaafd2359b499c4ba389ea6e384eaca, type: 3}
@@ -90,6 +96,8 @@ MonoBehaviour:
     - {fileID: -2093206728455521677, guid: 4aaafd2359b499c4ba389ea6e384eaca, type: 3}
     - {fileID: 3600692413818834618, guid: 4aaafd2359b499c4ba389ea6e384eaca, type: 3}
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: eoduksini
     sprite: {fileID: 1794088859300376281, guid: 15a3f518ffee81f43994969e49b45c3b, type: 3}
@@ -104,6 +112,8 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: gangcheol
     sprite: {fileID: 800245743277379290, guid: 123e2ec28b6723b4296d439d9743def4, type: 3}
@@ -114,6 +124,44 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
+    sourceFacesRight: 0
+  - id: gangcheol_body
+    sprite: {fileID: 21300000, guid: 6f31c47a2d3b4e0aa12876bd9c6e5f41, type: 3}
+    idleFrames: []
+    walkFrames: []
+    attackFrames: []
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
+    sourceFacesRight: 0
+  - id: gangcheol_pre_tail
+    sprite: {fileID: -7824231713840048120, guid: b9d2df8391d0cbc4591ba33902237b5e, type: 3}
+    idleFrames: []
+    walkFrames: []
+    attackFrames: []
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
+    sourceFacesRight: 0
+  - id: gangcheol_post_tail
+    sprite: {fileID: 2905305022359978654, guid: 8af1d28b61bd31a4f8efc44ea5b9925e, type: 3}
+    idleFrames: []
+    walkFrames: []
+    attackFrames: []
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: king_dokkaebi
     sprite: {fileID: 3639822758089844948, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
@@ -139,6 +187,8 @@ MonoBehaviour:
     - {fileID: 322764757033391488, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
     - {fileID: 511589522609010797, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
     - {fileID: 2266001021589297501, guid: 539bc6c5b97ea94499c95ed2798175be, type: 3}
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: mother_bulgasari
     sprite: {fileID: -9083124521055712037, guid: 7b8547daa5496714a9dd23099ecf832e, type: 3}
@@ -158,6 +208,8 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 1
   - id: gangcheol_boss
     sprite: {fileID: 800245743277379290, guid: 123e2ec28b6723b4296d439d9743def4, type: 3}
@@ -168,30 +220,24 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
-    sourceFacesRight: 0
-  - id: gangcheol_body
-    sprite: {fileID: 21300000, guid: 6f31c47a2d3b4e0aa12876bd9c6e5f41, type: 3}
-    idleFrames: []
-    walkFrames: []
-    attackFrames: []
-    hitFrames: []
-    deathFrames: []
-    fleeFrames: []
-    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: imugi
-    sprite: {fileID: -936988638118010278, guid: 2a7bb41090e81484c84e1012b1b5932f, type: 3}
+    sprite: {fileID: 1726460881264175948, guid: ea8b0a92147ff5c4680cd70da7249589, type: 3}
     idleFrames:
-    - {fileID: -936988638118010278, guid: 2a7bb41090e81484c84e1012b1b5932f, type: 3}
-    - {fileID: 3300507546646944425, guid: 2a7bb41090e81484c84e1012b1b5932f, type: 3}
+    - {fileID: 1726460881264175948, guid: ea8b0a92147ff5c4680cd70da7249589, type: 3}
+    - {fileID: -4838389088837200569, guid: ea8b0a92147ff5c4680cd70da7249589, type: 3}
     walkFrames: []
     attackFrames: []
     hitFrames: []
     deathFrames: []
     fleeFrames: []
     specialFrames:
-    - {fileID: -6985523165981452478, guid: 2a7bb41090e81484c84e1012b1b5932f, type: 3}
-    - {fileID: 7451109798732053095, guid: 2a7bb41090e81484c84e1012b1b5932f, type: 3}
+    - {fileID: 5058414355192420566, guid: ea8b0a92147ff5c4680cd70da7249589, type: 3}
+    - {fileID: -2370646170331627251, guid: ea8b0a92147ff5c4680cd70da7249589, type: 3}
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0
   - id: imugi_body
     sprite: {fileID: -4424207542527707683, guid: d1c9c571b9d1c7241bf539bb67804695, type: 3}
@@ -202,4 +248,78 @@ MonoBehaviour:
     deathFrames: []
     fleeFrames: []
     specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
+    sourceFacesRight: 0
+  - id: imugi_pre_tail
+    sprite: {fileID: -7226025466371153179, guid: 57acdcbe4e350bc4b9efcb6a752ef8c0, type: 3}
+    idleFrames: []
+    walkFrames: []
+    attackFrames: []
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
+    sourceFacesRight: 0
+  - id: imugi_post_tail
+    sprite: {fileID: 1513152788110594487, guid: 25d36d21ff5d4484e9777784c30fa9d1, type: 3}
+    idleFrames: []
+    walkFrames: []
+    attackFrames: []
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
+    sourceFacesRight: 0
+  - id: gaekgwi
+    sprite: {fileID: -3484577961366802881, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    idleFrames:
+    - {fileID: -3484577961366802881, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    - {fileID: 4495083498677478372, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    - {fileID: 3516717044699856901, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    walkFrames: []
+    attackFrames:
+    - {fileID: 6061454042852040817, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    - {fileID: 1283402690266562424, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    - {fileID: 6539144955130720834, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames:
+    - {fileID: 1663325616019458746, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    - {fileID: -6602532146183022609, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    - {fileID: -6304234032827073501, guid: b920d4dd24f58974ba715460b80335ad, type: 3}
+    dashEffectFrames:
+    - {fileID: -1993872398768732638, guid: 88cce042a730ef240a2e11bec339f714, type: 3}
+    - {fileID: -5740004765319063586, guid: 88cce042a730ef240a2e11bec339f714, type: 3}
+    - {fileID: -3963347195892226918, guid: 88cce042a730ef240a2e11bec339f714, type: 3}
+    - {fileID: 2509013238335020249, guid: 88cce042a730ef240a2e11bec339f714, type: 3}
+    - {fileID: -1185508770258826078, guid: 88cce042a730ef240a2e11bec339f714, type: 3}
+    impactEffectFrames:
+    - {fileID: -2752424973447238812, guid: 78bfc40026b333145970b4f65dcf218a, type: 3}
+    - {fileID: 8111002830786911681, guid: 78bfc40026b333145970b4f65dcf218a, type: 3}
+    - {fileID: 4656980490245571362, guid: 78bfc40026b333145970b4f65dcf218a, type: 3}
+    - {fileID: 3534621092754276369, guid: 78bfc40026b333145970b4f65dcf218a, type: 3}
+    - {fileID: -8314482557454083072, guid: 78bfc40026b333145970b4f65dcf218a, type: 3}
+    - {fileID: -2029440844936918709, guid: 78bfc40026b333145970b4f65dcf218a, type: 3}
+    sourceFacesRight: 1
+  - id: magpie
+    sprite: {fileID: -7341935163787379014, guid: 8985cfd2557877e42beee9a70f6ea29b, type: 3}
+    idleFrames:
+    - {fileID: -7341935163787379014, guid: 8985cfd2557877e42beee9a70f6ea29b, type: 3}
+    walkFrames:
+    - {fileID: -5546727766013694066, guid: 8985cfd2557877e42beee9a70f6ea29b, type: 3}
+    - {fileID: 4963487893630316108, guid: 8985cfd2557877e42beee9a70f6ea29b, type: 3}
+    attackFrames:
+    - {fileID: -3736522810823227955, guid: 8985cfd2557877e42beee9a70f6ea29b, type: 3}
+    hitFrames: []
+    deathFrames: []
+    fleeFrames: []
+    specialFrames: []
+    dashEffectFrames: []
+    impactEffectFrames: []
     sourceFacesRight: 0

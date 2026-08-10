@@ -49,8 +49,7 @@ public static class NyangbingoV24DataValidator
         {
             "king_dokkaebi",
             "mother_bulgasari",
-            "imugi",
-            "gangcheol_boss"
+            "imugi_boss"
         };
         var officialYokaiIds = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -58,14 +57,16 @@ public static class NyangbingoV24DataValidator
             "bulgasari",
             "yakwang",
             "eoduksini",
+            "gaekgwi",
+            "imugi",
             "gangcheol"
         };
         if (!bossIds.SetEquals(officialBossIds))
             throw new InvalidDataException(
-                "bosses.csv must contain the four official bosses, including 'imugi'.");
+                "bosses.csv must contain the three v34 bosses, including 'imugi_boss'.");
         if (!yokaiIds.SetEquals(officialYokaiIds))
             throw new InvalidDataException(
-                "yokai-stats.csv must contain only the five official regular yokai; 'imugi' is a boss.");
+                "yokai-stats.csv must contain the seven v34 yokai.");
         if (bossIds.Overlaps(yokaiIds))
             throw new InvalidDataException("Boss and regular yokai IDs must not overlap.");
         var craftingById = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
@@ -189,9 +190,12 @@ public static class NyangbingoV24DataValidator
 
         foreach (var row in yokai)
         {
-            RequireItem(itemIds, Value(row, "sig_drop_id", "yokai-stats.csv"),
-                "yokai-stats.csv", "sig_drop_id");
-            referenceCount++;
+            var signatureItemId = OptionalValue(row, "sig_drop_id");
+            if (!string.IsNullOrWhiteSpace(signatureItemId))
+            {
+                RequireItem(itemIds, signatureItemId, "yokai-stats.csv", "sig_drop_id");
+                referenceCount++;
+            }
         }
         var dropSourceKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var row in drops)
@@ -226,8 +230,12 @@ public static class NyangbingoV24DataValidator
                     "drops.csv", "extra_drops");
                 referenceCount += extraDrops.Count;
             }
-            RequireItem(itemIds, Value(row, "sig_drop_id", "drops.csv"), "drops.csv", "sig_drop_id");
-            referenceCount++;
+            var signatureItemId = OptionalValue(row, "sig_drop_id");
+            if (!string.IsNullOrWhiteSpace(signatureItemId))
+            {
+                RequireItem(itemIds, signatureItemId, "drops.csv", "sig_drop_id");
+                referenceCount++;
+            }
         }
 
         foreach (var row in days)

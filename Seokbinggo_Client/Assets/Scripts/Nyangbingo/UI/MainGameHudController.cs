@@ -26,12 +26,16 @@ namespace Nyangbingo.UI
         public const float BossHealthValueGlyphScale = .5f;
         public const float BossHealthValueVerticalNudge = -.5f;
         public const float BossFleeRollSeconds = .45f;
+        public const float BossEntranceFlashDuration = 1.2f;
         public const int DayCounterFontSize = 12;
         public const int DayCounterClockFontSize = 7;
         public const float DayCounterExpandedHeight = 32f;
         public const float DayCounterClockHeight = 10f;
         public const float DayCounterClockGap = 1f;
+        public const float SunsetWarningLeadSeconds = 60f;
+        public const float SunsetWarningFlashesPerSecond = 2f;
         public const float BaekjungDayCounterBorderPixels = 1f;
+        public const string GoalBadgeDayNightRhythmHint = "낮 · 채집/건설  |  밤 · 요괴 방어";
         public const float SealDiagnosticHoldSeconds = .6f;
         private const float SealLeakMarkerSeconds = 1.4f;
         private const float SealLeakMarkerVisualYOffset = .5f;
@@ -70,12 +74,13 @@ namespace Nyangbingo.UI
         private RectTransform bossHealthValueRect;
         private Sprite runtimeBossHealthSprite;
         private string runtimeBossHealthSpriteId;
-        private GameObject bossEntranceArtRoot;
-        private Image bossEntranceArt;
-        private float bossEntranceArtRemaining;
+        private GameObject bossEntranceFlashRoot;
+        private Image bossEntranceFlash;
+        private float bossEntranceFlashRemaining;
         private MainGameSaveCoordinator saveCoordinator;
         private GoalBadgeProgress goalBadgeProgress;
         private GameObject goalBadgeRoot;
+        private Text goalBadgeRhythmHint;
         private readonly Image[] goalBadgeBackgrounds = new Image[3];
         private readonly GameObject[] goalBadgeChecks = new GameObject[3];
         private const string BellRopeId = "bell_rope";
@@ -298,7 +303,8 @@ namespace Nyangbingo.UI
         {
             damageWarningRemaining = Mathf.Max(0f, damageWarningRemaining - Time.unscaledDeltaTime);
             bellWarningRemaining = Mathf.Max(0f, bellWarningRemaining - Time.unscaledDeltaTime);
-            bossEntranceArtRemaining = Mathf.Max(0f, bossEntranceArtRemaining - Time.unscaledDeltaTime);
+            bossEntranceFlashRemaining = Mathf.Max(0f,
+                bossEntranceFlashRemaining - Time.unscaledDeltaTime);
             bossFleeRollRemaining = Mathf.Max(0f, bossFleeRollRemaining - Time.unscaledDeltaTime);
             saveIndicatorRemaining = Mathf.Max(0f, saveIndicatorRemaining - Time.unscaledDeltaTime);
             tearAnimationRemaining = Mathf.Max(0f, tearAnimationRemaining - Time.unscaledDeltaTime);
@@ -306,8 +312,7 @@ namespace Nyangbingo.UI
             sealDeltaRemaining = Mathf.Max(0f, sealDeltaRemaining - Time.unscaledDeltaTime);
             UpdateSealDiagnosticInput();
             RefreshSealFeedbackVisuals();
-            if (bossEntranceArtRoot != null && bossEntranceArtRemaining <= 0f)
-                bossEntranceArtRoot.SetActive(false);
+            RefreshBossEntranceFlash();
             RefreshBellRopeDetection();
             RefreshAlertOverlay();
             RefreshStatus();
@@ -360,6 +365,7 @@ namespace Nyangbingo.UI
                     else dayClockText.text = clock;
                 }
                 RefreshDayNightClockArt();
+                RefreshSunsetWarning();
                 RefreshBaekjungDayCounterFeedback();
             }
             if (clawText != null) clawText.text = $"T{ResolveClawTier()}";
@@ -674,7 +680,7 @@ namespace Nyangbingo.UI
             else playerVitalsArt.enabled = false;
 
             var healthRatio = playerHealth != null ? CalculateHealthRatio(playerHealth.Current, playerHealth.MaxHealth) : 0f;
-            playerHealthFill.color = VitalsTemperatureColor(temperatureBucket);
+            playerHealthFill.color = new Color(.82f, .15f, .12f, 1f);
             playerHealthFill.rectTransform.sizeDelta = new Vector2(42f * healthRatio, 2.5f);
             playerHealthFill.enabled = healthRatio > 0f;
 
@@ -796,6 +802,10 @@ namespace Nyangbingo.UI
                 BuildGoalBadgeGlyph(rect, index);
                 goalBadgeChecks[index] = BuildGoalBadgeCheck(rect);
             }
+            goalBadgeRhythmHint = CreateStatusText(
+                rootRect, "DayNightRhythmHint", new Vector2(0f, -13f), new Vector2(112f, 9f), 6);
+            goalBadgeRhythmHint.text = GoalBadgeDayNightRhythmHint;
+            goalBadgeRhythmHint.color = new Color(.72f, .82f, .9f, .92f);
 
             if (goalBadgeProgress != null) goalBadgeProgress.Changed += RefreshGoalBadges;
             RefreshGoalBadges();
@@ -989,12 +999,6 @@ namespace Nyangbingo.UI
                     new Color(1f, .82f, .28f), true);
                 return;
             }
-            if (runtimeServices?.NapService?.IsNapping == true)
-            {
-                SetAlertOverlay(new Color(.025f, .045f, .1f, .18f), string.Empty,
-                    new Color(.65f, .75f, .95f), false);
-                return;
-            }
             alertOverlayRoot.gameObject.SetActive(false);
         }
 
@@ -1131,7 +1135,14 @@ namespace Nyangbingo.UI
             if (bossStatusText == null) return;
             var definition = bossManager != null ? bossManager.ActiveDefinition : null;
             var health = bossManager != null ? bossManager.ActiveHealth : null;
-            if (definition == null || health == null)
+            var healthBarId = definition != null ? definition.Id : string.Empty;
+            if ((definition == null || health == null) && encounterCoordinator != null &&
+                encounterCoordinator.TryGetActiveGaekgwi(out var gaekgwi, out var gaekgwiHealth))
+            {
+                healthBarId = gaekgwi.Id;
+                health = gaekgwiHealth;
+            }
+            if (string.IsNullOrEmpty(healthBarId) || health == null)
             {
                 if (bossHealthBarRoot != null)
                 {
@@ -1168,10 +1179,10 @@ namespace Nyangbingo.UI
             RestoreDayCounterPosition();
             if (bossHealthPortrait != null)
             {
-                bossHealthPortrait.sprite = ResolveBossHealthArt(definition.Id);
+                bossHealthPortrait.sprite = ResolveBossHealthArt(healthBarId);
                 bossHealthPortrait.enabled = bossHealthPortrait.sprite != null;
             }
-            ConfigureBossHealthVerticalLayout(definition.Id);
+            ConfigureBossHealthVerticalLayout(healthBarId);
             ResizeBossHealthBar(CalculateHealthRatio(health.Current, health.MaxHealth));
             var displayedBossHealth = FormatBossCurrentHealth(health.Current);
             if (bossHealthValueGlyphs != null)
@@ -1214,6 +1225,22 @@ namespace Nyangbingo.UI
 
         public static bool ShouldShowNightSpawnLock(bool isNight, bool bossActive, bool baekjungActive) =>
             isNight && (bossActive || baekjungActive);
+
+        public static bool IsSunsetWarningWindow(bool isNight, float secondsUntilTransition)
+        {
+            if (isNight || float.IsNaN(secondsUntilTransition) ||
+                float.IsInfinity(secondsUntilTransition))
+                return false;
+            return secondsUntilTransition >= 0f &&
+                   secondsUntilTransition <= SunsetWarningLeadSeconds;
+        }
+
+        public static bool IsSunsetWarningBrightPhase(float gameSeconds)
+        {
+            if (float.IsNaN(gameSeconds) || float.IsInfinity(gameSeconds) || gameSeconds < 0f)
+                return false;
+            return Mathf.FloorToInt(gameSeconds * SunsetWarningFlashesPerSecond) % 2 == 0;
+        }
 
         public static string FormatRemainingTime(float seconds)
         {
@@ -1362,6 +1389,28 @@ namespace Nyangbingo.UI
                     encounterCoordinator?.BaekjungScheduler?.IsActive == true));
         }
 
+        private void RefreshSunsetWarning()
+        {
+            var timeService = bootstrap?.TimeService;
+            if (timeService == null || dayClockText == null) return;
+            var warning = IsSunsetWarningWindow(
+                timeService.IsNight, timeService.SecondsUntilNextTransition);
+            var bright = warning && IsSunsetWarningBrightPhase(timeService.GameSeconds);
+            var clockColor = !warning
+                ? new Color(.88f, .93f, 1f, 1f)
+                : bright
+                    ? new Color(1f, .42f, .16f, 1f)
+                    : new Color(1f, .68f, .34f, .5f);
+            dayClockText.color = clockColor;
+            dayClockGlyphs?.SetColor(clockColor);
+            if (dayNightClockArt != null)
+                dayNightClockArt.color = !warning
+                    ? Color.white
+                    : bright
+                        ? new Color(1f, .42f, .16f, 1f)
+                        : new Color(1f, .68f, .34f, .5f);
+        }
+
         private static GameObject BuildNightSpawnLock(RectTransform parent)
         {
             var root = new GameObject("NightSpawnLock", typeof(RectTransform));
@@ -1507,16 +1556,18 @@ namespace Nyangbingo.UI
             ResizeBossHealthBar(1f);
             bossHealthBarRoot.SetActive(false);
 
-            bossEntranceArtRoot = new GameObject("BossEntranceArt", typeof(RectTransform));
-            var entranceRect = (RectTransform)bossEntranceArtRoot.transform;
+            bossEntranceFlashRoot = new GameObject("BossEntranceHorrorFlash", typeof(RectTransform));
+            var entranceRect = (RectTransform)bossEntranceFlashRoot.transform;
             entranceRect.SetParent(nativeRoot, false);
-            entranceRect.anchorMin = entranceRect.anchorMax = entranceRect.pivot = new Vector2(.5f, .5f);
-            entranceRect.anchoredPosition = new Vector2(0f, 42f);
-            entranceRect.sizeDelta = new Vector2(64f, 38f);
-            bossEntranceArt = bossEntranceArtRoot.AddComponent<Image>();
-            bossEntranceArt.preserveAspect = true;
-            bossEntranceArt.raycastTarget = false;
-            bossEntranceArtRoot.SetActive(false);
+            entranceRect.anchorMin = Vector2.zero;
+            entranceRect.anchorMax = Vector2.one;
+            entranceRect.offsetMin = Vector2.zero;
+            entranceRect.offsetMax = Vector2.zero;
+            bossEntranceFlash = bossEntranceFlashRoot.AddComponent<Image>();
+            bossEntranceFlash.color = Color.clear;
+            bossEntranceFlash.raycastTarget = false;
+            bossEntranceFlashRoot.transform.SetAsLastSibling();
+            bossEntranceFlashRoot.SetActive(false);
         }
 
         private void RestoreBossStatusLayout()
@@ -1570,17 +1621,14 @@ namespace Nyangbingo.UI
             }
         }
 
-        public static float BossHealthValueScale(string bossId) => bossId == "imugi" ? .85f : 1f;
+        public static float BossHealthValueScale(string bossId) => bossId == "imugi_boss" ? .85f : 1f;
 
         public static float BossHealthContentVerticalOffset(string bossId) =>
             bossId switch
             {
                 "mother_bulgasari" => -6.75f,
-                // These offsets follow the delivered frame artwork. After correcting the
-                // Gangcheol/King row mapping, their previously calibrated offsets swap too.
                 "king_dokkaebi" => -4.125f,
-                "gangcheol_boss" => -7.5f,
-                "imugi" => -6f,
+                "imugi_boss" => -6f,
                 _ => -3.75f
             };
 
@@ -1614,7 +1662,7 @@ namespace Nyangbingo.UI
                 sourceRect.y + sourceRect.height - topEnd,
                 sourceRect.width, topEnd - topStart);
             runtimeBossHealthSprite = Sprite.Create(source.texture, croppedRect, new Vector2(.5f, .5f),
-                source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+                source.pixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false);
             runtimeBossHealthSprite.name = $"{bossId}_health_bar_runtime";
             runtimeBossHealthSpriteId = bossId;
             return runtimeBossHealthSprite;
@@ -1628,8 +1676,7 @@ namespace Nyangbingo.UI
                 // bottom to top, so the runtime crop order is the reverse of the source view.
                 case "king_dokkaebi": return 0;
                 case "mother_bulgasari": return 1;
-                case "imugi": return 2;
-                case "gangcheol_boss": return 3;
+                case "imugi_boss": return 2;
                 default: return -1;
             }
         }
@@ -1638,10 +1685,9 @@ namespace Nyangbingo.UI
         {
             switch (bossId)
             {
-                case "gangcheol_boss": return gameplayArtCatalog?.BossHealthGangcheol;
                 case "king_dokkaebi": return gameplayArtCatalog?.BossHealthKingDokkaebi;
                 case "mother_bulgasari": return gameplayArtCatalog?.BossHealthMotherBulgasari;
-                case "imugi": return gameplayArtCatalog?.BossHealthImugi;
+                case "imugi_boss": return gameplayArtCatalog?.BossHealthImugi;
                 default: return null;
             }
         }
@@ -1652,23 +1698,53 @@ namespace Nyangbingo.UI
             if (bossHealthBarRoot != null) bossHealthBarRoot.transform.localScale = Vector3.one;
             if (baekjungHudActive) baekjungHudSuppressedForBoss = true;
             RefreshBaekjungDayCounterFeedback();
-            if (bossEntranceArt == null) return;
-            bossEntranceArt.sprite = gameplayArtCatalog?.BossWarningLarge ?? gameplayArtCatalog?.BossWarningSmall;
-            bossEntranceArt.enabled = bossEntranceArt.sprite != null;
-            bossEntranceArtRemaining = bossEntranceArt.enabled ? 1.2f : 0f;
-            bossEntranceArtRoot?.SetActive(bossEntranceArt.enabled);
+            if (bossEntranceFlash == null) return;
+            bossEntranceFlashRemaining = BossEntranceFlashDuration;
+            bossEntranceFlashRoot?.transform.SetAsLastSibling();
+            bossEntranceFlashRoot?.SetActive(true);
+            RefreshBossEntranceFlash();
         }
 
         private void HandleBossEnded(BossDefinition _, bool defeated)
         {
-            bossEntranceArtRemaining = 0f;
-            bossEntranceArtRoot?.SetActive(false);
+            bossEntranceFlashRemaining = 0f;
+            bossEntranceFlashRoot?.SetActive(false);
             bossFleeRollRemaining = defeated ? 0f : BossFleeRollSeconds;
             if (defeated && bossHealthBarRoot != null)
             {
                 bossHealthBarRoot.transform.localScale = Vector3.one;
                 bossHealthBarRoot.SetActive(false);
             }
+        }
+
+        private void RefreshBossEntranceFlash()
+        {
+            if (bossEntranceFlashRoot == null || bossEntranceFlash == null) return;
+            if (bossEntranceFlashRemaining <= 0f)
+            {
+                bossEntranceFlash.color = Color.clear;
+                bossEntranceFlashRoot.SetActive(false);
+                return;
+            }
+
+            var elapsed = BossEntranceFlashDuration - bossEntranceFlashRemaining;
+            bossEntranceFlash.color = BossEntranceFlashColor(elapsed);
+            bossEntranceFlashRoot.SetActive(bossEntranceFlash.color.a > 0f);
+        }
+
+        public static Color BossEntranceFlashColor(float elapsed)
+        {
+            if (elapsed < 0f || elapsed >= BossEntranceFlashDuration) return Color.clear;
+            if (elapsed < .10f) return new Color(.08f, 0f, .015f, .78f);
+            if (elapsed < .20f) return Color.clear;
+            if (elapsed < .34f) return new Color(.12f, .005f, .02f, .58f);
+            if (elapsed < .47f) return Color.clear;
+            if (elapsed < .66f) return new Color(.035f, 0f, .01f, .82f);
+            if (elapsed < .79f) return Color.clear;
+            if (elapsed < .98f) return new Color(.1f, 0f, .025f, .62f);
+            if (elapsed < 1.07f) return Color.clear;
+            var fade = 1f - Mathf.InverseLerp(1.07f, BossEntranceFlashDuration, elapsed);
+            return new Color(.025f, 0f, .008f, .48f * fade);
         }
 
         private void HandleBaekjungStarted()

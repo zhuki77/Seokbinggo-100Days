@@ -110,24 +110,76 @@ namespace Nyangbingo.Bosses
             var waveCount = definition.WaveOffsets.Length;
             if (waveCount <= 0 || waveIndex < 0 || waveIndex >= waveCount) return;
 
-            var totalSpawnCount = 0;
-            for (var groupIndex = 0; groupIndex < composition.Length; groupIndex++)
-                totalSpawnCount += Math.Max(0, composition[groupIndex].amount);
+            var waveComposition = BuildWaveComposition(composition, waveCount, waveIndex);
+            for (var index = 0; index < waveComposition.Count; index++)
+                pending.Enqueue(new PendingSpawn(definition, waveComposition[index], waveIndex));
 
-            var startIndex = totalSpawnCount * waveIndex / waveCount;
-            var endIndex = totalSpawnCount * (waveIndex + 1) / waveCount;
-            var compositionIndex = 0;
-            for (var groupIndex = 0; groupIndex < composition.Length; groupIndex++)
+            TryFlushPending();
+        }
+
+        public static IReadOnlyList<YokaiKind> BuildWaveComposition(
+            IReadOnlyList<YokaiSpawnAmount> composition, int waveCount, int waveIndex)
+        {
+            if (composition == null || waveCount <= 0 || waveIndex < 0 || waveIndex >= waveCount)
+                return Array.Empty<YokaiKind>();
+
+            var fixedKinds = new List<YokaiKind>[waveCount];
+            var waves = new List<YokaiKind>[waveCount];
+            var ordinaryKinds = new List<YokaiKind>();
+            var totalSpawnCount = 0;
+            for (var index = 0; index < waveCount; index++)
+            {
+                fixedKinds[index] = new List<YokaiKind>();
+                waves[index] = new List<YokaiKind>();
+            }
+
+            for (var groupIndex = 0; groupIndex < composition.Count; groupIndex++)
             {
                 var group = composition[groupIndex];
-                for (var spawnIndex = 0; spawnIndex < Math.Max(0, group.amount); spawnIndex++, compositionIndex++)
+                var amount = Math.Max(0, group.amount);
+                totalSpawnCount += amount;
+                var fixedWaveIndex = FixedWaveIndex(group.kind, waveCount);
+                for (var spawnIndex = 0; spawnIndex < amount; spawnIndex++)
                 {
-                    if (compositionIndex >= startIndex && compositionIndex < endIndex)
-                        pending.Enqueue(new PendingSpawn(definition, group.kind, waveIndex));
+                    if (fixedWaveIndex >= 0)
+                        fixedKinds[fixedWaveIndex].Add(group.kind);
+                    else
+                        ordinaryKinds.Add(group.kind);
                 }
             }
 
-            TryFlushPending();
+            var ordinaryIndex = 0;
+            for (var currentWave = 0; currentWave < waveCount; currentWave++)
+            {
+                var targetSize =
+                    totalSpawnCount * (currentWave + 1) / waveCount -
+                    totalSpawnCount * currentWave / waveCount;
+                var ordinaryCapacity = Math.Max(0, targetSize - fixedKinds[currentWave].Count);
+                for (var count = 0;
+                     count < ordinaryCapacity && ordinaryIndex < ordinaryKinds.Count;
+                     count++)
+                    waves[currentWave].Add(ordinaryKinds[ordinaryIndex++]);
+                waves[currentWave].AddRange(fixedKinds[currentWave]);
+            }
+
+            // Malformed future data must never silently lose a spawn. Valid v34 data never
+            // reaches this fallback because the fixed second-wave Gaekgwi fits its four slots.
+            while (ordinaryIndex < ordinaryKinds.Count)
+            {
+                var smallestWave = 0;
+                for (var currentWave = 1; currentWave < waveCount; currentWave++)
+                    if (waves[currentWave].Count < waves[smallestWave].Count)
+                        smallestWave = currentWave;
+                waves[smallestWave].Add(ordinaryKinds[ordinaryIndex++]);
+            }
+
+            return waves[waveIndex];
+        }
+
+        private static int FixedWaveIndex(YokaiKind kind, int waveCount)
+        {
+            // v34: the Baekjung midboss must enter with the second wave at +150 game-seconds.
+            return kind == YokaiKind.Gaekgwi && waveCount >= 2 ? 1 : -1;
         }
 
         private void TryFlushPending()

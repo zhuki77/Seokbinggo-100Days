@@ -20,7 +20,9 @@ MonoBehaviour:
     amount: 4
   - item: {fileID: 11400000, guid: d0cbb55eb184479478a337cef0a50eb8, type: 2}
     amount: 6
+  - item: {fileID: 11400000, guid: 73f0e554850cd9742a167ffb41735625, type: 2}
+    amount: 2
   equipmentPool:
   - {fileID: 11400000, guid: ec209317bfed97241bd8c5baa8e9b83f, type: 2}
   - {fileID: 11400000, guid: 3c360e633cdbe634990f8c8c10caa5b4, type: 2}
-  note: "\uBC24 \uC9C0\uC0C1 \uD0D0\uC0C9 \uBCF4\uC0C1"
+  note: "\uBC24 \uC9C0\uC0C1 \uD0D0\uC0C9 \uBCF4\uC0C1 + \uCEA3\uB2E2(v31)"

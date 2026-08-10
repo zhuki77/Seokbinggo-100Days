@@ -14,7 +14,7 @@ namespace Nyangbingo.UI
     {
         private static readonly string[] BossIds =
         {
-            "king_dokkaebi", "mother_bulgasari", "imugi", "gangcheol_boss"
+            "king_dokkaebi", "mother_bulgasari", "imugi_boss"
         };
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private static readonly string[] DeliveredInventoryArtTestItemIds =
@@ -31,17 +31,19 @@ namespace Nyangbingo.UI
             "F6  소환 재료 지급  ·  Shift+F6  제작대로 이동\n" +
             "Ctrl+F6  신규 아이템 아트 검증 지급\n" +
             "F7  소환 아이템 지급  ·  Shift+F7  깊은 제단 이동\n" +
-            "F8  도깨비 대장  ·  Shift+F8  강철이\n" +
-            "Ctrl+F8  어미 불가사리  ·  Alt+F8  이무기\n" +
+            "F8  도깨비 대장  ·  Ctrl+F8  어미 불가사리\n" +
+            "Alt+F8  이무기\n" +
             "J  일반 요괴 정리  ·  K  활성 보스 처치\n\n" +
             "제작·설치·연출\n" +
             "Ctrl+F5  선택 항목 재료 지급  ·  Shift+F5  필요 제작대로 이동\n" +
-            "F10  냥잠 연출  ·  Shift+F10  채굴 파괴 연출\n" +
+            "Shift+F10  채굴 파괴 연출\n" +
             "Ctrl+F10  채굴 치명타 연출\n" +
             "F11  등탑 지급  ·  Shift+F11  등탑 재료 지급\n" +
             "Ctrl+F11  등탑 연료 지급\n" +
             "F12  어둑시니 소환  ·  Shift+F12  어둑시니 테스트 키트\n" +
-            "Ctrl+F12  차열 지붕 테스트 키트";
+            "Alt+F12  강철이 소환  ·  Alt+Shift+F12  객귀 소환\n" +
+            "Ctrl+F12  차열 지붕 테스트 키트\n" +
+            "Alt+M  까치 테스트 활성/비활성";
 #endif
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
@@ -68,7 +70,7 @@ namespace Nyangbingo.UI
 #endif
 
         public const KeyCode DebugShortcutHelpKey = KeyCode.F5;
-        public static readonly Vector2 DebugShortcutHelpPanelSize = new Vector2(230f, 190f);
+        public static readonly Vector2 DebugShortcutHelpPanelSize = new Vector2(230f, 212f);
         public const int DebugShortcutHelpBodyFontSize = 6;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public static bool IsDebugShortcutHelpOpen => debugShortcutHelpOpen;
@@ -197,7 +199,10 @@ namespace Nyangbingo.UI
             var generator = bootstrap?.Session?.Generator;
             if (generator == null || playerTarget == null) return false;
             var altar = generator.AltarPosition;
-            var altarCenter = new Vector2(altar.x + .5f, altar.y + .5f);
+            var altarCenter = bootstrap?.TileService != null
+                ? (Vector2)bootstrap.TileService.GetCellCenterWorld(
+                    new Vector3Int(altar.x, altar.y, 0))
+                : new Vector2(altar.x + .5f, altar.y + .5f);
             return Vector2.Distance(playerTarget.transform.position, altarCenter) <= deepAltarInteractionRange;
         }
 
@@ -224,11 +229,6 @@ namespace Nyangbingo.UI
             if (definition == null)
             {
                 reason = "소환 아이템이 아닙니다.";
-                return false;
-            }
-            if (runtimeServices?.NapService?.IsNapping == true)
-            {
-                reason = "냥잠 중에는 소환할 수 없습니다.";
                 return false;
             }
             if (encounterCoordinator?.BossManager?.IsBossActive == true)
@@ -276,8 +276,6 @@ namespace Nyangbingo.UI
 
         private void TryCraftSelectedSummonItem()
         {
-            if (runtimeServices?.NapService?.IsNapping == true)
-            { ShowMessage("냥잠 중에는 제작할 수 없습니다."); return; }
             var definition = SelectedBoss;
             if (definition?.SummonItem == null || definition.SummonMaterials.Length == 0)
             { ShowMessage("소환 아이템 제작 데이터가 없습니다."); return; }
@@ -380,7 +378,10 @@ namespace Nyangbingo.UI
             var generator = bootstrap?.Session?.Generator;
             if (generator == null) { ShowMessage("깊은 제단 좌표를 찾을 수 없습니다."); return; }
             var altar = generator.AltarPosition;
-            var position = new Vector2(altar.x + .5f, altar.y + .5f);
+            var position = bootstrap?.TileService != null
+                ? (Vector2)bootstrap.TileService.GetCellCenterWorld(
+                    new Vector3Int(altar.x, altar.y, 0))
+                : new Vector2(altar.x + .5f, altar.y + .5f);
             MovePlayerForEditorTest(position);
             ShowMessage("Shift+F7: 깊은 얼음 제단으로 이동했습니다.");
         }

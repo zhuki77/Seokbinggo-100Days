@@ -12,14 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abf3ed66b4339a44a8be3512f7b46183, type: 3}
   m_Name: migration_25
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.IdMigrationDefinition
-  legacyId: gangcheori
-  newId: gangcheol_boss
-  domain: 2
+  legacyId: smelt_ice_steel
+  newId: smelt_icesteel
+  domain: 3
   action: 0
-  note: "\uBCF4\uC2A4\uC804 \uB3C4\uBA54\uC778: \uACA9\uD1F4 \uD50C\uB798\uADF8(\uAC00\uBB44
-    \uBD80\uC801 \uD574\uAE08 \uC870\uAC74 \u2014 30\uC77C\uCC28 \uB0B4\uC2B5 \uACA9\uD1F4
-    \uD3EC\uD568)\xB7\uC7AC\uC18C\uD658 \uC774\uB825 = gangcheol_boss. \uD65C\uC131
-    \uBCF4\uC2A4 \uC0C1\uD0DC\uB294 boss_save_policy=no_serialize\uB77C \uC800\uC7A5
-    \uC790\uCCB4\uAC00 \uC5C6\uB2E4"
+  note: "v24 \uBA85\uBA85 \uADDC\uCE59 \uC815\uD569(icesteel_*\uC640 \uB3D9\uC77C
+    \u2014 ice_steel \uD45C\uAE30\uB294 \uC804 \uB3C4\uBA54\uC778\uC5D0\uC11C icesteel\uB85C
+    \uD1B5\uC77C)"
   refundItemId: 
   refundAmount: 0

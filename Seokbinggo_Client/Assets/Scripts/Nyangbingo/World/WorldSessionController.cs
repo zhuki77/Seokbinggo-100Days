@@ -38,7 +38,7 @@ namespace Nyangbingo.World
         private TileService tileService;
         private SealSystem sealSystem;
         private WallpaperCoverageService wallpaperCoverage;
-        private ChestProgress chestProgress = new ChestProgress();
+        private ChestProgress chestProgress;
         private int seed;
         private bool disposed;
 
@@ -82,6 +82,7 @@ namespace Nyangbingo.World
         {
             this.config = config ?? throw new ArgumentNullException(nameof(config));
             this.renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
+            chestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
             this.catalog = catalog; // 카탈로그 없이도(상자 보상 미연결) 채굴/밀폐 테스트는 가능해야 한다.
         }
 
@@ -166,7 +167,7 @@ namespace Nyangbingo.World
 
             renderer.RenderWorld(result.tiles);
             RebuildLiveSystems(result.tiles);
-            chestProgress = new ChestProgress();
+            chestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
             WorldLoaded?.Invoke(); // §5 항목 7 — 라이브 참조 교체가 전부 끝난 뒤에만 통지한다.
             return result;
         }
@@ -182,6 +183,7 @@ namespace Nyangbingo.World
 
             // A-16: 전경 diff와 분리된 배경 변경 이력. CaptureWorld 시그니처는 Dev B 호환을 위해 유지한다.
             save.backgroundChanges = new List<TileChangeRecord>(tileService.GetBackgroundChangeRecords());
+            save.wallDamage = tileService.ExportWallDamage();
             return true;
         }
 
@@ -214,7 +216,11 @@ namespace Nyangbingo.World
             // 하나라도 실패하면 이 인스턴스와 result.tiles는 그냥 버려지고, 기존 라이브 상태·화면은 손끝 하나
             // 닿지 않는다.
             var loadedTileService = new TileService(result.tiles, null, catalog, result.acceptedSeed);
-            if (!loadedTileService.RestoreTileChanges(save.tileChanges))
+            var chestCells = new HashSet<Vector3Int>();
+            if (result.chests != null)
+                foreach (var chest in result.chests)
+                    chestCells.Add(new Vector3Int(chest.position.x, chest.position.y, 0));
+            if (!loadedTileService.RestoreTileChanges(save.tileChanges, chestCells))
             {
                 Debug.LogError("[Nyangbingo] WorldSessionController: 타일 변경 이력 재생에 실패해 로드를 중단합니다.");
                 return false;
@@ -226,10 +232,15 @@ namespace Nyangbingo.World
                 Debug.LogError("[Nyangbingo] WorldSessionController: 배경 변경 이력 재생에 실패해 로드를 중단합니다.");
                 return false;
             }
+            if (!loadedTileService.RestoreWallDamage(save.wallDamage))
+            {
+                Debug.LogError("[Nyangbingo] WorldSessionController: 방벽 피해 상태 복원에 실패해 로드를 중단합니다.");
+                return false;
+            }
 
             // 2) 이무기 제단은 파괴 불가 + 시드로만 결정되는 타일이라 재생성만으로 이미 원상 복구돼 있다.
             // 상자는 사용자 상호작용 결과(열림 여부)가 시드로 재현되지 않으므로 별도 복원이 필요하다.
-            var loadedChestProgress = new ChestProgress();
+            var loadedChestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
             if (!Nyangbingo.Save.WorldSaveAdapter.RestoreChests(save, loadedGenerator, loadedChestProgress))
             {
                 Debug.LogError("[Nyangbingo] WorldSessionController: 상자 상태 복원에 실패해 로드를 중단합니다.");
@@ -278,8 +289,11 @@ namespace Nyangbingo.World
         {
             chestId = null;
             definition = null;
-            if (!TryResolveUnopenedChestAt(cell, out var foundChestId, out var found)) return false;
-            if (!chestProgress.TryOpen(foundChestId, found, seed)) return false;
+            if (!TryResolveChestAt(cell, out var foundChestId, out var found)) return false;
+            if (!chestProgress.IsOpened(foundChestId) &&
+                !chestProgress.TryOpen(foundChestId, found, seed))
+                return false;
+            if (!chestProgress.TryGetContents(foundChestId, out _)) return false;
 
             chestId = foundChestId;
             definition = found;
@@ -288,15 +302,17 @@ namespace Nyangbingo.World
 
         /// <summary>개봉하지 않고 해당 칸에 미개봉 상자가 있는지 확인(타깃 선정용).</summary>
         public bool TryPeekUnopenedChestAt(Vector3Int cell) =>
-            TryResolveUnopenedChestAt(cell, out _, out _);
+            TryResolveChestAt(cell, out var chestId, out _) && !chestProgress.IsOpened(chestId);
 
-        private bool TryResolveUnopenedChestAt(Vector3Int cell, out string chestId, out ChestDefinition definition)
+        public bool TryPeekChestAt(Vector3Int cell) =>
+            TryResolveChestAt(cell, out _, out _);
+
+        private bool TryResolveChestAt(Vector3Int cell, out string chestId, out ChestDefinition definition)
         {
             chestId = null;
             definition = null;
             if (!HasWorld || catalog == null || generator == null) return false;
             if (!generator.TryGetChestIdAt(new Vector2Int(cell.x, cell.y), out var foundChestId)) return false;
-            if (chestProgress.IsOpened(foundChestId)) return false;
 
             var region = generator.GetChestRegion(foundChestId);
             var found = catalog.FindChest(RegionCatalogId(region));

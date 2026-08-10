@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: hp_regen_rate
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: hp_regen_rate
+  value: 1
+  unit: per_sec
+  note: "\uC790\uC5F0 \uC7AC\uC0DD HP/\uAC8C\uC784\uCD08 \u2014 0\u2192100 = 100\uAC8C\uC784\uCD08
+    (v31 \xB7 v31.1 \uB0E5\uC7A0 \uD3D0\uC9C0 \uBCF4\uC0C1 \uC0C1\uD5A5)"

@@ -460,6 +460,7 @@ namespace Nyangbingo.World
             // A-18: 스폰 발밑 최종 보강
             ReinforceSafeSpawnFooting(grid, surfaceHeights, structures.spawnPoint, config);
             PopulateNaturalCaveBackgrounds(grid, surfaceHeights, config);
+            EnsureChestCellsHaveNoForeground(grid, structures.chests);
 
             return new WorldGenerationResult
             {
@@ -1749,6 +1750,9 @@ namespace Nyangbingo.World
             var ruinFootprints = PlaceRuins(grid, surfaceHeights, rng, config, occupied, spawnPoint);
             var altarPosition = PlaceDeepAltarAndLake(grid, surfaceHeights, rng, config, occupied);
             var chests = PlaceChests(grid, surfaceHeights, rng, config, occupied, ruinFootprints);
+            foreach (var chest in chests)
+                if (InBounds(chest.position, config.MapWidth, config.MapHeight))
+                    protectedAir[chest.position.x, chest.position.y] = true;
 
             // protectedAir: 스폰 발밑 3×3 + 제단 주변 최소만. 입구/연결 통로 전체 마스킹 금지.
             MarkSpawnFootingProtectedAir(surfaceHeights, spawnPoint, config, protectedAir);
@@ -2145,6 +2149,20 @@ namespace Nyangbingo.World
                     nextIndex++;
                     placed++;
                 }
+            }
+        }
+
+        private static void EnsureChestCellsHaveNoForeground(TileData[,] grid,
+            IEnumerable<ChestSpawnPoint> chests)
+        {
+            if (grid == null || chests == null) return;
+            var width = grid.GetLength(0);
+            var height = grid.GetLength(1);
+            foreach (var chest in chests)
+            {
+                if (!InBounds(chest.position, width, height)) continue;
+                grid[chest.position.x, chest.position.y] =
+                    grid[chest.position.x, chest.position.y].WithoutForeground();
             }
         }
 

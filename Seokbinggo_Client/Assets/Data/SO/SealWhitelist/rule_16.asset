@@ -14,6 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.SealWhitelistDefinition
   element: "\uBCF4\uAE08\uC790\uB9AC"
   seals: 0
-  note: "\uBC00\uD3D0 \uC778\uC815 \uAD6C\uC5ED '\uB0B4\uC5D0 \uC788\uC5B4\uC57C'
-    \uB0E5\uC7A0 \uAE30\uB2A5 \u2014 \uC790\uAE30\uAC00 \uBC00\uD3D0\uB97C \uB9CC\uB4E4\uC9C0
-    \uC54A\uB294\uB2E4"
+  note: "\uB9AC\uC2A4\uD3F0 \uC9C0\uC810(4-8) \u2014 \uB0E5\uC7A0 v31.1 \uD3D0\uC9C0.
+    \uC790\uAE30\uAC00 \uBC00\uD3D0\uB97C \uB9CC\uB4E4\uC9C0 \uC54A\uB294\uB2E4"

@@ -231,7 +231,7 @@ namespace Nyangbingo.World
         /// <summary>임의의 월드 좌표가 완전히 밀폐된 실내 안에 있는지. 등록되지 않은 좌표도 즉석으로 계산(캐시됨)한다.</summary>
         public bool IsInsideSealedArea(Vector2 position)
         {
-            var cell = new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+            var cell = tileService.WorldToCell(position);
             return GetOrComputeRegion(cell).isSealed;
         }
 

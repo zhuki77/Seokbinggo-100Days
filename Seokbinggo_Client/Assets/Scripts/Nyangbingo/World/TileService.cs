@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
@@ -24,12 +25,18 @@ namespace Nyangbingo.World
         private TilemapRenderer renderer;
         private readonly GameDataCatalog catalog;
         private readonly int seed;
+        private readonly List<Func<Vector3Int, bool>> foregroundPlacementBlockers =
+            new List<Func<Vector3Int, bool>>();
+        private readonly HashSet<Vector3Int> openDoors = new HashSet<Vector3Int>();
+        private readonly Dictionary<Vector3Int, GameObject> openDoorVisuals =
+            new Dictionary<Vector3Int, GameObject>();
+        private readonly Dictionary<Vector3Int, float> wallDamageTaken =
+            new Dictionary<Vector3Int, float>();
+        private Func<Vector3Int, bool> clayPlasterResolver;
 
         private readonly List<TileChangeRecord> changeLog = new List<TileChangeRecord>();
-        private readonly Dictionary<Vector3Int, int> changeIndexByCell = new Dictionary<Vector3Int, int>();
 
         private readonly List<TileChangeRecord> backgroundChangeLog = new List<TileChangeRecord>();
-        private readonly Dictionary<Vector3Int, int> backgroundChangeIndexByCell = new Dictionary<Vector3Int, int>();
 
         /// <summary>스폰 시 회피할 수직 공기 run 상한(타일). cave_max_height와 맞춤.</summary>
         private const int MaxSafeSpawnAirRunBelow = 12;
@@ -66,6 +73,9 @@ namespace Nyangbingo.World
         public const string DoorElementType = "door";
         public const string DoorTopElementType = "door_top";
         public const int DoorHeightCells = 2;
+        public const float DefaultInsulationWallHitPoints = 600f;
+        public const float DefaultClayPlasteredWallHitPoints = 750f;
+        public const float DefaultIronInsulationWallHitPoints = 900f;
 
         public int Width { get; }
         public int Height { get; }
@@ -84,6 +94,28 @@ namespace Nyangbingo.World
         }
 
         public void BindRenderer(TilemapRenderer newRenderer) => renderer = newRenderer;
+
+        public void SetClayPlasterResolver(Func<Vector3Int, bool> resolver) =>
+            clayPlasterResolver = resolver;
+
+        public void SetForegroundPlacementBlocker(Func<Vector3Int, bool> blocker)
+        {
+            if (blocker != null && !foregroundPlacementBlockers.Contains(blocker))
+                foregroundPlacementBlockers.Add(blocker);
+        }
+
+        public void ClearForegroundPlacementBlocker(Func<Vector3Int, bool> blocker)
+        {
+            if (blocker != null) foregroundPlacementBlockers.Remove(blocker);
+        }
+
+        public bool IsForegroundPlacementBlocked(Vector3Int cell)
+        {
+            for (var index = 0; index < foregroundPlacementBlockers.Count; index++)
+                if (foregroundPlacementBlockers[index]?.Invoke(cell) == true)
+                    return true;
+            return false;
+        }
 
         public bool InBounds(Vector3Int cell) => cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
 
@@ -146,6 +178,154 @@ namespace Nyangbingo.World
             ApplyForegroundVisual(cell, elementType);
             RefreshEdgeOverlayAround(cell);
             renderer?.NotifyForegroundCollisionDirty();
+        public Vector3Int WorldToCell(Vector2 worldPosition) => renderer != null
+            ? renderer.WorldToCell(worldPosition)
+            : new Vector3Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y), 0);
+
+        public Vector3 GetCellCenterWorld(Vector3Int cell) => renderer != null
+            ? renderer.GetCellCenterWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
+
+        public Vector3 GetCellVisualAnchorWorld(Vector3Int cell) => renderer != null
+            ? renderer.GetCellVisualAnchorWorld(cell)
+            : new Vector3(cell.x + .5f, cell.y, cell.z);
+
+        public void AlignSpriteBoundsToCellBase(SpriteRenderer spriteRenderer, Vector3Int cell)
+        {
+            if (spriteRenderer == null) return;
+            var cellBounds = GetCellWorldBounds(cell);
+            var spriteBounds = spriteRenderer.bounds;
+            spriteRenderer.transform.position += new Vector3(
+                cellBounds.center.x - spriteBounds.center.x,
+                cellBounds.min.y - spriteBounds.min.y,
+                0f);
+        }
+
+        public Bounds GetCellWorldBounds(Vector3Int cell) => renderer != null
+            ? renderer.GetCellWorldBounds(cell)
+            : new Bounds(
+                new Vector3(cell.x + .5f, cell.y + .5f, cell.z),
+                new Vector3(1f, 1f, 0f));
+
+        public bool TryFindDamageableWall(Vector2 attackerPosition, Vector2 approachDirection,
+            float searchRange, out Vector3Int wallCell, out YokaiWallMaterial material)
+        {
+            wallCell = default;
+            material = YokaiWallMaterial.Default;
+            if (!IsFinite(attackerPosition.x) || !IsFinite(attackerPosition.y) ||
+                !IsFinite(approachDirection.x) || !IsFinite(approachDirection.y) ||
+                !IsFinite(searchRange) || searchRange < 0f)
+                return false;
+
+            if (approachDirection.sqrMagnitude <= Mathf.Epsilon) return false;
+            approachDirection.Normalize();
+
+            // Mob pivots sit near the middle of a tile while walls occupy a full grid cell.
+            // The half-tile allowance lets an adjacent mob reach the cell centre without
+            // allowing it to damage structures from multiple tiles away.
+            var effectiveRange = searchRange + .75f;
+            var extent = Mathf.CeilToInt(effectiveRange);
+            var center = new Vector3Int(
+                Mathf.FloorToInt(attackerPosition.x),
+                Mathf.FloorToInt(attackerPosition.y), 0);
+            var bestDistance = float.PositiveInfinity;
+            var found = false;
+            for (var y = center.y - extent; y <= center.y + extent; y++)
+            for (var x = center.x - extent; x <= center.x + extent; x++)
+            {
+                var candidate = new Vector3Int(x, y, 0);
+                if (!TryResolveWallMaterial(candidate, out var candidateMaterial)) continue;
+                var offset = (Vector2)GetCellCenterWorld(candidate) - attackerPosition;
+                var distance = offset.magnitude;
+                if (distance > effectiveRange || distance <= Mathf.Epsilon ||
+                    Vector2.Dot(offset / distance, approachDirection) < .25f ||
+                    distance >= bestDistance)
+                    continue;
+                found = true;
+                bestDistance = distance;
+                wallCell = candidate;
+                material = candidateMaterial;
+            }
+            return found;
+        }
+
+        public bool TryDamageWall(Vector3Int cell, float amount,
+            out float appliedDamage, out bool destroyed)
+        {
+            appliedDamage = 0f;
+            destroyed = false;
+            if (!IsFinite(amount) || amount <= 0f ||
+                !TryResolveWallMaterial(cell, out _))
+                return false;
+
+            var maximum = ResolveWallHitPoints(cell);
+            wallDamageTaken.TryGetValue(cell, out var currentDamage);
+            var remaining = Mathf.Max(0f, maximum - currentDamage);
+            if (remaining <= Mathf.Epsilon)
+            {
+                wallDamageTaken.Remove(cell);
+                destroyed = DestroyWallWithoutDrop(cell);
+                return destroyed;
+            }
+            appliedDamage = Mathf.Min(amount, remaining);
+            currentDamage += appliedDamage;
+            if (currentDamage + .0001f < maximum)
+            {
+                wallDamageTaken[cell] = currentDamage;
+                GameEvents.RaiseWallDurabilityChanged(
+                    cell, maximum - currentDamage, maximum, false);
+                return true;
+            }
+
+            wallDamageTaken.Remove(cell);
+            destroyed = DestroyWallWithoutDrop(cell);
+            if (destroyed)
+                GameEvents.RaiseWallDurabilityChanged(cell, 0f, maximum, true);
+            return destroyed;
+        }
+
+        public float GetWallRemainingHitPoints(Vector3Int cell)
+        {
+            if (!TryResolveWallMaterial(cell, out _)) return 0f;
+            wallDamageTaken.TryGetValue(cell, out var damage);
+            return Mathf.Max(0f, ResolveWallHitPoints(cell) - damage);
+        }
+
+        public List<WallDamageStateRecord> ExportWallDamage()
+        {
+            var records = new List<WallDamageStateRecord>(wallDamageTaken.Count);
+            foreach (var pair in wallDamageTaken.OrderBy(entry => entry.Key.x)
+                         .ThenBy(entry => entry.Key.y))
+            {
+                if (pair.Value <= 0f || !IsFinite(pair.Value) ||
+                    !TryResolveWallMaterial(pair.Key, out _))
+                    continue;
+                records.Add(new WallDamageStateRecord
+                {
+                    x = pair.Key.x,
+                    y = pair.Key.y,
+                    damageTaken = pair.Value
+                });
+            }
+            return records;
+        }
+
+        public bool RestoreWallDamage(IEnumerable<WallDamageStateRecord> records)
+        {
+            if (records == null) return true;
+            var restored = new Dictionary<Vector3Int, float>();
+            foreach (var record in records)
+            {
+                var cell = new Vector3Int(record.x, record.y, 0);
+                if (!IsFinite(record.damageTaken) || record.damageTaken <= 0f ||
+                    !TryResolveWallMaterial(cell, out _) ||
+                    record.damageTaken >= ResolveMaximumPossibleWallHitPoints(cell) ||
+                    restored.ContainsKey(cell))
+                    return false;
+                restored.Add(cell, record.damageTaken);
+            }
+            wallDamageTaken.Clear();
+            foreach (var pair in restored) wallDamageTaken.Add(pair.Key, pair.Value);
             return true;
         }
 
@@ -173,6 +353,8 @@ namespace Nyangbingo.World
                     out droppedItemId, out droppedAmount);
 
             var minedElementType = current.elementType;
+            wallDamageTaken.Remove(cell);
+            if (IsDoorOpen(cell)) RemoveOpenDoorState(cell);
             GameEvents.RaiseMiningImpact(minedElementType == WorldTileTypes.Dirt ||
                                           minedElementType == WorldTileTypes.Clay
                 ? MiningImpactSurface.Dirt
@@ -219,7 +401,7 @@ namespace Nyangbingo.World
                 return TryPlaceDoorFootprint(cell, consumeFrom, hardnessOverride);
 
             var current = tiles[cell.x, cell.y];
-            if (!current.IsAir) return false;
+            if (!current.IsAir || IsForegroundPlacementBlocked(cell)) return false;
 
             if (consumeFrom != null && !consumeFrom.TryRemove(elementType, 1)) return false;
 
@@ -228,6 +410,16 @@ namespace Nyangbingo.World
             GameEvents.RaiseTilePlaced(cell);
             return true;
         }
+            wallDamageTaken.Remove(cell);
+            var hardness = hardnessOverride > 0 ? hardnessOverride : ResolvePlacementHardness(elementType);
+            tiles[cell.x, cell.y] = new TileData
+            {
+                hardness = hardness,
+                isNaturalTerrain = false,
+                elementType = elementType,
+                backgroundElementType = string.IsNullOrEmpty(current.backgroundElementType) ? WorldTileTypes.Air : current.backgroundElementType,
+                naturalBackgroundElementType = string.IsNullOrEmpty(current.naturalBackgroundElementType) ? WorldTileTypes.Air : current.naturalBackgroundElementType
+            };
 
         /// <summary>드롭 없이 전경만 제거(단열 문 개폐용). raiseBroken=false면 OnTileBroken을 올리지 않는다.</summary>
         public bool TryClearForegroundWithoutDrop(Vector3Int cell, bool raiseBrokenEvent = true)
@@ -259,6 +451,11 @@ namespace Nyangbingo.World
             WriteForegroundCell(cell, elementType, hardnessOverride);
             RecordChange(cell, elementType, placed: true);
             GameEvents.RaiseTilePlaced(cell);
+            // Foreground insulation walls use the tile placement pipeline rather than the
+            // floor-standing environment pipeline. They must still satisfy the official
+            // "first wall placed" onboarding badge.
+            if (string.Equals(elementType, "insul_wall", StringComparison.Ordinal))
+                GameEvents.RaisePlacedObjectBuilt(elementType);
             return true;
         }
 
@@ -282,6 +479,76 @@ namespace Nyangbingo.World
             if (string.Equals(itemId, DoorElementType, StringComparison.Ordinal))
                 return CanPlaceDoorFootprint(cell);
             return GetTile(cell).IsAir;
+            return GetTile(cell).IsAir && !IsForegroundPlacementBlocked(cell);
+        }
+
+        public bool IsDoorOpen(Vector3Int cell) => openDoors.Contains(cell);
+
+        public bool TryGetDamageableWallMaterial(
+            Vector3Int cell, out YokaiWallMaterial material) =>
+            TryResolveWallMaterial(cell, out material);
+
+        public bool TryToggleNearestDoor(Vector2 origin, float radius, out bool isOpen)
+        {
+            isOpen = false;
+            if (!IsFinite(origin.x) || !IsFinite(origin.y) ||
+                !IsFinite(radius) || radius < 0f)
+                return false;
+            var extent = Mathf.CeilToInt(radius);
+            var center = WorldToCell(origin);
+            var radiusSquared = radius * radius;
+            var found = false;
+            var nearest = default(Vector3Int);
+            var nearestDistance = float.PositiveInfinity;
+            for (var y = center.y - extent; y <= center.y + extent; y++)
+            for (var x = center.x - extent; x <= center.x + extent; x++)
+            {
+                var cell = new Vector3Int(x, y, 0);
+                if (!InBounds(cell) ||
+                    TileIdAlias.ToCanonical(GetTile(cell).elementType) != "door")
+                    continue;
+                var delta = (Vector2)GetCellCenterWorld(cell) - origin;
+                var distance = delta.sqrMagnitude;
+                if (distance > radiusSquared || found && distance >= nearestDistance)
+                    continue;
+                found = true;
+                nearest = cell;
+                nearestDistance = distance;
+            }
+            if (!found) return false;
+            isOpen = !openDoors.Contains(nearest);
+            if (isOpen) OpenDoor(nearest);
+            else CloseDoor(nearest);
+            return true;
+        }
+
+        public List<DoorStateRecord> ExportDoorStates() => openDoors
+            .OrderBy(cell => cell.x)
+            .ThenBy(cell => cell.y)
+            .Select(cell => new DoorStateRecord
+            {
+                x = cell.x,
+                y = cell.y,
+                isOpen = true
+            })
+            .ToList();
+
+        public bool RestoreDoorStates(IEnumerable<DoorStateRecord> records)
+        {
+            if (records == null) return false;
+            var validated = new HashSet<Vector3Int>();
+            foreach (var record in records)
+            {
+                if (!record.isOpen) continue;
+                var cell = new Vector3Int(record.x, record.y, 0);
+                if (!InBounds(cell) ||
+                    TileIdAlias.ToCanonical(GetTile(cell).elementType) != "door" ||
+                    !validated.Add(cell))
+                    return false;
+            }
+            foreach (var cell in openDoors.ToArray()) CloseDoor(cell);
+            foreach (var cell in validated) OpenDoor(cell);
+            return true;
         }
 
         public static bool IsDoorFootprintElement(string elementType) =>
@@ -473,7 +740,7 @@ namespace Nyangbingo.World
             RecordBackgroundChange(cell, removedId, placed: false);
             GameEvents.RaiseTileBroken(cell);
             if (TryResolveDrop(removedId, out var item, out var amount))
-                WorldItemDropRequest.Request(item, amount, new Vector2(cell.x + .5f, cell.y + .5f));
+                WorldItemDropRequest.Request(item, amount, GetCellCenterWorld(cell));
             return true;
         }
 
@@ -509,12 +776,14 @@ namespace Nyangbingo.World
         public IReadOnlyList<TileChangeRecord> GetTileChangeRecords() => changeLog;
         public IReadOnlyList<TileChangeRecord> GetBackgroundChangeRecords() => backgroundChangeLog;
 
-        public bool RestoreTileChanges(IEnumerable<TileChangeRecord> records)
+        public bool RestoreTileChanges(IEnumerable<TileChangeRecord> records,
+            ISet<Vector3Int> allowedAlreadyClearedCells = null)
         {
             if (records == null) return false;
 
             changeLog.Clear();
-            changeIndexByCell.Clear();
+            var migratedAlreadyClearedCount = 0;
+            var migratedCancelledRoundTripCount = 0;
 
             foreach (var record in records)
             {
@@ -546,9 +815,46 @@ namespace Nyangbingo.World
                 }
                 else
                 {
-                    if (original.IsAir) return false;
-                    if (IndestructibleElementTypes.Contains(original.elementType)) return false;
-                    if (!string.Equals(original.elementType, tileId, StringComparison.Ordinal)) return false;
+                    if (original.IsAir)
+                    {
+                        // Generator fixes may make a formerly obstructed chest cell air by
+                        // default. A legacy save that explicitly mined that obstruction has
+                        // already reached the desired state, so retain its diff without
+                        // weakening mismatch validation for any other world cell.
+                        if (allowedAlreadyClearedCells != null &&
+                            allowedAlreadyClearedCells.Contains(cell))
+                        {
+                            RecordChange(cell, tileId, placed: false);
+                            migratedAlreadyClearedCount++;
+                            continue;
+                        }
+
+                        // Older logs retained only the final mutation per cell. A block placed
+                        // on pristine air and then mined became a lone removal. Its desired final
+                        // state already matches this regenerated air cell, so drop that cancelled
+                        // round trip while keeping validation strict for non-placeable IDs.
+                        if (PlacementHardness.ContainsKey(tileId))
+                        {
+                            migratedCancelledRoundTripCount++;
+                            continue;
+                        }
+
+                        Debug.LogError($"[Nyangbingo] Tile restore removal expected '{tileId}' " +
+                                       $"but found air at {cell}.");
+                        return false;
+                    }
+                    if (IndestructibleElementTypes.Contains(original.elementType))
+                    {
+                        Debug.LogError($"[Nyangbingo] Tile restore attempted to remove protected " +
+                                       $"'{original.elementType}' at {cell}.");
+                        return false;
+                    }
+                    if (!string.Equals(original.elementType, tileId, StringComparison.Ordinal))
+                    {
+                        Debug.LogError($"[Nyangbingo] Tile restore removal mismatch at {cell}: " +
+                                       $"saved='{tileId}', generated='{original.elementType}'.");
+                        return false;
+                    }
 
                     // A-16: 채굴 재생도 기존 배경을 유지한다(ResolveBackgroundFor로 새로 만들지 않음).
                     var cleared = original.WithoutForeground();
@@ -561,6 +867,12 @@ namespace Nyangbingo.World
                 RecordChange(cell, tileId, record.placed);
             }
 
+            if (migratedAlreadyClearedCount > 0)
+                Debug.LogWarning($"[Nyangbingo] Legacy chest-overlap tile removals migrated: " +
+                                 $"{migratedAlreadyClearedCount} record(s) were already clear.");
+            if (migratedCancelledRoundTripCount > 0)
+                Debug.LogWarning($"[Nyangbingo] Legacy cancelled tile placement/removal migrated: " +
+                                 $"{migratedCancelledRoundTripCount} record(s) already matched air.");
             return true;
         }
 
@@ -573,7 +885,7 @@ namespace Nyangbingo.World
             if (records == null) return true; // 구버전 세이브: 배경 이력 없음 = 성공.
 
             backgroundChangeLog.Clear();
-            backgroundChangeIndexByCell.Clear();
+            var migratedCancelledRoundTripCount = 0;
 
             foreach (var record in records)
             {
@@ -595,7 +907,18 @@ namespace Nyangbingo.World
                 }
                 else
                 {
-                    if (!current.IsWallpaperBackground) return false;
+                    if (!current.IsWallpaperBackground)
+                    {
+                        // Legacy last-write-only logs collapsed wallpaper place -> remove into
+                        // a lone removal. Natural/empty regenerated background is already the
+                        // correct final state.
+                        if (string.Equals(tileId, WorldTileTypes.Wallpaper, StringComparison.Ordinal))
+                        {
+                            migratedCancelledRoundTripCount++;
+                            continue;
+                        }
+                        return false;
+                    }
                     if (!TileIdAlias.EqualsCanonical(current.backgroundElementType, tileId)) return false;
                     var restored = current.WithBackgroundRestoredToNatural();
                     tiles[cell.x, cell.y] = restored;
@@ -605,6 +928,9 @@ namespace Nyangbingo.World
                 RecordBackgroundChange(cell, tileId, record.placed);
             }
 
+            if (migratedCancelledRoundTripCount > 0)
+                Debug.LogWarning($"[Nyangbingo] Legacy cancelled wallpaper placement/removal migrated: " +
+                                 $"{migratedCancelledRoundTripCount} record(s) already matched natural background.");
             return true;
         }
 
@@ -635,6 +961,41 @@ namespace Nyangbingo.World
             }
 
             return results;
+        }
+
+        public List<Vector3Int> GetValidSurfaceSpawnPositions(Vector3Int center, int minRange, int maxRange)
+        {
+            var results = new List<Vector3Int>();
+            if (minRange < 0 || maxRange < minRange) return results;
+
+            var minX = Mathf.Max(0, center.x - maxRange);
+            var maxX = Mathf.Min(Width - 1, center.x + maxRange);
+            var minRangeSquared = minRange * minRange;
+            var maxRangeSquared = maxRange * maxRange;
+            for (var x = minX; x <= maxX; x++)
+            {
+                var groundY = FindTopmostNaturalGroundY(x);
+                if (groundY < 0) continue;
+                var candidate = new Vector3Int(x, groundY + 1, center.z);
+                var dx = candidate.x - center.x;
+                var dy = candidate.y - center.y;
+                var distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared < minRangeSquared || distanceSquared > maxRangeSquared ||
+                    !IsSafeGroundSpawn(candidate)) continue;
+                results.Add(candidate);
+            }
+            return results;
+        }
+
+        private int FindTopmostNaturalGroundY(int x)
+        {
+            if (x < 0 || x >= Width) return -1;
+            for (var y = Height - 2; y >= 0; y--)
+            {
+                var tile = GetTile(new Vector3Int(x, y, 0));
+                if (!tile.IsAir && tile.isNaturalTerrain) return y;
+            }
+            return -1;
         }
 
         private bool IsSafeGroundSpawn(Vector3Int cell)
@@ -765,6 +1126,57 @@ namespace Nyangbingo.World
             renderer.Foreground.RefreshTile(cell);
         }
 
+        private void OpenDoor(Vector3Int cell)
+        {
+            if (!openDoors.Add(cell)) return;
+            Sprite sprite = null;
+            if (renderer?.Foreground != null)
+                sprite = renderer.Foreground.GetSprite(cell);
+            ApplyForegroundVisual(cell, null);
+            if (sprite != null && renderer?.Foreground != null)
+            {
+                var visual = new GameObject($"OpenDoor_{cell.x}_{cell.y}");
+                visual.transform.SetParent(renderer.Foreground.transform, false);
+                visual.transform.position = renderer.GetCellVisualAnchorWorld(cell) +
+                                            new Vector3(0f, .08f, 0f);
+                visual.transform.rotation = Quaternion.Euler(0f, 0f, -90f);
+                var spriteRenderer = visual.AddComponent<SpriteRenderer>();
+                spriteRenderer.sprite = sprite;
+                var tilemapRenderer =
+                    renderer.Foreground.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+                if (tilemapRenderer != null)
+                {
+                    spriteRenderer.sortingLayerID = tilemapRenderer.sortingLayerID;
+                    spriteRenderer.sortingOrder = tilemapRenderer.sortingOrder + 1;
+                }
+                openDoorVisuals[cell] = visual;
+            }
+            renderer?.NotifyForegroundCollisionDirty();
+        }
+
+        private void CloseDoor(Vector3Int cell)
+        {
+            if (!openDoors.Remove(cell)) return;
+            DestroyOpenDoorVisual(cell);
+            ApplyForegroundVisual(cell, "door");
+            renderer?.NotifyForegroundCollisionDirty();
+        }
+
+        private void RemoveOpenDoorState(Vector3Int cell)
+        {
+            openDoors.Remove(cell);
+            DestroyOpenDoorVisual(cell);
+        }
+
+        private void DestroyOpenDoorVisual(Vector3Int cell)
+        {
+            if (!openDoorVisuals.TryGetValue(cell, out var visual)) return;
+            openDoorVisuals.Remove(cell);
+            if (visual == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(visual);
+            else UnityEngine.Object.DestroyImmediate(visual);
+        }
+
         private void ApplyBackgroundVisual(Vector3Int cell, string elementType)
         {
             if (renderer == null || renderer.Background == null) return;
@@ -802,29 +1214,80 @@ namespace Nyangbingo.World
         private void RecordChange(Vector3Int cell, string tileId, bool placed)
         {
             var record = new TileChangeRecord { x = cell.x, y = cell.y, z = cell.z, tileId = tileId, placed = placed };
-            if (changeIndexByCell.TryGetValue(cell, out var index))
-            {
-                changeLog[index] = record;
-            }
-            else
-            {
-                changeIndexByCell[cell] = changeLog.Count;
-                changeLog.Add(record);
-            }
+            changeLog.Add(record);
         }
 
         private void RecordBackgroundChange(Vector3Int cell, string tileId, bool placed)
         {
             var record = new TileChangeRecord { x = cell.x, y = cell.y, z = cell.z, tileId = tileId, placed = placed };
-            if (backgroundChangeIndexByCell.TryGetValue(cell, out var index))
-            {
-                backgroundChangeLog[index] = record;
-            }
-            else
-            {
-                backgroundChangeIndexByCell[cell] = backgroundChangeLog.Count;
-                backgroundChangeLog.Add(record);
-            }
+            backgroundChangeLog.Add(record);
         }
+
+        private bool TryResolveWallMaterial(Vector3Int cell, out YokaiWallMaterial material)
+        {
+            material = YokaiWallMaterial.Default;
+            if (!InBounds(cell)) return false;
+            var id = TileIdAlias.ToCanonical(tiles[cell.x, cell.y].elementType);
+            if (string.Equals(id, "iron_insul_wall", StringComparison.Ordinal))
+            {
+                material = YokaiWallMaterial.IronHeatWall;
+                return true;
+            }
+            if (string.Equals(id, "door", StringComparison.Ordinal) && IsDoorOpen(cell))
+                return false;
+            return string.Equals(id, "insul_wall", StringComparison.Ordinal) ||
+                   string.Equals(id, "door", StringComparison.Ordinal) ||
+                   string.Equals(id, "roof", StringComparison.Ordinal);
+        }
+
+        private float ResolveWallHitPoints(Vector3Int cell)
+        {
+            var id = TileIdAlias.ToCanonical(GetTile(cell).elementType);
+            if (string.Equals(id, "iron_insul_wall", StringComparison.Ordinal))
+                return ReadPositiveGlobal("ice_storage_hp", DefaultIronInsulationWallHitPoints);
+            if (string.Equals(id, "insul_wall", StringComparison.Ordinal) &&
+                clayPlasterResolver?.Invoke(cell) == true)
+                return ReadPositiveGlobal("insul_clay_wall_hp", DefaultClayPlasteredWallHitPoints);
+            return ReadPositiveGlobal("ice_tile_hp", DefaultInsulationWallHitPoints);
+        }
+
+        private float ResolveMaximumPossibleWallHitPoints(Vector3Int cell)
+        {
+            var id = TileIdAlias.ToCanonical(GetTile(cell).elementType);
+            if (string.Equals(id, "iron_insul_wall", StringComparison.Ordinal))
+                return ReadPositiveGlobal("ice_storage_hp", DefaultIronInsulationWallHitPoints);
+            if (string.Equals(id, "insul_wall", StringComparison.Ordinal))
+                return ReadPositiveGlobal("insul_clay_wall_hp", DefaultClayPlasteredWallHitPoints);
+            return ReadPositiveGlobal("ice_tile_hp", DefaultInsulationWallHitPoints);
+        }
+
+        private float ReadPositiveGlobal(string key, float fallback)
+        {
+            var definition = catalog?.FindGlobal(key);
+            return definition != null && definition.TryGetFloat(out var value) &&
+                   IsFinite(value) && value > 0f
+                ? value
+                : fallback;
+        }
+
+        private bool DestroyWallWithoutDrop(Vector3Int cell)
+        {
+            if (!TryResolveWallMaterial(cell, out _)) return false;
+            var current = tiles[cell.x, cell.y];
+            var destroyedId = current.elementType;
+            if (IsDoorOpen(cell)) RemoveOpenDoorState(cell);
+            var cleared = current.WithoutForeground();
+            tiles[cell.x, cell.y] = cleared;
+            ApplyForegroundVisual(cell, null);
+            ApplyBackgroundVisual(cell, cleared.HasBackground ? cleared.backgroundElementType : null);
+            RefreshEdgeOverlayAround(cell);
+            renderer?.NotifyForegroundCollisionDirty();
+            RecordChange(cell, destroyedId, placed: false);
+            GameEvents.RaiseTileBroken(cell);
+            return true;
+        }
+
+        private static bool IsFinite(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

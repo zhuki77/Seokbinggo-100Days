@@ -9,6 +9,7 @@ clay,점토,resource,99,A,상층 T1 (v7 신설)
 iron_ore,철 광석,resource,99,A,중층 T2 — 화로 제련 투입
 copper_ore,구리 광석,resource,99,A,중층 T2 — 화로 제련 투입
 ice_shard,얼음 조각,resource,99,A,중층 T2 — 체온 회복 겸용
+catnip,캣닢,resource,99,A,상층·폐허 자연 스폰 군락(6/100타일·채집 2일 재생)+보물 상자 — 사용 시 HP+25 즉시. 얼음 조각(체온 응급)의 HP 대응물 (v31)
 icesteel_ore,얼음강철 원석,resource,99,A,심층 T3 — 용광로 제련 투입. 무쇠 발톱 하드 게이트
 frost_essence,서리정수,resource,99,A,심층 T3 최희소 — 빈도 4/100타일
 iron_ingot,철 주괴,material,99,A,화로 — 철 광석x2 + 석탄1
@@ -19,16 +20,16 @@ club_shard,도깨비 방망이 조각,material,99,A,방망이 도깨비 25%
 iron_scale,무쇠 비늘,material,99,A,불가사리 50%
 stolen_bundle,훔친 보따리,material,99,A,야광귀 — 절도 성공 개체 100%. 절도품 전액 반환+보너스
 shadow_shard,그림자 조각,material,99,A,어둑시니 40%
-gangcheol_scale,강철이 역린,material,99,A,강철이 100% 확정
+gangcheol_scale,강철이 역린,material,99,A,강철이 정예(v34) — 서리발톱 장갑 재료
 dokkaebi_fire_essence,도깨비불 정수,material,99,A,도깨비 대장 확정 — 도깨비불 등탑 유일 재료
 iron_forge_core,무쇠 용광심,material,99,B,어미 불가사리 확정 — 신기전 화차 유일 재료. 보스 B라 동반 B
-yeouiju,여의주,material,99,B,이무기 확정 — 빙정 냉각로 유일 재료. 보스 B라 동반 B
-drought_heart,가뭄 심장,material,99,A,강철이 확정 — 한파 코어 유일 재료
+yeouiju,여의주,material,99,A,이무기 최종보스(v34) 확정 — 빙정 냉각로 유일 재료
+drought_heart,가뭄 심장,material,99,A,강철이 정예(v34) — 한파 코어 유일 재료
 bare_claw,맨발톱,tool,0,A,T1 — 신체다. 인벤토리 미등재·제작 불가·분실 불가(4-4). max_stack 0 = 아이템화하지 않는다는 뜻
 iron_claw,무쇠 발톱,tool,1,A,T2 — 채굴 크리티컬 15%
 icesteel_claw,얼음강철 발톱,tool,1,A,T3 — 서리 서림 + 넓은 할퀴기
 dokkaebi_club,도깨비 방망이,weapon,1,A,넉백 2.0타일 특화
-frostclaw_gauntlet,서리발톱 장갑,weapon,1,A,엔드 무기 DPS 90
+frostclaw_gauntlet,서리발톱 장갑,weapon,1,A,엔드 무기 DPS 42
 hapjukseon,합죽선,weapon,1,A,밀치기 전용(기본 공격 없음) — 무기 슬롯 점유라 weapon
 cheolseon,철선,weapon,1,A,합죽선 진화 — 원본 소모. 채굴 불가
 workbench,작업대,station,99,A,1일차 밤 20초 온보딩
@@ -38,7 +39,7 @@ ice_anvil,얼음 모루,station,99,A,T3 제작대
 lantern,등불,placeable,99,A,반경 6타일 — 어둑시니 카운터. 연료 석탄
 sieve,체,placeable,99,A,반경 4타일 — 야광귀 카운터
 haetae_statue,해태 석상,placeable,99,A,반경 8타일 화염 -50%
-nest_bed,보금자리,placeable,99,A,냥잠 (v6)
+nest_bed,보금자리,placeable,99,A,리스폰 지점(4-8) — 냥잠은 v31.1 폐지
 magpie_nest,까치 둥지,placeable,99,A,까치 벗 입주 (v6) — 맵당 1개 제한(globals magpie_nest_limit)
 bell_rope,방울 금줄,placeable,99,A,경보 반경 10타일 (v11)
 iron_bell_rope,쇠 방울 금줄,placeable,99,A,방울 금줄 진화 — 원본 소모 (v12)
@@ -47,7 +48,7 @@ frost_lantern,서리 등불,placeable,99,A,등불 진화 — 원본 소모. 연�
 insul_wall,차열벽,placeable,99,A,모듈 P0 — HP600. modules.csv 기존 id 승계
 door,단열 문,placeable,99,A,모듈 P0 — 통행+밀폐 인정. modules.csv 기존 id 승계(범용 단어지만 개발 참조 보호 우선)
 roof,차열 지붕,placeable,99,A,모듈 P0 — 상부 밀폐. modules.csv 기존 id 승계
-jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 40슬롯(v29 확정). modules.csv 기존 id 승계
+jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 40슬롯(v29). modules.csv 기존 id 승계
 ice_core,얼음 저장고,placeable,99,A,모듈 P0 — 체온 회복 거점. modules.csv 기존 id 승계. ⚠️ 한파 코어(cold_wave_core)와 다른 물건
 seokbinggo_s1,석빙고 1단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s1. kit 오면 덮어쓰기
 seokbinggo_s2,석빙고 2단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s2. kit 오면 덮어쓰기
@@ -58,9 +59,9 @@ seokbinggo_s6,석빙고 6단계,material,99,A,석빙고 승급 — yokai_tear 56
 smithy,대장간,placeable,99,A,T4~T6 진화 제작대 — globals evolution_bench_t456. 석빙고 4단계 해금
 iron_insul_wall,무쇠 차열벽,placeable,99,A,HP900 — 불가사리 면역
 cold_device,냉기 장치,placeable,99,A,요괴 눈물 주 소비처(x40)
-dokkaebi_fire_tower,도깨비불 등탑,placeable,99,A,터렛 DPS10 유도·반경 8타일
-singijeon_cart,신기전 화차,placeable,99,B,터렛 DPS6 직선 관통 — 재료가 어미(B) 드랍이라 B
-ice_crystal_cooler,빙정 냉각로,placeable,99,B,냉각 — 재료가 이무기(B) 드랍이라 B
+dokkaebi_fire_tower,도깨비불 등탑,placeable,99,A,터렛 DPS10 유도·반경 8타일(v30 동배율 — 6-9 정본)
+singijeon_cart,신기전 화차,placeable,99,B,터렛 DPS12 직선 관통(v30 동배율) — 재료가 어미(B) 드랍이라 B
+ice_crystal_cooler,빙정 냉각로,placeable,99,A,냉각 — 이무기 최종보스(v34) 여의주 보상이라 A
 cold_wave_core,한파 코어,placeable,99,A,냉각 — 더위 단계 -1(전역 1기). 재료가 강철이(A) 드랍이라 A
 water_jar,물단지,placeable,99,A,소모형 냉기원 180초 — 온도 상한 25% (v21)
 ice_jar,얼음 항아리,placeable,99,A,연료형 냉기원 — 온도 상한 50% (v20)
@@ -74,8 +75,7 @@ wind_chime,풍경,placeable,99,A,장식 — 효과 0
 saekdong_cushion,색동 방석,placeable,99,A,장식 — 효과 0. 보금자리 스킨
 ssireum_satba,씨름 샅바,summon,99,A,도깨비 대장 소환
 iron_bait_pile,무쇠 미끼 더미,summon,99,B,어미 불가사리 소환 — MVP 제작 UI 미노출
-ice_altar_offering,얼음 제단 봉헌,summon,99,B,이무기 소환(심층 제단 전용) — MVP 제작 UI 미노출
-drought_talisman,가뭄 부적,summon,99,A,강철이 재소환(최초 격퇴 후 해금)
+ice_altar_offering,얼음 제단 봉헌,summon,99,A,이무기 최종보스 재소환(v34 강철이↔이무기 교체·최초 격퇴 후 해금)
 straw_helm,짚 투구,equipment,1,A,방어 1
 straw_armor,짚 갑옷,equipment,1,A,방어 1
 straw_boots,짚 신발,equipment,1,A,방어 1

@@ -20,6 +20,8 @@ namespace Nyangbingo.World
     public sealed class MainGameTurretRuntime : MonoBehaviour, IGameSecondsTickable
     {
         public const bool ProductHudNarrativeTextEnabled = false;
+        public const string NearbyInteractionPrompt =
+            "E · 상호작용    Shift+E · 회수";
 
         private sealed class TurretEntry
         {
@@ -32,6 +34,9 @@ namespace Nyangbingo.World
         private sealed class LanternEntry
         {
             public string ObjectId;
+            public string DefinitionId;
+            public string FuelItemId;
+            public float FuelSecondsPerUnit;
             public GameObject RuntimeRoot;
             public Light2D Light;
             public CounterAura Aura;
@@ -71,8 +76,16 @@ namespace Nyangbingo.World
         }
 
         private const string TurretItemId = "dokkaebi_fire_tower";
-        private const string LanternItemId = "lantern";
+        public const string LanternItemId = "lantern";
+        public const string FrostLanternItemId = "frost_lantern";
+        public const string SieveItemId = "sieve";
+        public const string IronSieveItemId = "iron_sieve";
+        public const string HaetaeStatueItemId = "haetae_statue";
+        public const string BellRopeItemId = "bell_rope";
+        public const string IronBellRopeItemId = "iron_bell_rope";
         private const string FuelItemId = "coal";
+        private const string FrostLanternFuelItemId = "frost_essence";
+        private const string FrostLanternFuelSecondsKey = "frost_lantern_fuel_sec";
         private const string IceFuelItemId = "ice_shard";
         private const float RetargetSeconds = .2f;
         private const float FireSeconds = 1f;
@@ -101,6 +114,8 @@ namespace Nyangbingo.World
             new Dictionary<string, TurretEntry>(StringComparer.Ordinal);
         private readonly Dictionary<string, LanternEntry> lanterns =
             new Dictionary<string, LanternEntry>(StringComparer.Ordinal);
+        private readonly Dictionary<string, GameObject> passiveCounterAuraRoots =
+            new Dictionary<string, GameObject>(StringComparer.Ordinal);
         private readonly List<CounterAura> activeCounterAuras = new List<CounterAura>();
         private readonly List<SpriteRenderer> projectileRenderers = new List<SpriteRenderer>();
         private HomingProjectilePool projectilePool;
@@ -108,6 +123,7 @@ namespace Nyangbingo.World
         private MainGameCraftingUiController productCraftingUi;
         private BossManager bossManager;
         private GameObject placementPreview;
+        private Transform placementPreviewVisual;
         private SpriteRenderer placementPreviewRenderer;
         private LineRenderer placementRangeRenderer;
         private Material placementRangeMaterial;
@@ -139,6 +155,7 @@ namespace Nyangbingo.World
         public IReadOnlyList<CounterAura> ActiveCounterAuras => activeCounterAuras;
         public bool IsPlacementPreviewActive => placementPreview != null;
         public bool IsPlacementPreviewValid => IsPlacementPreviewActive && placementValid;
+        public bool IsBottomInteractionPromptVisible { get; private set; }
         public static bool BlocksCombatInput => anyPlacementPreviewActive ||
                                                 placementPointerConsumedFrame == Time.frameCount;
         public static bool ConsumedEscapeThisFrame => placementEscapeConsumedFrame == Time.frameCount;
@@ -194,10 +211,22 @@ namespace Nyangbingo.World
             playerController = player;
         }
 
-        public void BindInteractionStatus(Text statusText) => interactionStatusText = statusText;
+        public void BindInteractionStatus(Text statusText)
+        {
+            if (interactionStatusText != null && interactionStatusText != statusText)
+            {
+                interactionStatusText.text = string.Empty;
+                interactionStatusText.gameObject.SetActive(false);
+            }
+            interactionStatusText = statusText;
+            if (interactionStatusText != null)
+                interactionStatusText.gameObject.SetActive(true);
+            ConfigureBottomInteractionStatus();
+        }
 
         private void Start()
         {
+            ConfigureBottomInteractionStatus();
             projectilePool = new HomingProjectilePool(4);
             craftingStationUi = FindAnyObjectByType<MainGameBossSummonUiController>();
             productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
@@ -270,11 +299,6 @@ namespace Nyangbingo.World
                 ShowMessage("등탑 시스템 배선이 준비되지 않았습니다.");
                 return false;
             }
-            if (runtimeServices.NapService?.IsNapping == true)
-            {
-                ShowMessage("냥잠 중에는 제작할 수 없습니다.");
-                return false;
-            }
             var recipe = TurretRecipe;
             if (recipe == null)
             {
@@ -315,7 +339,10 @@ namespace Nyangbingo.World
             placementPreview = new GameObject($"{definitionId}PlacementPreview");
             placementCamera = Camera.main;
             anyPlacementPreviewActive = true;
-            placementPreviewRenderer = placementPreview.AddComponent<SpriteRenderer>();
+            var visualObject = new GameObject("Art");
+            visualObject.transform.SetParent(placementPreview.transform, false);
+            placementPreviewVisual = visualObject.transform;
+            placementPreviewRenderer = visualObject.AddComponent<SpriteRenderer>();
             placementPreviewRenderer.sortingOrder = 30;
             placementPreviewRenderer.sprite = buildingArtCatalog?.Find(definitionId)?.Sprite;
             if (placementPreviewRenderer.sprite == null)
@@ -352,7 +379,13 @@ namespace Nyangbingo.World
         {
             if (!IsPlacementPreviewActive || !placementValid)
             {
-                ShowMessage("붉은 미리보기 위치에는 설치할 수 없습니다.");
+                var withinReach = playerController != null &&
+                                  MainGameTilePaletteController.IsWithinPlacementReach(
+                                      playerController.transform.position, placementPosition,
+                                      MainGameTilePaletteController.PlacementReachTiles);
+                ShowMessage(withinReach
+                    ? "붉은 미리보기 위치에는 설치할 수 없습니다."
+                    : "설치 거리가 너무 멉니다.");
                 return false;
             }
             var placed = TryPlaceTurretAt(placementPosition);
@@ -365,6 +398,7 @@ namespace Nyangbingo.World
             if (placementPreview != null) Destroy(placementPreview);
             if (placementRangeMaterial != null) Destroy(placementRangeMaterial);
             placementPreview = null;
+            placementPreviewVisual = null;
             placementPreviewRenderer = null;
             placementRangeRenderer = null;
             placementRangeMaterial = null;
@@ -408,11 +442,17 @@ namespace Nyangbingo.World
                     if (hasFuelRecord && !WorldSaveAdapter.RestoreTurretFuel(save, record.objectId, entry.Controller))
                         return false;
                 }
-                else if (string.Equals(record.definitionId, LanternItemId, StringComparison.Ordinal))
+                else if (IsInstalledLanternDefinition(record.definitionId))
                 {
-                    if (!TryRegisterPlacedLantern(record.objectId, out var lantern)) return false;
+                    if (!TryRegisterPlacedLantern(
+                            record.objectId, record.definitionId, out var lantern))
+                        return false;
                     if (hasFuelRecord && !TryRestoreLanternFuel(save, record.objectId, lantern)) return false;
                 }
+                else if (TryGetPassiveCounterAuraConfiguration(
+                             record.definitionId, out _, out _, out _, out _, out _) &&
+                         !TryRegisterPlacedCounterAura(record.objectId, record.definitionId))
+                    return false;
             }
             var restoredFuel = string.Join(", ", turrets.Values
                 .OrderBy(value => value.ObjectId, StringComparer.Ordinal)
@@ -431,10 +471,24 @@ namespace Nyangbingo.World
             else
                 placementPosition = (Vector2)playerController.transform.position +
                                     playerController.HorizontalFacingDirection * 2f;
-            placementPosition = new Vector2(Mathf.Floor(placementPosition.x) + .5f,
-                Mathf.Floor(placementPosition.y) + .5f);
+            var tileService = environmentState?.TileService;
+            var placementCell = tileService != null
+                ? tileService.WorldToCell(placementPosition)
+                : new Vector3Int(Mathf.FloorToInt(placementPosition.x),
+                    Mathf.FloorToInt(placementPosition.y), 0);
+            placementPosition = tileService != null
+                ? (Vector2)tileService.GetCellCenterWorld(placementCell)
+                : new Vector2(placementCell.x + .5f, placementCell.y + .5f);
             placementPreview.transform.position = placementPosition;
-            placementValid = environmentState.CanPlaceAt(placementPosition) &&
+            if (placementPreviewVisual != null)
+                placementPreviewVisual.localPosition = Vector3.zero;
+            tileService?.AlignSpriteBoundsToCellBase(
+                placementPreviewRenderer, placementCell);
+            placementValid = MainGameTilePaletteController.IsWithinPlacementReach(
+                                 playerController.transform.position, placementPosition,
+                                 MainGameTilePaletteController.PlacementReachTiles) &&
+                             environmentState.CanPlaceDefinitionAt(
+                                 placementDefinitionId, placementPosition) &&
                              GetInventoryCount(placementDefinitionId) > 0 &&
                              CanPlaceByTurretSlots(placementDefinitionId, out _);
             var color = placementValid ? new Color(.35f, 1f, .75f, .65f) : new Color(1f, .25f, .25f, .65f);
@@ -468,12 +522,7 @@ namespace Nyangbingo.World
             // Passing the placement through as a barrier candidate lets insul_wall/door/roof seal,
             // while lanterns, storage and other non-whitelisted placeables remain non-sealing.
             var placed = environmentState.TryPlace(record, barrierActive: true);
-            var runtimeRegistered = definitionId == TurretItemId
-                ? placed && TryRegisterPlacedTurret(record.objectId, 0, out _)
-                : definitionId == LanternItemId
-                    ? placed && TryRegisterPlacedLantern(record.objectId, out _)
-                : definitionId != JangdokStorageRuntime.DefinitionId ||
-                  placed && runtimeServices.JangdokStorage.TryRegister(record.objectId);
+            var runtimeRegistered = placed && TryRegisterPlacedObjectRuntime(record);
             if (!placed || !runtimeRegistered)
             {
                 environmentState.TryRemove(record.objectId);
@@ -502,11 +551,6 @@ namespace Nyangbingo.World
                 ShowMessage($"{ItemName(record.definitionId)} 제작 화면을 열 수 없습니다.");
                 return true;
             }
-            if (record.definitionId == "nest_bed")
-            {
-                playerController.TryToggleNapFromInteraction();
-                return true;
-            }
             if (record.definitionId == JangdokStorageRuntime.DefinitionId)
             {
                 if (productCraftingUi == null)
@@ -520,7 +564,8 @@ namespace Nyangbingo.World
                 TryRefuelTurret(turret);
                 return true;
             }
-            if (record.definitionId == LanternItemId && lanterns.TryGetValue(record.objectId, out var lantern))
+            if (IsInstalledLanternDefinition(record.definitionId) &&
+                lanterns.TryGetValue(record.objectId, out var lantern))
             {
                 TryRefuelLantern(lantern);
                 return true;
@@ -584,19 +629,21 @@ namespace Nyangbingo.World
 
         private void TryRefuelLantern(LanternEntry entry)
         {
-            if (!runtimeServices.PlayerInventory.TryRemove(FuelItemId, 1))
+            var fuelName = ItemName(entry.FuelItemId);
+            if (!runtimeServices.PlayerInventory.TryRemove(entry.FuelItemId, 1))
             {
-                ShowMessage($"등불 · 연료 {entry.FuelRemaining:0}초 · 석탄 없음");
+                ShowMessage($"{ItemName(entry.DefinitionId)} · 연료 {entry.FuelRemaining:0}초 · {fuelName} 없음");
                 return;
             }
-            if (!entry.AddFuel(FuelSecondsPerUnit))
+            if (!entry.AddFuel(entry.FuelSecondsPerUnit))
             {
-                runtimeServices.PlayerInventory.TryAdd(FuelItemId, 1);
-                ShowMessage("등불에 연료를 넣지 못했습니다.");
+                runtimeServices.PlayerInventory.TryAdd(entry.FuelItemId, 1);
+                ShowMessage($"{ItemName(entry.DefinitionId)}에 연료를 넣지 못했습니다.");
                 return;
             }
-            ShowMessage($"등불 · 석탄 1개 투입 · 연료 {entry.FuelRemaining:0}초");
+            ShowMessage($"{ItemName(entry.DefinitionId)} · {fuelName} 1개 투입 · 연료 {entry.FuelRemaining:0}초");
             Debug.Log($"[Nyangbingo] Installed lantern refueled: id={entry.ObjectId}, " +
+                      $"definition={entry.DefinitionId}, fuelItem={entry.FuelItemId}, " +
                       $"fuel={entry.FuelRemaining:0.0}.");
             BuildStateChanged?.Invoke();
         }
@@ -688,6 +735,7 @@ namespace Nyangbingo.World
                 turrets.Remove(record.objectId);
             }
             RemoveLantern(record.objectId);
+            RemovePassiveCounterAura(record.objectId);
             ShowMessage($"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.");
             Debug.Log($"[Nyangbingo] Product placeable recovered: id={record.objectId}, " +
                       $"definition={record.definitionId}.");
@@ -712,32 +760,33 @@ namespace Nyangbingo.World
             if (bossManager?.IsBossActive == true)
             {
                 interactionStatusText.text = string.Empty;
+                IsBottomInteractionPromptVisible = false;
                 return;
             }
-            if (TryGetNearestPlacedObject(out var record))
+            if (TryGetNearestPlacedObject(out _))
             {
-                var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
-                if (craftingStation != CraftingStation.None)
-                    interactionStatusText.text = "E  ·  ⇧E";
-                else if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
-                    interactionStatusText.text = $"{turret.Controller.FuelRemaining:0}  ·  E  ·  ⇧E";
-                else if (record.definitionId == LanternItemId && lanterns.TryGetValue(record.objectId, out var lantern))
-                    interactionStatusText.text = $"{lantern.FuelRemaining:0}  ·  E  ·  ⇧E";
-                else if (record.definitionId == JangdokStorageRuntime.DefinitionId)
-                    interactionStatusText.text = "40  ·  E  ·  ⇧E";
-                else if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
-                             out var capPercent, out var active))
-                {
-                    var lifetime = float.IsPositiveInfinity(remaining) ? "∞" : $"{remaining:0}";
-                    interactionStatusText.text = $"{capPercent:0}%  ·  {(active ? lifetime : "0")}  ·  E  ·  ⇧E";
-                }
-                else
-                    interactionStatusText.text = "E  ·  ⇧E";
+                interactionStatusText.text = NearbyInteractionPrompt;
+                IsBottomInteractionPromptVisible = true;
                 return;
             }
             interactionStatusText.text = IsPlacementPreviewActive
-                ? $"{(placementValid ? "✓  ·  LMB" : "✕")}  ·  ESC/RMB"
+                ? $"{(placementValid ? "LMB · 설치" : "설치 불가")}    ESC/RMB · 취소"
                 : string.Empty;
+            IsBottomInteractionPromptVisible = !string.IsNullOrEmpty(interactionStatusText.text);
+        }
+
+        private void ConfigureBottomInteractionStatus()
+        {
+            if (interactionStatusText == null) return;
+            var rect = interactionStatusText.rectTransform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, MainGameTilePaletteController.BottomStatusBaseY);
+            rect.sizeDelta = new Vector2(MainGameTilePaletteController.PaletteLogicalWidth,
+                MainGameTilePaletteController.BottomStatusLineHeight);
+            rect.localScale = Vector3.one;
+            interactionStatusText.fontSize = 9;
+            interactionStatusText.alignment = TextAnchor.MiddleCenter;
+            interactionStatusText.raycastTarget = false;
         }
 
         private bool TryRegisterPlacedTurret(string objectId, int initialFuelUnits, out TurretEntry entry)
@@ -759,10 +808,13 @@ namespace Nyangbingo.World
             return true;
         }
 
-        private bool TryRegisterPlacedLantern(string objectId, out LanternEntry entry)
+        private bool TryRegisterPlacedLantern(
+            string objectId, string definitionId, out LanternEntry entry)
         {
             entry = null;
-            if (lanterns.ContainsKey(objectId) || !environmentState.TryGetVisual(objectId, out var visual))
+            if (!IsInstalledLanternDefinition(definitionId) ||
+                lanterns.ContainsKey(objectId) ||
+                !environmentState.TryGetVisual(objectId, out var visual))
                 return false;
 
             var runtimeRoot = new GameObject("InstalledLanternRuntime");
@@ -785,6 +837,11 @@ namespace Nyangbingo.World
             entry = new LanternEntry
             {
                 ObjectId = objectId,
+                DefinitionId = definitionId,
+                FuelItemId = FuelItemForInstalledLantern(definitionId),
+                FuelSecondsPerUnit = definitionId == FrostLanternItemId
+                    ? FindGlobalFloat(FrostLanternFuelSecondsKey, FuelSecondsPerUnit)
+                    : FuelSecondsPerUnit,
                 RuntimeRoot = runtimeRoot,
                 Light = light,
                 Aura = aura
@@ -793,6 +850,76 @@ namespace Nyangbingo.World
             lanterns.Add(objectId, entry);
             activeCounterAuras.Add(aura);
             return true;
+        }
+
+        private bool TryRegisterPlacedObjectRuntime(PlacedObjectRecord record)
+        {
+            if (record.definitionId == TurretItemId)
+                return TryRegisterPlacedTurret(record.objectId, 0, out _);
+            if (IsInstalledLanternDefinition(record.definitionId))
+                return TryRegisterPlacedLantern(
+                    record.objectId, record.definitionId, out _);
+            if (TryGetPassiveCounterAuraConfiguration(
+                    record.definitionId, out _, out _, out _, out _, out _))
+                return TryRegisterPlacedCounterAura(record.objectId, record.definitionId);
+            return record.definitionId != JangdokStorageRuntime.DefinitionId ||
+                   runtimeServices.JangdokStorage.TryRegister(record.objectId);
+        }
+
+        public static bool IsInstalledLanternDefinition(string definitionId) =>
+            definitionId == LanternItemId || definitionId == FrostLanternItemId;
+
+        public static string FuelItemForInstalledLantern(string definitionId) =>
+            definitionId == FrostLanternItemId ? FrostLanternFuelItemId : FuelItemId;
+
+        private bool TryRegisterPlacedCounterAura(string objectId, string definitionId)
+        {
+            if (passiveCounterAuraRoots.ContainsKey(objectId) ||
+                !TryGetPassiveCounterAuraConfiguration(
+                    definitionId, out var kind, out var radius, out var effect,
+                    out var duration, out var cooldown) ||
+                !environmentState.TryGetVisual(objectId, out var visual))
+                return false;
+
+            var runtimeRoot = new GameObject("InstalledCounterAuraRuntime");
+            runtimeRoot.transform.SetParent(visual.transform, false);
+            var aura = runtimeRoot.AddComponent<CounterAura>();
+            aura.ConfigureForRuntime(kind, radius, effect, duration, cooldown);
+            passiveCounterAuraRoots.Add(objectId, runtimeRoot);
+            activeCounterAuras.Add(aura);
+            return true;
+        }
+
+        public static bool TryGetPassiveCounterAuraConfiguration(
+            string definitionId, out CounterAuraKind kind, out float radius,
+            out float effect, out float duration, out float cooldown)
+        {
+            kind = default;
+            radius = effect = duration = cooldown = 0f;
+            switch (definitionId)
+            {
+                case SieveItemId:
+                case IronSieveItemId:
+                    kind = CounterAuraKind.Sieve;
+                    radius = 4f;
+                    effect = 1.5f;
+                    duration = 12f;
+                    cooldown = 30f;
+                    return true;
+                case HaetaeStatueItemId:
+                    kind = CounterAuraKind.Haetae;
+                    radius = 8f;
+                    effect = .5f;
+                    return true;
+                case BellRopeItemId:
+                case IronBellRopeItemId:
+                    kind = CounterAuraKind.BellRope;
+                    radius = 10f;
+                    cooldown = 4f;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private float FindGlobalFloat(string key, float fallback)
@@ -821,6 +948,18 @@ namespace Nyangbingo.World
             lanterns.Remove(objectId);
             activeCounterAuras.Remove(entry.Aura);
             if (entry.RuntimeRoot != null) Destroy(entry.RuntimeRoot);
+        }
+
+        private void RemovePassiveCounterAura(string objectId)
+        {
+            if (!passiveCounterAuraRoots.TryGetValue(objectId, out var runtimeRoot)) return;
+            passiveCounterAuraRoots.Remove(objectId);
+            if (runtimeRoot != null)
+            {
+                var aura = runtimeRoot.GetComponent<CounterAura>();
+                if (aura != null) activeCounterAuras.Remove(aura);
+                Destroy(runtimeRoot);
+            }
         }
 
         private IReadOnlyList<Health> FindHostileTargets()
@@ -885,6 +1024,9 @@ namespace Nyangbingo.World
             foreach (var entry in lanterns.Values)
                 if (entry.RuntimeRoot != null) Destroy(entry.RuntimeRoot);
             lanterns.Clear();
+            foreach (var runtimeRoot in passiveCounterAuraRoots.Values)
+                if (runtimeRoot != null) Destroy(runtimeRoot);
+            passiveCounterAuraRoots.Clear();
             activeCounterAuras.Clear();
         }
 

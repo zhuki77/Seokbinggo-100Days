@@ -33,14 +33,14 @@ namespace Nyangbingo.Debugging
         /// </summary>
         private void TryInteract(TileService tileService)
         {
-            var cell = WorldCellUnderMouse();
+            var cell = WorldCellUnderMouse(tileService);
             if (harness != null && harness.TryOpenChest(cell)) return;
             TryPlace(tileService, cell);
         }
 
         private void TryMine(TileService tileService)
         {
-            var cell = WorldCellUnderMouse();
+            var cell = WorldCellUnderMouse(tileService);
             if (tileService.TryBreakForeground(cell, toolTier, out var itemId, out var amount))
             {
                 var dropText = string.IsNullOrEmpty(itemId) ? "드랍 없음(카탈로그 미연결)" : $"{itemId} x{amount}";
@@ -61,10 +61,10 @@ namespace Nyangbingo.Debugging
                 Debug.Log($"[Nyangbingo] 설치 실패 {cell} — 이미 막혀 있거나 범위 밖입니다.");
         }
 
-        private static Vector3Int WorldCellUnderMouse()
+        private static Vector3Int WorldCellUnderMouse(TileService tileService)
         {
             var worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            return new Vector3Int(Mathf.FloorToInt(worldPoint.x), Mathf.FloorToInt(worldPoint.y), 0);
+            return tileService.WorldToCell(worldPoint);
         }
     }
 }

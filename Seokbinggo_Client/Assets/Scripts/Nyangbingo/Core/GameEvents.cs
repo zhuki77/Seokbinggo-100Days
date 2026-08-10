@@ -24,6 +24,7 @@ namespace Nyangbingo.Core
         public static event Action OnPlayerDamaged;
         public static event Action OnYokaiDamaged;
         public static event Action OnMiningCritical;
+        public static event Action<Vector3Int, bool, bool> OnMiningTargetChanged;
         public static event Action<Vector3Int, float> OnMiningProgress;
         public static event Action<Vector3Int, string, int, bool> OnMiningResult;
         /// <summary>채굴 조준 하이라이트. visible=false면 숨김.</summary>
@@ -33,10 +34,10 @@ namespace Nyangbingo.Core
         public static event Action<string> OnPlacedObjectBuilt;
         public static event Action OnChestOpened;
         public static event Action OnWallDamaged;
+        public static event Action<Vector3Int, float, float, bool> OnWallDurabilityChanged;
         public static event Action OnBossFled;
         public static event Action OnEoduksiniBloomed;
         public static event Action OnPlayerHeatPanting;
-        public static event Action OnNapStarted;
         public static event Action OnGoalBadgeCompleted;
         public static event Action OnPlayerDied;
 
@@ -56,6 +57,8 @@ namespace Nyangbingo.Core
         public static void RaisePlayerDamaged() => OnPlayerDamaged?.Invoke();
         public static void RaiseYokaiDamaged() => OnYokaiDamaged?.Invoke();
         public static void RaiseMiningCritical() => OnMiningCritical?.Invoke();
+        public static void RaiseMiningTargetChanged(Vector3Int cell, bool visible, bool mineable) =>
+            OnMiningTargetChanged?.Invoke(cell, visible, mineable);
         public static void RaiseMiningProgress(Vector3Int cell, float normalizedProgress) =>
             OnMiningProgress?.Invoke(cell, Mathf.Clamp01(normalizedProgress));
         public static void RaiseMiningResult(Vector3Int cell, string itemName, int amount, bool critical) =>
@@ -73,10 +76,13 @@ namespace Nyangbingo.Core
         }
         public static void RaiseChestOpened() => OnChestOpened?.Invoke();
         public static void RaiseWallDamaged() => OnWallDamaged?.Invoke();
+        public static void RaiseWallDurabilityChanged(
+            Vector3Int cell, float current, float maximum, bool destroyed) =>
+            OnWallDurabilityChanged?.Invoke(
+                cell, Mathf.Max(0f, current), Mathf.Max(0f, maximum), destroyed);
         public static void RaiseBossFled() => OnBossFled?.Invoke();
         public static void RaiseEoduksiniBloomed() => OnEoduksiniBloomed?.Invoke();
         public static void RaisePlayerHeatPanting() => OnPlayerHeatPanting?.Invoke();
-        public static void RaiseNapStarted() => OnNapStarted?.Invoke();
         public static void RaiseGoalBadgeCompleted() => OnGoalBadgeCompleted?.Invoke();
         public static void RaisePlayerDied() => OnPlayerDied?.Invoke();
     }

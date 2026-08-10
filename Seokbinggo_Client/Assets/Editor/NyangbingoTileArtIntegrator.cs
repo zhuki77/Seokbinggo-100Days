@@ -30,6 +30,7 @@ namespace Nyangbingo.Editor
             "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset";
         private const string GameplayArtFolder = "Assets/Art/Gameplay";
         private const string GameplayArtCatalogPath = "Assets/Art/Gameplay/GameplayArtCatalog.asset";
+        private const string ImugiElectricAttackFile = "imugi_electric_attack.aseprite";
         private const string BuildingArtFolder = "Assets/Art/Buildings";
         private const string BuildingArtCatalogPath = "Assets/Art/Buildings/BuildingArtCatalog.asset";
         private const string BuildingPreviewScenePath = "Assets/Scenes/BuildingArtPreview.unity";
@@ -74,11 +75,27 @@ namespace Nyangbingo.Editor
                 ["eoduksini"] = "eoduksini.aseprite",
                 ["gangcheol"] = "gangcheol.aseprite",
                 ["gangcheol_body"] = "gangcheol_body.png",
+                // The delivered Gangcheol filenames are reversed by physical role:
+                // post_tail is the larger proximal piece and pre_tail is the smaller tip.
+                ["gangcheol_pre_tail"] = "gangcheol_post_tail.aseprite",
+                ["gangcheol_post_tail"] = "gangcheol_pre_tail.aseprite",
                 ["king_dokkaebi"] = "king_dokkaebi.aseprite",
                 ["mother_bulgasari"] = "mother_bulgasari.aseprite",
                 ["gangcheol_boss"] = "gangcheol.aseprite",
-                ["imugi"] = "imugi.aseprite",
-                ["imugi_body"] = "imugi_body.aseprite"
+                ["imugi"] = "imugi_head2.aseprite",
+                ["imugi_body"] = "imugi_body.aseprite",
+                ["imugi_pre_tail"] = "imugi_pre_tail.aseprite",
+                ["imugi_post_tail"] = "imugi_post_tail.aseprite",
+                ["gaekgwi"] = "gaekgwi.aseprite",
+                ["magpie"] = "magpie.aseprite"
+            };
+
+        private static readonly IReadOnlyDictionary<string, string> GaekgwiEffectArtFiles =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["dash"] = "gaekgwi_dash_horizontal.aseprite",
+                ["directional"] = "gaekgwi_dash_directional.aseprite",
+                ["impact"] = "gaekgwi_cold.aseprite"
             };
 
         private static readonly IReadOnlyDictionary<string, string> ItemArtFiles =
@@ -117,6 +134,7 @@ namespace Nyangbingo.Editor
                 ["iron_bait_pile"] = "iron_bait_pile.aseprite",
                 ["ice_altar_offering"] = "ice_altar_offering.aseprite",
                 ["drought_talisman"] = "drought_talisman.aseprite",
+                ["catnip"] = "catnip.aseprite",
                 // v29: wallpaper has no dedicated icon art. Use the delivered upper-layer background tile.
                 ["wallpaper"] = "Assets/Art/Tiles/t_bg_dirt.aseprite"
             };
@@ -343,7 +361,11 @@ namespace Nyangbingo.Editor
             foreach (var pair in CharacterArtFiles)
             {
                 var artPath = $"{CharacterArtFolder}/{pair.Value}";
-                if (!ConfigureAsepriteImporter(artPath, failures)) continue;
+                var imported = string.Equals(
+                    System.IO.Path.GetExtension(artPath), ".png", StringComparison.OrdinalIgnoreCase)
+                    ? ConfigureCharacterPngImporter(artPath, failures)
+                    : ConfigureAsepriteImporter(artPath, failures);
+                if (!imported) continue;
 
                 var sprite = FindDefaultSprite(artPath);
                 if (sprite == null)
@@ -354,6 +376,10 @@ namespace Nyangbingo.Editor
 
                 sprites[pair.Key] = sprite;
             }
+
+            foreach (var pair in GaekgwiEffectArtFiles)
+                ConfigureAsepriteImporter($"{CharacterArtFolder}/{pair.Value}", failures);
+            var imugiElectricFrames = LoadImugiElectricAttackFrames(failures);
 
             if (failures.Count > 0)
             {
@@ -380,36 +406,79 @@ namespace Nyangbingo.Editor
                 entry.FindPropertyRelative("id").stringValue = pair.Key;
                 entry.FindPropertyRelative("sprite").objectReferenceValue = sprites[pair.Key];
                 entry.FindPropertyRelative("sourceFacesRight").boolValue =
-                    string.Equals(pair.Key, "mother_bulgasari", StringComparison.Ordinal);
+                    string.Equals(pair.Key, "mother_bulgasari", StringComparison.Ordinal) ||
+                    string.Equals(pair.Key, "gaekgwi", StringComparison.Ordinal);
                 var artPath = $"{CharacterArtFolder}/{pair.Value}";
                 var idleTag = string.Equals(pair.Key, "imugi", StringComparison.Ordinal)
                     ? "default"
                     : "idle";
                 var specialTag = string.Equals(pair.Key, "imugi", StringComparison.Ordinal)
                     ? "marble"
+                    : string.Equals(pair.Key, "gaekgwi", StringComparison.Ordinal)
+                        ? "dash"
                     : "skill";
+                var idleFrames = string.Equals(pair.Key, "magpie", StringComparison.Ordinal)
+                    ? FindNamedSpriteFrames(
+                        artPath,
+                        "Frame_0",
+                        "Frame_1",
+                        "Frame_2",
+                        "Frame_3")
+                    : FindAnimationFrames(artPath, idleTag);
+                var isMagpie = string.Equals(pair.Key, "magpie", StringComparison.Ordinal);
                 SetSpriteArray(entry.FindPropertyRelative("idleFrames"),
-                    FindAnimationFrames(artPath, idleTag));
+                    isMagpie && idleFrames.Count > 0
+                        ? new[] { idleFrames[0] }
+                        : idleFrames);
                 SetSpriteArray(entry.FindPropertyRelative("walkFrames"),
-                    FindAnimationFrames(artPath, "walk"));
+                    isMagpie
+                        ? idleFrames.Skip(1).Take(2).ToArray()
+                        : FindAnimationFrames(artPath, "walk"));
                 SetSpriteArray(entry.FindPropertyRelative("attackFrames"),
-                    FindAnimationFrames(artPath, "attack"));
+                    isMagpie && idleFrames.Count > 3
+                        ? new[] { idleFrames[3] }
+                        : FindAnimationFrames(artPath, "attack"));
                 SetSpriteArray(entry.FindPropertyRelative("hitFrames"),
                     FindAnimationFrames(artPath, "hit"));
                 SetSpriteArray(entry.FindPropertyRelative("deathFrames"),
                     FindAnimationFrames(artPath, "die"));
                 SetSpriteArray(entry.FindPropertyRelative("fleeFrames"),
                     FindAnimationFrames(artPath, "flee"));
-                SetSpriteArray(entry.FindPropertyRelative("specialFrames"),
-                    FindAnimationFrames(artPath, specialTag));
+                var specialFrames = string.Equals(
+                    pair.Key, "king_dokkaebi", StringComparison.Ordinal)
+                    ? FindNamedSpriteFrames(
+                        artPath,
+                        "Frame_12",
+                        "Frame_13",
+                        "Frame_14",
+                        "Frame_15",
+                        "Frame_16")
+                    : FindAnimationFrames(artPath, specialTag);
+                SetSpriteArray(entry.FindPropertyRelative("specialFrames"), specialFrames);
+                if (string.Equals(pair.Key, "gaekgwi", StringComparison.Ordinal))
+                {
+                    SetSpriteArray(entry.FindPropertyRelative("dashEffectFrames"),
+                        FindLongestAnimationFrames(
+                            $"{CharacterArtFolder}/{GaekgwiEffectArtFiles["dash"]}"));
+                    SetSpriteArray(entry.FindPropertyRelative("impactEffectFrames"),
+                        FindLongestAnimationFrames(
+                            $"{CharacterArtFolder}/{GaekgwiEffectArtFiles["impact"]}"));
+                }
+                else
+                {
+                    SetSpriteArray(entry.FindPropertyRelative("dashEffectFrames"), Array.Empty<Sprite>());
+                    SetSpriteArray(entry.FindPropertyRelative("impactEffectFrames"), Array.Empty<Sprite>());
+                }
             }
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
+            SaveImugiElectricAttackFrames(imugiElectricFrames);
             AssetDatabase.SaveAssets();
 
             Debug.Log(
                 $"[Nyangbingo] Character art integration completed: {sprites.Count}/{CharacterArtFiles.Count}, " +
-                $"PPU={PixelsPerUnit:0}. Recreate MainGame scene to wire the catalog.");
+                $"Imugi electric {imugiElectricFrames.Count}/7, PPU={PixelsPerUnit:0}. " +
+                "Recreate MainGame scene to wire the catalog.");
         }
 
         [MenuItem("Nyangbingo/Art/Validate Character Art")]
@@ -442,6 +511,12 @@ namespace Nyangbingo.Editor
                     ValidateAnimationFrames(pair.Key, entry, failures);
                 }
             }
+            var gameplayCatalog =
+                AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            if (gameplayCatalog == null || gameplayCatalog.ImugiElectricAttackFrames.Count != 7)
+                failures.Add(
+                    $"imugi electric: expected 7 frames, actual=" +
+                    $"{gameplayCatalog?.ImugiElectricAttackFrames.Count ?? 0}");
 
             if (failures.Count > 0)
             {
@@ -453,7 +528,7 @@ namespace Nyangbingo.Editor
 
             Debug.Log(
                 $"[Nyangbingo] Character art and animation validation passed: " +
-                $"{CharacterArtFiles.Count}/{CharacterArtFiles.Count}.");
+                $"{CharacterArtFiles.Count}/{CharacterArtFiles.Count}, Imugi electric 7/7.");
         }
 
         [MenuItem("Nyangbingo/Art/Apply Item Art")]
@@ -622,35 +697,35 @@ namespace Nyangbingo.Editor
             var failures = new List<string>();
             var temperaturePath = $"{GameplayArtFolder}/temperature.aseprite";
             var attackPath = $"{GameplayArtFolder}/player_attack.aseprite";
-            var napPath = $"{GameplayArtFolder}/zzz.aseprite";
             var miningPath = $"{GameplayArtFolder}/mining_crack.aseprite";
             var warningPath = $"{GameplayArtFolder}/boss_warning.aseprite";
-            var gangcheoriFirePath = $"{GameplayArtFolder}/gangcheori_special_fire.png";
+            var gangcheoriFirePath = $"{GameplayArtFolder}/gangcheori_special_fire.aseprite";
+            var playerFireHitPath = $"{GameplayArtFolder}/player_fire_hit.aseprite";
             var projectilePath = $"{GameplayArtFolder}/blue_projectile.aseprite";
             ConfigureAsepriteImporter(temperaturePath, failures);
             ConfigureAsepriteImporter(attackPath, failures);
-            ConfigureAsepriteImporter(napPath, failures);
             ConfigureAsepriteImporter(miningPath, failures);
             ConfigureAsepriteImporter(warningPath, failures);
+            ConfigureAsepriteImporter(gangcheoriFirePath, failures);
+            ConfigureAsepriteImporter(playerFireHitPath, failures);
             ConfigureAsepriteImporter(projectilePath, failures);
             var temperatureFrames = FindLongestAnimationFrames(temperaturePath);
             var attackFrames = FindLongestAnimationFrames(attackPath);
-            var napFrames = FindLongestAnimationFrames(napPath);
             var miningFrames = FindLongestAnimationFrames(miningPath);
             var warningFrames = FindLongestAnimationFrames(warningPath);
-            var gangcheoriFireFrames = AssetDatabase.LoadAllAssetsAtPath(gangcheoriFirePath)
-                .OfType<Sprite>()
-                .OrderBy(sprite => sprite.name, StringComparer.Ordinal)
-                .ToArray();
+            var gangcheoriFireFrames = FindLongestAnimationFrames(gangcheoriFirePath);
+            var playerFireHitFrames = FindLongestAnimationFrames(playerFireHitPath);
+            var imugiElectricFrames = LoadImugiElectricAttackFrames(failures);
             var projectileFrames = FindLongestAnimationFrames(projectilePath);
             if (temperatureFrames.Count == 0) failures.Add("온도 HUD Sprite 프레임이 없습니다.");
             if (attackFrames.Count == 0) failures.Add("서리발톱 공격 이펙트 Sprite 프레임이 없습니다.");
-            if (napFrames.Count == 0) failures.Add("냥잠 zzz Sprite 프레임이 없습니다.");
             if (miningFrames.Count == 0) failures.Add("채굴 균열 Sprite 프레임이 없습니다.");
             if (warningFrames.Count == 0) failures.Add("보스 경고 Sprite 프레임이 없습니다.");
             if (projectileFrames.Count == 0) failures.Add("파란 투사체 Sprite 프레임이 없습니다.");
-            if (gangcheoriFireFrames.Length == 0)
+            if (gangcheoriFireFrames.Count == 0)
                 failures.Add("Gangcheori special fire effect frames are missing.");
+            if (playerFireHitFrames.Count == 0)
+                failures.Add("Player fire-hit effect frames are missing.");
             if (failures.Count > 0)
             {
                 Debug.LogError("[Nyangbingo] Combat/temperature art integration failed.\n- " +
@@ -667,11 +742,14 @@ namespace Nyangbingo.Editor
             var serializedCatalog = new SerializedObject(catalog);
             SetSpriteArray(serializedCatalog.FindProperty("temperatureFrames"), temperatureFrames);
             SetSpriteArray(serializedCatalog.FindProperty("playerAttackFrames"), attackFrames);
-            SetSpriteArray(serializedCatalog.FindProperty("napFrames"), napFrames);
             SetSpriteArray(serializedCatalog.FindProperty("miningCrackFrames"), miningFrames);
             SetSpriteArray(serializedCatalog.FindProperty("bossWarningFrames"), warningFrames);
             SetSpriteArray(serializedCatalog.FindProperty("gangcheoriSpecialFireFrames"),
                 gangcheoriFireFrames);
+            SetSpriteArray(serializedCatalog.FindProperty("playerFireHitFrames"),
+                playerFireHitFrames);
+            SetSpriteArray(serializedCatalog.FindProperty("imugiElectricAttackFrames"),
+                imugiElectricFrames);
             SetSpriteArray(serializedCatalog.FindProperty("blueProjectileFrames"), projectileFrames);
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
@@ -679,7 +757,10 @@ namespace Nyangbingo.Editor
             NyangbingoMainGameSceneCreator.CreateOrUpdate();
             Debug.Log($"[Nyangbingo] Combat/temperature art integration completed: " +
                       $"temperature {temperatureFrames.Count}, attack {attackFrames.Count}, " +
-                      $"nap {napFrames.Count}, mining {miningFrames.Count}, warning {warningFrames.Count}, " +
+                      $"mining {miningFrames.Count}, warning {warningFrames.Count}, " +
+                      $"Gangcheori fire {gangcheoriFireFrames.Count}, " +
+                      $"player fire hit {playerFireHitFrames.Count}, " +
+                      $"Imugi electric {imugiElectricFrames.Count}, " +
                       $"projectile {projectileFrames.Count}. MainGame scene updated.");
         }
 
@@ -882,9 +963,11 @@ namespace Nyangbingo.Editor
             if (catalog == null ||
                 catalog.TemperatureFrames.Count == 0 ||
                 catalog.PlayerAttackFrames.Count == 0 ||
-                catalog.NapFrames.Count == 0 ||
                 catalog.MiningCrackFrames.Count == 0 ||
                 catalog.BossWarningFrames.Count == 0 ||
+                catalog.GangcheoriSpecialFireFrames.Count != 4 ||
+                catalog.PlayerFireHitFrames.Count != 3 ||
+                catalog.ImugiElectricAttackFrames.Count != 7 ||
                 catalog.BlueProjectileFrames.Count == 0)
             {
                 Debug.LogError("[Nyangbingo] Combat/temperature art validation failed: catalog or frames missing.");
@@ -892,8 +975,12 @@ namespace Nyangbingo.Editor
             }
             Debug.Log($"[Nyangbingo] Combat/temperature art validation passed: " +
                       $"temperature {catalog.TemperatureFrames.Count}, attack {catalog.PlayerAttackFrames.Count}, " +
-                      $"nap {catalog.NapFrames.Count}, mining crack {catalog.MiningCrackFrames.Count}, " +
-                      $"boss warning {catalog.BossWarningFrames.Count}, projectile {catalog.BlueProjectileFrames.Count}.");
+                      $"mining crack {catalog.MiningCrackFrames.Count}, " +
+                      $"boss warning {catalog.BossWarningFrames.Count}, " +
+                      $"Gangcheori fire {catalog.GangcheoriSpecialFireFrames.Count}/4, " +
+                      $"player fire hit {catalog.PlayerFireHitFrames.Count}/3, " +
+                      $"Imugi electric {catalog.ImugiElectricAttackFrames.Count}/7, " +
+                      $"projectile {catalog.BlueProjectileFrames.Count}.");
         }
 
         private static void ValidateAnimationFrames(string id, CharacterArtCatalog.Entry entry,
@@ -933,7 +1020,7 @@ namespace Nyangbingo.Editor
                     RequireFrames(id, "idle", entry.IdleFrames, 3, failures);
                     RequireFrames(id, "walk", entry.WalkFrames, 4, failures);
                     RequireFrames(id, "attack", entry.AttackFrames, 3, failures);
-                    RequireFrames(id, "skill", entry.SpecialFrames, 6, failures);
+                    RequireFrames(id, "skill", entry.SpecialFrames, 5, failures);
                     break;
                 case "mother_bulgasari":
                     RequireFrames(id, "idle", entry.IdleFrames, 3, failures);
@@ -943,6 +1030,18 @@ namespace Nyangbingo.Editor
                 case "imugi":
                     RequireFrames(id, "default", entry.IdleFrames, 2, failures);
                     RequireFrames(id, "marble", entry.SpecialFrames, 2, failures);
+                    break;
+                case "gaekgwi":
+                    RequireFrames(id, "idle", entry.IdleFrames, 3, failures);
+                    RequireFrames(id, "dash", entry.SpecialFrames, 3, failures);
+                    RequireFrames(id, "attack", entry.AttackFrames, 3, failures);
+                    RequireFrames(id, "dash effect", entry.DashEffectFrames, 1, failures);
+                    RequireFrames(id, "impact effect", entry.ImpactEffectFrames, 1, failures);
+                    break;
+                case "magpie":
+                    RequireFrames(id, "idle", entry.IdleFrames, 1, failures);
+                    RequireFrames(id, "flight", entry.WalkFrames, 2, failures);
+                    RequireFrames(id, "pickup", entry.AttackFrames, 1, failures);
                     break;
             }
         }
@@ -1004,6 +1103,21 @@ namespace Nyangbingo.Editor
             return Array.Empty<Sprite>();
         }
 
+        private static IReadOnlyList<Sprite> FindNamedSpriteFrames(
+            string artPath, params string[] frameNames)
+        {
+            if (frameNames == null || frameNames.Length == 0) return Array.Empty<Sprite>();
+            var spritesByName = AssetDatabase.LoadAllAssetsAtPath(artPath)
+                .OfType<Sprite>()
+                .GroupBy(sprite => sprite.name, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            var frames = new List<Sprite>(frameNames.Length);
+            for (var index = 0; index < frameNames.Length; index++)
+                if (spritesByName.TryGetValue(frameNames[index], out var sprite))
+                    frames.Add(sprite);
+            return frames;
+        }
+
         private static IReadOnlyList<Sprite> FindLongestAnimationFrames(string artPath)
         {
             var clips = AssetDatabase.LoadAllAssetsAtPath(artPath).OfType<AnimationClip>();
@@ -1022,6 +1136,32 @@ namespace Nyangbingo.Editor
             if (longest.Count > 0) return longest;
             return AssetDatabase.LoadAllAssetsAtPath(artPath).OfType<Sprite>()
                 .OrderBy(sprite => sprite.name, StringComparer.Ordinal).ToArray();
+        }
+
+        private static IReadOnlyList<Sprite> LoadImugiElectricAttackFrames(
+            ICollection<string> failures)
+        {
+            var path = $"{GameplayArtFolder}/{ImugiElectricAttackFile}";
+            if (!ConfigureAsepriteImporter(path, failures)) return Array.Empty<Sprite>();
+            var frames = FindLongestAnimationFrames(path);
+            if (frames.Count != 7)
+                failures.Add($"Imugi electric attack frames must be 7, actual={frames.Count}.");
+            return frames;
+        }
+
+        private static void SaveImugiElectricAttackFrames(IReadOnlyList<Sprite> frames)
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            if (catalog == null)
+            {
+                catalog = ScriptableObject.CreateInstance<GameplayArtCatalog>();
+                AssetDatabase.CreateAsset(catalog, GameplayArtCatalogPath);
+            }
+            var serializedCatalog = new SerializedObject(catalog);
+            SetSpriteArray(
+                serializedCatalog.FindProperty("imugiElectricAttackFrames"), frames);
+            serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(catalog);
         }
 
         private static void SetSpriteArray(SerializedProperty property, IReadOnlyList<Sprite> sprites)
@@ -1084,6 +1224,38 @@ namespace Nyangbingo.Editor
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.alphaIsTransparency = true;
             importer.SaveAndReimport();
+            return true;
+        }
+
+        private static bool ConfigureCharacterPngImporter(string artPath, ICollection<string> failures)
+        {
+            AssetDatabase.ImportAsset(
+                artPath,
+                ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            if (!(AssetImporter.GetAtPath(artPath) is TextureImporter importer))
+            {
+                failures.Add($"TextureImporter를 찾지 못했습니다. ({artPath})");
+                return false;
+            }
+
+            var settingsChanged = importer.textureType != TextureImporterType.Sprite ||
+                                  importer.spriteImportMode != SpriteImportMode.Single ||
+                                  !Mathf.Approximately(importer.spritePixelsPerUnit, PixelsPerUnit) ||
+                                  importer.filterMode != FilterMode.Point ||
+                                  importer.wrapMode != TextureWrapMode.Clamp ||
+                                  importer.mipmapEnabled ||
+                                  !importer.alphaIsTransparency;
+            if (settingsChanged)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = PixelsPerUnit;
+                importer.filterMode = FilterMode.Point;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+            }
             return true;
         }
     }

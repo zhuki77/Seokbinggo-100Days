@@ -23,6 +23,7 @@ namespace Nyangbingo.Save
         [SerializeField] private MainGameTurretRuntime turretRuntime;
         [SerializeField] private MainGameEncounterCoordinator encounterCoordinator;
         [SerializeField] private MainGameWorldDropRuntime worldDropRuntime;
+        [SerializeField] private MainGameWorldDecorationRenderer worldDecorationRenderer;
         [SerializeField] private DayNightService timeService;
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private DawnAutoSave dawnAutoSave;
@@ -69,12 +70,13 @@ namespace Nyangbingo.Save
             turretRuntime ??= GetComponent<MainGameTurretRuntime>();
             encounterCoordinator ??= GetComponent<MainGameEncounterCoordinator>();
             worldDropRuntime ??= FindAnyObjectByType<MainGameWorldDropRuntime>();
+            worldDecorationRenderer ??= GetComponent<MainGameWorldDecorationRenderer>();
             timeService ??= GetComponent<DayNightService>();
             saveManager ??= GetComponent<SaveManager>();
             dawnAutoSave ??= GetComponent<DawnAutoSave>();
 
             if (bootstrap == null || runtimeServices == null || environmentState == null || turretRuntime == null ||
-                encounterCoordinator == null ||
+                encounterCoordinator == null || worldDecorationRenderer == null ||
                 timeService == null || saveManager == null || dawnAutoSave == null ||
                 !bootstrap.InitializeServices() || !runtimeServices.Initialize() || !environmentState.Initialize() ||
                 !encounterCoordinator.Initialize())
@@ -165,9 +167,10 @@ namespace Nyangbingo.Save
 
         public SaveGame CaptureSnapshot()
         {
-            if (!IsInitialized && !Initialize()) return null;
+            if (!IsInitialized && !Initialize()) return CaptureFailed("initialization");
             var save = new SaveGame();
-            if (!bootstrap.Session.CaptureSnapshot(save)) return null;
+            if (!bootstrap.Session.CaptureSnapshot(save)) return CaptureFailed("world session");
+            save.doorStates = bootstrap.TileService.ExportDoorStates();
 
             save.placedObjectRecords = environmentState.ExportPlacedObjects();
             var catalog = GetCatalog();
@@ -188,11 +191,18 @@ namespace Nyangbingo.Save
             save.jangdokStorages = runtimeServices.JangdokStorage.Export();
             save.deathTearPouches = runtimeServices.DeathTearPouches.Export();
             save.worldDrops = ResolveWorldDropRuntime()?.Export() ?? new List<WorldDropStateRecord>();
+            if (runtimeServices.MagpieCompanion != null &&
+                !runtimeServices.MagpieCompanion.Capture(save))
+                return CaptureFailed("magpie companion");
+            save.catnipPatches = worldDecorationRenderer.ExportCatnipPatches();
+            save.hempPatches = worldDecorationRenderer.ExportHempPatches();
+            save.harvestedTrees = worldDecorationRenderer.ExportHarvestedTrees();
+            save.harvestedRebar = worldDecorationRenderer.ExportHarvestedRebar();
             save.sealPct = Mathf.Clamp01(bootstrap.SealSystem.SealPercent) * 100f;
-            if (!turretRuntime.CaptureProgress(save)) return null;
+            if (!turretRuntime.CaptureProgress(save)) return CaptureFailed("turret progress");
             if (!PlayerTimeBossSaveAdapter.Capture(save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager))
-                return null;
+                return CaptureFailed("player, time, and boss state");
             save.playerState.hasTemperature = true;
             save.playerState.temperature = runtimeServices.PlayerTemperature.Current;
 
@@ -201,19 +211,33 @@ namespace Nyangbingo.Save
             ProgressionSaveAdapter.Capture(save, runtimeServices.PlayerInventory,
                 runtimeServices.EquipmentSystem, FoundryStationId, runtimeServices.Foundry);
 
-            if (!EquipmentCollectionSaveAdapter.Capture(save, runtimeServices.EquipmentCollection) ||
-                !ActiveSlotSaveAdapter.Capture(save, runtimeServices.ActiveSlot) ||
-                !PortableLanternSaveAdapter.Capture(save, runtimeServices.PortableLantern) ||
-                !RecipeBookSaveAdapter.Capture(save, runtimeServices.RecipeBook) ||
-                !CraftingProcessSaveAdapter.Capture(save, runtimeServices.CraftingProcess) ||
-                !UtilityCooldownSaveAdapter.Capture(save, runtimeServices.UtilityService) ||
-                !PendingItemAcquisitionSaveAdapter.Capture(save, runtimeServices.InventoryRuntime) ||
-                !progressTracker.CaptureTo(save) ||
-                !encounterCoordinator.CaptureProgress(save))
-                return null;
+            if (!EquipmentCollectionSaveAdapter.Capture(save, runtimeServices.EquipmentCollection))
+                return CaptureFailed("equipment collection");
+            if (!ActiveSlotSaveAdapter.Capture(save, runtimeServices.ActiveSlot))
+                return CaptureFailed("active slot");
+            if (!PortableLanternSaveAdapter.Capture(save, runtimeServices.PortableLantern))
+                return CaptureFailed("portable lantern");
+            if (!RecipeBookSaveAdapter.Capture(save, runtimeServices.RecipeBook))
+                return CaptureFailed("recipe book");
+            if (!CraftingProcessSaveAdapter.Capture(save, runtimeServices.CraftingProcess))
+                return CaptureFailed("crafting process");
+            if (!UtilityCooldownSaveAdapter.Capture(save, runtimeServices.UtilityService))
+                return CaptureFailed("utility cooldown");
+            if (!PendingItemAcquisitionSaveAdapter.Capture(save, runtimeServices.InventoryRuntime))
+                return CaptureFailed("pending item acquisition");
+            if (!progressTracker.CaptureTo(save))
+                return CaptureFailed("progress tracker");
+            if (!encounterCoordinator.CaptureProgress(save))
+                return CaptureFailed("encounter progress");
 
             save.NormalizeAfterLoad();
             return save;
+        }
+
+        private static SaveGame CaptureFailed(string stage)
+        {
+            Debug.LogError($"[Nyangbingo] MainGameSaveCoordinator: save capture failed at stage '{stage}'.");
+            return null;
         }
 
         public bool SaveNow(int slot)
@@ -265,45 +289,81 @@ namespace Nyangbingo.Save
             try
             {
                 save.NormalizeAfterLoad();
-                runtimeServices.NapService?.ResetForSaveRestore();
-                succeeded = save.timeState.hasValue &&
-                bootstrap.Session.LoadSnapshot(save) &&
-                PreparePlayerSpawnForRestore(save, forceSafeSurfaceSpawn) &&
-                PlayerTimeBossSaveAdapter.Restore(save, encounterCoordinator.PlayerTransform,
-                    encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager) &&
-                ResetPlayerTransientState() &&
-                ProgressionSaveAdapter.Restore(save, runtimeServices.PlayerInventory,
+                runtimeServices.BindPlayerHealth(encounterCoordinator.PlayerHealth);
+                runtimeServices.PlayerHealthRecovery?.ResetAfterRestore();
+                succeeded = RestoreStage("time state", () => save.timeState.hasValue) &&
+                RestoreStage("world session", () => bootstrap.Session.LoadSnapshot(save)) &&
+                RestoreStage("door states", () =>
+                    bootstrap.TileService.RestoreDoorStates(save.doorStates)) &&
+                RestoreStage("player spawn", () => PreparePlayerSpawnForRestore(save, forceSafeSurfaceSpawn)) &&
+                RestoreStage("player/time/boss", () => PlayerTimeBossSaveAdapter.Restore(
+                    save, encounterCoordinator.PlayerTransform,
+                    encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager)) &&
+                RestoreStage("player transient state", ResetPlayerTransientState) &&
+                RestoreStage("furnace progression", () => ProgressionSaveAdapter.Restore(
+                    save, runtimeServices.PlayerInventory,
                     runtimeServices.EquipmentSystem, FindEquipment,
-                    FurnaceStationId, runtimeServices.Furnace, FindSmelting, FindItem) &&
-                ProgressionSaveAdapter.Restore(save, runtimeServices.PlayerInventory,
+                    FurnaceStationId, runtimeServices.Furnace, FindSmelting, FindItem)) &&
+                RestoreStage("foundry progression", () => ProgressionSaveAdapter.Restore(
+                    save, runtimeServices.PlayerInventory,
                     runtimeServices.EquipmentSystem, FindEquipment,
-                    FoundryStationId, runtimeServices.Foundry, FindSmelting, FindItem) &&
-                EquipmentCollectionSaveAdapter.Restore(save, runtimeServices.EquipmentCollection) &&
-                ActiveSlotSaveAdapter.Restore(save, runtimeServices.ActiveSlot) &&
-                PortableLanternSaveAdapter.Restore(save, runtimeServices.PortableLantern) &&
-                RecipeBookSaveAdapter.Restore(save, runtimeServices.RecipeBook, FindRecipe) &&
-                CraftingProcessSaveAdapter.Restore(save, runtimeServices.CraftingProcess, FindRecipe) &&
-                UtilityCooldownSaveAdapter.Restore(save, runtimeServices.UtilityService) &&
-                PendingItemAcquisitionSaveAdapter.Restore(save, runtimeServices.InventoryRuntime, FindItem) &&
-                progressTracker.RestoreFrom(save) &&
-                (!save.playerState.hasTemperature ||
-                 runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
-                runtimeServices.DeathTearPouches.Restore(save.deathTearPouches) &&
-                RestoreWorldDrops(save.worldDrops) &&
-                RestoreSeokbinggoStage(save) &&
-                encounterCoordinator.RestoreProgress(save) &&
-                 environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources) &&
-                 runtimeServices.JangdokStorage.TryRestore(save.jangdokStorages,
+                    FoundryStationId, runtimeServices.Foundry, FindSmelting, FindItem)) &&
+                RestoreStage("equipment collection", () =>
+                    EquipmentCollectionSaveAdapter.Restore(save, runtimeServices.EquipmentCollection)) &&
+                RestoreStage("active slot", () =>
+                    ActiveSlotSaveAdapter.Restore(save, runtimeServices.ActiveSlot)) &&
+                RestoreStage("portable lantern", () =>
+                    PortableLanternSaveAdapter.Restore(save, runtimeServices.PortableLantern)) &&
+                RestoreStage("recipe book", () =>
+                    RecipeBookSaveAdapter.Restore(save, runtimeServices.RecipeBook, FindRecipe)) &&
+                RestoreStage("recipe progression", () => RestoreRecipeProgression(save)) &&
+                RestoreStage("crafting process", () =>
+                    CraftingProcessSaveAdapter.Restore(save, runtimeServices.CraftingProcess, FindRecipe)) &&
+                RestoreStage("utility cooldowns", () =>
+                    UtilityCooldownSaveAdapter.Restore(save, runtimeServices.UtilityService)) &&
+                RestoreStage("pending item acquisitions", () =>
+                    PendingItemAcquisitionSaveAdapter.Restore(save, runtimeServices.InventoryRuntime, FindItem)) &&
+                RestoreStage("progress tracker", () => progressTracker.RestoreFrom(save)) &&
+                RestoreStage("player temperature", () => !save.playerState.hasTemperature ||
+                    runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
+                RestoreStage("death tear pouches", () =>
+                    runtimeServices.DeathTearPouches.Restore(save.deathTearPouches)) &&
+                RestoreStage("world drops", () => RestoreWorldDrops(save.worldDrops)) &&
+                RestoreStage("seokbinggo stage", () => RestoreSeokbinggoStage(save)) &&
+                RestoreStage("catnip patches", () =>
+                    worldDecorationRenderer.RestoreCatnipPatches(save.catnipPatches)) &&
+                RestoreStage("hemp patches", () =>
+                    worldDecorationRenderer.RestoreHempPatches(save.hempPatches)) &&
+                RestoreStage("harvested trees", () =>
+                    worldDecorationRenderer.RestoreHarvestedTrees(save.harvestedTrees)) &&
+                RestoreStage("harvested rebar", () =>
+                    worldDecorationRenderer.RestoreHarvestedRebar(save.harvestedRebar)) &&
+                RestoreStage("encounters", () => encounterCoordinator.RestoreProgress(save)) &&
+                RestoreStage("placed objects", () =>
+                    environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources)) &&
+                RestoreStage("magpie companion", () =>
+                    runtimeServices.MagpieCompanion == null ||
+                    runtimeServices.MagpieCompanion.Restore(save)) &&
+                RestoreStage("jangdok storages", () =>
+                    runtimeServices.JangdokStorage.TryRestore(save.jangdokStorages,
                      save.placedObjectRecords
                          .Where(record => record.definitionId == Nyangbingo.Inventory.JangdokStorageRuntime.DefinitionId)
-                         .Select(record => record.objectId)) &&
-                 turretRuntime.RestoreProgress(save);
+                         .Select(record => record.objectId))) &&
+                RestoreStage("turrets", () => turretRuntime.RestoreProgress(save));
                 return succeeded;
             }
             finally
             {
                 encounterCoordinator.EndRestore(succeeded);
             }
+        }
+
+        private static bool RestoreStage(string stage, Func<bool> restore)
+        {
+            var succeeded = restore != null && restore();
+            if (!succeeded)
+                Debug.LogError($"[Nyangbingo] Save restore failed at stage '{stage}'.");
+            return succeeded;
         }
 
         public static bool ShouldResolveSafePlayerSpawn(bool forceSafeSurfaceSpawn,
@@ -397,6 +457,24 @@ namespace Nyangbingo.Save
             GetCatalog()?.FindEquipment(id);
         private Nyangbingo.Data.RecipeDefinition FindRecipe(string id) =>
             GetCatalog()?.FindRecipe(id);
+
+        private bool RestoreRecipeProgression(SaveGame save)
+        {
+            if (save?.dogam == null || runtimeServices?.RecipeBook == null) return false;
+            for (var index = 0; index < save.dogam.Count; index++)
+            {
+                var record = save.dogam[index];
+                if (record.kills <= 0) continue;
+                var yokai = GetCatalog()?.FindYokai(record.yokaiId);
+                if (yokai == null || yokai.Kind != Nyangbingo.Core.YokaiKind.Gangcheori) continue;
+                var recipe = FindRecipe(Nyangbingo.Crafting.RecipeUnlockPolicy.GangcheoriUnlockRecipeId);
+                if (recipe == null) return false;
+                runtimeServices.RecipeBook.Unlock(recipe.Id);
+                break;
+            }
+            return true;
+        }
+
         private Nyangbingo.Data.SmeltingDefinition FindSmelting(string id) =>
             GetCatalog()?.FindSmelting(id);
 

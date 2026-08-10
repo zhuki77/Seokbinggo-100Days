@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nyangbingo.Audio;
 using Nyangbingo.Core;
 using Nyangbingo.Save;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.UI
@@ -24,7 +25,7 @@ namespace Nyangbingo.UI
         public const string Teaser = "D-70 — 백일폭염까지";
         public float SealPercentage { get; internal set; }
         public IReadOnlyList<string> CompletedModuleIds { get; internal set; }
-        public bool GangcheolDefeated { get; internal set; }
+        public bool ImugiDefeated { get; internal set; }
         public int YokaiKills { get; internal set; }
         public int MinedTiles { get; internal set; }
         public int Deaths { get; internal set; }
@@ -102,7 +103,7 @@ namespace Nyangbingo.UI
         public void EnterGameplay(SaveGame currentSave)
         {
             activeSave = currentSave ?? activeSave ?? new SaveGame { day = 1 };
-            ShowGameplay();
+            ShowGameplay(false);
         }
 
         public void EnterTitle() => ShowTitle();
@@ -128,7 +129,12 @@ namespace Nyangbingo.UI
             SaveGame latest = null;
             Title.CanContinue = saveManager != null && saveManager.TryLoadLatest(out slot, out latest);
             Title.LatestSlot = Title.CanContinue ? slot : -1;
-            Title.DaysUntilBaegilHeat = Title.CanContinue ? Mathf.Max(0, 101 - latest.day) : 100;
+            var survivalDayLimit = timeSource is DayNightService dayNight
+                ? dayNight.SurvivalDayLimit
+                : DayNightService.DefaultSurvivalDayLimit;
+            Title.DaysUntilBaegilHeat = Title.CanContinue
+                ? DayNightService.CalculateDaysRemaining(survivalDayLimit, latest.day)
+                : survivalDayLimit;
         }
 
         public static string FormatTitleCountdown(int daysUntilBaegilHeat) =>
@@ -170,7 +176,7 @@ namespace Nyangbingo.UI
         public bool ResumeGameplay()
         {
             if (Screen != GameShellScreen.Pause) return false;
-            ShowGameplay();
+            ShowGameplay(true);
             return true;
         }
 
@@ -275,16 +281,16 @@ namespace Nyangbingo.UI
             var kills = 0;
             for (var i = 0; i < save.dogam.Count; i++)
                 kills = save.dogam[i].kills > int.MaxValue - kills ? int.MaxValue : kills + save.dogam[i].kills;
-            var gangcheolDefeated = false;
+            var imugiDefeated = false;
             for (var i = 0; i < save.bossRecords.Count; i++)
-                if (save.bossRecords[i].bossId == "gangcheol_boss" && save.bossRecords[i].count > 0)
-                    gangcheolDefeated = true;
+                if (save.bossRecords[i].bossId == "imugi_boss" && save.bossRecords[i].count > 0)
+                    imugiDefeated = true;
 
             return new DemoResultState
             {
                 SealPercentage = Mathf.Clamp(save.sealPct, 0f, 100f),
                 CompletedModuleIds = modules,
-                GangcheolDefeated = gangcheolDefeated,
+                ImugiDefeated = imugiDefeated,
                 YokaiKills = Math.Max(0, kills),
                 MinedTiles = save.stats.minedTiles,
                 Deaths = save.stats.deaths
@@ -292,7 +298,7 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// v14.1/v27 정본: 데모는 30일차 강철이의 격퇴 여부가 아니라 30일차 밤이 끝난 새벽에 종료한다.
+        /// v34 정본: 데모는 30일차 이무기의 격퇴 여부가 아니라 30일차 밤이 끝난 새벽에 종료한다.
         /// DayNightService.Dawn은 날짜를 먼저 증가시킨 뒤 발행되므로 새 날짜가 MVP 제한일+1인지 검사한다.
         /// </summary>
         public static bool ShouldEndDemoAtDawn(int newDay, int mvpDayLimit) =>
@@ -305,11 +311,14 @@ namespace Nyangbingo.UI
             NewGameRequested?.Invoke(AutoSaveSlot);
         }
 
-        private void ShowGameplay()
+        private void ShowGameplay(bool preserveCurrentMusic)
         {
             Time.timeScale = resumeTimeScale > 0f ? resumeTimeScale : 1f;
             SetScreen(GameShellScreen.Gameplay);
-            audioService?.EnsureAudiblePlayback(MusicTrack.Day);
+            if (preserveCurrentMusic)
+                audioService?.EnsureAudiblePlayback();
+            else
+                audioService?.EnsureAudiblePlayback(MusicTrack.Day);
         }
 
         private void ShowTitle()

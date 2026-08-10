@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Nyangbingo.Data;
 using Nyangbingo.Combat;
+using Nyangbingo.Inventory;
 using Nyangbingo.Yokai;
 using UnityEngine;
 
@@ -12,20 +14,154 @@ namespace Nyangbingo.World
     /// </summary>
     [RequireComponent(typeof(Health))]
     public sealed class MainGameRaidTarget : MonoBehaviour, IYokaiTarget, IWallMaterialTarget, IYokaiCombatTarget,
-        Nyangbingo.Bosses.IBossCombatTarget
+        IYokaiLootTarget, IYokaiTheftReceiptSource, IYokaiCounterSource,
+        IYokaiBarrierTarget, Nyangbingo.Bosses.IBossCombatTarget
     {
         [SerializeField] private YokaiWallMaterial wallMaterial = YokaiWallMaterial.Ice;
+        private Inventory.Inventory playerInventory;
+        private EquipmentSystem equipmentSystem;
+        private MainGameWorldDropRuntime worldDrops;
+        private MainGameBootstrap bootstrap;
+        private int sealPenaltyStartDay = 4;
+        private readonly List<ItemAmount> pendingStolenItems = new List<ItemAmount>();
+        private readonly StatSheet statSheet = new StatSheet();
+        public const float PaceWallDamageDeficitPercent = 40f;
+        public const float PaceWallDamageMultiplier = 1.3f;
 
         public Transform TargetTransform => transform;
         public YokaiWallMaterial WallMaterial => wallMaterial;
+        public bool IsInLanternRange => false;
+        public bool IsInSieveRange => false;
+        public bool HasGroundLoot => worldDrops != null && worldDrops.ActiveDropCount > 0;
+        public bool IsInventoryTheftBlocked
+        {
+            get
+            {
+                statSheet.Recalculate(equipmentSystem);
+                return statSheet.BlocksInventoryTheft;
+            }
+        }
+        public float SieveStopSeconds => 0f;
+        public float SieveCooldownSeconds => 0f;
+        public float SieveDamageMultiplier => 0f;
+        public float EoduksiniLanternPauseSeconds => 0f;
+        public float EoduksiniBloomCooldownSeconds => 0f;
+        public float EoduksiniLanternDamageMultiplier => 0f;
         public float AccumulatedWallDamage { get; private set; }
         public event Action<float> WallDamaged;
+
+        public void ConfigureTheftRuntime(Inventory.Inventory inventory,
+            EquipmentSystem equipment, MainGameWorldDropRuntime drops)
+        {
+            playerInventory = inventory;
+            equipmentSystem = equipment;
+            worldDrops = drops;
+        }
+
+        public bool ConfigureWallPaceRuntime(
+            MainGameBootstrap mainBootstrap, int firstPenaltyDay)
+        {
+            if (mainBootstrap == null || firstPenaltyDay <= 0) return false;
+            bootstrap = mainBootstrap;
+            sealPenaltyStartDay = firstPenaltyDay;
+            return true;
+        }
+
+        public bool TryStealGroundLoot()
+        {
+            pendingStolenItems.Clear();
+            if (worldDrops == null ||
+                !worldDrops.TryStealNearestStack(
+                    transform.position, out var item, out var amount))
+                return false;
+            pendingStolenItems.Add(new ItemAmount { item = item, amount = amount });
+            return true;
+        }
+
+        public bool TryStealInventory(int maxSlots, int maxAmount)
+        {
+            pendingStolenItems.Clear();
+            if (IsInventoryTheftBlocked || playerInventory == null) return false;
+            if (!playerInventory.TryRemoveFromOccupiedSlots(
+                    maxSlots, maxAmount, out var removedStacks))
+                return false;
+            foreach (var stack in removedStacks)
+            {
+                var item = playerInventory.FindItem(stack.itemId);
+                if (item != null && stack.amount > 0)
+                    pendingStolenItems.Add(new ItemAmount { item = item, amount = stack.amount });
+            }
+            return pendingStolenItems.Count > 0;
+        }
+
+        public IReadOnlyList<ItemAmount> TakeStolenItems()
+        {
+            var receipt = pendingStolenItems.ToArray();
+            pendingStolenItems.Clear();
+            return receipt;
+        }
 
         public void DamageWall(float amount)
         {
             if (amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount)) return;
-            AccumulatedWallDamage += amount;
-            WallDamaged?.Invoke(amount);
+            var adjusted = AdjustWallDamageForPace(amount);
+            AccumulatedWallDamage += adjusted;
+            WallDamaged?.Invoke(adjusted);
+        }
+
+        public bool TryFindBlockingWall(Vector3 attackerPosition, Vector3 approachDirection,
+            float searchRange,
+            out Vector3Int wallCell, out YokaiWallMaterial material)
+        {
+            wallCell = default;
+            material = YokaiWallMaterial.Default;
+            return bootstrap?.TileService?.TryFindDamageableWall(
+                attackerPosition, approachDirection, searchRange,
+                out wallCell, out material) == true;
+        }
+
+        public bool TryDamageBlockingWall(Vector3Int wallCell, float amount)
+        {
+            if (amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount) ||
+                bootstrap?.TileService == null)
+                return false;
+            var adjusted = AdjustWallDamageForPace(amount);
+            if (!bootstrap.TileService.TryDamageWall(
+                    wallCell, adjusted, out var appliedDamage, out _))
+                return false;
+            AccumulatedWallDamage += appliedDamage;
+            WallDamaged?.Invoke(appliedDamage);
+            return appliedDamage > 0f;
+        }
+
+        private float AdjustWallDamageForPace(float amount)
+        {
+            var timeService = bootstrap?.TimeService;
+            var sealSystem = bootstrap?.SealSystem;
+            return timeService?.CurrentDayCurve != null && sealSystem != null
+                ? CalculatePaceAdjustedWallDamage(
+                    amount,
+                    timeService.CurrentDayCurve.PaceSealPercent,
+                    sealSystem.SealPercent * 100f,
+                    timeService.Day,
+                    sealPenaltyStartDay)
+                : amount;
+        }
+
+        public static float CalculatePaceAdjustedWallDamage(
+            float baseDamage, float recommendedSealPercent, float currentSealPercent,
+            int day, int firstPenaltyDay)
+        {
+            if (baseDamage <= 0f || float.IsNaN(baseDamage) || float.IsInfinity(baseDamage))
+                return 0f;
+            if (float.IsNaN(recommendedSealPercent) || float.IsInfinity(recommendedSealPercent) ||
+                float.IsNaN(currentSealPercent) || float.IsInfinity(currentSealPercent) ||
+                day <= 0 || firstPenaltyDay <= 0)
+                return baseDamage;
+            var behindPace = day >= firstPenaltyDay &&
+                             recommendedSealPercent - currentSealPercent >=
+                             PaceWallDamageDeficitPercent;
+            return baseDamage * (behindPace ? PaceWallDamageMultiplier : 1f);
         }
 
         public bool TryApplyContactDamage(int amount)
@@ -40,13 +176,26 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool TryApplyBossSpecialDamage(int amount, Nyangbingo.Core.DamageTag tag, Vector2 knockback)
+        public bool TryApplyBossSpecialDamage(int amount, Nyangbingo.Core.DamageTag tag,
+            Vector2 knockback,
+            Nyangbingo.Core.DamageDelivery delivery = Nyangbingo.Core.DamageDelivery.Direct,
+            bool showFireHitEffect = true)
         {
             if (amount <= 0) return false;
             var health = GetComponent<Health>();
             if (health == null || health.IsDead) return false;
             var before = health.Current;
-            health.ApplyDamage(amount, tag);
+            if (!showFireHitEffect)
+                MainGameEffectPresenter.BeginSuppressPlayerFireHitEffect();
+            try
+            {
+                health.ApplyDamage(amount, tag, delivery);
+            }
+            finally
+            {
+                if (!showFireHitEffect)
+                    MainGameEffectPresenter.EndSuppressPlayerFireHitEffect();
+            }
             if (health.Current >= before) return false;
             if (knockback.sqrMagnitude > Mathf.Epsilon)
             {

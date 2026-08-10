@@ -13,15 +13,24 @@ namespace Nyangbingo.Inventory
         public const int SlotCount = 50;
         private readonly List<InventorySlot> slots;
         private readonly Func<string, ItemDefinition> findItem;
+        private readonly int reservedAutoFillSlotCount;
+        private readonly Func<string, bool> canAutoFillReservedSlot;
         public event Action Changed;
         public IReadOnlyList<InventorySlot> Slots => slots;
         public int Capacity => slots.Count;
         public bool IsEmpty => slots.TrueForAll(slot => string.IsNullOrEmpty(slot.itemId));
 
-        public Inventory(Func<string, ItemDefinition> findItem, int slotCount = SlotCount)
+        public Inventory(Func<string, ItemDefinition> findItem, int slotCount = SlotCount,
+            int reservedAutoFillSlotCount = 0, Func<string, bool> canAutoFillReservedSlot = null)
         {
             this.findItem = findItem ?? throw new ArgumentNullException(nameof(findItem));
             if (slotCount <= 0) throw new ArgumentOutOfRangeException(nameof(slotCount));
+            if (reservedAutoFillSlotCount < 0 || reservedAutoFillSlotCount > slotCount)
+                throw new ArgumentOutOfRangeException(nameof(reservedAutoFillSlotCount));
+            if (reservedAutoFillSlotCount > 0 && canAutoFillReservedSlot == null)
+                throw new ArgumentNullException(nameof(canAutoFillReservedSlot));
+            this.reservedAutoFillSlotCount = reservedAutoFillSlotCount;
+            this.canAutoFillReservedSlot = canAutoFillReservedSlot;
             slots = new List<InventorySlot>(slotCount);
             for (var i = 0; i < slotCount; i++) slots.Add(default);
         }
@@ -38,6 +47,9 @@ namespace Nyangbingo.Inventory
             return (int)total;
         }
 
+        public ItemDefinition FindItem(string itemId) =>
+            string.IsNullOrEmpty(itemId) ? null : findItem(itemId);
+
         public bool Has(string itemId, int amount) => amount > 0 && Count(itemId) >= amount;
 
         public bool TryAdd(string itemId, int amount)
@@ -45,14 +57,15 @@ namespace Nyangbingo.Inventory
             var item = findItem(itemId);
             if (item == null || item.MaxStack <= 0 || amount <= 0 || CapacityFor(itemId, item.MaxStack) < amount)
                 return false;
-            for (var i = 0; i < slots.Count && amount > 0; i++)
+            var firstAutoFillSlot = FirstAutoFillSlot(itemId);
+            for (var i = firstAutoFillSlot; i < slots.Count && amount > 0; i++)
             {
                 var slot = slots[i];
                 if (slot.itemId != itemId || slot.amount >= item.MaxStack) continue;
                 var added = Math.Min(amount, item.MaxStack - slot.amount);
                 slot.amount += added; amount -= added; slots[i] = slot;
             }
-            for (var i = 0; i < slots.Count && amount > 0; i++)
+            for (var i = firstAutoFillSlot; i < slots.Count && amount > 0; i++)
             {
                 if (!string.IsNullOrEmpty(slots[i].itemId)) continue;
                 var added = Math.Min(amount, item.MaxStack);
@@ -71,6 +84,35 @@ namespace Nyangbingo.Inventory
                 if (slot.amount == 0) slot.itemId = string.Empty; slots[i] = slot;
             }
             Changed?.Invoke(); return true;
+        }
+
+        public bool TryRemoveFromOccupiedSlots(int maximumSlots, int maximumAmount,
+            out List<InventorySlot> removedStacks)
+        {
+            removedStacks = new List<InventorySlot>();
+            if (maximumSlots <= 0 || maximumAmount <= 0) return false;
+            var candidates = new List<int>();
+            for (var index = 0; index < slots.Count; index++)
+                if (!string.IsNullOrEmpty(slots[index].itemId) && slots[index].amount > 0)
+                    candidates.Add(index);
+            var removedAmount = 0;
+            while (candidates.Count > 0 && removedStacks.Count < maximumSlots &&
+                   removedAmount < maximumAmount)
+            {
+                var candidateIndex = UnityEngine.Random.Range(0, candidates.Count);
+                var index = candidates[candidateIndex];
+                candidates.RemoveAt(candidateIndex);
+                var slot = slots[index];
+                var removed = Math.Min(slot.amount, maximumAmount - removedAmount);
+                removedStacks.Add(new InventorySlot { itemId = slot.itemId, amount = removed });
+                slot.amount -= removed;
+                removedAmount += removed;
+                if (slot.amount <= 0) slot = default;
+                slots[index] = slot;
+            }
+            if (removedStacks.Count == 0) return false;
+            Changed?.Invoke();
+            return true;
         }
 
         public List<InventorySlot> Export() => new List<InventorySlot>(slots);
@@ -98,6 +140,19 @@ namespace Nyangbingo.Inventory
             if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 || !target.TryAdd(slot.itemId, slot.amount))
                 return false;
             slots[slotIndex] = default;
+            Changed?.Invoke();
+            return true;
+        }
+
+        public bool TrySwapSlots(int firstIndex, int secondIndex)
+        {
+            if (firstIndex < 0 || firstIndex >= slots.Count ||
+                secondIndex < 0 || secondIndex >= slots.Count ||
+                firstIndex == secondIndex)
+                return false;
+            var first = slots[firstIndex];
+            slots[firstIndex] = slots[secondIndex];
+            slots[secondIndex] = first;
             Changed?.Invoke();
             return true;
         }
@@ -130,13 +185,19 @@ namespace Nyangbingo.Inventory
         private long CapacityFor(string itemId, int maxStack)
         {
             long capacity = 0;
-            foreach (var slot in slots)
+            for (var index = FirstAutoFillSlot(itemId); index < slots.Count; index++)
             {
+                var slot = slots[index];
                 if (slot.itemId == itemId) capacity += Math.Max(0L, (long)maxStack - slot.amount);
                 else if (string.IsNullOrEmpty(slot.itemId)) capacity += maxStack;
             }
             return capacity;
         }
+
+        private int FirstAutoFillSlot(string itemId) =>
+            reservedAutoFillSlotCount == 0 || canAutoFillReservedSlot(itemId)
+                ? 0
+                : reservedAutoFillSlotCount;
     }
 
     [Serializable]

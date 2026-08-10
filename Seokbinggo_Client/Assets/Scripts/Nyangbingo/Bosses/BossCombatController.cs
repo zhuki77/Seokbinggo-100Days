@@ -9,7 +9,9 @@ namespace Nyangbingo.Bosses
 {
     public interface IBossCombatTarget : IYokaiCombatTarget
     {
-        bool TryApplyBossSpecialDamage(int amount, DamageTag tag, Vector2 knockback);
+        bool TryApplyBossSpecialDamage(int amount, DamageTag tag, Vector2 knockback,
+            DamageDelivery delivery = DamageDelivery.Direct,
+            bool showFireHitEffect = true);
     }
 
     [RequireComponent(typeof(Health))]
@@ -29,13 +31,30 @@ namespace Nyangbingo.Bosses
         private const float GangcheoriBreathForwardRatio = 1f;
         private const float GangcheoriBreathHeightRatio = .5f;
         private const float GangcheoriFireVerticalOffset = -.25f;
+        private const float ImugiElectricForwardRatio = 1f;
+        private const float ImugiElectricHeightRatio = .5f;
         private const float GoblinChiefWarningGap = .75f;
         private const float GoblinChiefThrowClearance = .75f;
         private const float GoblinChiefSpecialAnimationLeadSeconds = .35f;
         private const int GoblinChiefSpecialImpactFrameIndex = 3;
         private const float MotherBulgasariSpecialAttackLeadSeconds = .1f;
         private const int MotherBulgasariSpecialImpactFrameIndex = 1;
+        private const float ImugiLandingPhaseHealthRatio = .66f;
+        private const float ImugiLakePhaseHealthRatio = .33f;
+        private const float ImugiLandingHalfExtentTiles = 1.5f;
+        private const int ImugiPhaseDamage = 8;
+        private const float ImugiLandingKnockbackTiles = 2f;
+        private const int ImugiLakePulseCount = 2;
+        private const float ImugiLakePulseIntervalSeconds = .5f;
+        private const float SpecialEffectFrameSeconds = .1f;
         private static readonly Vector2 GoblinChiefWarningWorldSize = new Vector2(1.8f, 1.1f);
+
+        private enum ImugiPhaseAttack
+        {
+            None,
+            LandingDischarge,
+            LakePulse
+        }
 
         [SerializeField] private BossDefinition definition;
         [SerializeField] private MonoBehaviour targetComponent;
@@ -54,6 +73,8 @@ namespace Nyangbingo.Bosses
         private RuntimeBuildingSpriteAnimator specialEffectAnimator;
         private System.Collections.Generic.IReadOnlyList<Sprite> specialEffectFrames;
         private float specialEffectWorldLength;
+        private Vector2 specialEffectMaximumWorldSize;
+        private float specialEffectPlaybackRemaining;
         private Health health;
         private Vector2 lockedAim = Vector2.down;
         private Vector2 specialOriginLocalOffset;
@@ -66,6 +87,11 @@ namespace Nyangbingo.Bosses
         private bool specialActive;
         private bool specialAnimationStarted;
         private bool specialTickAnimationStarted;
+        private bool specialDefenseApplied;
+        private bool imugiLandingPhaseTriggered;
+        private bool imugiLakePhaseTriggered;
+        private ImugiPhaseAttack imugiPhaseAttack;
+        private int imugiLakePulsesRemaining;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
 
@@ -79,7 +105,7 @@ namespace Nyangbingo.Bosses
 
         public void ConfigureWarningArt(GameplayArtCatalog artCatalog)
         {
-            ConfigureGangcheoriSpecialEffect(artCatalog);
+            ConfigureBossSpecialEffect(artCatalog);
             var frames = artCatalog?.BossWarningFrames;
             if (frames == null || frames.Count == 0) return;
             var warning = new GameObject("SpecialWarningArt");
@@ -102,28 +128,40 @@ namespace Nyangbingo.Bosses
             warningRenderer.enabled = telegraphing || specialActive;
         }
 
-        private void ConfigureGangcheoriSpecialEffect(GameplayArtCatalog artCatalog)
+        private void ConfigureBossSpecialEffect(GameplayArtCatalog artCatalog)
         {
-            if (definition == null || definition.Kind != BossKind.Gangcheori) return;
-            var frames = artCatalog?.GangcheoriSpecialFireFrames;
+            if (definition == null ||
+                (definition.Kind != BossKind.Gangcheori && definition.Kind != BossKind.Imugi)) return;
+            var frames = definition.Kind == BossKind.Imugi
+                ? artCatalog?.ImugiElectricAttackFrames
+                : artCatalog?.GangcheoriSpecialFireFrames;
             if (frames == null || frames.Count == 0) return;
             specialEffectFrames = frames;
-            var effect = new GameObject("GangcheoriSpecialFire");
+            var effect = new GameObject(
+                definition.Kind == BossKind.Imugi
+                    ? "ImugiElectricAttack"
+                    : "GangcheoriSpecialFire");
             effect.transform.SetParent(transform, false);
             specialEffectTransform = effect.transform;
             specialEffectRenderer = effect.AddComponent<SpriteRenderer>();
             specialEffectRenderer.sortingOrder = 16;
             specialEffectAnimator = effect.AddComponent<RuntimeBuildingSpriteAnimator>();
-            specialEffectAnimator.Configure(frames, .1f);
+            specialEffectAnimator.Configure(frames, SpecialEffectFrameSeconds);
             specialEffectWorldLength = 0f;
+            specialEffectMaximumWorldSize = Vector2.zero;
             for (var index = 0; index < frames.Count; index++)
             {
                 var frame = frames[index];
-                if (frame != null)
-                    specialEffectWorldLength =
-                        Mathf.Max(specialEffectWorldLength, frame.bounds.size.x);
+                if (frame == null) continue;
+                specialEffectWorldLength =
+                    Mathf.Max(specialEffectWorldLength, frame.bounds.size.x);
+                specialEffectMaximumWorldSize.x =
+                    Mathf.Max(specialEffectMaximumWorldSize.x, frame.bounds.size.x);
+                specialEffectMaximumWorldSize.y =
+                    Mathf.Max(specialEffectMaximumWorldSize.y, frame.bounds.size.y);
             }
             specialEffectRenderer.enabled = false;
+            specialEffectPlaybackRemaining = 0f;
         }
 
         public void BindCharacterAnimator(RuntimeCharacterSpriteAnimator animator)
@@ -153,6 +191,11 @@ namespace Nyangbingo.Bosses
             specialActive = false;
             specialAnimationStarted = false;
             specialTickAnimationStarted = false;
+            imugiLandingPhaseTriggered = false;
+            imugiLakePhaseTriggered = false;
+            imugiPhaseAttack = ImugiPhaseAttack.None;
+            imugiLakePulsesRemaining = 0;
+            specialEffectPlaybackRemaining = 0f;
             EnsureTelegraphRenderer();
             SetTelegraphVisible(false);
             return true;
@@ -163,6 +206,7 @@ namespace Nyangbingo.Bosses
             SetAnimationMoving(false);
             if (!IsFinite(deltaGameSeconds) || deltaGameSeconds < 0f || definition == null ||
                 targetTransform == null || combatTarget == null || health == null || health.IsDead) return;
+            TickSpecialEffect(deltaGameSeconds);
 
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - deltaGameSeconds);
             if (specialActive)
@@ -175,6 +219,7 @@ namespace Nyangbingo.Bosses
                 TickTelegraph(deltaGameSeconds);
                 return;
             }
+            if (TryBeginImugiPhaseAttack()) return;
 
             specialCooldownRemaining = Mathf.Max(0f, specialCooldownRemaining - deltaGameSeconds);
             var targetOffset = (Vector2)(targetTransform.position - transform.position);
@@ -244,11 +289,37 @@ namespace Nyangbingo.Bosses
             specialOriginLocalOffset = ResolveSpecialOriginLocalOffset(lockedAim);
             telegraphing = true;
             specialAnimationStarted = false;
+            specialDefenseApplied = false;
             telegraphRemaining = Mathf.Max(0f, definition.TelegraphSeconds);
-            RefreshTelegraphVisual();
             SetTelegraphVisible(true);
+            RefreshTelegraphVisual();
             TryStartSpecialAnimation();
             if (telegraphRemaining <= .0001f) ActivateSpecial();
+        }
+
+        private bool TryBeginImugiPhaseAttack()
+        {
+            if (definition == null || definition.Kind != BossKind.Imugi || health == null ||
+                health.IsDead || health.MaxHealth <= 0) return false;
+
+            var healthRatio = health.Current / (float)health.MaxHealth;
+            if (!imugiLandingPhaseTriggered && healthRatio < ImugiLandingPhaseHealthRatio)
+            {
+                imugiLandingPhaseTriggered = true;
+                imugiPhaseAttack = ImugiPhaseAttack.LandingDischarge;
+            }
+            else if (!imugiLakePhaseTriggered && healthRatio < ImugiLakePhaseHealthRatio)
+            {
+                imugiLakePhaseTriggered = true;
+                imugiPhaseAttack = ImugiPhaseAttack.LakePulse;
+            }
+            else return false;
+
+            var targetOffset = (Vector2)(targetTransform.position - transform.position);
+            BeginTelegraph(targetOffset.sqrMagnitude > Mathf.Epsilon
+                ? targetOffset.normalized
+                : Vector2.right);
+            return true;
         }
 
         private void TickTelegraph(float deltaGameSeconds)
@@ -269,6 +340,27 @@ namespace Nyangbingo.Bosses
             telegraphing = false;
             if (definition.Kind != BossKind.MotherBulgasari) StartSpecialAnimation();
             SpecialStarted?.Invoke();
+            if (imugiPhaseAttack == ImugiPhaseAttack.LandingDischarge)
+            {
+                ApplyImugiLandingDischarge();
+                FinishSpecial();
+                return;
+            }
+            if (imugiPhaseAttack == ImugiPhaseAttack.LakePulse)
+            {
+                specialActive = true;
+                imugiLakePulsesRemaining = ImugiLakePulseCount;
+                activeSpecialRemaining =
+                    Mathf.Max(0f, (ImugiLakePulseCount - 1) * ImugiLakePulseIntervalSeconds);
+                ApplyImugiLakePulse();
+                imugiLakePulsesRemaining--;
+                specialTickRemaining = ImugiLakePulseIntervalSeconds;
+                SetTelegraphColor(new Color(.2f, .65f, 1f, .42f));
+                SetTelegraphVisible(true);
+                RefreshTelegraphVisual();
+                if (imugiLakePulsesRemaining <= 0) FinishSpecial();
+                return;
+            }
             if (definition.Kind == BossKind.GoblinChief)
                 characterAnimator?.AlignActionImpactFrame(GoblinChiefSpecialImpactFrameIndex);
             if (definition.SpecialDurationSeconds <= .0001f || definition.SpecialTickSeconds <= .0001f)
@@ -302,6 +394,12 @@ namespace Nyangbingo.Bosses
 
         private void TickActiveSpecial(float deltaGameSeconds)
         {
+            if (imugiPhaseAttack == ImugiPhaseAttack.LakePulse)
+            {
+                TickImugiLakePulse(deltaGameSeconds);
+                return;
+            }
+
             var remainingStep = Mathf.Min(deltaGameSeconds, activeSpecialRemaining);
             activeSpecialRemaining = Mathf.Max(0f, activeSpecialRemaining - deltaGameSeconds);
             specialTickRemaining -= remainingStep;
@@ -327,16 +425,55 @@ namespace Nyangbingo.Bosses
             if (activeSpecialRemaining <= .0001f) FinishSpecial();
         }
 
+        private void TickImugiLakePulse(float deltaGameSeconds)
+        {
+            activeSpecialRemaining = Mathf.Max(0f, activeSpecialRemaining - deltaGameSeconds);
+            specialTickRemaining -= deltaGameSeconds;
+            while (imugiLakePulsesRemaining > 0 && specialTickRemaining <= .0001f)
+            {
+                ApplyImugiLakePulse();
+                imugiLakePulsesRemaining--;
+                specialTickRemaining += ImugiLakePulseIntervalSeconds;
+            }
+            if (imugiLakePulsesRemaining <= 0) FinishSpecial();
+        }
+
+        private void ApplyImugiLandingDischarge()
+        {
+            PlayImugiSpecialEffect();
+            var targetOffset = (Vector2)targetTransform.position - (Vector2)transform.position;
+            if (Mathf.Abs(targetOffset.x) > ImugiLandingHalfExtentTiles + RangeTolerance ||
+                Mathf.Abs(targetOffset.y) > ImugiLandingHalfExtentTiles + RangeTolerance) return;
+            var direction = targetOffset.sqrMagnitude > Mathf.Epsilon
+                ? targetOffset.normalized
+                : Vector2.up;
+            TryApplySpecialDamage(ImugiPhaseDamage, DamageTag.Melee,
+                direction * ImugiLandingKnockbackTiles);
+        }
+
+        private void ApplyImugiLakePulse()
+        {
+            PlayImugiSpecialEffect();
+            TryApplySpecialDamage(ImugiPhaseDamage, DamageTag.Melee, Vector2.zero);
+        }
+
         private void FinishSpecial()
         {
+            var completedImugiPhaseAttack = imugiPhaseAttack;
             specialActive = false;
             activeSpecialRemaining = 0f;
             specialTickRemaining = 0f;
-            specialCooldownRemaining = Mathf.Max(0f, definition.SpecialCooldownSeconds);
+            specialCooldownRemaining = completedImugiPhaseAttack == ImugiPhaseAttack.None
+                ? Mathf.Max(0f, definition.SpecialCooldownSeconds)
+                : 0f;
             specialAnimationStarted = false;
             specialTickAnimationStarted = false;
+            imugiPhaseAttack = ImugiPhaseAttack.None;
+            imugiLakePulsesRemaining = 0;
             SetTelegraphVisible(false);
-            SetSpecialEffectVisible(false);
+            if (definition == null || definition.Kind != BossKind.Imugi ||
+                specialEffectPlaybackRemaining <= .0001f)
+                SetSpecialEffectVisible(false);
         }
 
         private void SetSpecialEffectVisible(bool visible)
@@ -344,15 +481,55 @@ namespace Nyangbingo.Bosses
             if (specialEffectRenderer == null) return;
             if (visible)
             {
-                specialEffectAnimator?.Configure(specialEffectFrames, .1f);
+                specialEffectAnimator?.Configure(specialEffectFrames, SpecialEffectFrameSeconds);
                 RefreshSpecialEffectVisual();
             }
             specialEffectRenderer.enabled = visible;
         }
 
+        private void PlayImugiSpecialEffect()
+        {
+            if (definition == null || definition.Kind != BossKind.Imugi ||
+                specialEffectRenderer == null || specialEffectFrames == null ||
+                specialEffectFrames.Count == 0) return;
+            specialEffectPlaybackRemaining =
+                specialEffectFrames.Count * SpecialEffectFrameSeconds;
+            SetSpecialEffectVisible(true);
+        }
+
+        private void TickSpecialEffect(float deltaGameSeconds)
+        {
+            if (specialEffectPlaybackRemaining <= .0001f) return;
+            specialEffectPlaybackRemaining =
+                Mathf.Max(0f, specialEffectPlaybackRemaining - deltaGameSeconds);
+            if (specialEffectPlaybackRemaining <= .0001f)
+                SetSpecialEffectVisible(false);
+        }
+
         private void RefreshSpecialEffectVisual()
         {
             if (specialEffectTransform == null) return;
+            if (definition != null && definition.Kind == BossKind.Imugi)
+            {
+                var effectWorldSize = imugiPhaseAttack == ImugiPhaseAttack.LandingDischarge
+                    ? ImugiLandingHalfExtentTiles * 2f
+                    : Mathf.Max(.1f, definition.SpecialRangeTiles);
+                var imugiRootScale = transform.lossyScale;
+                specialEffectTransform.localScale = new Vector3(
+                    effectWorldSize /
+                    Mathf.Max(specialEffectMaximumWorldSize.x, Mathf.Epsilon) *
+                    SafeInverseScale(imugiRootScale.x),
+                    effectWorldSize /
+                    Mathf.Max(specialEffectMaximumWorldSize.y, Mathf.Epsilon) *
+                    SafeInverseScale(imugiRootScale.y),
+                    1f);
+                var effectCenter = ResolveImugiSpecialEffectCenter();
+                // The delivered 64x48 lightning canvas is bottom-center anchored.
+                specialEffectTransform.position =
+                    effectCenter - Vector2.up * (effectWorldSize * .5f);
+                specialEffectTransform.rotation = Quaternion.identity;
+                return;
+            }
             var aim = lockedAim.sqrMagnitude > Mathf.Epsilon ? lockedAim.normalized : Vector2.left;
             var rootScale = transform.lossyScale;
             specialEffectTransform.localScale = new Vector3(
@@ -371,12 +548,25 @@ namespace Nyangbingo.Bosses
 
         private void ApplySpecialHit()
         {
+            if (definition != null && definition.Kind == BossKind.Imugi)
+                PlayImugiSpecialEffect();
             if (!DoesSpecialAreaOverlapTarget(SpecialOriginWorld(), lockedAim)) return;
             var tag = definition.SpecialHasFireTag ? DamageTag.Fire : DamageTag.Melee;
             var knockback = ResolveSpecialKnockback(
                 (Vector2)targetTransform.position - SpecialOriginWorld());
-            combatTarget.TryApplyBossSpecialDamage(definition.SpecialDamagePerHit, tag,
-                knockback);
+            TryApplySpecialDamage(definition.SpecialDamagePerHit, tag, knockback);
+        }
+
+        private bool TryApplySpecialDamage(int amount, DamageTag tag, Vector2 knockback)
+        {
+            var delivery = specialDefenseApplied
+                ? DamageDelivery.DamageOverTime
+                : DamageDelivery.Direct;
+            var applied = combatTarget.TryApplyBossSpecialDamage(
+                amount, tag, knockback, delivery,
+                definition == null || definition.Kind != BossKind.MotherBulgasari);
+            if (applied) specialDefenseApplied = true;
+            return applied;
         }
 
         private Vector2 ResolveSpecialKnockback(Vector2 targetOffset)
@@ -421,9 +611,9 @@ namespace Nyangbingo.Bosses
         {
             if (!IsFinite(offset)) return false;
             var range = Mathf.Max(0f, definition.SpecialRangeTiles) + RangeTolerance;
-            if (offset.magnitude > range) return false;
             if (definition.SpecialShape == BossSpecialShape.Cone)
             {
+                if (offset.magnitude > range) return false;
                 if (offset.sqrMagnitude <= Mathf.Epsilon) return true;
                 return Vector2.Angle(aim, offset) <= definition.SpecialArcDegrees * .5f + RangeTolerance;
             }
@@ -431,6 +621,20 @@ namespace Nyangbingo.Bosses
             var forward = Vector2.Dot(offset, aim);
             var side = Mathf.Abs(Vector2.Dot(offset, new Vector2(-aim.y, aim.x)));
             return forward >= -RangeTolerance && forward <= range && side <= range * .5f;
+        }
+
+        private Vector2 ResolveImugiSpecialEffectCenter()
+        {
+            if (imugiPhaseAttack == ImugiPhaseAttack.LandingDischarge)
+                return transform.position;
+            if (imugiPhaseAttack == ImugiPhaseAttack.LakePulse)
+                return targetTransform != null ? targetTransform.position : transform.position;
+
+            var aim = lockedAim.sqrMagnitude > Mathf.Epsilon
+                ? lockedAim.normalized
+                : Vector2.right;
+            var range = definition != null ? Mathf.Max(0f, definition.SpecialRangeTiles) : 0f;
+            return SpecialOriginWorld() + aim * (range * .5f);
         }
 
         private bool IsInsideSpecialRecognitionRange(Vector2 offset, Vector2 aim, Vector2 origin)
@@ -542,18 +746,13 @@ namespace Nyangbingo.Bosses
             }
 
             var halfWidth = range * .5f;
-            var edgeAngle = Mathf.Asin(Mathf.Clamp01(halfWidth / range)) * Mathf.Rad2Deg;
-            var boxVertices = new Vector2[arcSegments + 3];
-            boxVertices[0] = origin - side * halfWidth;
-            for (var index = 0; index <= arcSegments; index++)
+            return new[]
             {
-                var angle = Mathf.Lerp(-edgeAngle, edgeAngle, index / (float)arcSegments) * Mathf.Deg2Rad;
-                boxVertices[index + 1] =
-                    origin + forward * (Mathf.Cos(angle) * range) +
-                    side * (Mathf.Sin(angle) * range);
-            }
-            boxVertices[boxVertices.Length - 1] = origin + side * halfWidth;
-            return boxVertices;
+                origin - side * halfWidth,
+                origin + forward * range - side * halfWidth,
+                origin + forward * range + side * halfWidth,
+                origin + side * halfWidth
+            };
         }
 
         private static bool SegmentIntersectsBounds(Vector2 start, Vector2 end, Vector2 min, Vector2 max)
@@ -606,21 +805,38 @@ namespace Nyangbingo.Bosses
         private void RefreshTelegraphVisual()
         {
             if (telegraphRenderer == null || telegraphMesh == null) return;
-            var range = Mathf.Max(.1f, definition.SpecialRangeTiles);
-            if (definition.SpecialShape == BossSpecialShape.Cone)
-                BuildConeMesh(range, definition.SpecialArcDegrees);
+            if (imugiPhaseAttack == ImugiPhaseAttack.LakePulse)
+            {
+                telegraphRenderer.enabled = false;
+                return;
+            }
+            if (imugiPhaseAttack == ImugiPhaseAttack.LandingDischarge)
+                BuildCenteredBoxMesh(ImugiLandingHalfExtentTiles);
             else
-                BuildBoxMesh(range, range * .5f);
+            {
+                var range = Mathf.Max(.1f, definition.SpecialRangeTiles);
+                if (definition.SpecialShape == BossSpecialShape.Cone)
+                    BuildConeMesh(range, definition.SpecialArcDegrees);
+                else
+                    BuildBoxMesh(range, range * .5f);
+            }
             telegraphRenderer.transform.localPosition =
-                new Vector3(specialOriginLocalOffset.x, specialOriginLocalOffset.y, 0f);
-            telegraphRenderer.transform.localRotation = Quaternion.Euler(0f, 0f,
-                Mathf.Atan2(lockedAim.y, lockedAim.x) * Mathf.Rad2Deg);
+                imugiPhaseAttack == ImugiPhaseAttack.LandingDischarge
+                    ? Vector3.zero
+                    : new Vector3(specialOriginLocalOffset.x, specialOriginLocalOffset.y, 0f);
+            telegraphRenderer.transform.localRotation =
+                imugiPhaseAttack == ImugiPhaseAttack.LandingDischarge
+                    ? Quaternion.identity
+                    : Quaternion.Euler(0f, 0f,
+                        Mathf.Atan2(lockedAim.y, lockedAim.x) * Mathf.Rad2Deg);
             var rootScale = transform.lossyScale;
             telegraphRenderer.transform.localScale = new Vector3(
                 SafeInverseScale(rootScale.x),
                 SafeInverseScale(rootScale.y),
                 1f);
-            SetTelegraphColor(new Color(1f, .2f, .05f, .32f));
+            SetTelegraphColor(imugiPhaseAttack == ImugiPhaseAttack.None
+                ? new Color(1f, .2f, .05f, .32f)
+                : new Color(.2f, .65f, 1f, .42f));
         }
 
         private Vector2 ResolveSpecialOriginLocalOffset(Vector2 aim)
@@ -628,7 +844,8 @@ namespace Nyangbingo.Bosses
             if (definition == null ||
                 (definition.Kind != BossKind.MotherBulgasari &&
                  definition.Kind != BossKind.GoblinChief &&
-                 definition.Kind != BossKind.Gangcheori))
+                 definition.Kind != BossKind.Gangcheori &&
+                 definition.Kind != BossKind.Imugi))
                 return Vector2.zero;
 
             var characterRenderer = CharacterRenderer();
@@ -638,17 +855,21 @@ namespace Nyangbingo.Bosses
             var bounds = characterRenderer.bounds;
             var horizontalSign = Mathf.Abs(aim.x) > RangeTolerance
                 ? Mathf.Sign(aim.x)
-                : characterRenderer.flipX ? -1f : 1f;
+                : definition.Kind == BossKind.Imugi
+                    ? characterRenderer.flipX ? 1f : -1f
+                    : characterRenderer.flipX ? -1f : 1f;
             var forwardRatio = definition.Kind switch
             {
                 BossKind.GoblinChief => GoblinChiefAttackForwardRatio,
                 BossKind.Gangcheori => GangcheoriBreathForwardRatio,
+                BossKind.Imugi => ImugiElectricForwardRatio,
                 _ => MotherBulgasariNoseForwardRatio
             };
             var heightRatio = definition.Kind switch
             {
                 BossKind.GoblinChief => GoblinChiefAttackHeightRatio,
                 BossKind.Gangcheori => GangcheoriBreathHeightRatio,
+                BossKind.Imugi => ImugiElectricHeightRatio,
                 _ => MotherBulgasariNoseHeightRatio
             };
             var noseWorld = new Vector2(
@@ -740,6 +961,18 @@ namespace Nyangbingo.Bosses
             ApplyTelegraphMesh(vertices, new[] { 0, 2, 1, 0, 3, 2 });
         }
 
+        private void BuildCenteredBoxMesh(float halfExtent)
+        {
+            var vertices = new[]
+            {
+                new Vector3(-halfExtent, -halfExtent, 0f),
+                new Vector3(halfExtent, -halfExtent, 0f),
+                new Vector3(halfExtent, halfExtent, 0f),
+                new Vector3(-halfExtent, halfExtent, 0f)
+            };
+            ApplyTelegraphMesh(vertices, new[] { 0, 2, 1, 0, 3, 2 });
+        }
+
         private void ApplyTelegraphMesh(Vector3[] vertices, int[] triangles)
         {
             telegraphMesh.Clear();
@@ -791,6 +1024,7 @@ namespace Nyangbingo.Bosses
 
         private void OnDisable()
         {
+            specialEffectPlaybackRemaining = 0f;
             SetTelegraphVisible(false);
             SetSpecialEffectVisible(false);
         }
