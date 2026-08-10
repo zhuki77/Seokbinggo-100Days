@@ -77,10 +77,24 @@ namespace Nyangbingo.World
         /// Tilemap instead of duplicating FloorToInt and x+0.5 assumptions. This keeps mining,
         /// placement, seal diagnostics and Tilemap art aligned if the Grid origin, scale or cell
         /// anchor changes later.
+        ///
+        /// 납품 지형 아트는 하단 피벗(0.5,0)이므로 tileAnchor도 <see cref="TerrainVisualAnchor"/>다.
+        /// 게임플레이 셀 중심은 tileAnchor와 독립적으로 격자 코너에서 계산한다.
         /// </summary>
-        public Vector3Int WorldToCell(Vector3 worldPosition) => foregroundTilemap != null
-            ? foregroundTilemap.WorldToCell(worldPosition)
-            : Vector3Int.FloorToInt(worldPosition);
+        public Vector3Int WorldToCell(Vector3 worldPosition)
+        {
+            if (foregroundTilemap == null) return Vector3Int.FloorToInt(worldPosition);
+
+            var size = foregroundTilemap.cellSize;
+            var anchor = foregroundTilemap.tileAnchor;
+            // visualBottom = cellOrigin + anchor*size
+            // X: 하단-중앙 피벗 → visualLeft = cellOrigin.x + (anchor.x - 0.5)*size.x
+            var adjusted = new Vector3(
+                worldPosition.x - (anchor.x - .5f) * size.x,
+                worldPosition.y - anchor.y * size.y,
+                worldPosition.z);
+            return foregroundTilemap.WorldToCell(adjusted);
+        }
 
         public Vector3 GetCellCenterWorld(Vector3Int cell)
         {
@@ -97,6 +111,21 @@ namespace Nyangbingo.World
             return (bottomLeft + topRight) * .5f;
         }
 
+        /// <summary>
+        /// 전경 타일 스프라이트 피벗이 놓이는 월드 좌표(tileAnchor 위치).
+        /// </summary>
+        public Vector3 GetTilePivotWorld(Vector3Int cell)
+        {
+            if (foregroundTilemap == null)
+                return new Vector3(cell.x + DefaultTileAnchor.x, cell.y + DefaultTileAnchor.y, cell.z);
+
+            var origin = foregroundTilemap.CellToWorld(cell);
+            var size = foregroundTilemap.cellSize;
+            var anchor = foregroundTilemap.tileAnchor;
+            return origin + Vector3.Scale(anchor, size);
+        }
+
+        /// <summary>타일 비주얼 앵커(하단 피벗 아트 기준). OpenDoor·장식 정렬에 사용.</summary>
         public Vector3 GetCellVisualAnchorWorld(Vector3Int cell)
         {
             if (foregroundTilemap == null)
@@ -121,16 +150,14 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// Delivered terrain sprites are bottom-pivoted. Their Tilemap visual anchor therefore
-        /// belongs on the lower edge of the logical cell; collision and targeting remain based
-        /// on the geometric cell bounds.
+        /// 하단 피벗·약 1칸 높이 지형 타일의 보이는 중심.
+        /// tileAnchor(0.5,0.5)일 때 GetCellCenterWorld보다 0.5칸 위에 있다.
         /// </summary>
-        public void EnsureWorldCoordinateContract()
+        public Vector3 GetTileVisualCenterWorld(Vector3Int cell)
         {
-            if (foregroundTilemap != null)
-                foregroundTilemap.tileAnchor = TerrainVisualAnchor;
-            if (backgroundTilemap != null)
-                backgroundTilemap.tileAnchor = TerrainVisualAnchor;
+            var pivot = GetTilePivotWorld(cell);
+            var sizeY = foregroundTilemap != null ? foregroundTilemap.cellSize.y : 1f;
+            return pivot + new Vector3(0f, sizeY * .5f, 0f);
         }
 
         public bool HasForegroundTile(Vector3Int cell) => foregroundTilemap != null &&
@@ -185,12 +212,15 @@ namespace Nyangbingo.World
         private CompositeCollider2D foregroundComposite;
         private TilemapCollider2D foregroundTilemapCollider;
         private GameObject runtimeEdgeOverlayObject;
-        private GameObject runtimeWorldBoundaryObject;
-        private BoxCollider2D leftWorldBoundary;
-        private BoxCollider2D rightWorldBoundary;
+
+        /// <summary>
+        /// 지형/배경 aseprite는 하단 피벗(0.5,0). 렌더 앵커는 <see cref="TerrainVisualAnchor"/>,
+        /// 게임플레이 셀 중심은 <see cref="GetCellCenterWorld"/>가 격자 기준으로 계산한다.
+        /// 중앙 앵커가 필요한 별도 오버레이는 <see cref="DefaultTileAnchor"/>를 직접 지정한다.
+        /// </summary>
+        public static readonly Vector3 DefaultTileAnchor = new Vector3(.5f, .5f, 0f);
 
         private const int RuntimeEdgeTextureSize = 16;
-        private const float WorldBoundaryThickness = 1f;
         private static readonly Color32 RuntimeEdgeInkColor = new Color32(0x1A, 0x1A, 0x24, 0xFF);
         private static readonly TileEdgeMask[] RuntimeEdgeBaseMasks =
         {
@@ -203,10 +233,32 @@ namespace Nyangbingo.World
 
         private void Awake()
         {
-            EnsureWorldCoordinateContract();
             RebuildLookupTable();
+            EnsureTileAnchors();
             EnsureForegroundCollision();
             EnsureEdgeOverlayWiring();
+        }
+
+        /// <summary>
+        /// 납품 지형 스프라이트는 하단 피벗이므로 Tilemap visual anchor를 논리 셀 하단 가장자리에 둔다.
+        /// 충돌·타겟팅은 기하 셀 bounds를 유지한다.
+        /// </summary>
+        public void EnsureWorldCoordinateContract()
+        {
+            if (foregroundTilemap != null)
+                foregroundTilemap.tileAnchor = TerrainVisualAnchor;
+            if (backgroundTilemap != null)
+                backgroundTilemap.tileAnchor = TerrainVisualAnchor;
+        }
+
+        /// <summary>
+        /// 전경·배경·엣지 오버레이에 월드 좌표 계약을 적용한다.
+        /// </summary>
+        public void EnsureTileAnchors()
+        {
+            EnsureWorldCoordinateContract();
+            if (edgeOverlayTilemap != null)
+                edgeOverlayTilemap.tileAnchor = TerrainVisualAnchor;
         }
 
         /// <summary>
@@ -286,7 +338,7 @@ namespace Nyangbingo.World
             }
 
             if (_lookup == null) RebuildLookupTable();
-            EnsureWorldCoordinateContract();
+            EnsureTileAnchors();
             EnsureEdgeOverlayWiring();
 
             var width = tiles.GetLength(0);
@@ -328,7 +380,6 @@ namespace Nyangbingo.World
             var bounds = new BoundsInt(0, 0, 0, width, height, 1);
 
             EnsureForegroundCollision();
-            EnsureWorldBoundaryCollision(width, height);
 
             foregroundTilemap.ClearAllTiles();
             backgroundTilemap.ClearAllTiles();
@@ -372,12 +423,14 @@ namespace Nyangbingo.World
         /// A-17/A-21: 전경 Tilemap에 TilemapCollider2D + CompositeCollider2D + Static Rigidbody2D를 구성한다.
         /// 배경 Tilemap에는 Collider를 붙이지 않는다.
         /// 좌표 계약: 논리 셀 (x,y)의 월드 AABB는 Grid/Tilemap 기본 Cell Size(1,1) 기준 [x,x+1]×[y,y+1],
-        /// 중심 GetCellCenterWorld ≈ (x+0.5, y+0.5). 지형 시각 앵커는 하단 피벗 아트에 맞춰 (0.5,0)을 사용하며,
+        /// 중심 GetCellCenterWorld ≈ (x+0.5, y+0.5). tileAnchor 기본 (0.5,0.5) —
+        /// 하단 피벗 아트는 논리 셀보다 0.5칸 위에 그려지며, 클릭은 WorldToCell이 보정한다.
         /// Collider는 타일 점유 셀 경계를 따르며 스프라이트 피벗에 의존하지 않는다.
         /// </summary>
         public void EnsureForegroundCollision()
         {
             if (foregroundTilemap == null) return;
+            EnsureTileAnchors();
 
             var fgGo = foregroundTilemap.gameObject;
             foregroundTilemapCollider = fgGo.GetComponent<TilemapCollider2D>();
@@ -404,78 +457,6 @@ namespace Nyangbingo.World
                 var bgBody = backgroundTilemap.GetComponent<Rigidbody2D>();
                 if (bgBody != null) DestroyComponentSafe(bgBody);
             }
-        }
-
-        /// <summary>
-        /// Keeps the player inside the generated map without adding visible or mineable tiles.
-        /// The colliders share the foreground body's transform and collision layer.
-        /// </summary>
-        private void EnsureWorldBoundaryCollision(int width, int height)
-        {
-            if (foregroundTilemap == null || width <= 0 || height <= 0) return;
-
-            if (runtimeWorldBoundaryObject == null)
-            {
-                runtimeWorldBoundaryObject = new GameObject("RuntimeWorldBoundaries");
-                runtimeWorldBoundaryObject.transform.SetParent(foregroundTilemap.transform, false);
-                leftWorldBoundary = CreateWorldBoundaryCollider("WorldBoundaryLeft");
-                rightWorldBoundary = CreateWorldBoundaryCollider("WorldBoundaryRight");
-            }
-            else
-            {
-                if (leftWorldBoundary == null)
-                    leftWorldBoundary = FindOrCreateWorldBoundaryCollider("WorldBoundaryLeft");
-                if (rightWorldBoundary == null)
-                    rightWorldBoundary = FindOrCreateWorldBoundaryCollider("WorldBoundaryRight");
-            }
-
-            var collisionLayer = foregroundTilemap.gameObject.layer;
-            runtimeWorldBoundaryObject.layer = collisionLayer;
-            leftWorldBoundary.gameObject.layer = collisionLayer;
-            rightWorldBoundary.gameObject.layer = collisionLayer;
-
-            // Extend one map height above and below the playable area so a falling or jumping
-            // character cannot slip around either end of a short wall.
-            var boundaryHeight = Mathf.Max(3f, height * 3f);
-            var boundaryCenterY = height * .5f;
-            var boundarySize = new Vector2(WorldBoundaryThickness, boundaryHeight);
-
-            ConfigureWorldBoundary(
-                leftWorldBoundary,
-                boundarySize,
-                new Vector3(-WorldBoundaryThickness * .5f, boundaryCenterY, 0f));
-            ConfigureWorldBoundary(
-                rightWorldBoundary,
-                boundarySize,
-                new Vector3(width + WorldBoundaryThickness * .5f, boundaryCenterY, 0f));
-
-            Physics2D.SyncTransforms();
-        }
-
-        private BoxCollider2D CreateWorldBoundaryCollider(string objectName)
-        {
-            var boundaryObject = new GameObject(objectName);
-            boundaryObject.transform.SetParent(runtimeWorldBoundaryObject.transform, false);
-            return boundaryObject.AddComponent<BoxCollider2D>();
-        }
-
-        private BoxCollider2D FindOrCreateWorldBoundaryCollider(string objectName)
-        {
-            var child = runtimeWorldBoundaryObject.transform.Find(objectName);
-            if (child == null) return CreateWorldBoundaryCollider(objectName);
-            var collider = child.GetComponent<BoxCollider2D>();
-            return collider != null ? collider : child.gameObject.AddComponent<BoxCollider2D>();
-        }
-
-        private static void ConfigureWorldBoundary(
-            BoxCollider2D boundary,
-            Vector2 size,
-            Vector3 localPosition)
-        {
-            boundary.size = size;
-            boundary.offset = Vector2.zero;
-            boundary.isTrigger = false;
-            boundary.transform.localPosition = localPosition;
         }
 
         /// <summary>전경 타일 변경 후 CompositeCollider가 형상을 다시 합치도록 알린다.</summary>
@@ -692,6 +673,29 @@ namespace Nyangbingo.World
             _lookup[elementType] = tile;
         }
 
+        /// <summary>투명 스프라이트 + Grid 충돌. 1x2 문 위칸처럼 비주얼은 아래 칸이 담당할 때 쓴다.</summary>
+        public void RegisterRuntimeColliderOnlyForegroundTile(string elementType)
+        {
+            if (string.IsNullOrWhiteSpace(elementType)) return;
+            if (_runtimeTiles.TryGetValue(elementType, out var existing) && existing != null)
+            {
+                _lookup[elementType] = existing;
+                return;
+            }
+
+            var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                name = $"Runtime_{elementType}_Tex"
+            };
+            texture.SetPixel(0, 0, Color.clear);
+            texture.Apply(false, true);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+            sprite.name = $"Runtime_{elementType}_Sprite";
+            RegisterRuntimeForegroundTile(elementType, sprite);
+        }
+
         private void OnDestroy()
         {
             foreach (var tile in _runtimeTiles.Values)
@@ -714,9 +718,6 @@ namespace Nyangbingo.World
 
             if (runtimeEdgeOverlayObject != null)
                 DestroyRuntimeObject(runtimeEdgeOverlayObject);
-
-            if (runtimeWorldBoundaryObject != null)
-                DestroyRuntimeObject(runtimeWorldBoundaryObject);
         }
 
         private static void DestroyRuntimeObject(UnityEngine.Object target)

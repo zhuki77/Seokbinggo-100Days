@@ -192,7 +192,19 @@ namespace Nyangbingo.UI
                 .ThenBy(definition => definition.Id, StringComparer.Ordinal));
             BuildUi();
             var saveCoordinator = FindAnyObjectByType<MainGameSaveCoordinator>();
-            codexModel = saveCoordinator?.ProgressTracker?.CreateCodexPresentationModel();
+            if (saveCoordinator != null && saveCoordinator.ProgressTracker != null)
+            {
+                try
+                {
+                    codexModel = saveCoordinator.ProgressTracker.CreateCodexPresentationModel();
+                }
+                catch (System.Exception exception)
+                {
+                    Debug.LogError("[Nyangbingo] MainGameCraftingUiController: 도감 모델 생성 실패 — " +
+                                   exception.Message);
+                    codexModel = null;
+                }
+            }
             ResolveCharacterArtCatalog();
             FindAnyObjectByType<MainGameCodexController>()?.UseUnifiedPanel();
             runtimeServices.PlayerInventory.Changed += Refresh;

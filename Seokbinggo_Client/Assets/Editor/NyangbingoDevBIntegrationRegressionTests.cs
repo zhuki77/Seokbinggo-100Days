@@ -792,7 +792,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
         Require(SaveManager.TryDeserialize(JsonUtility.ToJson(save), out var loaded),
             "Detailed dynamic save JSON must deserialize.");
-        Require(loaded.schemaVersion == SaveGame.CurrentSchemaVersion && loaded.regularEncounter.usesDetailedYokaiState &&
         Require(loaded.schemaVersion == SaveGame.CurrentSchemaVersion &&
                 loaded.regularEncounter.usesDetailedYokaiState &&
                 loaded.regularEncounter.activeYokai.Count == 1 &&
@@ -1794,8 +1793,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
             Require(attack.LastHitCount == 2 && yokaiDamageEvents == 1 && bossDamageEvents == 1,
                 "A boss sprite edge hurtbox must take one melee hit even when its movement core is out of range." +
                 $" (hits={attack.LastHitCount}, yokaiEvents={yokaiDamageEvents}, bossEvents={bossDamageEvents})");
-                $"The isolated melee query must report exactly two targets and one damage event per target. " +
-                $"hits={attack.LastHitCount}, yokaiEvents={yokaiDamageEvents}, bossEvents={bossDamageEvents}.");
 
             yokaiHealth.ConfigureForRuntime(100);
             bossHealth.ConfigureForRuntime(200);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Nyangbingo.Data;
 using Nyangbingo.Save;
 using UnityEngine;
@@ -54,17 +55,43 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
-            if (saveCoordinator == null || !saveCoordinator.Initialize() || saveCoordinator.ProgressTracker == null ||
-                panel == null || detailText == null || cardButtons == null || cardTexts == null ||
-                cardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount ||
-                cardTexts.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            if (saveCoordinator == null)
             {
-                Debug.LogError("[Nyangbingo] MainGameCodexController: 도감 데이터 또는 8장 카드 UI 배선이 올바르지 않습니다.");
+                Debug.LogError("[Nyangbingo] MainGameCodexController: SaveCoordinator 배선이 없습니다.");
                 enabled = false;
                 return;
             }
 
-            model = saveCoordinator.ProgressTracker.CreateCodexPresentationModel();
+            if (!saveCoordinator.Initialize() || saveCoordinator.ProgressTracker == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCodexController: 저장/진행 트랙커 초기화에 실패했습니다.");
+                enabled = false;
+                return;
+            }
+
+            EnsureCardUiBindings();
+            if (panel == null || detailText == null || !HasCompleteCardBindings())
+            {
+                Debug.LogError(
+                    "[Nyangbingo] MainGameCodexController: 도감 패널 또는 " +
+                    $"{YokaiCodexPresentationModel.ExpectedCardCount}장 카드 UI 배선이 올바르지 않습니다 " +
+                    $"(buttons={cardButtons?.Length ?? 0}, texts={cardTexts?.Length ?? 0}).");
+                enabled = false;
+                return;
+            }
+
+            try
+            {
+                model = saveCoordinator.ProgressTracker.CreateCodexPresentationModel();
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCodexController: 도감 모델 생성 실패 — " +
+                               exception.Message);
+                enabled = false;
+                return;
+            }
+
             ResolveCharacterArtCatalog();
             ResolveGameplayArtCatalog();
             ConfigureNativeGrid();
@@ -77,7 +104,73 @@ namespace Nyangbingo.UI
             }
             panel.SetActive(false);
             RefreshView();
-            Debug.Log("[Nyangbingo] MainGameCodexController: 3열 8장 격자와 192x256 확대·뒤집기 도감 연결 완료.");
+            Debug.Log(
+                $"[Nyangbingo] MainGameCodexController: 3열 {YokaiCodexPresentationModel.ExpectedCardCount}장 " +
+                "격자와 192x256 확대·뒤집기 도감 연결 완료.");
+        }
+
+        private bool HasCompleteCardBindings()
+        {
+            var expected = YokaiCodexPresentationModel.ExpectedCardCount;
+            if (cardButtons == null || cardTexts == null ||
+                cardButtons.Length != expected || cardTexts.Length != expected)
+                return false;
+            for (var index = 0; index < expected; index++)
+                if (cardButtons[index] == null || cardTexts[index] == null)
+                    return false;
+            return true;
+        }
+
+        /// <summary>
+        /// 구 씬은 8장 카드만 직렬화되어 있을 수 있다. CardGrid 자식을 모아 부족한 칸을 런타임에 보충한다.
+        /// </summary>
+        private void EnsureCardUiBindings()
+        {
+            if (panel == null) return;
+            var window = panel.transform.Find("Window");
+            var grid = window != null ? window.Find("CardGrid") as RectTransform : null;
+            if (grid == null) return;
+
+            var buttons = new List<Button>(YokaiCodexPresentationModel.ExpectedCardCount);
+            var labels = new List<Text>(YokaiCodexPresentationModel.ExpectedCardCount);
+            for (var index = 0; index < grid.childCount; index++)
+            {
+                var child = grid.GetChild(index);
+                var button = child.GetComponent<Button>();
+                var label = child.GetComponentInChildren<Text>(true);
+                if (button == null || label == null) continue;
+                buttons.Add(button);
+                labels.Add(label);
+            }
+
+            var font = detailText != null && detailText.font != null
+                ? detailText.font
+                : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            while (buttons.Count < YokaiCodexPresentationModel.ExpectedCardCount)
+            {
+                var cardIndex = buttons.Count;
+                var cardObject = new GameObject($"Card_{cardIndex + 1:00}", typeof(RectTransform));
+                cardObject.transform.SetParent(grid, false);
+                var cardImage = cardObject.AddComponent<Image>();
+                cardImage.color = new Color(.17f, .21f, .25f, 1f);
+                var button = cardObject.AddComponent<Button>();
+                var labelObject = new GameObject("Label", typeof(RectTransform));
+                labelObject.transform.SetParent(cardObject.transform, false);
+                var label = labelObject.AddComponent<Text>();
+                label.font = font;
+                label.fontSize = 13;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.color = new Color(.94f, .96f, 1f, 1f);
+                label.rectTransform.anchorMin = Vector2.zero;
+                label.rectTransform.anchorMax = Vector2.one;
+                label.rectTransform.offsetMin = new Vector2(3f, 3f);
+                label.rectTransform.offsetMax = new Vector2(-3f, -3f);
+                buttons.Add(button);
+                labels.Add(label);
+            }
+
+            cardButtons = buttons.GetRange(0, YokaiCodexPresentationModel.ExpectedCardCount).ToArray();
+            cardTexts = labels.GetRange(0, YokaiCodexPresentationModel.ExpectedCardCount).ToArray();
         }
 
         private void Update()
