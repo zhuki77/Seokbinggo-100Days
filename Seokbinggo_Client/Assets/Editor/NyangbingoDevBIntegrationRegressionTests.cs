@@ -1393,27 +1393,24 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The delivered title, pause, settings, and numeric shell art must be fully catalog-bound.");
         Require(catalog.ShellLoadingSheet != null &&
                 catalog.ShellLoadingSheet.texture.width == 3200 &&
-                catalog.ShellLoadingSheet.texture.height == 1440 &&
-                MainGameShellUiController.ShellLoadingFrameCount == 17 &&
-                Mathf.Approximately(MainGameShellUiController.ShellLoadingDurationSeconds, 2.2f),
-            "The delivered logo tear loading animation must keep its optimized 5x4 sheet and timing.");
-        var loadingDuration = 0f;
-        for (var index = 0; index < MainGameShellUiController.ShellLoadingFrameCount; index++)
-            loadingDuration += MainGameShellUiController.ShellLoadingFrameDurationSeconds(index);
-        Require(Mathf.Approximately(loadingDuration,
-                MainGameShellUiController.ShellLoadingDurationSeconds),
-            "The shell loading frame timings must add up to the declared transition duration.");
+                catalog.ShellLoadingSheet.texture.height == 1440,
+            "The delivered logo tear loading animation sheet must remain available for Loading.unity.");
+        var loadingControllerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/LoadingSceneController.cs");
+        Require(loadingControllerSource.Contains("LoadSceneMode.Single") &&
+                loadingControllerSource.Contains("allowSceneActivation = false") &&
+                loadingControllerSource.Contains("SceneTransitionRequest.TargetSceneName"),
+            "Loading.unity must drive the Title/MainGame handoff via an async Single-mode load.");
         Require(Mathf.Approximately(
                     GameShellController.ResolveTimeScaleAfterLoading(GameShellScreen.Gameplay), 1f) &&
                 Mathf.Approximately(
-                    GameShellController.ResolveTimeScaleAfterLoading(GameShellScreen.Title), 0f),
-            "Loading completion must always resume gameplay and keep title screens paused.");
-        var gameShellSource = System.IO.File.ReadAllText(
-            "Assets/Scripts/Nyangbingo/UI/GameShellController.cs");
-        Require(!gameShellSource.Contains("ReplaceSlotOne") &&
-                !gameShellSource.Contains("HasSave(AutoSaveSlot)") &&
-                !gameShellSource.Contains("ShowGameplay();\n            ContinueRequested") &&
-                gameShellSource.Contains("NewGameRequested?.Invoke(AutoSaveSlot)"),
+                    GameShellController.ResolveTimeScaleAfterLoading(GameShellScreen.Pause), 0f),
+            "Loading completion must always resume gameplay and keep non-gameplay screens paused.");
+        var titleShellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/TitleShellController.cs");
+        Require(!titleShellSource.Contains("ReplaceSlotOne") &&
+                !titleShellSource.Contains("HasSave(AutoSaveSlot)") &&
+                titleShellSource.Contains("NewGameRequested?.Invoke()"),
             "The single-slot Start button must immediately request a clean new game.");
         Require(RuntimePixelGlyphPresenter.GlyphIndex('D') == 0 &&
                 RuntimePixelGlyphPresenter.GlyphIndex('-') == 1 &&
@@ -1431,32 +1428,20 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(shellSource.Contains("ConfigurePauseHoverIndicator") &&
                 shellSource.Contains("EventTriggerType.PointerEnter") &&
                 shellSource.Contains("checkmark.rectTransform.sizeDelta = offSize") &&
-                shellSource.Contains("SetStatus(string.Empty)") &&
                 shellSource.Contains("pauseHoverIndicator.gameObject.SetActive") &&
-                shellSource.Contains("BeginShellLoadingTransition") &&
-                shellSource.Contains("StabilizeGameplayCamera();") &&
-                shellSource.Contains("shellLoadingImage.sprite = shellLoadingFrames[0]") &&
-                shellSource.Contains("SpriteMeshType.FullRect, Vector4.zero, false") &&
-                shellSource.Contains("yield return PlayShellLoadingReveal()") &&
-                shellSource.Contains("revealLoadingAfterReload = true") &&
-                shellSource.Contains("shell.RestoreTimeScaleAfterLoading()") &&
                 shellSource.Contains("saveManager.DeleteAll()") &&
-                shellSource.Contains("discardSaveAfterReload = true") &&
-                shellSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed)") &&
                 shellSource.Contains("CreateFreshInitialSave()") &&
                 shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
-                shellSource.Contains("LoadScene(SceneManager.GetActiveScene().name)") &&
-                shellSource.IndexOf("completion?.Invoke();", shellSource.IndexOf(
-                    "private IEnumerator PlayShellLoadingTransition", StringComparison.Ordinal),
-                    StringComparison.Ordinal) <
-                shellSource.IndexOf("shellLoadingOverlay.SetActive(false);", shellSource.IndexOf(
-                    "private IEnumerator PlayShellLoadingTransition", StringComparison.Ordinal),
-                    StringComparison.Ordinal) &&
-                shellSource.Contains("WaitForSecondsRealtime") &&
-                shellSource.Contains("new Vector2(-112f, 82f)") &&
-                shellSource.Contains("new Vector2(96f, 96f)") &&
-                shellSource.Contains("new Vector2(176f, 97f)"),
-            "Shell art and loading must remain wired, with loading frozen before the post-load tear reveal.");
+                shellSource.Contains("SceneTransitionRequest.Begin(\"Title\")"),
+            "Pause-hover art and the new-game fresh-save path must remain wired in MainGame.unity.");
+        var titleUiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/TitleUiController.cs");
+        Require(titleUiSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed)") &&
+                titleUiSource.Contains("SceneTransitionRequest.Begin(\"MainGame\")") &&
+                titleUiSource.Contains("new Vector2(-112f, 82f)") &&
+                titleUiSource.Contains("new Vector2(96f, 96f)") &&
+                titleUiSource.Contains("new Vector2(176f, 97f)"),
+            "Title art and the Title→MainGame scene handoff must remain wired in Title.unity.");
 
         var hudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
@@ -3376,12 +3361,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Number keys 1-8 must select inventory hotbar slots, including empty slots.");
         Require(!paletteSource.Contains("!MainGameShellUiController.IsLoadingTransitionActive"),
             "The tile palette must remain in the gameplay HUD beneath the shell loading overlay.");
-        var shellSource = System.IO.File.ReadAllText(
-            "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
-        Require(MainGameShellUiController.ShellLoadingSortingOrder == 32700 &&
-                shellSource.Contains("overlayCanvas.overrideSorting = true") &&
-                shellSource.Contains("overlayCanvas.sortingOrder = ShellLoadingSortingOrder"),
-            "The shell loading transition must use a dedicated topmost canvas independent of HUD creation order.");
+        var loadingCreatorSource = System.IO.File.ReadAllText(
+            "Assets/Editor/NyangbingoLoadingSceneCreator.cs");
+        Require(LoadingSceneController.CanvasSortingOrder == 32700 &&
+                loadingCreatorSource.Contains("overrideSorting = true") &&
+                loadingCreatorSource.Contains("LoadingSceneController.CanvasSortingOrder"),
+            "The Loading scene must use a dedicated topmost canvas independent of Title/MainGame HUD creation order.");
         Require(TileService.SupportsForegroundPlacement(WorldTileTypes.Dirt) &&
                 TileService.SupportsForegroundPlacement(WorldTileTypes.Stone) &&
                 TileService.SupportsForegroundPlacement("insul_wall") &&
