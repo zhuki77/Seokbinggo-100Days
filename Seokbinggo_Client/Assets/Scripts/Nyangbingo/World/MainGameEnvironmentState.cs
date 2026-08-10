@@ -789,6 +789,7 @@ namespace Nyangbingo.World
             var openSprite = ResolveDoorSprite(buildingArtCatalog?.Find(DoorDefinitionId), open: true);
             if (openSprite != null) spriteRenderer.sprite = openSprite;
             else RuntimePlaceholderVisual.Configure(spriteRenderer, new Color(.55f, .85f, 1f), .75f, 13);
+            TileService?.AlignSpriteBoundsToCellBase(spriteRenderer, entry.Cell);
             var color = spriteRenderer.color;
             color.a = OpenDoorVisualAlpha;
             spriteRenderer.color = color;

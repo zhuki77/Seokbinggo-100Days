@@ -37,7 +37,12 @@ namespace Nyangbingo.UI
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
         public const int ShortcutSlotCount = 8;
-        public const float PlacementReachTiles = 1.5f;
+        /// <summary>채굴과 동일 — globals <c>player_mining_reach_tiles</c> 기본값.</summary>
+        public const float DefaultPlacementReachTiles = 4f;
+
+        private static float placementReachTiles = DefaultPlacementReachTiles;
+        /// <summary>전경 블록·설치물 공통 사거리. 런타임에 globals에서 갱신된다.</summary>
+        public static float PlacementReachTiles => placementReachTiles;
 
         private static int escapeConsumedFrame = -1;
         private static bool foregroundPlacementActive;
@@ -91,6 +96,7 @@ namespace Nyangbingo.UI
             placementRuntime = productPlacement;
             itemArtCatalog = itemArt;
             gameplayArtCatalog = gameplayArt;
+            ResolvePlacementReachFromCatalog();
             if (initialized) RefreshPalette();
         }
 
@@ -163,6 +169,14 @@ namespace Nyangbingo.UI
         {
             if (!initialized || slotIndex < 0 || slotIndex >= ShortcutSlotCount) return false;
             RefreshHotbarSlotIds();
+
+            // 이미 선택된 슬롯을 다시 누르면 선택 해제(빈손).
+            if (selectedSlotIndex == slotIndex)
+            {
+                SelectBareHands();
+                return true;
+            }
+
             selectedSlotIndex = slotIndex;
             var itemId = paletteItemIds[slotIndex];
             if (string.IsNullOrEmpty(itemId))
@@ -227,6 +241,7 @@ namespace Nyangbingo.UI
                 return;
             }
 
+            ResolvePlacementReachFromCatalog();
             BuildPaletteUi();
             var overlayObject = new GameObject("TilePaletteRangeOverlay");
             overlayObject.transform.SetParent(transform, false);
@@ -651,8 +666,13 @@ namespace Nyangbingo.UI
             var cellCenter = tileService != null
                 ? tileService.GetCellCenterWorld(foregroundPlacementCell)
                 : new Vector3(foregroundPlacementCell.x + .5f, foregroundPlacementCell.y + .5f, 0f);
-            foregroundPreview.transform.position = AlignSpriteBoundsToCellCenter(
-                foregroundPreview.sprite, cellCenter);
+            // 설치 타일과 동일: 셀 하단 기준 정렬. 중심에 맞추면 하단 피벗 아트가 반칸 위로 뜬다.
+            foregroundPreview.transform.position = cellCenter;
+            if (tileService != null)
+                tileService.AlignSpriteBoundsToCellBase(foregroundPreview, foregroundPlacementCell);
+            else
+                foregroundPreview.transform.position = AlignSpriteBoundsToCellCenter(
+                    foregroundPreview.sprite, cellCenter);
             var withinReach = playerTransform != null &&
                               IsWithinPlacementReach(
                                   playerTransform.position,
@@ -828,6 +848,22 @@ namespace Nyangbingo.UI
                 Mathf.Clamp(playerPosition.x, cell.x, cell.x + 1f),
                 Mathf.Clamp(playerPosition.y, cell.y, cell.y + 1f));
             return (closest - playerPosition).sqrMagnitude <= reachTiles * reachTiles;
+        }
+
+        private void ResolvePlacementReachFromCatalog()
+        {
+            placementReachTiles = DefaultPlacementReachTiles;
+            var definition = gameDataCatalog?.FindGlobal(GlobalKeys.PlayerMiningReachTiles);
+            if (definition != null && definition.TryGetFloat(out var configured) &&
+                !float.IsNaN(configured) && !float.IsInfinity(configured) && configured > 0f)
+            {
+                placementReachTiles = configured;
+                return;
+            }
+
+            Debug.LogWarning(
+                "[Nyangbingo] MainGameTilePaletteController: player_mining_reach_tiles missing; " +
+                $"using default placement reach {DefaultPlacementReachTiles}.");
         }
 
         public static bool IsWithinPlacementReach(

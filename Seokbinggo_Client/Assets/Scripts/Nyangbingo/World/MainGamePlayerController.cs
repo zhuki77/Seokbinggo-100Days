@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
@@ -38,9 +39,8 @@ namespace Nyangbingo.World
         private const string NestBedId = "nest_bed";
         private const float TearPouchPickupRadius = .75f;
         private const float CatnipHarvestRadius = 1.5f;
-        // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
-        // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
-        private const float MiningReach = 1.5f;
+        // 채굴은 전투 사거리(1.5)와 분리. 본값은 globals.csv player_mining_reach_tiles.
+        private const float DefaultMiningReach = 4f;
         public const float InsulationWallBareClawMiningSeconds = 3f;
         // DevA 테스트 하니스와 동일: 마우스 칸 우선 + 플레이어 인접 미개봉 상자.
         private const float ChestInteractReach = 1.75f;
@@ -72,6 +72,7 @@ namespace Nyangbingo.World
         private float fallDamageThresholdTiles;
         private float fallDamagePerTile;
         private float iceShardTemperatureRelief;
+        private float miningReach = DefaultMiningReach;
         private float fallPeakWorldY;
         private bool trackingFall;
         private bool fallDamageBounceAscending;
@@ -241,6 +242,15 @@ namespace Nyangbingo.World
             gravityAcceleration = physics.Gravity;
             maximumFallSpeed = physics.MaxFallSpeed;
             jumpCutMultiplier = physics.JumpCutMultiplier;
+
+            miningReach = DefaultMiningReach;
+            var miningReachDefinition = catalog.FindGlobal(GlobalKeys.PlayerMiningReachTiles);
+            if (miningReachDefinition != null && miningReachDefinition.TryGetFloat(out var configuredReach) &&
+                !float.IsNaN(configuredReach) && !float.IsInfinity(configuredReach) && configuredReach > 0f)
+                miningReach = configuredReach;
+            else
+                Debug.LogWarning("[Nyangbingo] MainGamePlayerController: player_mining_reach_tiles missing; " +
+                                 $"using default {DefaultMiningReach}.");
 
             ConfigurePhysicsBody(body, playerCollider);
             ApplyGeneratedWorldSpawn();
@@ -934,7 +944,7 @@ namespace Nyangbingo.World
         {
             if (worldDecorationRenderer == null ||
                 !worldDecorationRenderer.TryResolveTreeMiningTarget(transform.position,
-                    SnapAttackFeedbackDirection(facing), MiningReach, out var treeId, out var hitCell))
+                    SnapAttackFeedbackDirection(facing), miningReach, out var treeId, out var hitCell))
                 return false;
             var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.WoodItemId);
             var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
@@ -970,7 +980,7 @@ namespace Nyangbingo.World
         {
             if (worldDecorationRenderer == null ||
                 !worldDecorationRenderer.TryResolveRebarMiningTarget(transform.position,
-                    SnapAttackFeedbackDirection(facing), MiningReach, out var rebarId, out var hitCell))
+                    SnapAttackFeedbackDirection(facing), miningReach, out var rebarId, out var hitCell))
                 return false;
             var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.RebarItemId);
             var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
@@ -1012,7 +1022,7 @@ namespace Nyangbingo.World
                 ? followCamera.ScreenToWorldPoint(Input.mousePosition)
                 : null;
             var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            return TryPickMiningCell(tileService, origin, mouseWorld, direction, MiningReach, out cell);
+            return TryPickMiningCell(tileService, origin, mouseWorld, direction, miningReach, out cell);
         }
 
         /// <summary>
@@ -1733,12 +1743,20 @@ namespace Nyangbingo.World
             return true;
         }
 
+        /// <summary>
+        /// 단열 문 개폐는 <see cref="MainGameTurretRuntime.TryInteractNearestPlacedObject"/> →
+        /// EnvironmentState 프레임 오버레이 경로를 쓴다. TileService.TryToggleNearestDoor(회전 스프라이트)는
+        /// 개폐 모션을 가로채므로 플레이어 상호작용에서는 호출하지 않는다.
+        /// </summary>
         private bool TryToggleNearbyDoor()
         {
-            var tileService = bootstrap?.TileService;
-            if (tileService == null ||
-                !tileService.TryToggleNearestDoor(
-                    transform.position, ChestInteractReach, out var isOpen))
+            if (environmentState == null ||
+                !environmentState.TryGetNearestPlacedObject(
+                    transform.position, ChestInteractReach, out var record) ||
+                !string.Equals(record.definitionId, MainGameEnvironmentState.DoorDefinitionId,
+                    StringComparison.Ordinal))
+                return false;
+            if (!environmentState.TryToggleInsulationDoor(record.objectId, out var isOpen))
                 return false;
             interactionMessages?.ShowExternalMessage(
                 isOpen ? "단열 문을 열었습니다." : "단열 문을 닫았습니다.");

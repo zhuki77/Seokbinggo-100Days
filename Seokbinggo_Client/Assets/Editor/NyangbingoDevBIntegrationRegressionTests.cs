@@ -3405,12 +3405,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameTilePaletteController.ShortcutKeyForSlot(7) == KeyCode.Alpha8 &&
                 MainGameTilePaletteController.ShortcutKeyForSlot(8) == KeyCode.None,
             "The eight visible tile-palette slots must be assigned to number keys 1 through 8.");
-        Require(Mathf.Approximately(MainGameTilePaletteController.PlacementReachTiles, 1.5f) &&
+        Require(Mathf.Approximately(MainGameTilePaletteController.DefaultPlacementReachTiles, 4f) &&
                 MainGameTilePaletteController.IsWithinPlacementReach(
-                    new Vector2(.5f, .5f), new Vector3Int(1, 0, 0), 1.5f) &&
+                    new Vector2(.5f, .5f), new Vector3Int(3, 0, 0), 4f) &&
                 !MainGameTilePaletteController.IsWithinPlacementReach(
-                    new Vector2(.5f, .5f), new Vector3Int(3, 0, 0), 1.5f),
-            "Foreground placement must use the same 1.5-tile reach as mining.");
+                    new Vector2(.5f, .5f), new Vector3Int(6, 0, 0), 4f),
+            "Foreground placement must use the same 4-tile reach as mining.");
         Require(MainGameTilePaletteController.IsDirectUseHotbarItem(
                     PlayerHealthRecoveryService.CatnipItemId) &&
                 !MainGameTilePaletteController.IsDirectUseHotbarItem(WorldTileTypes.Dirt),
