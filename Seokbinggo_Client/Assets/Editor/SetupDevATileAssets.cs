@@ -240,9 +240,9 @@ namespace Nyangbingo.Editor
             var camera = Object.FindAnyObjectByType<Camera>();
             if (camera != null)
             {
-                // 월드 크기: 400x160 (기본 config 기준). 카메라를 월드 중앙에 배치하고,
+                // 월드 크기: 600x160 (기본 config 기준). 카메라를 월드 중앙에 배치하고,
                 // 전체 높이가 보이도록 orthographic size 설정(여유 있게 90).
-                camera.transform.position = new Vector3(200f, 80f, -10f);
+                camera.transform.position = new Vector3(300f, 80f, -10f);
                 camera.orthographicSize = 90f;
                 EditorUtility.SetDirty(camera);
                 L("[Nyangbingo] A-01: 카메라를 월드 중앙(200, 80)으로 이동, Size=90 설정 완료.");

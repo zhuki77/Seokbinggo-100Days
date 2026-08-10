@@ -22,6 +22,7 @@ namespace Nyangbingo.World
         public const bool ProductHudNarrativeTextEnabled = false;
         public const string NearbyInteractionPrompt =
             "E · 상호작용    좌클릭 유지 · 회수";
+        public const float InteractionRange = 2.5f;
 
         private sealed class TurretEntry
         {
@@ -97,7 +98,6 @@ namespace Nyangbingo.World
         private const string EoduksiniRebloomCooldownKey = "eoduksini_rebloom_cd_sec";
         private const float ProjectileSpeed = 6f;
         private const float ProjectileHitDistance = .1f;
-        private const float InteractionRange = 2.5f;
         private static bool anyPlacementPreviewActive;
         private static int placementPointerConsumedFrame = -1;
         private static int placementEscapeConsumedFrame = -1;
@@ -755,9 +755,12 @@ namespace Nyangbingo.World
         private bool TryGetNearestPlacedObject(out PlacedObjectRecord record)
         {
             record = default;
-            return playerController != null && environmentState != null &&
-                   environmentState.TryGetNearestPlacedObject(playerController.transform.position,
-                       InteractionRange, out record);
+            if (playerController == null || environmentState == null) return false;
+            var origin = (Vector2)playerController.transform.position;
+            var aim = origin;
+            if (playerController.TryGetInteractionAimWorld(out var mouseAim))
+                aim = mouseAim;
+            return environmentState.TryGetNearestPlacedObject(origin, InteractionRange, aim, out record);
         }
 
         private string ItemName(string definitionId) =>

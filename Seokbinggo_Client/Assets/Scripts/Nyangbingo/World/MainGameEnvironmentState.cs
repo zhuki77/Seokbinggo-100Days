@@ -409,19 +409,33 @@ namespace Nyangbingo.World
                    coolingSources.TryGetStatus(objectId, out remainingGameSeconds, out capPercent, out active);
         }
 
-        public bool TryGetNearestPlacedObject(Vector2 origin, float radius, out PlacedObjectRecord record)
+        public bool TryGetNearestPlacedObject(Vector2 origin, float radius, out PlacedObjectRecord record) =>
+            TryGetNearestPlacedObject(origin, radius, preferNear: origin, out record);
+
+        /// <summary>
+        /// 플레이어 사거리(<paramref name="radius"/>) 안 설치물 중, 조준점(<paramref name="preferNear"/>)에
+        /// 가장 가까운 것을 고른다. 범위가 겹칠 때 마우스 우선에 쓴다.
+        /// </summary>
+        public bool TryGetNearestPlacedObject(Vector2 origin, float radius, Vector2 preferNear,
+            out PlacedObjectRecord record)
         {
             record = default;
-            if (!IsFinite(origin.x) || !IsFinite(origin.y) || !IsFinite(radius) || radius < 0f) return false;
+            if (!IsFinite(origin.x) || !IsFinite(origin.y) || !IsFinite(radius) || radius < 0f ||
+                !IsFinite(preferNear.x) || !IsFinite(preferNear.y))
+                return false;
             var found = false;
-            var bestDistance = radius * radius;
+            var reachSq = radius * radius;
+            var bestAimDistance = float.PositiveInfinity;
             foreach (var entry in byObjectId.Values)
             {
-                var distance = (entry.Record.position - origin).sqrMagnitude;
-                if (distance > bestDistance || found && Mathf.Approximately(distance, bestDistance) &&
-                    string.CompareOrdinal(entry.Record.objectId, record.objectId) >= 0) continue;
+                var toPlayer = (entry.Record.position - origin).sqrMagnitude;
+                if (toPlayer > reachSq) continue;
+                var toAim = (entry.Record.position - preferNear).sqrMagnitude;
+                if (toAim > bestAimDistance || found && Mathf.Approximately(toAim, bestAimDistance) &&
+                    string.CompareOrdinal(entry.Record.objectId, record.objectId) >= 0)
+                    continue;
                 found = true;
-                bestDistance = distance;
+                bestAimDistance = toAim;
                 record = entry.Record;
             }
             return found;

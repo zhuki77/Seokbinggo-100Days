@@ -437,6 +437,7 @@ namespace Nyangbingo.World
             var caveRng = new System.Random(seed + 2);
             var resourceRng = new System.Random(seed + 3);
             var structureRng = new System.Random(seed + 4);
+            var largeCavernRng = new System.Random(seed + 5);
 
             // Pass 1 — 지형
             var surfaceHeights = GenerateTerrain(grid, terrainRng, config);
@@ -453,6 +454,9 @@ namespace Nyangbingo.World
             PostProcessCaveCavities(grid, surfaceHeights, config, protectedAir);
             // Hard Fill 후 공식 얕은 입구만 재개방
             ReopenSpawnEntrance(grid, surfaceHeights, structures.spawnPoint, config);
+            // Pass 4b2 — 시드 기반 중간층 공동(≈30×20, 여러 개). cave_max_height Hard Cut 이후에만 개척.
+            CarveLargeCaverns(grid, surfaceHeights, largeCavernRng, config, protectedAir,
+                structures.spawnPoint, structures.altarPosition);
             // Pass 4c — v27: 지상→심층 인공 통로 Carve 금지. 지하 공동 간 최소 벽(≤3)만 천공.
             EnsureReachabilityByCavityBridges(grid, surfaceHeights, structures.spawnPoint,
                 structures.altarPosition, config);
@@ -603,6 +607,165 @@ namespace Nyangbingo.World
                         (y + offsetY) * config.CaveNoiseFrequency);
                     if (noise < caveChance)
                         grid[x, y] = TileData.CreateAir();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 시드 기반 중간층 공동(기본 ≈30×20)을 띄엄띄엄 배치.
+        /// <see cref="PostProcessCaveCavities"/> Hard Cut 이후에만 호출해 cave_max_height에 잘리지 않게 한다.
+        /// 중간층 y대역·지표 crust·스폰/제단 보호칸·호수/제단 타일은 개척하지 않는다.
+        /// </summary>
+        private static void CarveLargeCaverns(TileData[,] grid, int[] surfaceHeights, System.Random rng,
+            WorldGenerationConfig config, bool[,] protectedAir, Vector2Int spawnPoint, Vector2Int altarPosition)
+        {
+            var countMin = config.LargeCavernCountMin;
+            var countMax = config.LargeCavernCountMax;
+            if (countMax <= 0) return;
+
+            var targetCount = rng.Next(countMin, countMax + 1);
+            if (targetCount <= 0) return;
+
+            var width = config.MapWidth;
+            var cavernW = Mathf.Max(4, config.LargeCavernWidth);
+            var cavernH = Mathf.Max(4, config.LargeCavernHeight);
+            var halfW = cavernW * 0.5f;
+            var halfH = cavernH * 0.5f;
+            var edgeGap = Mathf.Max(0, config.LargeCavernMinEdgeGap);
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+            var minDepth = Mathf.Max(0, config.LargeCavernMinDepthBelowCrust);
+            var spawnMargin = Mathf.Max(0, config.LargeCavernMarginFromSpawn);
+            var altarMargin = Mathf.Max(0, config.LargeCavernMarginFromAltar);
+            var maxAttempts = config.LargeCavernMaxPlacementAttempts;
+
+            var placedMinX = new int[targetCount];
+            var placedMaxX = new int[targetCount];
+            var placedCount = 0;
+            var noiseOx = (float)(rng.NextDouble() * 100000.0);
+            var noiseOy = (float)(rng.NextDouble() * 100000.0);
+
+            for (var attempt = 0; attempt < maxAttempts && placedCount < targetCount; attempt++)
+            {
+                var centerX = rng.Next(cavernW / 2 + 2, Mathf.Max(cavernW / 2 + 3, width - cavernW / 2 - 2));
+                var minX = centerX - cavernW / 2;
+                var maxX = centerX + (cavernW - 1) / 2;
+                if (minX < 1 || maxX >= width - 1) continue;
+
+                if (OverlapsPlacedLargeCavern(minX, maxX, placedMinX, placedMaxX, placedCount, edgeGap))
+                    continue;
+
+                if (HorizontalDistanceToPoint(centerX, spawnPoint.x) < spawnMargin + cavernW / 2)
+                    continue;
+                if (HorizontalDistanceToPoint(centerX, altarPosition.x) < altarMargin + cavernW / 2)
+                    continue;
+
+                if (!TryGetMiddleLayerLargeCavernVerticalRange(surfaceHeights, config, minX, maxX, cavernH, crust,
+                        minDepth, out var minCenterY, out var maxCenterY))
+                    continue;
+
+                var centerY = rng.Next(minCenterY, maxCenterY + 1);
+
+                CarveLargeCavernEllipse(grid, surfaceHeights, config, protectedAir,
+                    centerX, centerY, halfW, halfH, noiseOx, noiseOy);
+
+                placedMinX[placedCount] = minX;
+                placedMaxX[placedCount] = maxX;
+                placedCount++;
+            }
+        }
+
+        private static int HorizontalDistanceToPoint(int a, int b) => Mathf.Abs(a - b);
+
+        private static bool OverlapsPlacedLargeCavern(int minX, int maxX, int[] placedMinX, int[] placedMaxX,
+            int placedCount, int edgeGap)
+        {
+            for (var i = 0; i < placedCount; i++)
+            {
+                if (maxX + edgeGap < placedMinX[i]) continue;
+                if (minX - edgeGap > placedMaxX[i]) continue;
+                return true;
+            }
+            return false;
+        }
+
+        private static int GetLargeCavernMaxTopY(int[] surfaceHeights, int minX, int maxX, int crust, int minDepth)
+        {
+            var maxTop = int.MaxValue;
+            for (var x = minX; x <= maxX; x++)
+            {
+                // crust 봉인선(포함) 위는 금지 → 천장 최대 = surfaceY - crust - minDepth
+                var top = surfaceHeights[x] - crust - minDepth;
+                if (top < maxTop) maxTop = top;
+            }
+            return maxTop;
+        }
+
+        /// <summary>공동 전체가 중간층 대역 안에 들어가도록 centerY 허용 범위를 구한다.</summary>
+        private static bool TryGetMiddleLayerLargeCavernVerticalRange(int[] surfaceHeights,
+            WorldGenerationConfig config, int minX, int maxX, int cavernH, int crust, int minDepth,
+            out int minCenterY, out int maxCenterY)
+        {
+            minCenterY = 0;
+            maxCenterY = -1;
+            var halfH = cavernH / 2;
+            var bandLow = int.MinValue;
+            var bandHigh = int.MaxValue;
+
+            for (var x = minX; x <= maxX; x++)
+            {
+                var (low, high) = GetLayerRange(x, WorldLayer.Middle, surfaceHeights, config);
+                if (high < low) return false;
+                if (low > bandLow) bandLow = low;
+                if (high < bandHigh) bandHigh = high;
+            }
+
+            if (bandHigh < bandLow) return false;
+
+            var maxTop = GetLargeCavernMaxTopY(surfaceHeights, minX, maxX, crust, minDepth);
+            if (maxTop < bandHigh) bandHigh = maxTop;
+            if (bandHigh < bandLow) return false;
+
+            minCenterY = bandLow + halfH;
+            maxCenterY = bandHigh - (cavernH - halfH);
+            return maxCenterY >= minCenterY;
+        }
+
+        private static void CarveLargeCavernEllipse(TileData[,] grid, int[] surfaceHeights,
+            WorldGenerationConfig config, bool[,] protectedAir,
+            int centerX, int centerY, float halfW, float halfH, float noiseOx, float noiseOy)
+        {
+            var width = config.MapWidth;
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+            var minX = Mathf.Max(0, Mathf.FloorToInt(centerX - halfW) - 1);
+            var maxX = Mathf.Min(width - 1, Mathf.CeilToInt(centerX + halfW) + 1);
+            var minY = Mathf.Max(config.BedrockThickness, Mathf.FloorToInt(centerY - halfH) - 1);
+            var maxY = Mathf.Min(config.MapHeight - 1, Mathf.CeilToInt(centerY + halfH) + 1);
+            var invHalfW = halfW > 0.001f ? 1f / halfW : 0f;
+            var invHalfH = halfH > 0.001f ? 1f / halfH : 0f;
+
+            for (var x = minX; x <= maxX; x++)
+            {
+                var surfaceY = surfaceHeights[x];
+                var carveMaxY = surfaceY - crust; // 포함 상한
+                for (var y = minY; y <= maxY; y++)
+                {
+                    if (y > carveMaxY || y < config.BedrockThickness) continue;
+                    if (IsProtectedAirCell(x, y, protectedAir)) continue;
+
+                    var existing = grid[x, y];
+                    if (ShouldPreserveSpecialAir(existing)) continue;
+                    if (string.Equals(existing.elementType, WorldTileTypes.IceAltar, StringComparison.Ordinal) ||
+                        string.Equals(existing.elementType, WorldTileTypes.RuinWall, StringComparison.Ordinal) ||
+                        string.Equals(existing.elementType, WorldTileTypes.Bedrock, StringComparison.Ordinal))
+                        continue;
+
+                    var nx = (x - centerX) * invHalfW;
+                    var ny = (y - centerY) * invHalfH;
+                    var edgeNoise = Mathf.PerlinNoise((x + noiseOx) * 0.11f, (y + noiseOy) * 0.11f);
+                    var radius = 1f - 0.07f * edgeNoise;
+                    if (nx * nx + ny * ny > radius * radius) continue;
+
+                    grid[x, y] = TileData.CreateAir();
                 }
             }
         }

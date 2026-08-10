@@ -206,8 +206,12 @@ namespace Nyangbingo.World
             var result = loadedGenerator.GenerateDetailed(save.seed);
             if (result.acceptedSeed != save.seed)
             {
-                // 저장된 시드가 더 이상 같은 검증 통과 맵을 재현하지 못한다 — 룰/시드가 바뀐 손상된 세이브다.
-                Debug.LogError($"[Nyangbingo] WorldSessionController: seed {save.seed} 재생성 결과가 저장 시점과 달라 로드를 중단합니다.");
+                // 저장된 시드가 더 이상 같은 검증 통과 맵을 재현하지 못한다 — 월드 생성 룰/크기가 바뀌었거나
+                // 손상된 세이브다. (시드 재생성 후 acceptedSeed가 달라지면 타일 diff도 안전하게 적용 불가.)
+                Debug.LogError(
+                    $"[Nyangbingo] WorldSessionController: seed {save.seed} 재생성 결과가 저장 시점과 달라 로드를 중단합니다 " +
+                    $"(재생성 확정 seed={result.acceptedSeed}, validation={result.passedValidation}). " +
+                    "맵 크기·동굴 등 월드 생성 규칙이 바뀐 뒤의 구버전 세이브일 수 있으니 타이틀에서 '새 게임'으로 시작해 주세요.");
                 return false;
             }
 

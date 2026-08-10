@@ -1995,7 +1995,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(playerSource.Contains("TryUseSelectedCatnip() ||") &&
                 playerSource.Contains("tilePalette.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId") &&
                 playerSource.Contains("recovery.TryUseCatnip(out var restoredHealth)") &&
-                playerSource.Contains("TryHarvestNearbyCatnip() ||") &&
+                playerSource.Contains("TryInteractClosestWorldTarget()") &&
+                playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
                 playerSource.Contains("TryTickHempMining(") &&
                 source.Contains("TryResolveHempMiningTarget(") &&
@@ -2765,7 +2766,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     @"if \(attackCooldown <= 0f\)\s*TryBasicAttack\(\);\s*//[\s\S]{0,180}TickMining\(\);"),
             "A successful claw hit must not reset or suppress mining held on the same primary input.");
         Require(System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryOpenNearbyChest\(\)") &&
+                    @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryInteractClosestWorldTarget\(\)") &&
+                playerSource.Contains("TryOpenChestAt(") &&
                 !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
                     @"GetMouseButtonDown\(1\)[\s\S]{0,120}TryOpenNearbyChest"),
             "Chest interaction must remain on E while right-click stays exclusive to the fan ability.");

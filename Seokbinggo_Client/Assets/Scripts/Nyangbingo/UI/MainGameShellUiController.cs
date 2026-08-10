@@ -159,7 +159,9 @@ namespace Nyangbingo.UI
                         launchSave = saveCoordinator.CaptureSnapshot();
                         return launchSave != null;
                     }
-                    Debug.LogError("[Nyangbingo] 저장 데이터 복원 실패 — 타이틀로 복귀합니다.");
+                    Debug.LogError(
+                        "[Nyangbingo] 저장 데이터 복원 실패 — 타이틀로 복귀합니다. " +
+                        "최근 맵 생성 변경(가로 1.5배·중간층 동굴 등) 이후에는 구 세이브가 호환되지 않을 수 있습니다. '새 게임'으로 시작하세요.");
                     launchSave = null;
                     return false;
             }

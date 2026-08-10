@@ -325,28 +325,53 @@ namespace Nyangbingo.World
         }
 
         public bool TryHarvestCatnip(Vector2 playerPosition, float radius,
+            Nyangbingo.Inventory.Inventory inventory, out int harvested) =>
+            TryHarvestCatnip(playerPosition, radius, preferNear: playerPosition, inventory, out harvested);
+
+        public bool TryHarvestCatnip(Vector2 playerPosition, float radius, Vector2 preferNear,
             Nyangbingo.Inventory.Inventory inventory, out int harvested)
         {
             harvested = 0;
             if (inventory == null || radius <= 0f) return false;
-            CatnipPatch nearest = null;
-            var nearestDistance = radius * radius;
-            foreach (var patch in catnipPatches.Values)
-            {
-                if (!IsCatnipAvailable(patch)) continue;
-                var position = patch.Renderer != null
-                    ? (Vector2)patch.Renderer.transform.position
-                    : new Vector2(patch.SupportCell.x + .5f, patch.SupportCell.y + 1f);
-                var distance = (position - playerPosition).sqrMagnitude;
-                if (distance > nearestDistance) continue;
-                nearest = patch;
-                nearestDistance = distance;
-            }
-            if (nearest == null || !inventory.TryAdd(PlayerHealthRecoveryService.CatnipItemId, 1)) return false;
+            if (!TryFindCatnipInRange(playerPosition, radius, preferNear, out _, out var nearest) ||
+                nearest == null ||
+                !inventory.TryAdd(PlayerHealthRecoveryService.CatnipItemId, 1))
+                return false;
             nearest.HarvestedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
             if (nearest.Renderer != null) nearest.Renderer.gameObject.SetActive(false);
             harvested = 1;
             return true;
+        }
+
+        public bool TryFindCatnipInRange(Vector2 playerPosition, float radius, out Vector2 position) =>
+            TryFindCatnipInRange(playerPosition, radius, preferNear: playerPosition, out position);
+
+        public bool TryFindCatnipInRange(Vector2 playerPosition, float radius, Vector2 preferNear,
+            out Vector2 position) =>
+            TryFindCatnipInRange(playerPosition, radius, preferNear, out position, out _);
+
+        private bool TryFindCatnipInRange(Vector2 playerPosition, float radius, Vector2 preferNear,
+            out Vector2 position, out CatnipPatch patch)
+        {
+            position = default;
+            patch = null;
+            if (radius <= 0f) return false;
+            var reachSq = radius * radius;
+            var bestAimDistance = float.PositiveInfinity;
+            foreach (var candidate in catnipPatches.Values)
+            {
+                if (!IsCatnipAvailable(candidate)) continue;
+                var candidatePos = candidate.Renderer != null
+                    ? (Vector2)candidate.Renderer.transform.position
+                    : new Vector2(candidate.SupportCell.x + .5f, candidate.SupportCell.y + 1f);
+                if ((candidatePos - playerPosition).sqrMagnitude > reachSq) continue;
+                var aimDistance = (candidatePos - preferNear).sqrMagnitude;
+                if (aimDistance > bestAimDistance) continue;
+                patch = candidate;
+                position = candidatePos;
+                bestAimDistance = aimDistance;
+            }
+            return patch != null;
         }
 
         public bool TryHarvestHemp(Vector2 playerPosition, float radius,

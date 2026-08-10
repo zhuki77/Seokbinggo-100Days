@@ -457,10 +457,7 @@ namespace Nyangbingo.World
             {
                 var handled = TryUseSelectedIceShard() ||
                       TryUseSelectedCatnip() ||
-                      TryHarvestNearbyCatnip() ||
-                      TryOpenNearbyChest() ||
-                      TryToggleNearbyDoor() ||
-                      placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
+                      TryInteractClosestWorldTarget();
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
                         "가까이 있는 상호작용 대상을 찾지 못했습니다.");
@@ -888,15 +885,69 @@ namespace Nyangbingo.World
                 return;
             }
             var clawTier = ResolveMiningClawTier();
-            if (TryTickTreeMining(clawTier, miningDelta)) return;
-            if (TryTickRebarMining(clawTier, miningDelta)) return;
-            if (TryTickHempMining(clawTier, miningDelta)) return;
-            if (TryTickPlacedObjectMining(clawTier, miningDelta)) return;
-            if (!TryResolveMiningCell(tileService, out var cell))
+            var hasMouse = TryGetInteractionAimWorld(out var mouseAim);
+            var aim = hasMouse ? mouseAim : (Vector2)transform.position;
+            Vector2? mouseWorld = hasMouse ? mouseAim : null;
+            var origin = (Vector2)transform.position;
+            var facingDir = SnapAttackFeedbackDirection(facing);
+            var bestAimDist = float.PositiveInfinity;
+            var bestKind = MiningWorldTargetKind.None;
+            var bestTileCell = default(Vector3Int);
+
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveTreeMiningTarget(origin, facingDir, miningReach,
+                    out _, out var treeCell))
+                ConsiderMiningTarget(CellAimPoint(treeCell), aim, MiningWorldTargetKind.Tree, ref bestAimDist,
+                    ref bestKind);
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveRebarMiningTarget(origin, facingDir, miningReach,
+                    out _, out var rebarCell))
+                ConsiderMiningTarget(CellAimPoint(rebarCell), aim, MiningWorldTargetKind.Rebar, ref bestAimDist,
+                    ref bestKind);
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveHempMiningTarget(origin, mouseWorld, facingDir, miningReach,
+                    out _, out var hempCell))
+                ConsiderMiningTarget(CellAimPoint(hempCell), aim, MiningWorldTargetKind.Hemp, ref bestAimDist,
+                    ref bestKind);
+            if (environmentState != null &&
+                environmentState.TryResolvePlacedObjectMiningTarget(origin, mouseWorld, miningReach,
+                    out var placedRecord))
+                ConsiderMiningTarget(placedRecord.position, aim, MiningWorldTargetKind.PlacedObject,
+                    ref bestAimDist, ref bestKind);
+            if (TryResolveMiningCell(tileService, out var tileCell))
             {
-                ResetMiningProgress();
-                return;
+                ConsiderMiningTarget(CellAimPoint(tileCell), aim, MiningWorldTargetKind.Tile, ref bestAimDist,
+                    ref bestKind);
+                if (bestKind == MiningWorldTargetKind.Tile)
+                    bestTileCell = tileCell;
             }
+
+            switch (bestKind)
+            {
+                case MiningWorldTargetKind.Tree:
+                    if (TryTickTreeMining(clawTier, miningDelta)) return;
+                    ResetMiningProgress();
+                    return;
+                case MiningWorldTargetKind.Rebar:
+                    if (TryTickRebarMining(clawTier, miningDelta)) return;
+                    ResetMiningProgress();
+                    return;
+                case MiningWorldTargetKind.Hemp:
+                    if (TryTickHempMining(clawTier, miningDelta)) return;
+                    ResetMiningProgress();
+                    return;
+                case MiningWorldTargetKind.PlacedObject:
+                    if (TryTickPlacedObjectMining(clawTier, miningDelta)) return;
+                    ResetMiningProgress();
+                    return;
+                case MiningWorldTargetKind.Tile:
+                    break;
+                default:
+                    ResetMiningProgress();
+                    return;
+            }
+
+            var cell = bestTileCell;
             var tile = tileService.GetTile(cell);
             var requiredSeconds = ResolveTileMiningSeconds(catalog, tile.elementType, clawTier);
             if (!tileService.InBounds(cell) || tile.IsAir || clawTier < tile.hardness || requiredSeconds <= 0f)
@@ -1120,6 +1171,109 @@ namespace Nyangbingo.World
             if (clawTier < 1) return -1f;
             return PlacedObjectBareClawMiningSeconds /
                    Mathf.Pow(2f, Mathf.Clamp(clawTier - 1, 0, 2));
+        }
+
+        private enum MiningWorldTargetKind
+        {
+            None = 0,
+            Tree,
+            Rebar,
+            Hemp,
+            PlacedObject,
+            Tile
+        }
+
+        private enum WorldInteractKind
+        {
+            None = 0,
+            Catnip,
+            Chest,
+            PlacedObject
+        }
+
+        /// <summary>상호작용/채굴 조준용 마우스 월드 좌표. 카메라가 없으면 false.</summary>
+        public bool TryGetInteractionAimWorld(out Vector2 aimWorld)
+        {
+            aimWorld = default;
+            if (followCamera == null) return false;
+            var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
+            if (float.IsNaN(mouse.x) || float.IsInfinity(mouse.x) ||
+                float.IsNaN(mouse.y) || float.IsInfinity(mouse.y))
+                return false;
+            aimWorld = mouse;
+            return true;
+        }
+
+        private static void ConsiderMiningTarget(Vector2 targetWorld, Vector2 aim,
+            MiningWorldTargetKind kind, ref float bestAimDist, ref MiningWorldTargetKind bestKind)
+        {
+            var aimDist = (targetWorld - aim).sqrMagnitude;
+            if (aimDist > bestAimDist) return;
+            bestAimDist = aimDist;
+            bestKind = kind;
+        }
+
+        private Vector2 CellAimPoint(Vector3Int cell)
+        {
+            var tileService = bootstrap?.TileService;
+            return tileService != null
+                ? (Vector2)tileService.GetCellCenterWorld(cell)
+                : new Vector2(cell.x + .5f, cell.y + .5f);
+        }
+
+        /// <summary>
+        /// 사거리 안 월드 상호작용(캣닢/상자/설치물) 중 마우스에 가장 가까운 대상을 고른다.
+        /// </summary>
+        private bool TryInteractClosestWorldTarget()
+        {
+            var origin = (Vector2)transform.position;
+            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
+            var bestAimDist = float.PositiveInfinity;
+            var bestKind = WorldInteractKind.None;
+            var bestChestCell = default(Vector3Int);
+
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryFindCatnipInRange(origin, CatnipHarvestRadius, aim, out var catnipPos))
+            {
+                var aimDist = (catnipPos - aim).sqrMagnitude;
+                if (aimDist < bestAimDist)
+                {
+                    bestAimDist = aimDist;
+                    bestKind = WorldInteractKind.Catnip;
+                }
+            }
+
+            var session = bootstrap?.Session;
+            if (session != null && session.HasWorld &&
+                TryFindChestClosestToAim(session, origin, aim, ChestInteractReach * ChestInteractReach,
+                    out var chestCell, out var chestAimDist) &&
+                chestAimDist < bestAimDist)
+            {
+                bestAimDist = chestAimDist;
+                bestKind = WorldInteractKind.Chest;
+                bestChestCell = chestCell;
+            }
+
+            if (environmentState != null &&
+                environmentState.TryGetNearestPlacedObject(origin, MainGameTurretRuntime.InteractionRange, aim,
+                    out var placed))
+            {
+                var placedAimDist = (placed.position - aim).sqrMagnitude;
+                if (placedAimDist < bestAimDist)
+                    bestKind = WorldInteractKind.PlacedObject;
+            }
+
+            switch (bestKind)
+            {
+                case WorldInteractKind.Catnip:
+                    return TryHarvestNearbyCatnip();
+                case WorldInteractKind.Chest:
+                    return TryOpenChestAt(bestChestCell);
+                case WorldInteractKind.PlacedObject:
+                    return placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>
@@ -1808,6 +1962,13 @@ namespace Nyangbingo.World
             var session = bootstrap?.Session;
             if (session == null || !session.HasWorld) return false;
             if (!TryResolveNearbyChestCell(session, out var cell)) return false;
+            return TryOpenChestAt(cell);
+        }
+
+        private bool TryOpenChestAt(Vector3Int cell)
+        {
+            var session = bootstrap?.Session;
+            if (session == null || !session.HasWorld) return false;
             if (!session.TryOpenChestAt(cell, out var chestId, out var definition)) return false;
             storageUi ??= FindAnyObjectByType<Nyangbingo.UI.MainGameCraftingUiController>();
             if (storageUi == null || !storageUi.TryOpenChest(session.ChestProgress, chestId))
@@ -1819,9 +1980,12 @@ namespace Nyangbingo.World
 
         private bool TryHarvestNearbyCatnip()
         {
-            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null ||
-                !worldDecorationRenderer.TryHarvestCatnip(
-                    transform.position, CatnipHarvestRadius, runtimeServices.PlayerInventory, out var harvested))
+            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null)
+                return false;
+            var origin = (Vector2)transform.position;
+            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
+            if (!worldDecorationRenderer.TryHarvestCatnip(
+                    origin, CatnipHarvestRadius, aim, runtimeServices.PlayerInventory, out var harvested))
                 return false;
             interactionMessages?.ShowExternalMessage($"캣닢 채집 ×{harvested} · 2일 뒤 재생");
             return true;
@@ -1902,51 +2066,44 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 마우스 아래 칸(사거리 안) → 조준 칸 → 발 칸 → 사거리 안 최근접 미개봉 상자.
+        /// 플레이어 사거리 안 상자 중 조준점(마우스)에 가장 가까운 칸.
         /// </summary>
         private bool TryResolveNearbyChestCell(WorldSessionController session, out Vector3Int cell)
         {
             cell = default;
             var origin = (Vector2)transform.position;
-            var reachSq = ChestInteractReach * ChestInteractReach;
+            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
+            return TryFindChestClosestToAim(session, origin, aim, ChestInteractReach * ChestInteractReach,
+                out cell, out _);
+        }
+
+        private bool TryFindChestClosestToAim(
+            WorldSessionController session, Vector2 origin, Vector2 aim, float reachSq,
+            out Vector3Int cell, out float aimDistSq)
+        {
+            cell = default;
+            aimDistSq = float.PositiveInfinity;
+            var chests = session?.LastResult.chests;
+            if (chests == null || chests.Count == 0) return false;
+
             var tileService = bootstrap?.TileService;
-
-            if (followCamera != null)
+            var found = false;
+            for (var i = 0; i < chests.Count; i++)
             {
-                var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
-                var mouseCell = tileService != null
-                    ? tileService.WorldToCell(mouse)
-                    : new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
-                if (IsChestCellInReach(tileService, origin, mouseCell, reachSq) &&
-                    session.TryPeekChestAt(mouseCell))
-                {
-                    cell = mouseCell;
-                    return true;
-                }
+                var chest = chests[i];
+                var chestCell = new Vector3Int(chest.position.x, chest.position.y, 0);
+                if (!session.TryPeekChestAt(chestCell)) continue;
+                var center = tileService != null
+                    ? (Vector2)tileService.GetCellCenterWorld(chestCell)
+                    : new Vector2(chestCell.x + .5f, chestCell.y + .5f);
+                if ((center - origin).sqrMagnitude > reachSq) continue;
+                var toAim = (center - aim).sqrMagnitude;
+                if (toAim >= aimDistSq) continue;
+                aimDistSq = toAim;
+                cell = chestCell;
+                found = true;
             }
-
-            var facingPosition = origin +
-                (facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.right);
-            var facingCell = tileService != null
-                ? tileService.WorldToCell(facingPosition)
-                : Vector3Int.FloorToInt(facingPosition);
-            var currentCell = tileService != null
-                ? tileService.WorldToCell(origin)
-                : Vector3Int.FloorToInt(origin);
-            if (IsChestCellInReach(tileService, origin, facingCell, reachSq) &&
-                session.TryPeekChestAt(facingCell))
-            {
-                cell = facingCell;
-                return true;
-            }
-            if (IsChestCellInReach(tileService, origin, currentCell, reachSq) &&
-                session.TryPeekChestAt(currentCell))
-            {
-                cell = currentCell;
-                return true;
-            }
-
-            return TryFindNearestChestCell(session, tileService, origin, reachSq, out cell);
+            return found;
         }
 
         private static bool TryFindNearestChestCell(

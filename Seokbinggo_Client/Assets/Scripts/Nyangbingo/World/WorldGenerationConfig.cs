@@ -10,8 +10,8 @@ namespace Nyangbingo.World
     [CreateAssetMenu(menuName = "Nyangbingo/World/World Generation Config", fileName = "WorldGenerationConfig")]
     public sealed class WorldGenerationConfig : ScriptableObject
     {
-        [Header("맵 크기 (GDD: 400×160)")]
-        [Min(16)][SerializeField] private int mapWidth = 400;
+        [Header("맵 크기 (기본 600×160 = 가로 400의 1.5배)")]
+        [Min(16)][SerializeField] private int mapWidth = 600;
         [Min(16)][SerializeField] private int mapHeight = 160;
 
         [Header("지형 — Pass 1 (1D 펄린)")]
@@ -41,6 +41,20 @@ namespace Nyangbingo.World
         // v27 Top Safety Zone: 지표(surfaceY) 포함 직하단 몇 칸을 펄린 공동에서 제외(기본 2 = 지표+1칸).
         // 기획 surface_y(맵 상단 하늘 두께)와 별개로, 열별 표면 껍질을 절대 안전지대로 둔다.
         [Min(1)][SerializeField] private int caveSurfaceCrustThickness = 2;
+
+        // 펄린 소형 공동과 별개 — PostProcess(Hard Cut) 이후, 중간층에만 띄엄띄엄 개척.
+        [Header("동굴 — 중간층 공동 (시드, PostProcess 이후, 띄엄띄엄)")]
+        [Min(0)][SerializeField] private int largeCavernCountMin = 5;
+        [Min(0)][SerializeField] private int largeCavernCountMax = 8;
+        [Min(4)][SerializeField] private int largeCavernWidth = 30;
+        [Min(4)][SerializeField] private int largeCavernHeight = 20;
+        // 공동 bounding box 사이 최소 가로 간격(가장자리 기준).
+        [Min(0)][SerializeField] private int largeCavernMinEdgeGap = 40;
+        // 공동 천장(타원 상단)이 crust 봉인선보다 최소 이만큼 더 깊게(중간층 배치의 보조 가드).
+        [Min(0)][SerializeField] private int largeCavernMinDepthBelowCrust = 8;
+        [Min(0)][SerializeField] private int largeCavernMarginFromSpawn = 32;
+        [Min(0)][SerializeField] private int largeCavernMarginFromAltar = 28;
+        [Min(1)][SerializeField] private int largeCavernMaxPlacementAttempts = 120;
 
         // A-10: depthMin/depthMax는 Assets/Data/CSV/mineral-tiers.csv의 depth_min/depth_max를 그대로 옮긴
         // 값이다(T1 1~45 · T2 46~90 · T3 91~135). CSV가 정본이므로 두 값이 어긋나면 이 배열을 CSV에 맞춰
@@ -107,6 +121,16 @@ namespace Nyangbingo.World
         public float CaveChanceDeep => caveChanceDeep;
         public int CaveMaxHeight => caveMaxHeight;
         public int CaveSurfaceCrustThickness => caveSurfaceCrustThickness;
+
+        public int LargeCavernCountMin => Mathf.Min(largeCavernCountMin, largeCavernCountMax);
+        public int LargeCavernCountMax => Mathf.Max(largeCavernCountMin, largeCavernCountMax);
+        public int LargeCavernWidth => largeCavernWidth;
+        public int LargeCavernHeight => largeCavernHeight;
+        public int LargeCavernMinEdgeGap => largeCavernMinEdgeGap;
+        public int LargeCavernMinDepthBelowCrust => largeCavernMinDepthBelowCrust;
+        public int LargeCavernMarginFromSpawn => largeCavernMarginFromSpawn;
+        public int LargeCavernMarginFromAltar => largeCavernMarginFromAltar;
+        public int LargeCavernMaxPlacementAttempts => Mathf.Max(1, largeCavernMaxPlacementAttempts);
 
         public OreVeinProfile[] OreVeins => oreVeins ?? Array.Empty<OreVeinProfile>();
 

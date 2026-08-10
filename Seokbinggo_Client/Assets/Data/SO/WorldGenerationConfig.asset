@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5fde254ef9b59f1448067b8864cc7050, type: 3}
   m_Name: WorldGenerationConfig
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.WorldGenerationConfig
-  mapWidth: 400
+  mapWidth: 600
   mapHeight: 160
   surfaceBaseHeightRatio: 0.86875
   surfaceNoiseAmplitude: 6
@@ -26,6 +26,15 @@ MonoBehaviour:
   caveChanceDeep: 0.25
   caveMaxHeight: 12
   caveSurfaceCrustThickness: 2
+  largeCavernCountMin: 5
+  largeCavernCountMax: 8
+  largeCavernWidth: 30
+  largeCavernHeight: 20
+  largeCavernMinEdgeGap: 40
+  largeCavernMinDepthBelowCrust: 8
+  largeCavernMarginFromSpawn: 32
+  largeCavernMarginFromAltar: 28
+  largeCavernMaxPlacementAttempts: 120
   oreVeins:
   - elementType: coal
     layer: 1
