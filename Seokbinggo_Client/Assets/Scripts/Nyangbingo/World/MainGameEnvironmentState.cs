@@ -446,8 +446,13 @@ namespace Nyangbingo.World
         /// </summary>
         public bool TryResolvePlacedObjectMiningTarget(Vector2 playerPosition, Vector2? mouseWorld,
             float reach, out PlacedObjectRecord record)
+            => TryResolvePlacedObjectMiningTarget(playerPosition, mouseWorld, reach, out record, out _);
+
+        public bool TryResolvePlacedObjectMiningTarget(Vector2 playerPosition, Vector2? mouseWorld,
+            float reach, out PlacedObjectRecord record, out Vector3Int hitCell)
         {
             record = default;
+            hitCell = default;
             if (!mouseWorld.HasValue ||
                 !IsFinite(playerPosition.x) || !IsFinite(playerPosition.y) ||
                 !IsFinite(reach) || reach <= 0f)
@@ -459,20 +464,13 @@ namespace Nyangbingo.World
             var mouseCell = bootstrap?.TileService != null
                 ? bootstrap.TileService.WorldToCell(mouse)
                 : CellFrom(mouse);
-            var reachSq = reach * reach;
-            var found = false;
-            var bestDistance = reachSq;
-            foreach (var entry in byObjectId.Values)
-            {
-                var objectCell = CellFrom(entry.Record.position);
-                if (objectCell != mouseCell) continue;
-                var distance = (entry.Record.position - playerPosition).sqrMagnitude;
-                if (distance > bestDistance) continue;
-                found = true;
-                bestDistance = distance;
-                record = entry.Record;
-            }
-            return found;
+            if (!byCell.TryGetValue(mouseCell, out var entry) || entry == null ||
+                (entry.Record.position - playerPosition).sqrMagnitude > reach * reach)
+                return false;
+
+            record = entry.Record;
+            hitCell = mouseCell;
+            return true;
         }
 
         public List<PlacedObjectRecord> ExportPlacedObjects() => byObjectId.Values

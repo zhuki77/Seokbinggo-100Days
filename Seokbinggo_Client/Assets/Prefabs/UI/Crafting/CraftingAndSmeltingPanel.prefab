@@ -14142,7 +14142,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "F3 \xB7 \uC7A5\uBE44"
+  m_Text: "3 \xB7 \uC7A5\uBE44"
 --- !u!1 &2669463850345489852
 GameObject:
   m_ObjectHideFlags: 0
@@ -22042,7 +22042,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "F1 \xB7 \uC778\uBCA4\uD1A0\uB9AC"
+  m_Text: "1 \xB7 \uC778\uBCA4\uD1A0\uB9AC"
 --- !u!1 &4164500398545729547
 GameObject:
   m_ObjectHideFlags: 0
@@ -22850,7 +22850,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "F4 \xB7 \uB3C4\uAC10"
+  m_Text: "4 \xB7 \uB3C4\uAC10"
 --- !u!1 &4335973203215408127
 GameObject:
   m_ObjectHideFlags: 0
@@ -37217,7 +37217,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "F2 \xB7 \uC81C\uC791/\uC81C\uB828"
+  m_Text: "2 \xB7 \uC81C\uC791/\uC81C\uB828"
 --- !u!1 &6899122535270205584
 GameObject:
   m_ObjectHideFlags: 0

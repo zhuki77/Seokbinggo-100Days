@@ -373,9 +373,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
     private static void TestQuickSlotConsumableContract()
     {
         Require(MainGameTilePaletteController.ShouldHighlightSlot(2, 2, "dirt") &&
-                !MainGameTilePaletteController.ShouldHighlightSlot(2, 2, string.Empty) &&
+                MainGameTilePaletteController.ShouldHighlightSlot(2, 2, string.Empty) &&
                 !MainGameTilePaletteController.ShouldHighlightSlot(2, 1, "dirt"),
-            "A quick-slot border must render only while that slot has an active selection.");
+            "A quick-slot border must render for the selected slot even when that slot is empty.");
         Require(MainGameTilePaletteController.ShouldClearEndedProductSelection(
                     true, false, false, "workbench") &&
                 !MainGameTilePaletteController.ShouldClearEndedProductSelection(
@@ -1321,7 +1321,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/Save/MainGameSaveCoordinator.cs");
         var environmentSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
-        Require(playerSource.Contains("TryToggleNearbyDoor()") &&
+        Require(playerSource.Contains("TryInteractPlacedObjectAtPointer()") &&
                 saveSource.Contains("ExportDoorStates()") &&
                 saveSource.Contains("RestoreDoorStates(save.doorStates)") &&
                 environmentSource.Contains(
@@ -1395,10 +1395,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The delivered logo tear loading animation must ship as 17 pre-sliced frames for Loading.unity.");
         var loadingControllerSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/LoadingSceneController.cs");
-        Require(loadingControllerSource.Contains("LoadSceneMode.Single") &&
-                loadingControllerSource.Contains("allowSceneActivation = false") &&
+        Require(loadingControllerSource.Contains("LoadSceneMode.Additive") &&
+                loadingControllerSource.Contains("SceneManager.SetActiveScene(targetScene)") &&
+                loadingControllerSource.Contains("SceneManager.UnloadSceneAsync(scene)") &&
+                loadingControllerSource.Contains("AnimatorUpdateMode.UnscaledTime") &&
                 loadingControllerSource.Contains("SceneTransitionRequest.TargetSceneName"),
-            "Loading.unity must drive the Title/MainGame handoff via an async Single-mode load.");
+            "Loading.unity must activate the destination beneath its overlay before unloading the previous scene, " +
+            "and its animation must ignore gameplay time scale changes.");
         Require(Mathf.Approximately(
                     GameShellController.ResolveTimeScaleAfterLoading(GameShellScreen.Gameplay), 1f) &&
                 Mathf.Approximately(
@@ -1430,12 +1433,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("saveManager.DeleteAll()") &&
                 shellSource.Contains("CreateFreshInitialSave()") &&
                 shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
+                shellSource.Contains("!SceneTransitionRequest.IsTransitionActive") &&
                 shellSource.Contains("SceneTransitionRequest.Begin(\"Title\")"),
-            "Pause-hover art and the new-game fresh-save path must remain wired in MainGame.unity.");
+            "Pause-hover art and the new-game fresh-save path must remain wired, and loading must block Escape.");
         var titleUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/TitleUiController.cs");
         Require(titleUiSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed)") &&
-                titleUiSource.Contains("SceneTransitionRequest.Begin(\"MainGame\")") &&
+                titleUiSource.Contains("SceneTransitionRequest.BeginDirect(\"MainGame\")") &&
                 titleUiSource.Contains("new Vector2(-112f, 82f)") &&
                 titleUiSource.Contains("new Vector2(96f, 96f)") &&
                 titleUiSource.Contains("new Vector2(176f, 97f)"),
@@ -1776,6 +1780,26 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 Mathf.Approximately(physics.MaxFallSpeed, PlayerMovementPhysics.DefaultMaxFallSpeed) &&
                 Mathf.Approximately(physics.JumpCutMultiplier, PlayerMovementPhysics.DefaultJumpCut),
             "The merged player controller must use the v34 code-owned movement defaults.");
+        var coyoteFull = PlayerMovementPhysics.TickCoyoteTime(
+            true, 0f, PlayerMovementPhysics.DefaultCoyoteTimeSeconds, .02f);
+        var coyoteAfterLedge = PlayerMovementPhysics.TickCoyoteTime(
+            false, coyoteFull, PlayerMovementPhysics.DefaultCoyoteTimeSeconds, .02f);
+        var coyoteExpired = PlayerMovementPhysics.TickCoyoteTime(
+            false, coyoteAfterLedge, PlayerMovementPhysics.DefaultCoyoteTimeSeconds, .2f);
+        Require(Mathf.Approximately(PlayerMovementPhysics.DefaultCoyoteTimeSeconds, .1f) &&
+                Mathf.Approximately(coyoteFull, .1f) &&
+                coyoteAfterLedge > 0f &&
+                PlayerMovementPhysics.CanUseGroundJump(false, coyoteAfterLedge) &&
+                Mathf.Approximately(coyoteExpired, 0f) &&
+                !PlayerMovementPhysics.CanUseGroundJump(false, coyoteExpired),
+            "The player must retain a 0.1-second coyote jump window after leaving a ledge and consume it after expiry.");
+        var playerPhysicsSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        Require(playerPhysicsSource.Contains(
+                    "grounded = IsStandingOnForeground() && verticalVelocity <= 0f") &&
+                playerPhysicsSource.Contains(
+                    "PlayerMovementPhysics.CanUseGroundJump(grounded, coyoteTimeRemaining)"),
+            "Coyote time must not recharge from residual ground contact while the player is already rising.");
 
         var playerObject = new GameObject("PlayerPhysicsIntegrationContract",
             typeof(Rigidbody2D), typeof(CircleCollider2D));
@@ -1995,7 +2019,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(playerSource.Contains("TryUseSelectedCatnip() ||") &&
                 playerSource.Contains("tilePalette.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId") &&
                 playerSource.Contains("recovery.TryUseCatnip(out var restoredHealth)") &&
-                playerSource.Contains("TryInteractClosestWorldTarget()") &&
+                playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: false)") &&
                 playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
                 playerSource.Contains("TryTickHempMining(") &&
@@ -2726,6 +2750,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
         var playerSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var environmentSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
         Require(!hudSource.Contains("피격!") &&
                 !hudSource.Contains("방울 금줄 경보 · 침입자 접근") &&
                 !hudSource.Contains("sealText.text = $\"석빙고") &&
@@ -2735,8 +2761,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(!turretSource.Contains("장독 창고 · 40슬롯") &&
                 !turretSource.Contains("좌클릭 설치 · ESC/우클릭 취소"),
             "Narrative interaction instructions were reintroduced into the world HUD.");
-        Require(MainGameTurretRuntime.NearbyInteractionPrompt ==
-                    "E · 상호작용    좌클릭 유지 · 회수" &&
+        Require(!turretSource.Contains("우클릭 · 상호작용") &&
+                !turretSource.Contains("좌클릭 유지 · 회수") &&
                 paletteSource.Contains("\"PlacedObjectInteractionPrompt\"") &&
                 paletteSource.Contains("placementRuntime?.BindInteractionStatus(interactionPromptText)") &&
                 Mathf.Approximately(
@@ -2746,17 +2772,24 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     MainGameTilePaletteController.ResolveBottomStatusY(true),
                     MainGameTilePaletteController.BottomStatusBaseY +
                     MainGameTilePaletteController.BottomStatusLineHeight),
-            "Nearby placed-object controls must use the readable bottom prompt and stack older hotbar feedback one line above it.");
+            "Nearby placed objects must not display a persistent bottom control prompt; " +
+            "placement feedback may still use the shared status line.");
         Require(playerSource.Contains("TryTickPlacedObjectMining(") &&
                 playerSource.Contains("ResolvePlacedObjectMiningSeconds(") &&
+                playerSource.Contains("out var record, out var hitCell") &&
+                playerSource.Contains("placedObjectInteractions.TryRecoverPlacedObject(toRecover)") &&
+                environmentSource.Contains("byCell.TryGetValue(mouseCell, out var entry)") &&
                 !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
                     @"GetKeyDown\(KeyCode\.E\)[\s\S]{0,400}TryRecoverNearestPlacedObject"),
-            "Placed-object recovery must use hold-to-mine left-click instead of Shift+E.");
+            "Placed-object recovery must use hold-to-mine left-click instead of Shift+E, " +
+            "including every occupied cell of multi-cell objects.");
         Require(!turretSource.Contains("TryPlace(record, barrierActive: false)"),
             "Whitelisted insulation modules must remain eligible to seal after product placement.");
-        Require(!turretSource.Contains("설치 거리가 너무 멉니다 · 최대") &&
-                !paletteSource.Contains("설치 거리가 너무 멉니다 · 최대"),
-            "Placement-distance feedback must not append the numeric tile limit.");
+        Require(!turretSource.Contains("설치 거리가 너무 멉니다") &&
+                !paletteSource.Contains("설치 거리가 너무 멉니다") &&
+                !turretSource.Contains("LMB · 설치") &&
+                !turretSource.Contains("ESC/RMB · 취소"),
+            "Placement distance and placement-control narration must stay hidden.");
         Require(!paletteSource.Contains("R · 반경 표시"),
             "Narrative range-toggle status was reintroduced into the tile palette HUD.");
         Require(playerSource.Contains("MainGameHudController.BlocksWorldPrimaryInput"),
@@ -2766,11 +2799,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     @"if \(attackCooldown <= 0f\)\s*TryBasicAttack\(\);\s*//[\s\S]{0,180}TickMining\(\);"),
             "A successful claw hit must not reset or suppress mining held on the same primary input.");
         Require(System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryInteractClosestWorldTarget\(\)") &&
+                    @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryInteractClosestWorldTarget\(includePlacedObjects: false\)") &&
                 playerSource.Contains("TryOpenChestAt(") &&
+                System.Text.RegularExpressions.Regex.IsMatch(playerSource,
+                    @"GetMouseButtonDown\(1\)[\s\S]{0,220}TryInteractPlacedObjectAtPointer\(\)[\s\S]{0,120}TryFanAbility\(\)") &&
+                turretSource.Contains("TryResolvePlacedObjectMiningTarget(") &&
                 !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"GetMouseButtonDown\(1\)[\s\S]{0,120}TryOpenNearbyChest"),
-            "Chest interaction must remain on E while right-click stays exclusive to the fan ability.");
+                    @"GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryInteractNearestPlacedObject"),
+            "Natural gathering and chests must remain on E while a pointed placed object takes right-click priority over the fan ability.");
     }
 
     private static void TestBossHealthArtMapping()
@@ -3214,31 +3250,36 @@ public static class NyangbingoDevBIntegrationRegressionTests
             $"v29 inventory grid must have 5 rows (actual {MainGameCraftingUiController.InventoryGridRows}).");
         Require(MainGameCraftingUiController.InventoryHotbarSlotCount == 8 &&
                 MainGameCraftingUiController.UnifiedTabLabel(0) == "인벤토리",
-            "The inventory must distinguish its first eight hotbar-linked slots and label F1 as inventory.");
+            "The inventory must distinguish its first eight hotbar-linked slots and label panel 1 as inventory.");
         Require(Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f),
             $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
         Require(MainGameCraftingUiController.UsesIconOnlyCraftingList,
             "v28 crafting list must use icon and quantity presentation without narrative row text.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F5,
             "MainGame Editor test shortcut help must be assigned to F5.");
-        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.F1 &&
-                MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.F2 &&
-                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.F3 &&
-                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.F4 &&
+        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.Alpha1 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.Alpha2 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.Alpha3 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.Alpha4 &&
                 MainGameCraftingUiController.UnifiedTabHotkey(4) == KeyCode.None,
-            "The four unified panels must be assigned to F1 through F4.");
+            "The four unified panels must be assigned to number keys 1 through 4.");
         Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F5,
-            "Crafting test grants must share modified F5 without reclaiming the F1-F4 product panel keys.");
+            "Crafting test grants must remain on modified F5 without reclaiming the 1-4 product panel keys.");
         Require(MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Furnace) &&
                 MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Foundry) &&
                 !MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Workbench),
             "Furnaces and foundries must expose both their crafting and smelting routes.");
         var craftingUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
-        Require(craftingUiSource.Contains("F2 · 제작/제련") &&
+        var shellUiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        Require(craftingUiSource.Contains("$\"{index + 1} · {UnifiedTabLabel(index)}\"") &&
                 craftingUiSource.Contains("showingSmelting = !showingSmelting") &&
-                craftingUiSource.Contains("F2 제작/제련 전환"),
-            "F2 must visibly toggle both ways between crafting and smelting at a shared station.");
+                craftingUiSource.Contains("2 제작/제련 전환") &&
+                shellUiSource.Contains("!MainGameCraftingUiController.BlocksGameplayInput") &&
+                shellUiSource.Contains("!MainGameCraftingUiController.ConsumedEscapeThisFrame"),
+            "Number key 2 must visibly toggle both ways between crafting and smelting at a shared station, " +
+            "and Escape must close any 1-4 panel without opening pause in the same frame.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&
                 MainGameBossSummonUiController.DebugShortcutHelpPanelSize.y <=
@@ -3345,10 +3386,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(Mathf.Approximately(MainGameTilePaletteController.SlotPixelSize, 27f),
             "The tile palette must reuse the delivered 27 px inventory slot scale.");
         Require(MainGameTilePaletteController.ShortcutSlotCount == 8 &&
-                MainGameTilePaletteController.ShortcutKeyForSlot(0) == KeyCode.Alpha1 &&
-                MainGameTilePaletteController.ShortcutKeyForSlot(7) == KeyCode.Alpha8 &&
-                MainGameTilePaletteController.ShortcutKeyForSlot(8) == KeyCode.None,
-            "The eight visible tile-palette slots must be assigned to number keys 1 through 8.");
+                MainGameTilePaletteController.UsesMouseWheelSelection &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(-1, -1f, 8) == 0 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(0, -1f, 8) == 1 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(0, 1f, 8) == 7 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(7, -1f, 8) == 0,
+            "The eight visible tile-palette slots must wrap in both directions with the mouse wheel.");
         Require(Mathf.Approximately(MainGameTilePaletteController.DefaultPlacementReachTiles, 4f) &&
                 MainGameTilePaletteController.IsWithinPlacementReach(
                     new Vector2(.5f, .5f), new Vector3Int(3, 0, 0), 4f) &&
@@ -3362,10 +3405,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var paletteSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
         Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot)") &&
+                 paletteSource.Contains("Input.mouseScrollDelta.y") &&
+                 paletteSource.Contains("shortcut.gameObject.SetActive(false)") &&
                  paletteSource.Contains("CollectHotbarSlotItemIds()") &&
                  paletteSource.Contains("SelectEmptySlot(slotIndex)") &&
                  paletteSource.Contains("SelectDirectUseSlot(slotIndex, itemId)"),
-            "Number keys 1-8 must select inventory hotbar slots, including empty slots.");
+            "Mouse-wheel input must select inventory hotbar slots, including empty slots, without stale number-key labels.");
         Require(!paletteSource.Contains("!MainGameShellUiController.IsLoadingTransitionActive"),
             "The tile palette must remain in the gameplay HUD beneath the shell loading overlay.");
         var loadingCreatorSource = System.IO.File.ReadAllText(
@@ -3415,19 +3460,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(craftingSource.Contains("TrySwapSlots(sourceIndex, index)") &&
                 craftingSource.Contains("Shift+다른 슬롯 클릭: 위치 교환") &&
                 !craftingSource.Contains("앞 8칸은 퀵슬롯") &&
-                craftingSource.Contains("\"HotbarShortcut\"") &&
-                craftingSource.Contains("shortcut.text = (index + 1).ToString()") &&
-                craftingSource.Contains("shortcutRect.anchorMin = Vector2.zero") &&
-                craftingSource.Contains("shortcutRect.anchorMax = Vector2.one") &&
+                craftingSource.Contains("transform.Find(\"HotbarShortcut\")") &&
+                craftingSource.Contains("oldNumberHint.gameObject.SetActive(false)") &&
                 !craftingSource.Contains("gameplayArtCatalog?.InventorySlotTopSelected") &&
-                craftingSource.Contains("F1 · 인벤토리") &&
-                paletteSource.Contains("설치 거리가 너무 멉니다") &&
-                !paletteSource.Contains("설치 거리가 너무 멉니다 · 최대") &&
+                craftingSource.Contains("{index + 1} · {UnifiedTabLabel(index)}") &&
+                !paletteSource.Contains("설치 거리가 너무 멉니다") &&
+                !paletteSource.Contains("붉은 위치에는 블럭을 설치할 수 없습니다") &&
                 paletteSource.Contains("퀵슬롯에서 선택할 수 없습니다") &&
                 !paletteSource.Contains("퀵슬롯에서 설치할 수 없습니다") &&
                 playerSource.Contains("채굴 도구 등급 부족") &&
                 playerSource.Contains("RaiseMiningTargetChanged"),
-            "Hotbar reordering, placement failures, mining target highlight, and hardness feedback must be visible.");
+            "Hotbar reordering, quiet invalid placement, mining target highlight, and hardness feedback must remain intact.");
     }
 
     private static void TestIceStorageSealCoreLifecycle()
