@@ -22,7 +22,6 @@ namespace Nyangbingo.World
         public const float FallDamageBounceHeightTiles = .5f;
 
         private const string MoveSpeedKey = "player_move_speed";
-        private const string MiningReachKey = "player_mining_reach_tiles";
         private const string BareClawId = "bare_claw";
         private const string HapjukseonId = "hapjukseon";
         private const string CheolseonId = "cheolseon";
@@ -38,9 +37,6 @@ namespace Nyangbingo.World
         private const string IceShardTemperatureReliefKey = "ice_shard_temp_relief";
         private const string NestBedId = "nest_bed";
         private const float TearPouchPickupRadius = .75f;
-        // 채굴은 전투 사거리(1.5)와 분리 — 건설·굴착 자유도를 위해 테라리아식으로 더 길게.
-        // 정본 수치: globals.csv player_mining_reach_tiles
-        private const float DefaultMiningReach = 4f;
         private const float CatnipHarvestRadius = 1.5f;
         // 공격 사거리(bare_claw rangeTiles=1.5)와 맞춰, facing*짧은 거리만 보면 조준 타일 앞 공기 칸만
         // 찍혀 채굴이 조용히 실패하던 문제를 피한다.
@@ -73,7 +69,6 @@ namespace Nyangbingo.World
         private float gravityAcceleration;
         private float maximumFallSpeed;
         private float jumpCutMultiplier;
-        private float miningReach = DefaultMiningReach;
         private float fallDamageThresholdTiles;
         private float fallDamagePerTile;
         private float iceShardTemperatureRelief;
@@ -107,7 +102,6 @@ namespace Nyangbingo.World
         private float miningElapsedSeconds;
         private float miningRequiredSeconds;
         private bool miningTargetVisible;
-        private Vector3Int miningTargetCell;
         private bool miningTargetMineable;
         private Vector3Int miningTargetCell;
         private Vector3Int miningFailureCell;
@@ -247,15 +241,6 @@ namespace Nyangbingo.World
             gravityAcceleration = physics.Gravity;
             maximumFallSpeed = physics.MaxFallSpeed;
             jumpCutMultiplier = physics.JumpCutMultiplier;
-
-            miningReach = DefaultMiningReach;
-            var miningReachDefinition = catalog.FindGlobal(MiningReachKey);
-            if (miningReachDefinition != null && miningReachDefinition.TryGetFloat(out var configuredReach) &&
-                !float.IsNaN(configuredReach) && !float.IsInfinity(configuredReach) && configuredReach > 0f)
-                miningReach = configuredReach;
-            else
-                Debug.LogWarning("[Nyangbingo] MainGamePlayerController: player_mining_reach_tiles missing; " +
-                                 $"using default {DefaultMiningReach}.");
 
             ConfigurePhysicsBody(body, playerCollider);
             ApplyGeneratedWorldSpawn();
@@ -420,7 +405,6 @@ namespace Nyangbingo.World
             {
                 movementInput = Vector2.zero;
                 CancelMining();
-                ClearMiningTargetHighlight();
                 HideMiningTargetFeedback();
                 TickDeathSequence(Time.deltaTime);
                 return;
@@ -430,7 +414,6 @@ namespace Nyangbingo.World
             {
                 movementInput = Vector2.zero;
                 CancelMining();
-                ClearMiningTargetHighlight();
                 HideMiningTargetFeedback();
                 characterAnimator?.SetMoving(false);
                 return;
@@ -472,27 +455,6 @@ namespace Nyangbingo.World
                     interactionMessages?.ShowExternalMessage(recover
                         ? "가까이 있는 회수 가능한 설치물이 없습니다."
                         : "가까이 있는 상호작용 대상을 찾지 못했습니다.");
-                if (runtimeServices.NapService.IsNapping)
-                {
-                    movementInput = Vector2.zero;
-                    CancelMining();
-                    characterAnimator?.SetMoving(false);
-                    return;
-                }
-            }
-            if (runtimeServices.NapService.IsNapping)
-            {
-                if (encounterCoordinator != null &&
-                    encounterCoordinator.HasActiveYokaiWithin(transform.position, NapYokaiWakeRadius))
-                    runtimeServices.NapService.Wake(NapWakeReason.YokaiApproached);
-            }
-            if (runtimeServices.NapService.IsNapping)
-            {
-                movementInput = Vector2.zero;
-                CancelMining();
-                ClearMiningTargetHighlight();
-                characterAnimator?.SetMoving(false);
-                return;
             }
             movementInput = new Vector2(Mathf.Clamp(Input.GetAxisRaw("Horizontal"), -1f, 1f), 0f);
             if (Mathf.Abs(movementInput.x) > Mathf.Epsilon)
@@ -526,9 +488,6 @@ namespace Nyangbingo.World
                 TickMining();
             }
             else CancelMining();
-
-            UpdateMiningTargetHighlight(!buildingPlacementActive && !pointerOverUi);
-
             // 우클릭은 부채 액티브 전용이다. 상자와 설치물의 제품 상호작용은 E로 통합한다.
             if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1))
                 TryFanAbility();
@@ -632,8 +591,8 @@ namespace Nyangbingo.World
         private void UpdateAimDirection()
         {
             if (followCamera == null || body == null) return;
-            if (!TryGetMouseWorldPosition(out var mouse)) return;
-            var aim = mouse - body.position;
+            var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
+            var aim = (Vector2)mouse - body.position;
             if (aim.sqrMagnitude > Mathf.Epsilon) facing = aim.normalized;
         }
 
@@ -1041,70 +1000,26 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 마우스 아래 칸이 사거리 안 고체면 그 칸만 채굴한다. 공기·어긋난 칸에서는 인접 보정 없음.
-        /// 셀 변환은 WorldRenderer.WorldToCell(타일 앵커·하단 피벗 보정)을 쓴다.
+        /// 마우스 아래 칸이 사거리 안이면 그 칸(공기면 발밑·인접 고체)을 우선하고,
+        /// 아니면 조준 방향 × 사거리 칸을 같은 규칙으로 쓴다.
         /// </summary>
         private bool TryResolveMiningCell(TileService tileService, out Vector3Int cell)
         {
             cell = default;
             if (tileService == null) return false;
             var origin = (Vector2)transform.position;
-            Vector2? mouseWorld = null;
-            Vector3Int? mouseCell = null;
-            if (TryGetMouseWorldPosition(out var mouse))
-            {
-                mouseWorld = mouse;
-                mouseCell = ResolveWorldCell(mouse);
-            }
-
+            Vector2? mouseWorld = followCamera != null
+                ? followCamera.ScreenToWorldPoint(Input.mousePosition)
+                : null;
             var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            return TryPickMiningCell(tileService, origin, mouseWorld, mouseCell, direction, miningReach,
-                out cell);
-        }
-
-        private bool TryGetMouseWorldPosition(out Vector2 worldPosition)
-        {
-            worldPosition = default;
-            if (followCamera == null) return false;
-            var screen = Input.mousePosition;
-            // ScreenToWorldPoint는 z=카메라→게임면 거리여야 XY가 커서와 맞는다(z=0이면 미세 오차).
-            screen.z = Mathf.Abs(followCamera.transform.position.z);
-            var world = followCamera.ScreenToWorldPoint(screen);
-            if (float.IsNaN(world.x) || float.IsInfinity(world.x) ||
-                float.IsNaN(world.y) || float.IsInfinity(world.y))
-                return false;
-            worldPosition = world;
-            return true;
-        }
-
-        private Vector3Int ResolveWorldCell(Vector2 worldPosition)
-        {
-            var renderer = bootstrap?.WorldRenderer;
-            if (renderer != null) return renderer.WorldToCell(worldPosition);
-            return new Vector3Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y), 0);
+            return TryPickMiningCell(tileService, origin, mouseWorld, direction, MiningReach, out cell);
         }
 
         /// <summary>
-        /// 포인터(또는 조준점)가 올라간 칸만 본다. 그 칸이 사거리 안 고체일 때만 채굴하고,
-        /// 공기이거나 사거리 밖이면 인접 칸으로 넘어가지 않는다.
+        /// 지표 채굴 UX — 마우스가 공기 칸(플레이어 발 높이)을 가리키면 바로 아래·인접 전경 고체로 보정한다.
         /// </summary>
         public static bool TryPickMiningCell(TileService tileService, Vector2 playerOrigin,
             Vector2? mouseWorld, Vector2 facing, float miningReach, out Vector3Int cell)
-        {
-            Vector3Int? mouseCell = null;
-            if (mouseWorld.HasValue)
-            {
-                var mouse = mouseWorld.Value;
-                mouseCell = new Vector3Int(Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
-            }
-
-            return TryPickMiningCell(tileService, playerOrigin, mouseWorld, mouseCell, facing, miningReach,
-                out cell);
-        }
-
-        public static bool TryPickMiningCell(TileService tileService, Vector2 playerOrigin,
-            Vector2? mouseWorld, Vector3Int? mouseCell, Vector2 facing, float miningReach,
-            out Vector3Int cell)
         {
             cell = default;
             if (tileService == null || miningReach <= 0f ||
@@ -1127,26 +1042,6 @@ namespace Nyangbingo.World
                 if (IsMineableForegroundCell(tileService, cursorCell) &&
                     IsWithinMiningReach(tileService, attackOrigin, cursorCell, reachSq))
                 {
-                    var primary = mouseCell ?? new Vector3Int(
-                        Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
-                    return TryResolveExactMiningTarget(tileService, playerOrigin, primary, reachSq, out cell);
-                }
-            }
-
-            var direction = facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector2.down;
-            var aim = playerOrigin + direction * miningReach;
-            var aimCell = new Vector3Int(Mathf.FloorToInt(aim.x), Mathf.FloorToInt(aim.y), 0);
-            return TryResolveExactMiningTarget(tileService, playerOrigin, aimCell, reachSq, out cell);
-        }
-
-        private static bool TryResolveExactMiningTarget(TileService tileService, Vector2 playerOrigin,
-            Vector3Int primaryCell, float reachSq, out Vector3Int cell)
-        {
-            cell = default;
-            if (!IsMineableForegroundCell(tileService, primaryCell)) return false;
-            if (!IsWithinMiningReach(playerOrigin, primaryCell, reachSq)) return false;
-            cell = primaryCell;
-            return true;
                     cell = cursorCell;
                     return true;
                 }
@@ -1305,33 +1200,6 @@ namespace Nyangbingo.World
             miningRequiredSeconds = 0f;
         }
 
-        private void UpdateMiningTargetHighlight(bool allowTarget)
-        {
-            if (!allowTarget || !TryResolveHoverMiningTarget(out var cell))
-            {
-                ClearMiningTargetHighlight();
-                return;
-            }
-
-            if (miningTargetVisible && miningTargetCell == cell) return;
-            miningTargetVisible = true;
-            miningTargetCell = cell;
-            Nyangbingo.Core.GameEvents.RaiseMiningTarget(true, cell);
-        }
-
-        private bool TryResolveHoverMiningTarget(out Vector3Int cell)
-        {
-            cell = default;
-            var tileService = bootstrap?.TileService;
-            if (tileService == null || !TryResolveMiningCell(tileService, out cell)) return false;
-            return TryGetMiningSeconds(cell, ResolveMiningClawTier(), out _);
-        }
-
-        private void ClearMiningTargetHighlight()
-        {
-            if (!miningTargetVisible) return;
-            miningTargetVisible = false;
-            Nyangbingo.Core.GameEvents.RaiseMiningTarget(false);
         private void UpdateMiningTargetFeedback(bool blocked)
         {
             var tileService = bootstrap?.TileService;
@@ -1897,11 +1765,8 @@ namespace Nyangbingo.World
             var reachSq = ChestInteractReach * ChestInteractReach;
             var tileService = bootstrap?.TileService;
 
-            if (TryGetMouseWorldPosition(out var mouse))
+            if (followCamera != null)
             {
-                var mouseCell = ResolveWorldCell(mouse);
-                if (IsChestCellInReach(origin, mouseCell, reachSq) &&
-                    session.TryPeekUnopenedChestAt(mouseCell))
                 var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
                 var mouseCell = tileService != null
                     ? tileService.WorldToCell(mouse)

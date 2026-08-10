@@ -52,8 +52,7 @@ namespace Nyangbingo.World
             { WorldTileTypes.StoneMid, WorldTileTypes.Stone },
             { WorldTileTypes.StoneDeep, WorldTileTypes.Stone },
             { WorldTileTypes.RuinWall, WorldTileTypes.Stone },
-            { WorldTileTypes.IceLake, WorldTileTypes.IceShard },
-            { DoorTopElementType, DoorElementType }
+            { WorldTileTypes.IceLake, WorldTileTypes.IceShard }
         };
 
         private static readonly Dictionary<string, int> PlacementHardness = new Dictionary<string, int>(StringComparer.Ordinal)
@@ -65,14 +64,9 @@ namespace Nyangbingo.World
             { WorldTileTypes.CopperOre, 2 }, { WorldTileTypes.IceShard, 2 }, { WorldTileTypes.RuinWall, 2 },
             { WorldTileTypes.StoneDeep, 3 }, { WorldTileTypes.IceSteelOre, 3 }, { WorldTileTypes.FrostEssence, 3 },
             // Product insulation boundaries are foreground tiles, not floor-standing objects.
-            // door는 비주얼 1x2(아래 칸), door_top은 위 칸 충돌·밀폐 전용(투명).
-            { "insul_wall", 1 }, { DoorElementType, 1 }, { DoorTopElementType, 1 }, { "roof", 1 },
-            { "iron_insul_wall", 2 }
+            { "insul_wall", 1 }, { "door", 1 }, { "roof", 1 }, { "iron_insul_wall", 2 }
         };
 
-        public const string DoorElementType = "door";
-        public const string DoorTopElementType = "door_top";
-        public const int DoorHeightCells = 2;
         public const float DefaultInsulationWallHitPoints = 600f;
         public const float DefaultClayPlasteredWallHitPoints = 750f;
         public const float DefaultIronInsulationWallHitPoints = 900f;
@@ -121,7 +115,7 @@ namespace Nyangbingo.World
 
         public TileData GetTile(Vector3Int cell) => InBounds(cell) ? tiles[cell.x, cell.y] : default;
 
-        /// <summary>열 x의 최상위 자연 고체 Y. 없으면 -1.</summary>
+        /// <summary>해당 x의 최상위 자연 고체 Y. 없으면 -1.</summary>
         public int FindSurfaceNaturalY(int x)
         {
             if (x < 0 || x >= Width || Height <= 1) return -1;
@@ -154,7 +148,7 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 전경 element만 교체(채굴/설치 아님). 서리 광물 확정·경계암 개방에 사용.
+        /// 전경 element만 교체(채굴/설치 아님). 서리 광물 확정·경계용 개방 시 사용.
         /// </summary>
         public bool TrySetForegroundElement(Vector3Int cell, string elementType, int hardness)
         {
@@ -178,6 +172,9 @@ namespace Nyangbingo.World
             ApplyForegroundVisual(cell, elementType);
             RefreshEdgeOverlayAround(cell);
             renderer?.NotifyForegroundCollisionDirty();
+            return true;
+        }
+
         public Vector3Int WorldToCell(Vector2 worldPosition) => renderer != null
             ? renderer.WorldToCell(worldPosition)
             : new Vector3Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y), 0);
@@ -339,7 +336,7 @@ namespace Nyangbingo.World
 
             if (!InBounds(cell)) return false;
 
-            // 서리 pending: 공기 인접 시 광물로만 확정하고 이번 타격은 소비한다.
+            // 서리 pending: 공격 인접 시 광물로만 확정하고 이번 타격은 소비한다.
             if (FrostSpread != null && FrostSpread.TryRevealOnInteract(this, cell))
                 return false;
 
@@ -347,10 +344,6 @@ namespace Nyangbingo.World
             if (current.IsAir) return false;
             if (IndestructibleElementTypes.Contains(current.elementType)) return false;
             if (toolTier < current.hardness) return false;
-
-            if (IsDoorFootprintElement(current.elementType))
-                return TryBreakDoorFootprint(ResolveDoorBaseCell(cell, current.elementType), toolTier,
-                    out droppedItemId, out droppedAmount);
 
             var minedElementType = current.elementType;
             wallDamageTaken.Remove(cell);
@@ -397,19 +390,11 @@ namespace Nyangbingo.World
             elementType = TileIdAlias.ToCanonical(elementType);
             if (!SupportsForegroundPlacement(elementType)) return false;
 
-            if (string.Equals(elementType, DoorElementType, StringComparison.Ordinal))
-                return TryPlaceDoorFootprint(cell, consumeFrom, hardnessOverride);
-
             var current = tiles[cell.x, cell.y];
             if (!current.IsAir || IsForegroundPlacementBlocked(cell)) return false;
 
             if (consumeFrom != null && !consumeFrom.TryRemove(elementType, 1)) return false;
 
-            WriteForegroundCell(cell, elementType, hardnessOverride);
-            RecordChange(cell, elementType, placed: true);
-            GameEvents.RaiseTilePlaced(cell);
-            return true;
-        }
             wallDamageTaken.Remove(cell);
             var hardness = hardnessOverride > 0 ? hardnessOverride : ResolvePlacementHardness(elementType);
             tiles[cell.x, cell.y] = new TileData
@@ -421,34 +406,10 @@ namespace Nyangbingo.World
                 naturalBackgroundElementType = string.IsNullOrEmpty(current.naturalBackgroundElementType) ? WorldTileTypes.Air : current.naturalBackgroundElementType
             };
 
-        /// <summary>드롭 없이 전경만 제거(단열 문 개폐용). raiseBroken=false면 OnTileBroken을 올리지 않는다.</summary>
-        public bool TryClearForegroundWithoutDrop(Vector3Int cell, bool raiseBrokenEvent = true)
-        {
-            if (!InBounds(cell)) return false;
-            var current = tiles[cell.x, cell.y];
-            if (current.IsAir) return false;
-            if (IndestructibleElementTypes.Contains(current.elementType)) return false;
+            ApplyForegroundVisual(cell, elementType);
+            RefreshEdgeOverlayAround(cell);
+            renderer?.NotifyForegroundCollisionDirty();
 
-            if (IsDoorFootprintElement(current.elementType))
-                return TryClearDoorFootprint(ResolveDoorBaseCell(cell, current.elementType), raiseBrokenEvent);
-
-            return ClearForegroundCell(cell, current.elementType, raiseBrokenEvent);
-        }
-
-        /// <summary>인벤 소비 없이 전경 복구(열린 단열 문 닫기).</summary>
-        public bool TryRestoreForeground(Vector3Int cell, string elementType, int hardnessOverride = -1)
-        {
-            if (string.IsNullOrEmpty(elementType) || !InBounds(cell)) return false;
-            elementType = TileIdAlias.ToCanonical(elementType);
-            if (!SupportsForegroundPlacement(elementType)) return false;
-
-            if (string.Equals(elementType, DoorElementType, StringComparison.Ordinal))
-                return TryRestoreDoorFootprint(cell, hardnessOverride);
-
-            var current = tiles[cell.x, cell.y];
-            if (!current.IsAir) return false;
-
-            WriteForegroundCell(cell, elementType, hardnessOverride);
             RecordChange(cell, elementType, placed: true);
             GameEvents.RaiseTilePlaced(cell);
             // Foreground insulation walls use the tile placement pipeline rather than the
@@ -466,8 +427,6 @@ namespace Nyangbingo.World
             var id = TileIdAlias.ToCanonical(itemId);
             if (IndestructibleElementTypes.Contains(id)) return false;
             if (WorldTileTypes.IsBackgroundId(id)) return false;
-            // door_top은 핫바 설치 대상이 아니다(문 설치 시 자동 생성).
-            if (string.Equals(id, DoorTopElementType, StringComparison.Ordinal)) return false;
             return PlacementHardness.ContainsKey(id);
         }
 
@@ -475,10 +434,6 @@ namespace Nyangbingo.World
         public bool CanPlaceForeground(Vector3Int cell, string itemId)
         {
             if (!SupportsForegroundPlacement(itemId) || !InBounds(cell)) return false;
-            itemId = TileIdAlias.ToCanonical(itemId);
-            if (string.Equals(itemId, DoorElementType, StringComparison.Ordinal))
-                return CanPlaceDoorFootprint(cell);
-            return GetTile(cell).IsAir;
             return GetTile(cell).IsAir && !IsForegroundPlacementBlocked(cell);
         }
 
@@ -548,153 +503,6 @@ namespace Nyangbingo.World
             }
             foreach (var cell in openDoors.ToArray()) CloseDoor(cell);
             foreach (var cell in validated) OpenDoor(cell);
-            return true;
-        }
-
-        public static bool IsDoorFootprintElement(string elementType) =>
-            string.Equals(elementType, DoorElementType, StringComparison.Ordinal) ||
-            string.Equals(elementType, DoorTopElementType, StringComparison.Ordinal);
-
-        public static Vector3Int ResolveDoorBaseCell(Vector3Int cell, string elementType) =>
-            string.Equals(elementType, DoorTopElementType, StringComparison.Ordinal)
-                ? cell + Vector3Int.down
-                : cell;
-
-        public bool CanPlaceDoorFootprint(Vector3Int baseCell)
-        {
-            var head = baseCell + Vector3Int.up;
-            return InBounds(baseCell) && InBounds(head) &&
-                   GetTile(baseCell).IsAir && GetTile(head).IsAir;
-        }
-
-        /// <summary>이미 설치된 문 아래에 위칸 충돌이 없으면 투명 door_top을 보충한다.</summary>
-        public bool TryEnsureDoorTop(Vector3Int baseCell)
-        {
-            if (!InBounds(baseCell)) return false;
-            if (!string.Equals(GetTile(baseCell).elementType, DoorElementType, StringComparison.Ordinal))
-                return false;
-            var head = baseCell + Vector3Int.up;
-            if (!InBounds(head)) return false;
-            if (string.Equals(GetTile(head).elementType, DoorTopElementType, StringComparison.Ordinal))
-                return true;
-            if (!GetTile(head).IsAir) return false;
-            WriteForegroundCell(head, DoorTopElementType, -1);
-            RecordChange(head, DoorTopElementType, placed: true);
-            GameEvents.RaiseTilePlaced(head);
-            return true;
-        }
-
-        private bool TryPlaceDoorFootprint(Vector3Int baseCell, Nyangbingo.Inventory.Inventory consumeFrom,
-            int hardnessOverride)
-        {
-            if (!CanPlaceDoorFootprint(baseCell)) return false;
-            if (consumeFrom != null && !consumeFrom.TryRemove(DoorElementType, 1)) return false;
-
-            WriteForegroundCell(baseCell, DoorElementType, hardnessOverride);
-            WriteForegroundCell(baseCell + Vector3Int.up, DoorTopElementType, hardnessOverride);
-            RecordChange(baseCell, DoorElementType, placed: true);
-            RecordChange(baseCell + Vector3Int.up, DoorTopElementType, placed: true);
-            GameEvents.RaiseTilePlaced(baseCell);
-            GameEvents.RaiseTilePlaced(baseCell + Vector3Int.up);
-            return true;
-        }
-
-        private bool TryRestoreDoorFootprint(Vector3Int baseCell, int hardnessOverride)
-        {
-            if (!CanPlaceDoorFootprint(baseCell)) return false;
-            WriteForegroundCell(baseCell, DoorElementType, hardnessOverride);
-            WriteForegroundCell(baseCell + Vector3Int.up, DoorTopElementType, hardnessOverride);
-            RecordChange(baseCell, DoorElementType, placed: true);
-            RecordChange(baseCell + Vector3Int.up, DoorTopElementType, placed: true);
-            GameEvents.RaiseTilePlaced(baseCell);
-            GameEvents.RaiseTilePlaced(baseCell + Vector3Int.up);
-            return true;
-        }
-
-        private bool TryClearDoorFootprint(Vector3Int baseCell, bool raiseBrokenEvent)
-        {
-            var head = baseCell + Vector3Int.up;
-            var clearedAny = false;
-            if (InBounds(baseCell))
-            {
-                var baseTile = GetTile(baseCell);
-                if (IsDoorFootprintElement(baseTile.elementType))
-                    clearedAny |= ClearForegroundCell(baseCell, baseTile.elementType, raiseBrokenEvent);
-            }
-
-            if (InBounds(head))
-            {
-                var headTile = GetTile(head);
-                if (IsDoorFootprintElement(headTile.elementType))
-                    clearedAny |= ClearForegroundCell(head, headTile.elementType, raiseBrokenEvent);
-            }
-
-            return clearedAny;
-        }
-
-        private bool TryBreakDoorFootprint(Vector3Int baseCell, int toolTier, out string droppedItemId,
-            out int droppedAmount)
-        {
-            droppedItemId = null;
-            droppedAmount = 0;
-            if (!InBounds(baseCell)) return false;
-            var baseTile = GetTile(baseCell);
-            var head = baseCell + Vector3Int.up;
-            var headTile = InBounds(head) ? GetTile(head) : default;
-            if (!IsDoorFootprintElement(baseTile.elementType) &&
-                !(InBounds(head) && IsDoorFootprintElement(headTile.elementType)))
-                return false;
-
-            var hardness = 0;
-            if (IsDoorFootprintElement(baseTile.elementType)) hardness = Mathf.Max(hardness, baseTile.hardness);
-            if (InBounds(head) && IsDoorFootprintElement(headTile.elementType))
-                hardness = Mathf.Max(hardness, headTile.hardness);
-            if (toolTier < hardness) return false;
-
-            GameEvents.RaiseMiningImpact(MiningImpactSurface.Mineral);
-            TryClearDoorFootprint(baseCell, raiseBrokenEvent: true);
-            if (TryResolveDrop(DoorElementType, out var item, out var amount))
-            {
-                ItemAcquisition.Request(item, amount);
-                droppedItemId = item.Id;
-                droppedAmount = amount;
-            }
-            return true;
-        }
-
-        private void WriteForegroundCell(Vector3Int cell, string elementType, int hardnessOverride)
-        {
-            var current = tiles[cell.x, cell.y];
-            var hardness = hardnessOverride > 0 ? hardnessOverride : ResolvePlacementHardness(elementType);
-            tiles[cell.x, cell.y] = new TileData
-            {
-                hardness = hardness,
-                isNaturalTerrain = false,
-                elementType = elementType,
-                backgroundElementType = string.IsNullOrEmpty(current.backgroundElementType)
-                    ? WorldTileTypes.Air
-                    : current.backgroundElementType,
-                naturalBackgroundElementType = string.IsNullOrEmpty(current.naturalBackgroundElementType)
-                    ? WorldTileTypes.Air
-                    : current.naturalBackgroundElementType
-            };
-            ApplyForegroundVisual(cell, elementType);
-            RefreshEdgeOverlayAround(cell);
-            renderer?.NotifyForegroundCollisionDirty();
-        }
-
-        private bool ClearForegroundCell(Vector3Int cell, string clearedElementType, bool raiseBrokenEvent)
-        {
-            var current = tiles[cell.x, cell.y];
-            if (current.IsAir) return false;
-            var cleared = current.WithoutForeground();
-            tiles[cell.x, cell.y] = cleared;
-            ApplyForegroundVisual(cell, null);
-            ApplyBackgroundVisual(cell, cleared.HasBackground ? cleared.backgroundElementType : null);
-            RefreshEdgeOverlayAround(cell);
-            renderer?.NotifyForegroundCollisionDirty();
-            RecordChange(cell, clearedElementType, placed: false);
-            if (raiseBrokenEvent) GameEvents.RaiseTileBroken(cell);
             return true;
         }
 

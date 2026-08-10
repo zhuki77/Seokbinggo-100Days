@@ -1756,12 +1756,11 @@ public static class NyangbingoDevARegressionTests
 
         var tileService = new TileService(tiles, renderer: null, catalog: null, seed: 42);
         var playerOrigin = new Vector2(groundX + .5f, airY + .5f);
-        const float reach = 4f;
+        const float reach = 1.5f;
 
-        // 공기 칸 클릭은 아래 고체로 보정하지 않는다 — 정확한 포인터 칸만 채굴.
         Assert(!MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
                 new Vector2(groundX + .2f, airY + .3f), Vector2.right, reach, out _),
-            "공기 칸 클릭이 인접 고체로 스냅되면 안 됨");
+            "수평 발톱이 방향선 밖의 아래쪽 지표 블록을 채굴하면 안 됨");
 
         tiles[groundX + 1, airY] = TileData.CreateNaturalWithBackground(
             WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
@@ -1773,7 +1772,7 @@ public static class NyangbingoDevARegressionTests
         Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
                 new Vector2(groundX + .5f, groundY + .5f), Vector2.down, reach, out var directCell) &&
             directCell.x == groundX && directCell.y == groundY,
-            "고체 직접 클릭이 바뀌면 안 됨");
+            "아래 방향 발톱은 발밑 지표 고체를 채굴해야 함");
 
         var undergroundOrigin = new Vector2(3.5f, 3.5f);
         tiles[3, 3] = TileData.CreateNaturalWithBackground(
@@ -1782,38 +1781,6 @@ public static class NyangbingoDevARegressionTests
                 new Vector2(3.6f, 3.4f), Vector2.down, reach, out var wallCell) &&
             wallCell.x == 3 && wallCell.y == 3,
             "지하 벽 직접 클릭이 바뀌면 안 됨");
-
-        const int upwardTwoY = airY + 2;
-        tiles[groundX, upwardTwoY] = TileData.CreateNaturalWithBackground(
-            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
-        tiles[groundX, airY + 1] = TileData.CreateNaturalWithBackground(
-            WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
-        Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(groundX + .5f, upwardTwoY + .5f), Vector2.up, reach, out var upwardTwoCell) &&
-            upwardTwoCell.x == groundX && upwardTwoCell.y == upwardTwoY,
-            $"머리 위 2칸 채굴 실패 — 기대 ({groundX},{upwardTwoY}), 실제 {upwardTwoCell}");
-
-        // 사거리 밖·옆 공기에서는 사이/인접 칸으로 대체하면 안 된다.
-        const int farY = airY + 5;
-        tiles[groundX, farY] = TileData.CreateNaturalWithBackground(
-            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
-        Assert(!MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(groundX + .5f, farY + .5f), Vector2.up, reach, out _),
-            "사거리 밖 포인터 고체는 더 가까운 블록으로 대체되면 안 됨");
-
-        const int diagX = groundX + 1;
-        const int diagY = airY + 1;
-        tiles[diagX, diagY] = TileData.CreateNaturalWithBackground(
-            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
-        tiles[diagX, diagY - 1] = TileData.CreateNaturalWithBackground(
-            WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt);
-        Assert(!MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(diagX + 1.1f, diagY + .2f), Vector2.right, reach, out _),
-            "대각선 옆 공기 클릭이 인접 고체로 스냅되면 안 됨");
-        Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(diagX + .5f, diagY + .5f), Vector2.right, reach, out var diagonalCell) &&
-            diagonalCell.x == diagX && diagonalCell.y == diagY,
-            $"대각선 고체 직접 클릭 실패 — 기대 ({diagX},{diagY}), 실제 {diagonalCell}");
 
         Debug.Log("[Nyangbingo] Dev A mining cell surface fallback test completed.");
     }

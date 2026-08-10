@@ -77,25 +77,10 @@ namespace Nyangbingo.World
         /// Tilemap instead of duplicating FloorToInt and x+0.5 assumptions. This keeps mining,
         /// placement, seal diagnostics and Tilemap art aligned if the Grid origin, scale or cell
         /// anchor changes later.
-        ///
-        /// 지형 아트는 하단 피벗(0.5,0) + 기본 tileAnchor(0.5,0.5)라서 그림이 논리 셀보다
-        /// 0.5칸 위에 그려진다. Grid WorldToCell은 스프라이트를 무시하므로 tileAnchor만큼
-        /// 보정해야 클릭한 ‘보이는 블록’과 셀이 일치한다.
         /// </summary>
-        public Vector3Int WorldToCell(Vector3 worldPosition)
-        {
-            if (foregroundTilemap == null) return Vector3Int.FloorToInt(worldPosition);
-
-            var size = foregroundTilemap.cellSize;
-            var anchor = foregroundTilemap.tileAnchor;
-            // visualBottom = cellOrigin + anchor*size
-            // X: 하단-중앙 피벗 → visualLeft = cellOrigin.x + (anchor.x - 0.5)*size.x
-            var adjusted = new Vector3(
-                worldPosition.x - (anchor.x - .5f) * size.x,
-                worldPosition.y - anchor.y * size.y,
-                worldPosition.z);
-            return foregroundTilemap.WorldToCell(adjusted);
-        }
+        public Vector3Int WorldToCell(Vector3 worldPosition) => foregroundTilemap != null
+            ? foregroundTilemap.WorldToCell(worldPosition)
+            : Vector3Int.FloorToInt(worldPosition);
 
         public Vector3 GetCellCenterWorld(Vector3Int cell)
         {
@@ -146,31 +131,6 @@ namespace Nyangbingo.World
                 foregroundTilemap.tileAnchor = TerrainVisualAnchor;
             if (backgroundTilemap != null)
                 backgroundTilemap.tileAnchor = TerrainVisualAnchor;
-        }
-
-        /// <summary>
-        /// 전경 타일 스프라이트 피벗이 놓이는 월드 좌표(tileAnchor 위치).
-        /// </summary>
-        public Vector3 GetTilePivotWorld(Vector3Int cell)
-        {
-            if (foregroundTilemap == null)
-                return new Vector3(cell.x + DefaultTileAnchor.x, cell.y + DefaultTileAnchor.y, cell.z);
-
-            var origin = foregroundTilemap.CellToWorld(cell);
-            var size = foregroundTilemap.cellSize;
-            var anchor = foregroundTilemap.tileAnchor;
-            return origin + Vector3.Scale(anchor, size);
-        }
-
-        /// <summary>
-        /// 하단 피벗·약 1칸 높이 지형 타일의 보이는 중심.
-        /// tileAnchor(0.5,0.5)일 때 GetCellCenterWorld보다 0.5칸 위에 있다.
-        /// </summary>
-        public Vector3 GetTileVisualCenterWorld(Vector3Int cell)
-        {
-            var pivot = GetTilePivotWorld(cell);
-            var sizeY = foregroundTilemap != null ? foregroundTilemap.cellSize.y : 1f;
-            return pivot + new Vector3(0f, sizeY * .5f, 0f);
         }
 
         public bool HasForegroundTile(Vector3Int cell) => foregroundTilemap != null &&
@@ -229,13 +189,6 @@ namespace Nyangbingo.World
         private BoxCollider2D leftWorldBoundary;
         private BoxCollider2D rightWorldBoundary;
 
-        /// <summary>
-        /// 지형/배경 aseprite는 하단 피벗(0.5,0). Unity 기본 tileAnchor(0.5,0.5)를 유지한다.
-        /// (앵커를 하단으로 내리면 타일만 내려가 캐릭터·콜라이더와 어긋난다.)
-        /// 클릭 판정은 <see cref="WorldToCell"/>이 앵커를 보정한다.
-        /// </summary>
-        public static readonly Vector3 DefaultTileAnchor = new Vector3(.5f, .5f, 0f);
-
         private const int RuntimeEdgeTextureSize = 16;
         private const float WorldBoundaryThickness = 1f;
         private static readonly Color32 RuntimeEdgeInkColor = new Color32(0x1A, 0x1A, 0x24, 0xFF);
@@ -252,23 +205,8 @@ namespace Nyangbingo.World
         {
             EnsureWorldCoordinateContract();
             RebuildLookupTable();
-            EnsureTileAnchors();
             EnsureForegroundCollision();
             EnsureEdgeOverlayWiring();
-        }
-
-        /// <summary>
-        /// Unity 기본 tileAnchor(0.5,0.5)를 유지한다. 하단으로 바꾸면 타일만 내려가
-        /// 캐릭터·콜라이더와 어긋난다. 클릭은 <see cref="WorldToCell"/>이 보정한다.
-        /// </summary>
-        public void EnsureTileAnchors()
-        {
-            if (foregroundTilemap != null)
-                foregroundTilemap.tileAnchor = DefaultTileAnchor;
-            if (backgroundTilemap != null)
-                backgroundTilemap.tileAnchor = DefaultTileAnchor;
-            if (edgeOverlayTilemap != null)
-                edgeOverlayTilemap.tileAnchor = DefaultTileAnchor;
         }
 
         /// <summary>
@@ -349,7 +287,6 @@ namespace Nyangbingo.World
 
             if (_lookup == null) RebuildLookupTable();
             EnsureWorldCoordinateContract();
-            EnsureTileAnchors();
             EnsureEdgeOverlayWiring();
 
             var width = tiles.GetLength(0);
@@ -436,14 +373,11 @@ namespace Nyangbingo.World
         /// 배경 Tilemap에는 Collider를 붙이지 않는다.
         /// 좌표 계약: 논리 셀 (x,y)의 월드 AABB는 Grid/Tilemap 기본 Cell Size(1,1) 기준 [x,x+1]×[y,y+1],
         /// 중심 GetCellCenterWorld ≈ (x+0.5, y+0.5). 지형 시각 앵커는 하단 피벗 아트에 맞춰 (0.5,0)을 사용하며,
-        /// tileAnchor 기본과 하단 피벗 보정은 EnsureTileAnchors/EnsureWorldCoordinateContract가 담당한다.
-        /// 하단 피벗 아트는 논리 셀보다 0.5칸 위에 그려질 수 있으며, 클릭은 WorldToCell이 보정한다.
         /// Collider는 타일 점유 셀 경계를 따르며 스프라이트 피벗에 의존하지 않는다.
         /// </summary>
         public void EnsureForegroundCollision()
         {
             if (foregroundTilemap == null) return;
-            EnsureTileAnchors();
 
             var fgGo = foregroundTilemap.gameObject;
             foregroundTilemapCollider = fgGo.GetComponent<TilemapCollider2D>();
@@ -756,29 +690,6 @@ namespace Nyangbingo.World
             tile.colliderType = Tile.ColliderType.Grid;
             _runtimeTiles[elementType] = tile;
             _lookup[elementType] = tile;
-        }
-
-        /// <summary>투명 스프라이트 + Grid 충돌. 1x2 문 위칸처럼 비주얼은 아래 칸이 담당할 때 쓴다.</summary>
-        public void RegisterRuntimeColliderOnlyForegroundTile(string elementType)
-        {
-            if (string.IsNullOrWhiteSpace(elementType)) return;
-            if (_runtimeTiles.TryGetValue(elementType, out var existing) && existing != null)
-            {
-                _lookup[elementType] = existing;
-                return;
-            }
-
-            var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp,
-                name = $"Runtime_{elementType}_Tex"
-            };
-            texture.SetPixel(0, 0, Color.clear);
-            texture.Apply(false, true);
-            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
-            sprite.name = $"Runtime_{elementType}_Sprite";
-            RegisterRuntimeForegroundTile(elementType, sprite);
         }
 
         private void OnDestroy()

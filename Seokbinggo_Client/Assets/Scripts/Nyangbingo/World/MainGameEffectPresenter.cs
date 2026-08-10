@@ -27,8 +27,6 @@ namespace Nyangbingo.World
         }
         [SerializeField] private GameplayArtCatalog artCatalog;
         [SerializeField] private Transform playerTransform;
-        [SerializeField] private MainGameBootstrap bootstrap;
-        private RuntimeOneShotSpriteEffect napEffect;
         private RuntimeOneShotSpriteEffect miningEffect;
         private RuntimeOneShotSpriteEffect miningBreakEffect;
         private RuntimeOneShotSpriteEffect miningCriticalEffect;
@@ -38,8 +36,6 @@ namespace Nyangbingo.World
         private SpriteRenderer miningTargetRenderer;
         private System.Collections.Generic.IReadOnlyList<Sprite> miningProgressFrames;
         private Vector3Int miningProgressCell;
-        private SpriteRenderer miningTargetRenderer;
-        private Sprite miningTargetSprite;
         private MiningImpactSurface lastMiningSurface = MiningImpactSurface.Mineral;
         private TilemapRenderer worldRenderer;
         private readonly Dictionary<Vector3Int, WallDurabilityLabel> wallDurabilityLabels =
@@ -51,12 +47,10 @@ namespace Nyangbingo.World
         {
             artCatalog = catalog;
             playerTransform = player;
-            bootstrap ??= GetComponent<MainGameBootstrap>() ?? GetComponentInParent<MainGameBootstrap>();
         }
 
         private void Start()
         {
-            bootstrap ??= GetComponent<MainGameBootstrap>() ?? GetComponentInParent<MainGameBootstrap>();
             if (artCatalog == null || playerTransform == null) return;
             worldRenderer = FindAnyObjectByType<TilemapRenderer>();
             miningEffect = CreateEffect("MiningCrackEffect", transform, artCatalog.MiningCrackFrames, 24);
@@ -91,12 +85,6 @@ namespace Nyangbingo.World
             var targetObject = new GameObject("MiningTargetOverlay");
             targetObject.transform.SetParent(transform, false);
             miningTargetRenderer = targetObject.AddComponent<SpriteRenderer>();
-            miningTargetSprite = CreateMiningTargetSprite();
-            miningTargetRenderer.sprite = miningTargetSprite;
-            miningTargetRenderer.color = new Color(1f, .92f, .35f, .9f);
-            miningTargetRenderer.sortingOrder = 23;
-            miningTargetRenderer.enabled = false;
-            GameEvents.OnNapStarted += HandleNapStarted;
             RuntimePlaceholderVisual.Configure(
                 miningTargetRenderer, new Color(.2f, .9f, 1f, .18f), 1.02f, 24);
             miningTargetRenderer.enabled = false;
@@ -105,7 +93,6 @@ namespace Nyangbingo.World
             GameEvents.OnMiningImpact += HandleMiningImpact;
             GameEvents.OnTileBroken += HandleTileBroken;
             GameEvents.OnMiningResult += HandleMiningResult;
-            GameEvents.OnMiningTarget += HandleMiningTarget;
             GameEvents.OnWallDurabilityChanged += HandleWallDurabilityChanged;
         }
 
@@ -129,18 +116,6 @@ namespace Nyangbingo.World
 
         private void HandleMiningImpact(MiningImpactSurface surface) => lastMiningSurface = surface;
 
-        private void HandleMiningTarget(bool visible, Vector3Int cell)
-        {
-            if (miningTargetRenderer == null) return;
-            if (!visible)
-            {
-                miningTargetRenderer.enabled = false;
-                return;
-            }
-
-            miningTargetRenderer.transform.position =
-                ResolveSpriteCenteredOnCell(cell, miningTargetRenderer.sprite);
-            miningTargetRenderer.enabled = true;
         private void HandleMiningTargetChanged(Vector3Int cell, bool visible, bool mineable)
         {
             if (miningTargetRenderer == null) return;
@@ -197,10 +172,7 @@ namespace Nyangbingo.World
             var frameIndex = Mathf.Clamp(
                 Mathf.CeilToInt(Mathf.Clamp01(normalizedProgress) * miningProgressFrames.Count) - 1,
                 0, miningProgressFrames.Count - 1);
-            var frame = miningProgressFrames[frameIndex];
-            miningProgressRenderer.sprite = frame;
-            // 피벗이 하단이든 중앙이든, 스프라이트 기하 중심을 셀 중심에 맞춘다.
-            miningProgressRenderer.transform.position = ResolveSpriteCenteredOnCell(cell, frame);
+            miningProgressRenderer.sprite = miningProgressFrames[frameIndex];
             miningProgressRenderer.enabled = true;
         }
 
@@ -210,11 +182,6 @@ namespace Nyangbingo.World
             if (miningProgressRenderer != null && miningProgressRenderer.enabled && miningProgressCell == cell)
                 miningProgressRenderer.enabled = false;
             if (miningEffect == null) return;
-            PlaceEffectOnCell(miningEffect, cell);
-            miningEffect.Play(.35f);
-            if (miningBreakEffect != null && artCatalog.MiningBreakFrames.Count > 0)
-            {
-                PlaceEffectOnCell(miningBreakEffect, cell);
             var visualAnchor = CellVisualAnchor(cell);
             miningEffect.transform.position = visualAnchor;
             miningEffect.Play(.35f);
@@ -310,8 +277,6 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(itemName) || amount <= 0) return;
             var popupObject = new GameObject("MiningResultPopup");
             popupObject.transform.SetParent(transform, false);
-            var center = ResolveCellCenter(cell);
-            popupObject.transform.position = center + new Vector3(0f, .35f, 0f);
             popupObject.transform.position = CellCenter(cell) + Vector3.up * .35f;
             var text = popupObject.AddComponent<TextMesh>();
             text.text = $"+{itemName} ×{amount}";
@@ -327,36 +292,12 @@ namespace Nyangbingo.World
             if (!critical) return;
             if (miningCriticalEffect != null && artCatalog.MiningCriticalFrames.Count > 0)
             {
-                PlaceEffectOnCell(miningCriticalEffect, cell);
                 miningCriticalEffect.transform.position = CellVisualAnchor(cell);
                 miningCriticalEffect.Play(.3f);
             }
             else RuntimeMiningCriticalSparkle.Create(transform, CellCenter(cell));
         }
 
-        private void PlaceEffectOnCell(RuntimeOneShotSpriteEffect effect, Vector3Int cell)
-        {
-            if (effect == null) return;
-            var spriteRenderer = effect.GetComponent<SpriteRenderer>();
-            effect.transform.position = ResolveSpriteCenteredOnCell(cell, spriteRenderer != null
-                ? spriteRenderer.sprite
-                : null);
-        }
-
-        private Vector3 ResolveCellCenter(Vector3Int cell) => bootstrap?.WorldRenderer != null
-            ? bootstrap.WorldRenderer.GetTileVisualCenterWorld(cell)
-            : new Vector3(cell.x + .5f, cell.y + 1f, 0f);
-
-        /// <summary>
-        /// transform.position은 스프라이트 피벗이다. bounds.center만큼 보정해야
-        /// 그림의 기하 중심이 보이는 타일 중심에 온다.
-        /// </summary>
-        private Vector3 ResolveSpriteCenteredOnCell(Vector3Int cell, Sprite sprite)
-        {
-            var center = ResolveCellCenter(cell);
-            if (sprite == null) return center;
-            return center - (Vector3)sprite.bounds.center;
-        }
         private Vector3 CellCenter(Vector3Int cell) => worldRenderer != null
             ? worldRenderer.GetCellCenterWorld(cell)
             : new Vector3(cell.x + .5f, cell.y + .5f, cell.z);
@@ -376,28 +317,6 @@ namespace Nyangbingo.World
             return effect;
         }
 
-        private static Sprite CreateMiningTargetSprite()
-        {
-            const int size = 16;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp,
-                name = "MiningTargetTex"
-            };
-            var clear = new Color(1f, 1f, 1f, .12f);
-            var edge = Color.white;
-            for (var y = 0; y < size; y++)
-            for (var x = 0; x < size; x++)
-            {
-                var border = x <= 1 || y <= 1 || x >= size - 2 || y >= size - 2;
-                texture.SetPixel(x, y, border ? edge : clear);
-            }
-
-            texture.Apply(false, true);
-            return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(.5f, .5f), size);
-        }
-
         private void OnDestroy()
         {
             if (playerHealth != null) playerHealth.Damaged -= HandlePlayerDamaged;
@@ -406,12 +325,6 @@ namespace Nyangbingo.World
             GameEvents.OnMiningImpact -= HandleMiningImpact;
             GameEvents.OnTileBroken -= HandleTileBroken;
             GameEvents.OnMiningResult -= HandleMiningResult;
-            GameEvents.OnMiningTarget -= HandleMiningTarget;
-            if (miningTargetSprite != null)
-            {
-                if (miningTargetSprite.texture != null) Destroy(miningTargetSprite.texture);
-                Destroy(miningTargetSprite);
-            }
             GameEvents.OnWallDurabilityChanged -= HandleWallDurabilityChanged;
             wallDurabilityLabels.Clear();
         }
