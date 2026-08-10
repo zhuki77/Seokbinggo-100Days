@@ -1391,10 +1391,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 catalog.ShellPauseIcon != null && catalog.ShellPlayIcon != null &&
                 catalog.ShellCheckOn != null && catalog.ShellCheckOff != null,
             "The delivered title, pause, settings, and numeric shell art must be fully catalog-bound.");
-        Require(catalog.ShellLoadingSheet != null &&
-                catalog.ShellLoadingSheet.texture.width == 3200 &&
-                catalog.ShellLoadingSheet.texture.height == 1440,
-            "The delivered logo tear loading animation sheet must remain available for Loading.unity.");
+        Require(catalog.ShellLoadingFrames.Count == LoadingSceneController.FrameCount,
+            "The delivered logo tear loading animation must ship as 17 pre-sliced frames for Loading.unity.");
         var loadingControllerSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/LoadingSceneController.cs");
         Require(loadingControllerSource.Contains("LoadSceneMode.Single") &&

@@ -8,7 +8,6 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace Nyangbingo.UI
@@ -99,6 +98,8 @@ namespace Nyangbingo.UI
                 return;
             }
 
+            LoadingOverlayRequest.Begin();
+
             audioService.Initialize();
             shell.ConfigureForRuntime(audioService, saveCoordinator.CaptureSnapshot(), Application.isMobilePlatform);
             shell.TitleRequested += HandleTitleRequested;
@@ -112,11 +113,13 @@ namespace Nyangbingo.UI
             bgmSlider.value = audioService.BgmVolume;
             sfxSlider.value = audioService.SfxVolume;
             fullscreenToggle.isOn = Screen.fullScreen;
-            ResolveShellArtCatalogs();
+            if (gameplayArtCatalog == null)
+                Debug.LogError("[Nyangbingo] MainGameShellUiController: gameplayArtCatalog 배선이 비어 있습니다.");
             ApplyDeliveredShellArt();
 
             if (!TryResolveLaunchSave(out var launchSave))
             {
+                LoadingOverlayRequest.MarkReady();
                 SceneTransitionRequest.Begin("Title");
                 return;
             }
@@ -126,6 +129,7 @@ namespace Nyangbingo.UI
             Time.timeScale = 1f;
             SetStatus(string.Empty);
             IsInitialized = true;
+            LoadingOverlayRequest.MarkReady();
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지 4항목·현재 슬롯 저장·설정 셸 연결 완료.");
         }
 
@@ -174,13 +178,6 @@ namespace Nyangbingo.UI
             Debug.Log($"[Nyangbingo] Fresh new-game save created " +
                       $"(seed={initialSnapshot.seed}, day={initialSnapshot.day}).");
             return initialSnapshot;
-        }
-
-        private void ResolveShellArtCatalogs()
-        {
-            if (gameplayArtCatalog == null)
-                gameplayArtCatalog = Resources.FindObjectsOfTypeAll<GameplayArtCatalog>()
-                    .FirstOrDefault(catalog => catalog != null && catalog.name == "GameplayArtCatalog");
         }
 
         private void ApplyDeliveredShellArt()

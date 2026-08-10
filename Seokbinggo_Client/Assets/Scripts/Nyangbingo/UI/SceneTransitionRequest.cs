@@ -18,5 +18,19 @@ namespace Nyangbingo.UI
             TargetSceneName = targetSceneName;
             SceneManager.LoadScene(LoadingSceneName, LoadSceneMode.Additive);
         }
+
+        /// <summary>
+        /// Loading.unity를 거치지 않고 대상 씬으로 곧바로 전환한다. 대상 씬이 자체적으로
+        /// LoadingOverlayRequest를 통해 자신의 초기화 구간을 가리는 경우(예: Title -> MainGame)에 쓰인다.
+        /// </summary>
+        public static void BeginDirect(string targetSceneName)
+        {
+            TargetSceneName = null;
+            SceneManager.LoadScene(targetSceneName, LoadSceneMode.Single);
+        }
+
+        /// <summary>LoadingSceneController가 대상 씬 값을 소비한 뒤, 이후의 Loading 오버레이 로드와
+        /// 혼동되지 않도록 초기화한다.</summary>
+        public static void ClearTarget() => TargetSceneName = null;
     }
 }

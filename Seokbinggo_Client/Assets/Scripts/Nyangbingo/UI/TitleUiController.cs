@@ -161,21 +161,21 @@ namespace Nyangbingo.UI
                 ? previousSave.seed
                 : 0;
             MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed);
-            SceneTransitionRequest.Begin("MainGame");
+            SceneTransitionRequest.BeginDirect("MainGame");
         }
 
         private void HandleContinueRequested(int slot, SaveGame loadedSave)
         {
             MainGameLaunchRequest.RequestedMode = MainGameLaunchRequest.Mode.Continue;
             MainGameLaunchRequest.SaveSlot = slot;
-            SceneTransitionRequest.Begin("MainGame");
+            SceneTransitionRequest.BeginDirect("MainGame");
         }
 
         private void HandleDemoSaveRequested(SaveGame demo)
         {
             MainGameLaunchRequest.RequestedMode = MainGameLaunchRequest.Mode.DemoLoad;
             MainGameLaunchRequest.SaveSlot = GameShellController.AutoSaveSlot;
-            SceneTransitionRequest.Begin("MainGame");
+            SceneTransitionRequest.BeginDirect("MainGame");
         }
 
         private void ConfigureTitleMenuLayout()
