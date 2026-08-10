@@ -22,6 +22,12 @@ Unity: `6000.5.3f1`
 작업 트리 정본 브랜치는 이 인수인계 시점 기준 **`main`(본 문서와 함께 반영된 상태)** 이다.  
 병렬 브랜치 `feat/v46-nyangbingo-continue`는 참고용이며, 충돌 시 **이 main 반영분을 우선**한다.
 
+### main 병합 메모 (2026-08-10)
+- `origin/main`(PR #30 벽 라우팅 등)을 `feat/audio-bgm-reupload`에 병합한 뒤 `main`에 올렸다.
+- `SaveGame` schema는 병합 결과 **21** (v46 frost/gimmick 필드 유지).
+- `MainGame.unity`는 씬 diff가 커서 **본 세션(OURS) 쪽을 유지**했다. Play 스모크에서 Title→MainGame·벽 라우팅을 함께 확인한다.
+- `globals.csv`는 양쪽 키 **유니온**.
+
 ---
 
 ## 1. 제품 진입: Title → MainGame 씬 분리
