@@ -19,6 +19,7 @@ namespace Nyangbingo.World
         public const float DefaultGravity = 32f;
         public const float DefaultMaxFallSpeed = 12f;
         public const float DefaultJumpCut = 0.5f;
+        public const float DefaultCoyoteTimeSeconds = 0.1f;
 
         public readonly struct Config
         {
@@ -96,6 +97,22 @@ namespace Nyangbingo.World
                 return 0f;
             return Mathf.Max(0f, baseJumpVelocity) * Mathf.Sqrt(Mathf.Max(0f, heightRatio));
         }
+
+        public static float TickCoyoteTime(bool grounded, float remainingSeconds,
+            float durationSeconds, float deltaSeconds)
+        {
+            if (float.IsNaN(durationSeconds) || float.IsInfinity(durationSeconds)) durationSeconds = 0f;
+            if (float.IsNaN(remainingSeconds) || float.IsInfinity(remainingSeconds)) remainingSeconds = 0f;
+            if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds)) deltaSeconds = 0f;
+            var duration = Mathf.Max(0f, durationSeconds);
+            return grounded
+                ? duration
+                : Mathf.Max(0f, Mathf.Min(duration, remainingSeconds) - Mathf.Max(0f, deltaSeconds));
+        }
+
+        public static bool CanUseGroundJump(bool grounded, float coyoteTimeRemaining) =>
+            grounded || coyoteTimeRemaining > 0f &&
+            !float.IsNaN(coyoteTimeRemaining) && !float.IsInfinity(coyoteTimeRemaining);
 
         /// <summary>회귀용 — holdFrames 동안 점프 키를 누른 것으로 가정한 최대 상승 높이(타일).</summary>
         public static float SimulatePeakJumpHeightTiles(Config config, float fixedDeltaSeconds,

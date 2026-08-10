@@ -12,10 +12,12 @@ namespace Nyangbingo.UI
         public const string LoadingSceneName = "Loading";
 
         public static string TargetSceneName { get; private set; }
+        public static bool IsTransitionActive { get; private set; }
 
         public static void Begin(string targetSceneName)
         {
             TargetSceneName = targetSceneName;
+            IsTransitionActive = true;
             SceneManager.LoadScene(LoadingSceneName, LoadSceneMode.Additive);
         }
 
@@ -26,11 +28,14 @@ namespace Nyangbingo.UI
         public static void BeginDirect(string targetSceneName)
         {
             TargetSceneName = null;
+            IsTransitionActive = false;
             SceneManager.LoadScene(targetSceneName, LoadSceneMode.Single);
         }
 
         /// <summary>LoadingSceneController가 대상 씬 값을 소비한 뒤, 이후의 Loading 오버레이 로드와
         /// 혼동되지 않도록 초기화한다.</summary>
         public static void ClearTarget() => TargetSceneName = null;
+
+        public static void Complete() => IsTransitionActive = false;
     }
 }

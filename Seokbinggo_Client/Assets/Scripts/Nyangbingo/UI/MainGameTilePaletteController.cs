@@ -10,7 +10,8 @@ using UnityEngine.UI;
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 8칸(키 1–8)을 고정 슬롯으로 보여 주며,
+    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 8칸을 고정 슬롯으로 보여 주며,
+    /// 마우스 휠로 선택 슬롯을 순환한다.
     /// 빈 칸도 선택 가능하다. 전경 타일·설치물·벽지 배치를 같은 슬롯에서 처리한다.
     /// </summary>
     [DefaultExecutionOrder(-50)]
@@ -37,6 +38,7 @@ namespace Nyangbingo.UI
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
         public const int ShortcutSlotCount = 8;
+        public const bool UsesMouseWheelSelection = true;
         /// <summary>채굴과 동일 — globals <c>player_mining_reach_tiles</c> 기본값.</summary>
         public const float DefaultPlacementReachTiles = 4f;
 
@@ -119,7 +121,7 @@ namespace Nyangbingo.UI
 
         public static bool ShouldHighlightSlot(
             int slotIndex, int selectedIndex, string selectedItemId) =>
-            !string.IsNullOrEmpty(selectedItemId) && slotIndex == selectedIndex;
+            slotIndex >= 0 && slotIndex == selectedIndex;
 
         public static bool ShouldClearEndedProductSelection(
             bool wasActive, bool isActive, bool foregroundActive, string selectedItemId) =>
@@ -211,20 +213,12 @@ namespace Nyangbingo.UI
             return selectedSlotIndex == slotIndex;
         }
 
-        public static KeyCode ShortcutKeyForSlot(int slotIndex)
+        public static int ResolveMouseWheelSlot(int selectedIndex, float scrollDelta, int slotCount)
         {
-            switch (slotIndex)
-            {
-                case 0: return KeyCode.Alpha1;
-                case 1: return KeyCode.Alpha2;
-                case 2: return KeyCode.Alpha3;
-                case 3: return KeyCode.Alpha4;
-                case 4: return KeyCode.Alpha5;
-                case 5: return KeyCode.Alpha6;
-                case 6: return KeyCode.Alpha7;
-                case 7: return KeyCode.Alpha8;
-                default: return KeyCode.None;
-            }
+            if (slotCount <= 0 || Mathf.Approximately(scrollDelta, 0f)) return -1;
+            if (selectedIndex < 0 || selectedIndex >= slotCount) return 0;
+            var direction = scrollDelta > 0f ? -1 : 1;
+            return (selectedIndex + direction + slotCount) % slotCount;
         }
 
         private void Start()
@@ -254,7 +248,7 @@ namespace Nyangbingo.UI
             runtimeServices.PlayerInventory.Changed += RefreshPalette;
             initialized = true;
             RefreshPalette();
-            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–8칸·빈 칸 선택·설치물 미리보기·전경 블록 설치.");
+            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–8칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
         }
 
         private void Update()
@@ -286,7 +280,7 @@ namespace Nyangbingo.UI
 
             if (gameplayVisible && Time.timeScale > 0f)
             {
-                var shortcutSlot = ReadPaletteShortcutSlot();
+                var shortcutSlot = ReadPaletteMouseWheelSlot();
                 if (shortcutSlot >= 0)
                 {
                     TrySelectPaletteSlot(shortcutSlot);
@@ -425,6 +419,7 @@ namespace Nyangbingo.UI
                 var amount = slotTransform.Find("Amount").GetComponent<Text>();
                 var shortcutTransform = slotTransform.Find("Shortcut");
                 var shortcut = shortcutTransform != null ? shortcutTransform.GetComponent<Text>() : null;
+                if (shortcut != null) shortcut.gameObject.SetActive(false);
 
                 slotViews.Add(new SlotView
                 {
@@ -439,15 +434,8 @@ namespace Nyangbingo.UI
             RefreshSlotVisuals();
         }
 
-        private static int ReadPaletteShortcutSlot()
-        {
-            for (var index = 0; index < ShortcutSlotCount; index++)
-            {
-                if (Input.GetKeyDown(ShortcutKeyForSlot(index)) ||
-                    Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index))) return index;
-            }
-            return -1;
-        }
+        private int ReadPaletteMouseWheelSlot() => ResolveMouseWheelSlot(
+            selectedSlotIndex, Input.mouseScrollDelta.y, ShortcutSlotCount);
 
         private void RefreshSlotVisuals()
         {
@@ -598,26 +586,7 @@ namespace Nyangbingo.UI
 
         private void ConfirmForegroundPlacement()
         {
-            if (!foregroundPlacementValid)
-            {
-                var reachTileService = bootstrap?.TileService;
-                var center = reachTileService != null
-                    ? reachTileService.GetCellCenterWorld(foregroundPlacementCell)
-                    : new Vector3(
-                        foregroundPlacementCell.x + .5f,
-                        foregroundPlacementCell.y + .5f,
-                        0f);
-                var withinReach = playerTransform != null &&
-                                  IsWithinPlacementReach(
-                                      playerTransform.position,
-                                      reachTileService?.GetCellWorldBounds(foregroundPlacementCell) ??
-                                      new Bounds(center, new Vector3(1f, 1f, 0f)),
-                                      PlacementReachTiles);
-                ShowPaletteStatus(withinReach
-                    ? "붉은 위치에는 블럭을 설치할 수 없습니다."
-                    : "설치 거리가 너무 멉니다.");
-                return;
-            }
+            if (!foregroundPlacementValid) return;
             var tileService = bootstrap?.TileService;
             if (tileService == null) return;
             var placed = IsWallpaper(foregroundPlacementItemId)

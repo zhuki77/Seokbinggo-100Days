@@ -66,6 +66,8 @@ namespace Nyangbingo.World
         [SerializeField] private CharacterArtCatalog characterArtCatalog;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
         [Min(0f)][SerializeField] private float cameraFollowSharpness = 12f;
+        [Min(0f)][SerializeField] private float coyoteTimeSeconds =
+            PlayerMovementPhysics.DefaultCoyoteTimeSeconds;
 
         private float jumpVelocity;
         private float gravityAcceleration;
@@ -95,6 +97,7 @@ namespace Nyangbingo.World
         private float bossKnockbackHorizontalVelocity;
         private float bossKnockbackRemainingSeconds;
         private bool grounded;
+        private float coyoteTimeRemaining;
         private bool airJumpConsumed;
         private bool miningActive;
         private string miningTreeId = string.Empty;
@@ -355,7 +358,8 @@ namespace Nyangbingo.World
             RefreshEquipmentStats();
             RefreshCombatProfile();
             RefreshTearPouchVisuals();
-            grounded = IsStandingOnForeground();
+            grounded = IsStandingOnForeground() && verticalVelocity <= 0f;
+            coyoteTimeRemaining = grounded ? coyoteTimeSeconds : 0f;
             ResetFallTracking();
             initialized = activeProfile != null;
             if (initialized)
@@ -457,7 +461,7 @@ namespace Nyangbingo.World
             {
                 var handled = TryUseSelectedIceShard() ||
                       TryUseSelectedCatnip() ||
-                      TryInteractClosestWorldTarget();
+                      TryInteractClosestWorldTarget(includePlacedObjects: false);
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
                         "가까이 있는 상호작용 대상을 찾지 못했습니다.");
@@ -496,16 +500,20 @@ namespace Nyangbingo.World
                 TickMining();
             }
             else CancelMining();
-            // 우클릭은 부채 액티브 전용이다. 상자와 설치물의 제품 상호작용은 E로 통합한다.
+            // 커서로 설치물을 직접 우클릭하면 상호작용하고, 그 외에는 기존 부채 액티브를 사용한다.
             if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1))
-                TryFanAbility();
+            {
+                if (!TryInteractPlacedObjectAtPointer()) TryFanAbility();
+            }
         }
 
         private void FixedUpdate()
         {
             if (!initialized || dead || body == null) return;
             var deltaSeconds = Time.fixedDeltaTime;
-            grounded = IsStandingOnForeground();
+            grounded = IsStandingOnForeground() && verticalVelocity <= 0f;
+            coyoteTimeRemaining = PlayerMovementPhysics.TickCoyoteTime(
+                grounded, coyoteTimeRemaining, coyoteTimeSeconds, deltaSeconds);
             if (grounded)
             {
                 ResolveFallLanding(body.position.y);
@@ -576,6 +584,7 @@ namespace Nyangbingo.World
                 verticalVelocity,
                 Mathf.Max(horizontalArcVelocity, airborneVelocity));
             grounded = false;
+            coyoteTimeRemaining = 0f;
             return true;
         }
 
@@ -609,11 +618,12 @@ namespace Nyangbingo.World
 
         private void TryJump()
         {
-            if (grounded)
+            if (PlayerMovementPhysics.CanUseGroundJump(grounded, coyoteTimeRemaining))
             {
                 fallDamageBounceAscending = false;
                 verticalVelocity = jumpVelocity;
                 grounded = false;
+                coyoteTimeRemaining = 0f;
                 airJumpConsumed = false;
                 BeginFallTracking(body != null ? body.position.y : transform.position.y);
                 return;
@@ -655,6 +665,7 @@ namespace Nyangbingo.World
                     grounded = !bounced;
                     if (!bounced)
                     {
+                        coyoteTimeRemaining = coyoteTimeSeconds;
                         verticalVelocity = 0f;
                         airJumpConsumed = false;
                     }
@@ -763,6 +774,7 @@ namespace Nyangbingo.World
             if (verticalVelocity <= Mathf.Epsilon) return false;
             fallDamageBounceAscending = true;
             grounded = false;
+            coyoteTimeRemaining = 0f;
             BeginFallTracking(landingWorldY);
             if (body != null)
                 body.linearVelocity = new Vector2(body.linearVelocity.x, verticalVelocity);
@@ -814,6 +826,7 @@ namespace Nyangbingo.World
             bossKnockbackRemainingSeconds = 0f;
             attackCooldown = 0f;
             grounded = false;
+            coyoteTimeRemaining = 0f;
             airJumpConsumed = false;
             if (body != null)
             {
@@ -1125,7 +1138,7 @@ namespace Nyangbingo.World
                 ? followCamera.ScreenToWorldPoint(Input.mousePosition)
                 : null;
             if (!environmentState.TryResolvePlacedObjectMiningTarget(
-                    transform.position, mouseWorld, miningReach, out var record))
+                    transform.position, mouseWorld, miningReach, out var record, out var hitCell))
                 return false;
 
             var requiredSeconds = ResolvePlacedObjectMiningSeconds(clawTier);
@@ -1135,9 +1148,6 @@ namespace Nyangbingo.World
                 return true;
             }
 
-            var hitCell = new Vector3Int(
-                Mathf.FloorToInt(record.position.x),
-                Mathf.FloorToInt(record.position.y), 0);
             if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
                 !string.IsNullOrEmpty(miningRebarId) ||
                 !string.IsNullOrEmpty(miningHempId) ||
@@ -1222,9 +1232,10 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 사거리 안 월드 상호작용(캣닢/상자/설치물) 중 마우스에 가장 가까운 대상을 고른다.
+        /// 사거리 안 자연 상호작용(캣닢/상자) 중 마우스에 가장 가까운 대상을 고른다.
+        /// 설치물은 우클릭 전용 경로에서만 처리한다.
         /// </summary>
-        private bool TryInteractClosestWorldTarget()
+        private bool TryInteractClosestWorldTarget(bool includePlacedObjects)
         {
             var origin = (Vector2)transform.position;
             var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
@@ -1254,7 +1265,7 @@ namespace Nyangbingo.World
                 bestChestCell = chestCell;
             }
 
-            if (environmentState != null &&
+            if (includePlacedObjects && environmentState != null &&
                 environmentState.TryGetNearestPlacedObject(origin, MainGameTurretRuntime.InteractionRange, aim,
                     out var placed))
             {
@@ -1274,6 +1285,13 @@ namespace Nyangbingo.World
                 default:
                     return false;
             }
+        }
+
+        private bool TryInteractPlacedObjectAtPointer()
+        {
+            if (placedObjectInteractions == null ||
+                !TryGetInteractionAimWorld(out var aimWorld)) return false;
+            return placedObjectInteractions.TryInteractPlacedObjectClosestToAim(aimWorld);
         }
 
         /// <summary>
@@ -1773,6 +1791,7 @@ namespace Nyangbingo.World
             verticalVelocity = 0f;
             fallDamageBounceAscending = false;
             grounded = false;
+            coyoteTimeRemaining = 0f;
             airJumpConsumed = false;
             ResetFallTracking();
             LockDeathPhysics();
@@ -1834,6 +1853,7 @@ namespace Nyangbingo.World
             bossKnockbackHorizontalVelocity = 0f;
             bossKnockbackRemainingSeconds = 0f;
             grounded = false;
+            coyoteTimeRemaining = 0f;
             airJumpConsumed = false;
             ResetFallTracking();
             transform.rotation = aliveRotation;

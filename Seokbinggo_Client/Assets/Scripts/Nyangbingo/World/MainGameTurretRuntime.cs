@@ -20,8 +20,6 @@ namespace Nyangbingo.World
     public sealed class MainGameTurretRuntime : MonoBehaviour, IGameSecondsTickable
     {
         public const bool ProductHudNarrativeTextEnabled = false;
-        public const string NearbyInteractionPrompt =
-            "E · 상호작용    좌클릭 유지 · 회수";
         public const float InteractionRange = 2.5f;
 
         private sealed class TurretEntry
@@ -383,9 +381,7 @@ namespace Nyangbingo.World
                                   MainGameTilePaletteController.IsWithinPlacementReach(
                                       playerController.transform.position, placementPosition,
                                       MainGameTilePaletteController.PlacementReachTiles);
-                ShowMessage(withinReach
-                    ? "붉은 미리보기 위치에는 설치할 수 없습니다."
-                    : "설치 거리가 너무 멉니다.");
+                if (withinReach) ShowMessage("붉은 미리보기 위치에는 설치할 수 없습니다.");
                 return false;
             }
             var placed = TryPlaceTurretAt(placementPosition);
@@ -531,7 +527,7 @@ namespace Nyangbingo.World
                 return false;
             }
             ShowMessage(CoolingSourceRuntime.IsCoolingDefinition(definitionId)
-                ? $"{item.DisplayName} 설치 완료 · 가까이에서 E로 상태를 확인하세요."
+                ? $"{item.DisplayName} 설치 완료 · 우클릭으로 상태를 확인하세요."
                 : $"{item.DisplayName} 설치 완료");
             Debug.Log($"[Nyangbingo] Product placeable installed: id={record.objectId}, " +
                       $"definition={definitionId}, position={record.position}.");
@@ -542,6 +538,21 @@ namespace Nyangbingo.World
         public bool TryInteractNearestPlacedObject()
         {
             if (!TryGetNearestPlacedObject(out var record)) return false;
+            return TryInteractPlacedObject(record);
+        }
+
+        public bool TryInteractPlacedObjectClosestToAim(Vector2 aimWorld)
+        {
+            if (playerController == null || environmentState == null) return false;
+            var origin = (Vector2)playerController.transform.position;
+            if (!environmentState.TryResolvePlacedObjectMiningTarget(
+                    origin, aimWorld, InteractionRange, out var record))
+                return false;
+            return TryInteractPlacedObject(record);
+        }
+
+        private bool TryInteractPlacedObject(PlacedObjectRecord record)
+        {
             var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
             if (craftingStation != CraftingStation.None)
             {
@@ -775,16 +786,8 @@ namespace Nyangbingo.World
                 IsBottomInteractionPromptVisible = false;
                 return;
             }
-            if (TryGetNearestPlacedObject(out _))
-            {
-                interactionStatusText.text = NearbyInteractionPrompt;
-                IsBottomInteractionPromptVisible = true;
-                return;
-            }
-            interactionStatusText.text = IsPlacementPreviewActive
-                ? $"{(placementValid ? "LMB · 설치" : "설치 불가")}    ESC/RMB · 취소"
-                : string.Empty;
-            IsBottomInteractionPromptVisible = !string.IsNullOrEmpty(interactionStatusText.text);
+            interactionStatusText.text = string.Empty;
+            IsBottomInteractionPromptVisible = false;
         }
 
         private void ConfigureBottomInteractionStatus()

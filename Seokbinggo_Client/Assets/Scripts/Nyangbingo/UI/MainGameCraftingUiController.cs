@@ -150,10 +150,10 @@ namespace Nyangbingo.UI
         {
             switch (index)
             {
-                case 0: return KeyCode.F1;
-                case 1: return KeyCode.F2;
-                case 2: return KeyCode.F3;
-                case 3: return KeyCode.F4;
+                case 0: return KeyCode.Alpha1;
+                case 1: return KeyCode.Alpha2;
+                case 2: return KeyCode.Alpha3;
+                case 3: return KeyCode.Alpha4;
                 default: return KeyCode.None;
             }
         }
@@ -360,6 +360,11 @@ namespace Nyangbingo.UI
             tabButtons[1].onClick.AddListener(() => TogglePage(Page.Crafting));
             tabButtons[2].onClick.AddListener(() => TogglePage(Page.Equipment));
             tabButtons[3].onClick.AddListener(() => TogglePage(Page.Codex));
+            for (var index = 0; index < tabButtons.Length; index++)
+            {
+                var label = tabButtons[index]?.GetComponentInChildren<Text>();
+                if (label != null) label.text = $"{index + 1} · {UnifiedTabLabel(index)}";
+            }
             BuildDetailsScrollArea();
             BuildCraftingList();
             BuildInventoryGrid();
@@ -515,6 +520,8 @@ namespace Nyangbingo.UI
             {
                 var capturedIndex = index;
                 inventoryGridButtons[index].onClick.AddListener(() => SelectInventorySlot(capturedIndex));
+                var oldNumberHint = inventoryGridButtons[index].transform.Find("HotbarShortcut");
+                if (oldNumberHint != null) oldNumberHint.gameObject.SetActive(false);
             }
             inventoryGridRoot.SetActive(false);
         }
@@ -673,11 +680,12 @@ namespace Nyangbingo.UI
 
         private bool TryHandlePageHotkey()
         {
-            // Product input: F1~F4 select the unified panels; number keys belong to the tile palette.
+            // Product input: number keys 1~4 select the unified panels; the tile palette uses the mouse wheel.
             var targetIndex = -1;
             for (var index = 0; index < UnifiedTabCount; index++)
             {
-                if (!Input.GetKeyDown(UnifiedTabHotkey(index))) continue;
+                if (!Input.GetKeyDown(UnifiedTabHotkey(index)) &&
+                    !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index))) continue;
                 targetIndex = index;
                 break;
             }
@@ -2040,11 +2048,11 @@ namespace Nyangbingo.UI
         private string DefaultHelpText()
         {
             if (page == Page.Crafting && CanToggleCraftingSmelting(NearbyStation()))
-                return "F2 제작/제련 전환 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+                return "2 제작/제련 전환 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+            return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else
-            return "F1~F4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+            return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #endif
         }
 

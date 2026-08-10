@@ -459,7 +459,9 @@ namespace Nyangbingo.UI
             if (!IsInitialized) return;
             RefreshPauseControls();
             if (Input.GetKeyDown(KeyCode.Escape) &&
+                !SceneTransitionRequest.IsTransitionActive &&
                 !MainGameBossSummonUiController.ConsumeEscapeIfDebugHelpOpen() &&
+                !MainGameCraftingUiController.BlocksGameplayInput &&
                 !MainGameCraftingUiController.ConsumedEscapeThisFrame &&
                 !MainGameTurretRuntime.ConsumedEscapeThisFrame &&
                 !MainGameTilePaletteController.ConsumedEscapeThisFrame &&
