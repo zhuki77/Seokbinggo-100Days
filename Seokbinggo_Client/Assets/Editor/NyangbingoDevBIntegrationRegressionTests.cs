@@ -2052,12 +2052,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 playerSource.Contains("tilePalette.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId") &&
                 playerSource.Contains("recovery.TryUseCatnip(out var restoredHealth)") &&
                 playerSource.Contains("TryHarvestNearbyCatnip() ||") &&
-                playerSource.Contains("TryHarvestNearbyHemp() ||") &&
+                !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
+                playerSource.Contains("TryTickHempMining(") &&
+                source.Contains("TryResolveHempMiningTarget(") &&
                 source.Contains("var shouldDrop = patch.HarvestedDay == 0;") &&
                 source.Contains("FindItem(PlayerHealthRecoveryService.CatnipItemId)") &&
                 saveSource.Contains("save.hempPatches = worldDecorationRenderer.ExportHempPatches();") &&
                 saveSource.Contains("worldDecorationRenderer.RestoreHempPatches(save.hempPatches)"),
-            "E interaction must use selected hotbar catnip, while mined support drops live catnip and preserves independent hemp harvesting.");
+            "Catnip stays on E; surface hemp is harvested by left-click mining like trees/rebar.");
         Require(source.Contains("decorationSupportCells[visual.transform] = supportCell;") &&
                 source.Contains("RemoveDecorationsSupportedBy(cell);") &&
                 source.Contains("visual.gameObject.SetActive(false);") &&
@@ -2789,7 +2791,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 !turretSource.Contains("좌클릭 설치 · ESC/우클릭 취소"),
             "Narrative interaction instructions were reintroduced into the world HUD.");
         Require(MainGameTurretRuntime.NearbyInteractionPrompt ==
-                    "E · 상호작용    Shift+E · 회수" &&
+                    "E · 상호작용    좌클릭 유지 · 회수" &&
                 paletteSource.Contains("\"PlacedObjectInteractionPrompt\"") &&
                 paletteSource.Contains("placementRuntime?.BindInteractionStatus(interactionPromptText)") &&
                 Mathf.Approximately(
@@ -2800,6 +2802,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     MainGameTilePaletteController.BottomStatusBaseY +
                     MainGameTilePaletteController.BottomStatusLineHeight),
             "Nearby placed-object controls must use the readable bottom prompt and stack older hotbar feedback one line above it.");
+        Require(playerSource.Contains("TryTickPlacedObjectMining(") &&
+                playerSource.Contains("ResolvePlacedObjectMiningSeconds(") &&
+                playerSource.Contains("TryRecoverPlacedObject(toRecover)") &&
+                !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
+                    @"GetKeyDown\(KeyCode\.E\)[\s\S]{0,400}TryRecoverNearestPlacedObject"),
+            "Placed-object recovery must use hold-to-mine left-click instead of Shift+E.");
         Require(!turretSource.Contains("TryPlace(record, barrierActive: false)"),
             "Whitelisted insulation modules must remain eligible to seal after product placement.");
         Require(!turretSource.Contains("설치 거리가 너무 멉니다 · 최대") &&

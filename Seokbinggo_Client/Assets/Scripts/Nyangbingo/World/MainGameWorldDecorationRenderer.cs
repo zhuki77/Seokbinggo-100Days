@@ -374,6 +374,89 @@ namespace Nyangbingo.World
             return true;
         }
 
+        /// <summary>
+        /// 좌클릭 채굴용. 삼줄기는 지지 칸 바로 위(공기)에 서 있으므로 그 칸·마우스 조준을 우선한다.
+        /// </summary>
+        public bool TryResolveHempMiningTarget(Vector2 playerPosition, Vector2? mouseWorld,
+            Vector2 direction, float reach, out string hempId, out Vector3Int hitCell)
+        {
+            hempId = string.Empty;
+            hitCell = default;
+            if (reach <= 0f) return false;
+            var reachSq = reach * reach;
+
+            if (mouseWorld.HasValue)
+            {
+                var mouse = mouseWorld.Value;
+                if (!float.IsNaN(mouse.x) && !float.IsInfinity(mouse.x) &&
+                    !float.IsNaN(mouse.y) && !float.IsInfinity(mouse.y))
+                {
+                    var mouseCell = bootstrap?.TileService != null
+                        ? bootstrap.TileService.WorldToCell(mouse)
+                        : new Vector3Int(
+                            Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                    HempPatch mousePatch = null;
+                    var mouseBest = reachSq;
+                    foreach (var patch in hempPatches.Values)
+                    {
+                        if (!IsHempAvailable(patch)) continue;
+                        var plantCell = patch.SupportCell + Vector3Int.up;
+                        if (mouseCell != plantCell && mouseCell != patch.SupportCell) continue;
+                        var position = patch.Renderer != null
+                            ? (Vector2)patch.Renderer.transform.position
+                            : new Vector2(plantCell.x + .5f, plantCell.y + .5f);
+                        var distance = (position - playerPosition).sqrMagnitude;
+                        if (distance > mouseBest) continue;
+                        mousePatch = patch;
+                        hitCell = plantCell;
+                        mouseBest = distance;
+                    }
+                    if (mousePatch != null)
+                    {
+                        hempId = mousePatch.Id;
+                        return true;
+                    }
+                }
+            }
+
+            if (direction.sqrMagnitude <= Mathf.Epsilon) return false;
+            var ray = new Ray(playerPosition, direction.normalized);
+            var nearestDistance = reach;
+            HempPatch nearest = null;
+            foreach (var patch in hempPatches.Values)
+            {
+                if (!IsHempAvailable(patch)) continue;
+                var plantCell = patch.SupportCell + Vector3Int.up;
+                var bounds = bootstrap?.TileService?.GetCellWorldBounds(plantCell) ??
+                             new Bounds(
+                                 new Vector3(plantCell.x + .5f, plantCell.y + .5f, 0f),
+                                 new Vector3(1f, 1f, 1f));
+                if (!bounds.IntersectRay(ray, out var distance) ||
+                    distance < 0f || distance > nearestDistance)
+                    continue;
+                nearest = patch;
+                hitCell = plantCell;
+                nearestDistance = distance;
+            }
+            if (nearest == null) return false;
+            hempId = nearest.Id;
+            return true;
+        }
+
+        public bool TryHarvestHemp(string hempId, out Vector2 dropPosition)
+        {
+            dropPosition = default;
+            if (string.IsNullOrWhiteSpace(hempId) ||
+                !hempPatches.TryGetValue(hempId, out var patch) || !IsHempAvailable(patch))
+                return false;
+            dropPosition = patch.Renderer != null
+                ? (Vector2)patch.Renderer.transform.position
+                : new Vector2(patch.SupportCell.x + .5f, patch.SupportCell.y + 1f);
+            patch.Harvested = true;
+            if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
+            return true;
+        }
+
         public List<CatnipPatchStateRecord> ExportCatnipPatches()
         {
             var records = new List<CatnipPatchStateRecord>();

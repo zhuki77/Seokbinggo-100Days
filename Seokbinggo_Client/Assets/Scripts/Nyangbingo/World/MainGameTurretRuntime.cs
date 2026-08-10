@@ -21,7 +21,7 @@ namespace Nyangbingo.World
     {
         public const bool ProductHudNarrativeTextEnabled = false;
         public const string NearbyInteractionPrompt =
-            "E · 상호작용    Shift+E · 회수";
+            "E · 상호작용    좌클릭 유지 · 회수";
 
         private sealed class TurretEntry
         {
@@ -604,7 +604,7 @@ namespace Nyangbingo.World
                             $"{(active ? $"가동 중 ({lifetime})" : "정지")}");
                 return true;
             }
-            ShowMessage($"{ItemName(record.definitionId)} · Shift+E로 회수");
+            ShowMessage($"{ItemName(record.definitionId)} · 좌클릭 유지로 회수");
             return true;
         }
 
@@ -709,6 +709,15 @@ namespace Nyangbingo.World
         public bool TryRecoverNearestPlacedObject()
         {
             if (!TryGetNearestPlacedObject(out var record)) return false;
+            return TryRecoverPlacedObject(record);
+        }
+
+        public bool TryRecoverPlacedObject(PlacedObjectRecord record)
+        {
+            if (string.IsNullOrWhiteSpace(record.objectId) ||
+                string.IsNullOrWhiteSpace(record.definitionId) ||
+                environmentState == null || runtimeServices?.PlayerInventory == null)
+                return false;
             if (record.definitionId == JangdokStorageRuntime.DefinitionId &&
                 !runtimeServices.JangdokStorage.CanRecover(record.objectId))
             {

@@ -427,6 +427,40 @@ namespace Nyangbingo.World
             return found;
         }
 
+        /// <summary>
+        /// 좌클릭 회수용. 마우스가 가리키는 칸의 설치물만 대상이다(빈 칸 설치·채굴을 가로채지 않음).
+        /// </summary>
+        public bool TryResolvePlacedObjectMiningTarget(Vector2 playerPosition, Vector2? mouseWorld,
+            float reach, out PlacedObjectRecord record)
+        {
+            record = default;
+            if (!mouseWorld.HasValue ||
+                !IsFinite(playerPosition.x) || !IsFinite(playerPosition.y) ||
+                !IsFinite(reach) || reach <= 0f)
+                return false;
+
+            var mouse = mouseWorld.Value;
+            if (!IsFinite(mouse.x) || !IsFinite(mouse.y)) return false;
+
+            var mouseCell = bootstrap?.TileService != null
+                ? bootstrap.TileService.WorldToCell(mouse)
+                : CellFrom(mouse);
+            var reachSq = reach * reach;
+            var found = false;
+            var bestDistance = reachSq;
+            foreach (var entry in byObjectId.Values)
+            {
+                var objectCell = CellFrom(entry.Record.position);
+                if (objectCell != mouseCell) continue;
+                var distance = (entry.Record.position - playerPosition).sqrMagnitude;
+                if (distance > bestDistance) continue;
+                found = true;
+                bestDistance = distance;
+                record = entry.Record;
+            }
+            return found;
+        }
+
         public List<PlacedObjectRecord> ExportPlacedObjects() => byObjectId.Values
             .Select(entry => entry.Record)
             .OrderBy(record => record.objectId, StringComparer.Ordinal)

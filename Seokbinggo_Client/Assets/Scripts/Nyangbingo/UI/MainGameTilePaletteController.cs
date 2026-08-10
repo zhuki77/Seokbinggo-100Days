@@ -82,6 +82,10 @@ namespace Nyangbingo.UI
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsInitialized => initialized;
         public bool IsForegroundPlacementActive => foregroundPreview != null;
+        /// <summary>핫바에서 전경 블록·벽지를 고른 동안 좌클릭 채굴/공격을 막는다.</summary>
+        public bool ShouldBlockPrimaryForPlacement =>
+            IsForegroundPlacementActive ||
+            (!string.IsNullOrEmpty(selectedItemId) && SupportsPalettePlacement(selectedItemId));
         public int VisibleSlotCount => ShortcutSlotCount;
         public string SelectedItemId => selectedItemId;
         public int SelectedSlotIndex => selectedSlotIndex;
@@ -295,6 +299,14 @@ namespace Nyangbingo.UI
                 (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) &&
                 TryRemoveWallpaperAtPointer())
                 return;
+
+            // 선택은 남아 있는데 미리보기만 끊긴 경우 복구(그렇지 않으면 좌클릭이 채굴로 간다).
+            if (gameplayVisible && Time.timeScale > 0f &&
+                !IsForegroundPlacementActive &&
+                SupportsPalettePlacement(selectedItemId) &&
+                runtimeServices?.PlayerInventory != null &&
+                runtimeServices.PlayerInventory.Count(selectedItemId) > 0)
+                BeginForegroundPlacement(selectedItemId);
 
             if (!IsForegroundPlacementActive) return;
             if (!gameplayVisible || Time.timeScale <= 0f)
