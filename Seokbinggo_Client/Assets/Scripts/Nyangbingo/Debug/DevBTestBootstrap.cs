@@ -94,7 +94,8 @@ namespace Nyangbingo.Debugging
             TestYokaiCodexKillSaveBinding();
             TestImportedYokaiCodexPresentation();
             TestAudioEventRoutingAndRuntimePool();
-            TestGameShellTitlePauseSettingsAndResult();
+            TestTitleShellFlow();
+            TestGameShellPauseSettingsAndResult();
             TestProductCraftingStationDefinitionContract();
             TestImportedAccessoryStatsAndTheftProtection();
             TestImportedArmorStatsRecipesAndSetBonus();
@@ -2897,14 +2898,59 @@ namespace Nyangbingo.Debugging
             else Debug.LogError("[Nyangbingo] Audio event routing or runtime pool test failed.");
         }
 
-        private void TestGameShellTitlePauseSettingsAndResult()
+        /// <summary>Title.unity 전용 TitleShellController(이어하기/새 게임/데모/종료)를 검증한다.</summary>
+        private void TestTitleShellFlow()
+        {
+            var shellObject = new GameObject("TemporaryTitleShell");
+            var saveManager = shellObject.AddComponent<SaveManager>();
+            var shell = shellObject.AddComponent<TitleShellController>();
+            shell.ConfigureForRuntime(saveManager, false, true);
+
+            saveManager.Save(GameShellController.AutoSaveSlot, new SaveGame { day = 15 });
+            shell.RefreshTitle();
+            var titleMatches = shell.Title.CanContinue && shell.Title.LatestSlot >= 0 &&
+                               shell.Title.DaysUntilBaegilHeat >= 70 && shell.Title.DaysUntilBaegilHeat <= 100 &&
+                               TitleShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat) == "D-85" &&
+                               shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit;
+
+            var newGameRequested = false;
+            shell.NewGameRequested += () => newGameRequested = true;
+            shell.RequestNewGame();
+
+            var continueRequestedSlot = -1;
+            SaveGame continueRequestedSave = null;
+            shell.ContinueRequested += (slot, save) =>
+            {
+                continueRequestedSlot = slot;
+                continueRequestedSave = save;
+            };
+            var continueResult = shell.TryContinue();
+            var continueMatches = continueResult && continueRequestedSlot == GameShellController.AutoSaveSlot &&
+                                  continueRequestedSave != null && continueRequestedSave.day == 15;
+
+            var demoGuard = !shell.RequestDemoSave(14) && shell.RequestDemoSave(15) &&
+                            shell.IsAwaitingDemoLoadConfirmation && shell.PendingDemoDay == 15;
+            shell.CancelDemoLoad();
+            var demoCancelled = !shell.IsAwaitingDemoLoadConfirmation;
+
+            var quitRequested = false;
+            shell.QuitRequested += () => quitRequested = true;
+            var desktopQuit = shell.RequestQuit() && quitRequested;
+
+            DestroyImmediate(shellObject);
+
+            if (titleMatches && newGameRequested && continueMatches && demoGuard && demoCancelled && desktopQuit)
+                Debug.Log("[Nyangbingo] Title shell continue/new game/demo/quit flow completed.");
+            else Debug.LogError("[Nyangbingo] Title shell flow test failed.");
+        }
+
+        /// <summary>MainGame.unity 전용 GameShellController(Pause/Settings/Confirmation/Result)를 검증한다.</summary>
+        private void TestGameShellPauseSettingsAndResult()
         {
             var originalTimeScale = Time.timeScale;
             var originalFullscreen = Screen.fullScreen;
             var shellObject = new GameObject("TemporaryGameShell");
-            var saveManager = shellObject.AddComponent<SaveManager>();
             var audioService = shellObject.AddComponent<NyangbingoAudioService>();
-            var timeSource = shellObject.AddComponent<DevBTestTimeSource>();
             var shell = shellObject.AddComponent<GameShellController>();
             var activeSave = new SaveGame
             {
@@ -2925,7 +2971,8 @@ namespace Nyangbingo.Debugging
                 },
                 stats = new RunStatsRecord { minedTiles = 17, deaths = 2 }
             };
-            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+            MainGameLaunchRequest.Reset();
+            shell.ConfigureForRuntime(audioService, activeSave, false);
 
             var trackedSave = new SaveGame { stats = new RunStatsRecord { minedTiles = int.MaxValue - 1, deaths = 0 } };
             var statsBinding = new RunStatsBinding(trackedSave);
@@ -2940,20 +2987,8 @@ namespace Nyangbingo.Debugging
             var statsSaved = statsRoundTrip.schemaVersion == SaveGame.CurrentSchemaVersion &&
                              statsRoundTrip.stats.minedTiles == int.MaxValue && statsRoundTrip.stats.deaths == 1;
 
-            saveManager.Save(GameShellController.AutoSaveSlot, new SaveGame { day = 15 });
-            shell.RefreshTitle();
-            var titleMatches = shell.Title.CanContinue && shell.Title.LatestSlot >= 0 &&
-                               shell.Title.DaysUntilBaegilHeat >= 70 && shell.Title.DaysUntilBaegilHeat <= 100 &&
-                               GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat) == "D-85" &&
-                               shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit && shell.CanShowFullscreenToggle;
-
-            var newGameSlot = -1;
-            shell.NewGameRequested += slot => newGameSlot = slot;
-            shell.RequestNewGame();
-            var newGameRequested = shell.Screen == GameShellScreen.Title &&
-                                   newGameSlot == GameShellController.AutoSaveSlot;
             shell.EnterGameplay(new SaveGame { day = 1 });
-            var newGameStarted = newGameRequested && shell.Screen == GameShellScreen.Gameplay;
+            var gameplayEntered = shell.Screen == GameShellScreen.Gameplay;
 
             audioService.EnsureAudiblePlayback(MusicTrack.Boss);
             var bossTrackStarted = audioService.CurrentTrack == MusicTrack.Boss;
@@ -2974,13 +3009,12 @@ namespace Nyangbingo.Debugging
             var resumed = shell.ResumeGameplay() && shell.Screen == GameShellScreen.Gameplay &&
                           Time.timeScale > 0f && audioService.CurrentTrack == MusicTrack.Boss;
 
-            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
-            var gameplayStarted = shell.TryContinue();
-            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
-            shell.RequestNewGame();
-            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
-            shell.TryContinue();
-            shell.ConfigureForRuntime(saveManager, audioService, timeSource, activeSave, false, true);
+            var titleRequested = false;
+            shell.TitleRequested += () => titleRequested = true;
+            shell.OpenPause();
+            shell.RequestReturnToTitle();
+            var returnToTitleConfirmed = shell.Confirm() && titleRequested;
+
             var endingPolicy = GameShellController.ShouldEndDemoAtDawn(31, 30) &&
                                !GameShellController.ShouldEndDemoAtDawn(30, 30) &&
                                !GameShellController.ShouldEndDemoAtDawn(32, 30) &&
@@ -2993,24 +3027,19 @@ namespace Nyangbingo.Debugging
                                 result.YokaiKills == 5 && result.MinedTiles == 17 && result.Deaths == 2 &&
                                 DemoResultState.Teaser == "D-70 — 백일폭염까지" &&
                                 Mathf.Approximately(Time.timeScale, 0f);
-            var resultSingleExit = shell.ReturnFromResultToTitle() && shell.Screen == GameShellScreen.Title &&
-                                   Mathf.Approximately(Time.timeScale, 0f);
-            var demoGuard = !shell.RequestDemoSave(14) && shell.RequestDemoSave(15) &&
-                            shell.PendingConfirmation == GameShellConfirmation.LoadDemoSave &&
-                            shell.CancelConfirmation() && shell.Screen == GameShellScreen.Title;
-            var quitRequested = false;
-            shell.QuitRequested += () => quitRequested = true;
-            var desktopQuit = shell.RequestQuit() && quitRequested;
+            var resultTitleRequested = false;
+            shell.TitleRequested += () => resultTitleRequested = true;
+            var resultSingleExit = shell.ReturnFromResultToTitle() && resultTitleRequested;
 
             Time.timeScale = originalTimeScale;
             Screen.fullScreen = originalFullscreen;
             DestroyImmediate(shellObject);
 
-            if (statsTracked && statsSaved && titleMatches && newGameStarted && bossTrackStarted &&
+            if (statsTracked && statsSaved && gameplayEntered && bossTrackStarted &&
                 paused && settingsOpened && settingsPreviewed && settingsApplied && settingsClosed &&
-                returnWarning && cancelToPause && resumed && gameplayStarted && endingPolicy && resultMatches &&
-                resultSingleExit && demoGuard && desktopQuit)
-                Debug.Log("[Nyangbingo] Game shell title, pause, settings, confirmation, and D30 result flow completed.");
+                returnWarning && cancelToPause && resumed && returnToTitleConfirmed && endingPolicy &&
+                resultMatches && resultSingleExit)
+                Debug.Log("[Nyangbingo] Game shell pause, settings, confirmation, and D30 result flow completed.");
             else Debug.LogError("[Nyangbingo] Game shell flow test failed.");
         }
 

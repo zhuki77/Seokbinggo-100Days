@@ -52,13 +52,7 @@ namespace Nyangbingo.World
                  "selects the correct quadrant from its 2x2 neighbours.")]
         [SerializeField] private TileBase[] iceAltarQuadrantTiles = new TileBase[4];
 
-        [Tooltip("1순위(인스펙터 매핑)에 없는 elementType을 만나면 이 폴더 아래에서 " +
-                 "Resources.Load<TileBase>(\"{이 값}/{elementType}\")로 한 번 더 찾아본다(2순위, 선택 사항). " +
-                 "예: 값이 'Tiles'이고 elementType이 'dirt'면 'Assets/Resources/Tiles/dirt.asset'을 찾는다. " +
-                 "비워두면 이 단계를 건너뛰고 곧장 폴백 타일로 넘어간다.")]
-        [SerializeField] private string resourcesFallbackFolder = "Tiles";
-
-        [Tooltip("1·2순위 모두 실패했을 때 빈 칸(투명) 대신 그려줄 최종 대체 타일(3순위). 눈에 띄는 색(예: " +
+        [Tooltip("1순위(인스펙터 매핑)가 모두 실패했을 때 빈 칸(투명) 대신 그려줄 최종 대체 타일(2순위). 눈에 띄는 색(예: " +
                  "마젠타)의 더미 타일을 연결해두면 매핑 누락 칸이 '검은 화면'처럼 안 보이는 게 아니라 화면에 " +
                  "바로 도드라져서 원인을 즉시 알 수 있다. 비워두면 기존처럼 완전히 투명하게 처리된다.")]
         [SerializeField] private TileBase fallbackTile;
@@ -204,7 +198,6 @@ namespace Nyangbingo.World
         private Dictionary<string, TileBase> _lookup = new Dictionary<string, TileBase>();
         private readonly Dictionary<int, TileBase> _wallpaperTileByRow = new Dictionary<int, TileBase>();
         private readonly Dictionary<string, Tile> _runtimeTiles = new Dictionary<string, Tile>(StringComparer.Ordinal);
-        private readonly HashSet<string> _resourceLoadWarnings = new HashSet<string>();
         private readonly List<Tile> _runtimeEdgeTiles = new List<Tile>();
         private readonly List<Sprite> _runtimeEdgeSprites = new List<Sprite>();
         private readonly List<Texture2D> _runtimeEdgeTextures = new List<Texture2D>();
@@ -765,8 +758,8 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 3단계 안전장치: 1) 인스펙터 명시 매핑 → 2) Resources.Load 동적 폴백(선택) → 3) 최종 fallbackTile.
-        /// 1순위가 항상 우선이므로, 인스펙터에 등록해둔 타일이 있으면 Resources 폴더 내용과 무관하게 그걸 쓴다.
+        /// 2단계 안전장치: 1) 인스펙터 명시 매핑 → 2) 최종 fallbackTile.
+        /// 모든 elementType은 인스펙터에 직접 등록되어 있어야 하며, 런타임 동적 로드는 하지 않는다.
         /// </summary>
         private TileBase ResolveTile(string elementType, ref HashSet<string> missing)
         {
@@ -782,32 +775,7 @@ namespace Nyangbingo.World
                 wallpaperFallback != null)
                 return wallpaperFallback;
 
-            // 2순위: Resources.Load 동적 폴백(선택 사항) — 파일명이 elementType과 정확히 일치해야 한다.
-            // suppressMissingTileWarning이 켜진 더미 렌더러(회귀 테스트 등)에서는 애초에 시도할 필요가
-            // 없는 진단용 기능이므로 함께 건너뛴다.
-            if (!string.IsNullOrEmpty(resourcesFallbackFolder) && !suppressMissingTileWarning)
-            {
-                var resourcePath = $"{resourcesFallbackFolder}/{elementType}";
-                var loaded = Resources.Load<TileBase>(resourcePath);
-                if (loaded != null)
-                {
-                    _lookup[elementType] = loaded; // 다음부터는 1순위 캐시로 바로 히트하게 저장.
-                    Debug.Log($"[Nyangbingo] TilemapRenderer: '{elementType}' 인스펙터 매핑이 없어 " +
-                              $"Resources.Load(\"{resourcePath}\")로 대신 찾았습니다. 가능하면 인스펙터에 " +
-                              "직접 등록해두는 것을 권장합니다(1순위가 더 안전함).");
-                    return loaded;
-                }
-                // RenderWorld는 같은 elementType을 수천 셀에서 조회할 수 있다. 누락 진단은 타입마다
-                // 한 번만 남기고, 최종 누락 목록은 RenderWorld 끝의 집계 경고로 다시 제공한다.
-                if (_resourceLoadWarnings.Add(elementType))
-                {
-                    Debug.LogWarning($"[Nyangbingo] TilemapRenderer: [Resources/{resourcePath}] 로드 실패! " +
-                                     $"인스펙터 매핑도 없고 'Assets/Resources/{resourcePath}.asset' 경로에도 " +
-                                     "TileBase 에셋이 없습니다.");
-                }
-            }
-
-            // 3순위: 최종 폴백 타일(설정돼 있으면 화면에서 바로 눈에 띔), 없으면 투명 빈 칸.
+            // 2순위: 최종 폴백 타일(설정돼 있으면 화면에서 바로 눈에 띔), 없으면 투명 빈 칸.
             missing ??= new HashSet<string>();
             missing.Add(elementType);
             return fallbackTile;

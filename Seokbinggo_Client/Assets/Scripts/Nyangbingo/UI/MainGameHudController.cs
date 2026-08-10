@@ -15,7 +15,6 @@ namespace Nyangbingo.UI
     [DefaultExecutionOrder(-60)]
     public sealed class MainGameHudController : MonoBehaviour
     {
-        private const float LegacyHudToLogicalScale = .25f;
         public const int LegacyInventoryBarSlotCount = 12;
         public const bool ProductHudNarrativeTextEnabled = false;
         public const bool ProductBossHealthTextEnabled = false;
@@ -63,26 +62,25 @@ namespace Nyangbingo.UI
         [SerializeField] private Image[] inventorySlotIcons = new Image[LegacyInventoryBarSlotCount];
         [SerializeField] private ItemArtCatalog itemArtCatalog;
         private PlayerInventory inventory;
-        private GameObject bossHealthBarRoot;
+        [SerializeField] private GameObject bossHealthBarRoot;
         private float bossFleeRollRemaining;
-        private readonly List<Image> bossHealthBarFills = new List<Image>();
-        private readonly List<float> bossHealthSegmentWidths = new List<float>();
-        private readonly List<RectTransform> bossHealthSegmentRects = new List<RectTransform>();
-        private Image bossHealthPortrait;
-        private Text bossHealthValueText;
+        [SerializeField] private Image[] bossHealthBarFills = new Image[5];
+        private static readonly float[] BossHealthSegmentWidths = { 24f, 24f, 39f, 24f, 24f };
+        [SerializeField] private RectTransform[] bossHealthSegmentRects = new RectTransform[10];
+        [SerializeField] private Image bossHealthPortrait;
+        [SerializeField] private Text bossHealthValueText;
         private RuntimePixelGlyphPresenter bossHealthValueGlyphs;
-        private RectTransform bossHealthValueRect;
-        private Sprite runtimeBossHealthSprite;
-        private string runtimeBossHealthSpriteId;
-        private GameObject bossEntranceFlashRoot;
-        private Image bossEntranceFlash;
+        [SerializeField] private RectTransform bossHealthValueRect;
+        private readonly Dictionary<string, Sprite> runtimeBossHealthSpriteCache = new Dictionary<string, Sprite>();
+        [SerializeField] private GameObject bossEntranceFlashRoot;
+        [SerializeField] private Image bossEntranceFlash;
         private float bossEntranceFlashRemaining;
         private MainGameSaveCoordinator saveCoordinator;
         private GoalBadgeProgress goalBadgeProgress;
-        private GameObject goalBadgeRoot;
-        private Text goalBadgeRhythmHint;
-        private readonly Image[] goalBadgeBackgrounds = new Image[3];
-        private readonly GameObject[] goalBadgeChecks = new GameObject[3];
+        [SerializeField] private GameObject goalBadgeRoot;
+        [SerializeField] private Text goalBadgeRhythmHint;
+        [SerializeField] private Image[] goalBadgeBackgrounds = new Image[3];
+        [SerializeField] private GameObject[] goalBadgeChecks = new GameObject[3];
         private const string BellRopeId = "bell_rope";
         private const string IronBellRopeId = "iron_bell_rope";
         private const float PlayerDamageWarningSeconds = .28f;
@@ -93,13 +91,13 @@ namespace Nyangbingo.UI
         private MainGameEncounterCoordinator encounterCoordinator;
         private UtilityDefinition bellRopeUtility;
         private Camera alertCamera;
-        private RectTransform alertOverlayRoot;
-        private Image alertOverlayTint;
-        private Text alertOverlayText;
-        private Image alertDangerIcon;
-        private RectTransform alertDirectionMarker;
-        private Image alertDirectionIcon;
-        private Text alertDirectionText;
+        [SerializeField] private RectTransform alertOverlayRoot;
+        [SerializeField] private Image alertOverlayTint;
+        [SerializeField] private Text alertOverlayText;
+        [SerializeField] private Image alertDangerIcon;
+        [SerializeField] private RectTransform alertDirectionMarker;
+        [SerializeField] private Image alertDirectionIcon;
+        [SerializeField] private Text alertDirectionText;
         private readonly List<Vector2> bellRopePositions = new List<Vector2>();
         private readonly List<Transform> activeThreats = new List<Transform>();
         private readonly HashSet<Transform> bellTargetsInside = new HashSet<Transform>();
@@ -107,34 +105,34 @@ namespace Nyangbingo.UI
         private float damageWarningRemaining;
         private float bellWarningRemaining;
         private Vector2 bellWarningTargetPosition;
-        private GameObject statusArtRoot;
-        private Image playerVitalsArt;
-        private Image playerHealthFill;
-        private Image playerTemperatureFill;
+        [SerializeField] private GameObject statusArtRoot;
+        [SerializeField] private Image playerVitalsArt;
+        [SerializeField] private Image playerHealthFill;
+        [SerializeField] private Image playerTemperatureFill;
         private RuntimePixelGlyphPresenter playerHealthGlyphs;
         private RuntimePixelGlyphPresenter playerTemperatureGlyphs;
-        private Image tearBalanceArt;
-        private Text tearBalanceText;
-        private Image fuelGaugeArt;
-        private Text fuelGaugeText;
-        private Image saveIndicatorArt;
+        [SerializeField] private Image tearBalanceArt;
+        [SerializeField] private Text tearBalanceText;
+        [SerializeField] private Image fuelGaugeArt;
+        [SerializeField] private Text fuelGaugeText;
+        [SerializeField] private Image saveIndicatorArt;
         private SaveManager hudSaveManager;
         private float saveIndicatorRemaining;
         private int lastTearBalance = -1;
         private float tearAnimationRemaining;
         private Vector2 dayTextDefaultPosition;
         private bool hasDayTextDefaultPosition;
-        private RectTransform dayCounterScrollRect;
+        [SerializeField] private RectTransform dayCounterScrollRect;
         private Vector2 dayCounterScrollDefaultPosition;
         private RuntimeDayCounterScrollPresenter dayCounterScrollPresenter;
         private RuntimePixelGlyphPresenter dayCounterGlyphs;
-        private GameObject baekjungDayCounterBorder;
+        [SerializeField] private GameObject baekjungDayCounterBorder;
         private bool baekjungHudActive;
         private bool baekjungHudSuppressedForBoss;
-        private Text dayClockText;
+        [SerializeField] private Text dayClockText;
         private RuntimePixelGlyphPresenter dayClockGlyphs;
-        private Image dayNightClockArt;
-        private GameObject nightSpawnLockRoot;
+        [SerializeField] private Image dayNightClockArt;
+        [SerializeField] private GameObject nightSpawnLockRoot;
         private Vector2 dayClockDefaultPosition;
         private Vector2 bossStatusDefaultPosition;
         private int bossStatusDefaultFontSize;
@@ -146,7 +144,7 @@ namespace Nyangbingo.UI
         private Material sealLeakMarkerMaterial;
         private readonly Vector3[] sealLeakMarkerCorners = new Vector3[4];
         private float sealLeakMarkerRemaining;
-        private Text sealDeltaText;
+        [SerializeField] private Text sealDeltaText;
         private float sealDeltaRemaining;
         private float lastSealPercent;
         private bool hasLastSealPercent;
@@ -384,38 +382,12 @@ namespace Nyangbingo.UI
 
         private void BuildStatusArtHud()
         {
-            if (statusArtRoot != null) return;
-            if (temperatureArt != null)
+            if (statusArtRoot == null)
             {
-                var sealRect = temperatureArt.rectTransform;
-                sealRect.SetParent(transform, false);
-                sealRect.anchorMin = sealRect.anchorMax = sealRect.pivot = new Vector2(1f, 1f);
-                sealRect.anchoredPosition = new Vector2(-8f, -8f);
-                sealRect.sizeDelta = new Vector2(17f, 31f);
-                sealRect.localScale = Vector3.one;
-                temperatureArt.preserveAspect = true;
-                // This gauge owns a long-press gesture. Keeping it raycastable makes the EventSystem
-                // consume the primary pointer so the claw cannot attack or mine through the HUD.
-                temperatureArt.raycastTarget = true;
+                Debug.LogError("[Nyangbingo] MainGameHudController: PlayerStatusArt 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
             }
 
-            statusArtRoot = new GameObject("PlayerStatusArt", typeof(RectTransform));
-            statusArtRoot.transform.SetParent(transform, false);
-            var root = (RectTransform)statusArtRoot.transform;
-            root.anchorMin = root.anchorMax = root.pivot = new Vector2(0f, 1f);
-            root.anchoredPosition = new Vector2(6f, -5f);
-            root.sizeDelta = new Vector2(60f, 31f);
-
-            playerHealthFill = CreateStatusImage(root, "HealthFill", null,
-                new Vector2(14.5f, -2.5f), new Vector2(42f, 2.5f));
-            playerHealthFill.rectTransform.pivot = new Vector2(0f, 1f);
-            playerTemperatureFill = CreateStatusImage(root, "TemperatureFill", null,
-                new Vector2(14.5f, -7.5f), new Vector2(42f, 2.5f));
-            playerTemperatureFill.rectTransform.pivot = new Vector2(0f, 1f);
-            playerVitalsArt = CreateStatusImage(root, "VitalsFrame", null, Vector2.zero, root.sizeDelta);
-
-            ReparentStatusText(playerHealthText, root, new Vector2(18f, -11f), new Vector2(38f, 8f), 7);
-            ReparentStatusText(temperatureText, root, new Vector2(18f, -20f), new Vector2(22f, 8f), 7);
             if (playerHealthText != null && temperatureText != null &&
                 gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
@@ -432,27 +404,7 @@ namespace Nyangbingo.UI
                 playerTemperatureGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .45f);
             }
 
-            var tearRoot = CreateStatusRoot(transform, "TearBalance", new Vector2(6f, -52f),
-                new Vector2(31f, 16f));
-            tearBalanceArt = CreateStatusImage(tearRoot, "Icon", null, Vector2.zero, new Vector2(9f, 15f));
-            tearBalanceText = CreateStatusText(tearRoot, "Amount", new Vector2(11f, -3f),
-                new Vector2(20f, 9f), 6);
-
-            var fuelRoot = CreateStatusRoot(transform, "PortableLanternFuel", new Vector2(40f, -52f),
-                new Vector2(30f, 16f));
-            fuelGaugeArt = CreateStatusImage(fuelRoot, "Gauge", null, Vector2.zero, new Vector2(5f, 13f));
-            fuelGaugeText = CreateStatusText(fuelRoot, "Remaining", new Vector2(7f, -3f),
-                new Vector2(23f, 9f), 5);
-
-            var saveRoot = CreateStatusRoot(transform, "SaveIndicator", new Vector2(-8f, -24f),
-                new Vector2(16f, 16f), new Vector2(1f, 1f));
-            saveIndicatorArt = CreateStatusImage(saveRoot, "Art", null, Vector2.zero, new Vector2(16f, 16f));
-            saveIndicatorArt.enabled = false;
-
-            if (goalBadgeRoot != null)
-                ((RectTransform)goalBadgeRoot.transform).anchoredPosition = new Vector2(72f, -8f);
-            if (clawText != null)
-                clawText.rectTransform.anchoredPosition = new Vector2(6f, -38f);
+            if (saveIndicatorArt != null) saveIndicatorArt.enabled = false;
 
             hudSaveManager = FindAnyObjectByType<SaveManager>();
             if (hudSaveManager != null) hudSaveManager.Saved += HandleSaved;
@@ -460,13 +412,11 @@ namespace Nyangbingo.UI
 
         private void BuildSealFeedbackHud()
         {
-            if (sealDeltaText != null) return;
-            var deltaRoot = CreateStatusRoot(transform, "SealDeltaFeedback", new Vector2(-29f, -36f),
-                new Vector2(44f, 12f), new Vector2(1f, 1f));
-            sealDeltaText = CreateStatusText(deltaRoot, "Delta", Vector2.zero, deltaRoot.sizeDelta, 9);
-            sealDeltaText.alignment = TextAnchor.MiddleRight;
-            sealDeltaText.fontStyle = FontStyle.Bold;
-            sealDeltaText.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, .9f);
+            if (sealDeltaText == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameHudController: SealDeltaFeedback 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             sealDeltaText.enabled = false;
         }
 
@@ -604,68 +554,6 @@ namespace Nyangbingo.UI
             hasLastSealPercent = true;
         }
 
-        private static RectTransform CreateStatusRoot(Transform parent, string name, Vector2 position,
-            Vector2 size, Vector2? anchor = null)
-        {
-            var root = new GameObject(name, typeof(RectTransform));
-            root.transform.SetParent(parent, false);
-            var rect = (RectTransform)root.transform;
-            var fixedAnchor = anchor ?? new Vector2(0f, 1f);
-            rect.anchorMin = rect.anchorMax = rect.pivot = fixedAnchor;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-            return rect;
-        }
-
-        private static Image CreateStatusImage(Transform parent, string name, Sprite sprite,
-            Vector2 position, Vector2 size)
-        {
-            var imageObject = new GameObject(name, typeof(RectTransform));
-            imageObject.transform.SetParent(parent, false);
-            var image = imageObject.AddComponent<Image>();
-            image.sprite = sprite;
-            image.preserveAspect = sprite != null;
-            image.raycastTarget = false;
-            var rect = image.rectTransform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-            return image;
-        }
-
-        private static Text CreateStatusText(Transform parent, string name, Vector2 position, Vector2 size,
-            int fontSize)
-        {
-            var textObject = new GameObject(name, typeof(RectTransform));
-            textObject.transform.SetParent(parent, false);
-            var text = textObject.AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontSize = fontSize;
-            text.alignment = TextAnchor.MiddleLeft;
-            text.color = Color.white;
-            text.raycastTarget = false;
-            var rect = text.rectTransform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-            return text;
-        }
-
-        private static void ReparentStatusText(Text text, Transform parent, Vector2 position, Vector2 size,
-            int fontSize)
-        {
-            if (text == null) return;
-            text.transform.SetParent(parent, false);
-            text.transform.localScale = Vector3.one;
-            text.transform.localRotation = Quaternion.identity;
-            text.fontSize = fontSize;
-            text.alignment = TextAnchor.MiddleLeft;
-            var rect = text.rectTransform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-        }
-
         private void RefreshStatusArtHud()
         {
             if (playerVitalsArt == null || runtimeServices?.PlayerTemperature == null) return;
@@ -773,178 +661,29 @@ namespace Nyangbingo.UI
 
         private void BuildGoalBadges()
         {
-            if (goalBadgeRoot != null) return;
+            if (goalBadgeRoot == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameHudController: GoalBadges 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             saveCoordinator = FindAnyObjectByType<MainGameSaveCoordinator>();
             goalBadgeProgress = saveCoordinator != null ? saveCoordinator.ProgressTracker?.GoalBadges : null;
-
-            goalBadgeRoot = new GameObject("GoalBadges", typeof(RectTransform));
-            goalBadgeRoot.transform.SetParent(transform, false);
-            var rootRect = (RectTransform)goalBadgeRoot.transform;
-            rootRect.anchorMin = rootRect.anchorMax = rootRect.pivot = new Vector2(0f, 1f);
-            rootRect.anchoredPosition = ScaleLegacyHud(new Vector2(96f, -72f));
-            rootRect.sizeDelta = ScaleLegacyHud(new Vector2(154f, 46f));
-            if (clawText != null)
-                clawText.rectTransform.anchoredPosition = ScaleLegacyHud(new Vector2(24f, -124f));
-            if (playerHealthText != null)
-                playerHealthText.rectTransform.anchoredPosition = ScaleLegacyHud(new Vector2(24f, -168f));
-
-            for (var index = 0; index < goalBadgeBackgrounds.Length; index++)
-            {
-                var badge = new GameObject($"Badge_{index + 1}", typeof(RectTransform));
-                badge.transform.SetParent(rootRect, false);
-                var rect = (RectTransform)badge.transform;
-                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, .5f);
-                rect.anchoredPosition = ScaleLegacyHud(new Vector2(index * 54f, 0f));
-                rect.sizeDelta = ScaleLegacyHud(new Vector2(46f, 46f));
-                var background = badge.AddComponent<Image>();
-                background.raycastTarget = false;
-                goalBadgeBackgrounds[index] = background;
-                BuildGoalBadgeGlyph(rect, index);
-                goalBadgeChecks[index] = BuildGoalBadgeCheck(rect);
-            }
-            goalBadgeRhythmHint = CreateStatusText(
-                rootRect, "DayNightRhythmHint", new Vector2(0f, -13f), new Vector2(112f, 9f), 6);
-            goalBadgeRhythmHint.text = GoalBadgeDayNightRhythmHint;
-            goalBadgeRhythmHint.color = new Color(.72f, .82f, .9f, .92f);
 
             if (goalBadgeProgress != null) goalBadgeProgress.Changed += RefreshGoalBadges;
             RefreshGoalBadges();
         }
 
-        private static void BuildGoalBadgeGlyph(RectTransform parent, int index)
-        {
-            var ink = new Color(.88f, .92f, .94f, 1f);
-            if (index == 0)
-            {
-                CreateBadgeShape(parent, "Top", ScaleLegacyHud(new Vector2(0f, 6f)),
-                    ScaleLegacyHud(new Vector2(28f, 7f)), ink);
-                CreateBadgeShape(parent, "LegLeft", ScaleLegacyHud(new Vector2(-9f, -6f)),
-                    ScaleLegacyHud(new Vector2(5f, 18f)), ink);
-                CreateBadgeShape(parent, "LegRight", ScaleLegacyHud(new Vector2(9f, -6f)),
-                    ScaleLegacyHud(new Vector2(5f, 18f)), ink);
-                return;
-            }
-            if (index == 1)
-            {
-                for (var row = 0; row < 3; row++)
-                    for (var column = 0; column < 2; column++)
-                        CreateBadgeShape(parent, $"Brick_{row}_{column}",
-                            ScaleLegacyHud(new Vector2(
-                                (column - .5f) * 15f + (row % 2 == 0 ? 0f : 4f), (row - 1) * 9f)),
-                            ScaleLegacyHud(new Vector2(13f, 7f)), ink);
-                return;
-            }
-
-            CreateBadgeShape(parent, "FurnaceBody", Vector2.zero,
-                ScaleLegacyHud(new Vector2(28f, 31f)), ink);
-            CreateBadgeShape(parent, "FurnaceOpening", ScaleLegacyHud(new Vector2(0f, -5f)),
-                ScaleLegacyHud(new Vector2(13f, 12f)),
-                new Color(.08f, .11f, .14f, 1f));
-            CreateBadgeShape(parent, "FurnaceFire", ScaleLegacyHud(new Vector2(0f, -4f)),
-                ScaleLegacyHud(new Vector2(7f, 7f)),
-                new Color(1f, .48f, .14f, 1f));
-        }
-
-        private static GameObject BuildGoalBadgeCheck(RectTransform parent)
-        {
-            var root = new GameObject("Completed", typeof(RectTransform));
-            root.transform.SetParent(parent, false);
-            var rect = (RectTransform)root.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0f);
-            rect.anchoredPosition = ScaleLegacyHud(new Vector2(-2f, 2f));
-            rect.sizeDelta = ScaleLegacyHud(new Vector2(20f, 20f));
-            var color = new Color(.62f, 1f, .72f, 1f);
-            var shortBar = CreateBadgeShape(rect, "Short", ScaleLegacyHud(new Vector2(-4f, -1f)),
-                ScaleLegacyHud(new Vector2(4f, 11f)), color);
-            shortBar.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -42f);
-            var longBar = CreateBadgeShape(rect, "Long", ScaleLegacyHud(new Vector2(3f, 1f)),
-                ScaleLegacyHud(new Vector2(4f, 17f)), color);
-            longBar.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 42f);
-            return root;
-        }
-
-        private static Image CreateBadgeShape(Transform parent, string name, Vector2 position, Vector2 size,
-            Color color)
-        {
-            var shape = new GameObject(name, typeof(RectTransform));
-            shape.transform.SetParent(parent, false);
-            var image = shape.AddComponent<Image>();
-            image.color = color;
-            image.raycastTarget = false;
-            var rect = image.rectTransform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-            return image;
-        }
-
-        private static Vector2 ScaleLegacyHud(Vector2 value) => value * LegacyHudToLogicalScale;
-
         private void BuildAlertOverlay()
         {
-            if (alertOverlayRoot != null) return;
-            var root = new GameObject("PriorityAlertOverlay", typeof(RectTransform));
-            root.transform.SetParent(transform, false);
-            alertOverlayRoot = (RectTransform)root.transform;
-            alertOverlayRoot.anchorMin = Vector2.zero;
-            alertOverlayRoot.anchorMax = Vector2.one;
-            alertOverlayRoot.offsetMin = Vector2.zero;
-            alertOverlayRoot.offsetMax = Vector2.zero;
+            if (alertOverlayRoot == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameHudController: PriorityAlertOverlay 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             alertOverlayRoot.SetAsLastSibling();
-
-            alertOverlayTint = root.AddComponent<Image>();
-            alertOverlayTint.raycastTarget = false;
-
-            var labelObject = new GameObject("AlertText", typeof(RectTransform));
-            labelObject.transform.SetParent(alertOverlayRoot, false);
-            alertOverlayText = labelObject.AddComponent<Text>();
-            alertOverlayText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            alertOverlayText.fontSize = 12;
-            alertOverlayText.fontStyle = FontStyle.Bold;
-            alertOverlayText.alignment = TextAnchor.MiddleCenter;
-            alertOverlayText.raycastTarget = false;
-            var labelRect = alertOverlayText.rectTransform;
-            labelRect.anchorMin = labelRect.anchorMax = labelRect.pivot = new Vector2(.5f, 1f);
-            labelRect.anchoredPosition = new Vector2(0f, -38f);
-            labelRect.sizeDelta = new Vector2(280f, 24f);
-
-            var dangerObject = new GameObject("BellRopeDangerIcon", typeof(RectTransform));
-            dangerObject.transform.SetParent(alertOverlayRoot, false);
-            alertDangerIcon = dangerObject.AddComponent<Image>();
-            alertDangerIcon.sprite = gameplayArtCatalog?.DangerIcon;
-            alertDangerIcon.preserveAspect = true;
-            alertDangerIcon.raycastTarget = false;
-            var dangerRect = alertDangerIcon.rectTransform;
-            dangerRect.anchorMin = dangerRect.anchorMax = dangerRect.pivot = new Vector2(.5f, 1f);
-            dangerRect.anchoredPosition = new Vector2(-112f, -38f);
-            dangerRect.sizeDelta = new Vector2(16f, 16f);
-
-            var markerObject = new GameObject("OffscreenThreatDirection", typeof(RectTransform));
-            markerObject.transform.SetParent(alertOverlayRoot, false);
-            alertDirectionMarker = (RectTransform)markerObject.transform;
-            alertDirectionMarker.anchorMin = alertDirectionMarker.anchorMax = alertDirectionMarker.pivot =
-                new Vector2(.5f, .5f);
-            alertDirectionMarker.sizeDelta = new Vector2(18f, 18f);
-            alertDirectionIcon = markerObject.AddComponent<Image>();
-            alertDirectionIcon.sprite = gameplayArtCatalog?.DangerIcon;
-            alertDirectionIcon.preserveAspect = true;
-            alertDirectionIcon.raycastTarget = false;
-
-            var fallbackObject = new GameObject("DirectionFallback", typeof(RectTransform));
-            fallbackObject.transform.SetParent(alertDirectionMarker, false);
-            alertDirectionText = fallbackObject.AddComponent<Text>();
-            alertDirectionText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            alertDirectionText.fontSize = 16;
-            alertDirectionText.fontStyle = FontStyle.Bold;
-            alertDirectionText.alignment = TextAnchor.MiddleCenter;
-            alertDirectionText.color = new Color(1f, .73f, .18f, 1f);
-            alertDirectionText.raycastTarget = false;
-            var fallbackRect = alertDirectionText.rectTransform;
-            fallbackRect.anchorMin = Vector2.zero;
-            fallbackRect.anchorMax = Vector2.one;
-            fallbackRect.offsetMin = Vector2.zero;
-            fallbackRect.offsetMax = Vector2.zero;
-            root.SetActive(false);
+            if (alertDangerIcon != null) alertDangerIcon.sprite = gameplayArtCatalog?.DangerIcon;
+            if (alertDirectionIcon != null) alertDirectionIcon.sprite = gameplayArtCatalog?.DangerIcon;
+            alertOverlayRoot.gameObject.SetActive(false);
         }
 
         private void RefreshBellRopeDetection()
@@ -1260,6 +999,11 @@ namespace Nyangbingo.UI
         private void BuildDayCounterScroll()
         {
             if (dayText == null || dayCounterScrollPresenter != null) return;
+            if (dayCounterScrollRect == null || dayClockText == null || dayNightClockArt == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameHudController: DayCounterScroll/Clock 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             if (environmentArtCatalog == null)
             {
                 var catalogs = Resources.FindObjectsOfTypeAll<EnvironmentArtCatalog>();
@@ -1283,23 +1027,14 @@ namespace Nyangbingo.UI
             var frames = environmentArtCatalog?.DayCounterScrollFrames;
             if (frames == null || frames.Count == 0) return;
 
-            var scrollObject = new GameObject("DayCounterScroll", typeof(RectTransform), typeof(Image));
-            scrollObject.transform.SetParent(dayText.transform.parent, false);
-            dayCounterScrollRect = (RectTransform)scrollObject.transform;
-            dayCounterScrollRect.anchorMin = dayCounterScrollRect.anchorMax = dayCounterScrollRect.pivot =
-                new Vector2(.5f, 1f);
             dayClockDefaultPosition = dayTextDefaultPosition;
             dayCounterScrollDefaultPosition = ResolveDayCounterPositionBelowClock(dayClockDefaultPosition);
             dayTextDefaultPosition = dayCounterScrollDefaultPosition;
             dayText.rectTransform.anchoredPosition = dayTextDefaultPosition;
             dayCounterScrollRect.anchoredPosition = dayCounterScrollDefaultPosition;
-            var image = scrollObject.GetComponent<Image>();
-            image.raycastTarget = false;
-            image.preserveAspect = true;
-            baekjungDayCounterBorder = BuildBaekjungDayCounterBorder(scrollObject.transform);
-            baekjungDayCounterBorder.SetActive(false);
-            scrollObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex());
-            dayCounterScrollPresenter = scrollObject.AddComponent<RuntimeDayCounterScrollPresenter>();
+            if (baekjungDayCounterBorder != null) baekjungDayCounterBorder.SetActive(false);
+            dayCounterScrollPresenter = dayCounterScrollRect.GetComponent<RuntimeDayCounterScrollPresenter>() ??
+                                         dayCounterScrollRect.gameObject.AddComponent<RuntimeDayCounterScrollPresenter>();
             dayCounterScrollPresenter.ConfigureForRuntime(frames, bootstrap.TimeService.DaysRemaining);
             dayCounterScrollPresenter.PresentationCompleted += HandleDayCounterPresentationCompleted;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
@@ -1311,45 +1046,21 @@ namespace Nyangbingo.UI
                 dayText.enabled = false;
             }
 
-            var clockObject = new GameObject("DayCycleClock", typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(Text));
-            clockObject.transform.SetParent(dayText.transform.parent, false);
-            dayClockText = clockObject.GetComponent<Text>();
-            dayClockText.font = dayText.font;
-            dayClockText.fontSize = DayCounterClockFontSize;
-            dayClockText.alignment = TextAnchor.UpperCenter;
-            dayClockText.color = new Color(.88f, .93f, 1f, 1f);
-            dayClockText.raycastTarget = false;
-            dayClockText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            dayClockText.verticalOverflow = VerticalWrapMode.Overflow;
-            var clockRect = dayClockText.rectTransform;
-            clockRect.anchorMin = clockRect.anchorMax = clockRect.pivot = new Vector2(.5f, 1f);
-            clockRect.anchoredPosition = dayClockDefaultPosition;
-            clockRect.sizeDelta = new Vector2(96f, DayCounterClockHeight);
-            clockObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
+            dayClockText.rectTransform.anchoredPosition = dayClockDefaultPosition;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
-                dayClockGlyphs = clockObject.AddComponent<RuntimePixelGlyphPresenter>();
+                dayClockGlyphs = dayClockText.GetComponent<RuntimePixelGlyphPresenter>() ??
+                                  dayClockText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
                 dayClockGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .6f);
                 dayClockText.text = string.Empty;
                 dayClockText.enabled = false;
             }
 
-            var clockArtObject = new GameObject("DayNightClockArt", typeof(RectTransform), typeof(Image));
-            clockArtObject.transform.SetParent(dayText.transform.parent, false);
-            dayNightClockArt = clockArtObject.GetComponent<Image>();
-            dayNightClockArt.raycastTarget = false;
-            dayNightClockArt.preserveAspect = true;
-            var artRect = dayNightClockArt.rectTransform;
-            artRect.anchorMin = artRect.anchorMax = artRect.pivot = new Vector2(.5f, 1f);
-            artRect.anchoredPosition = dayClockDefaultPosition + new Vector2(-22f, 0f);
-            artRect.sizeDelta = new Vector2(10f, 10f);
-            clockArtObject.transform.SetSiblingIndex(dayText.transform.GetSiblingIndex() + 1);
-            nightSpawnLockRoot = BuildNightSpawnLock(artRect);
-            nightSpawnLockRoot.SetActive(false);
+            dayNightClockArt.rectTransform.anchoredPosition = dayClockDefaultPosition + new Vector2(-22f, 0f);
+            if (nightSpawnLockRoot != null) nightSpawnLockRoot.SetActive(false);
             RefreshDayNightClockArt();
             dayText.gameObject.SetActive(false);
-            scrollObject.SetActive(false);
+            dayCounterScrollRect.gameObject.SetActive(false);
         }
 
         private void HandleDayCounterDawn()
@@ -1411,36 +1122,6 @@ namespace Nyangbingo.UI
                         : new Color(1f, .68f, .34f, .5f);
         }
 
-        private static GameObject BuildNightSpawnLock(RectTransform parent)
-        {
-            var root = new GameObject("NightSpawnLock", typeof(RectTransform));
-            var rootRect = (RectTransform)root.transform;
-            rootRect.SetParent(parent, false);
-            rootRect.anchorMin = Vector2.zero;
-            rootRect.anchorMax = Vector2.one;
-            rootRect.offsetMin = Vector2.zero;
-            rootRect.offsetMax = Vector2.zero;
-            var lockColor = new Color32(0x49, 0x2D, 0x4D, 0xFF);
-            AddNightSpawnLockPiece(rootRect, "Bar", Vector2.zero, new Vector2(12f, 2f), lockColor);
-            AddNightSpawnLockPiece(rootRect, "LeftCap", new Vector2(-5f, 0f), new Vector2(2f, 6f), lockColor);
-            AddNightSpawnLockPiece(rootRect, "RightCap", new Vector2(5f, 0f), new Vector2(2f, 6f), lockColor);
-            return root;
-        }
-
-        private static void AddNightSpawnLockPiece(RectTransform parent, string name,
-            Vector2 anchoredPosition, Vector2 size, Color color)
-        {
-            var piece = new GameObject(name, typeof(RectTransform), typeof(Image));
-            var rect = (RectTransform)piece.transform;
-            rect.SetParent(parent, false);
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
-            rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = size;
-            var image = piece.GetComponent<Image>();
-            image.color = color;
-            image.raycastTarget = false;
-        }
-
         public static bool ShouldShowBaekjungDayCounterFeedback(bool baekjungActive,
             bool suppressedForBoss, bool bossActive) =>
             baekjungActive && !suppressedForBoss && !bossActive;
@@ -1457,98 +1138,26 @@ namespace Nyangbingo.UI
                 baekjungHudActive, baekjungHudSuppressedForBoss, bossManager?.IsBossActive == true));
         }
 
-        private static GameObject BuildBaekjungDayCounterBorder(Transform parent)
-        {
-            var root = new GameObject("BaekjungDayCounterBorder", typeof(RectTransform));
-            var rootRect = (RectTransform)root.transform;
-            rootRect.SetParent(parent, false);
-            rootRect.anchorMin = Vector2.zero;
-            rootRect.anchorMax = Vector2.one;
-            rootRect.offsetMin = Vector2.zero;
-            rootRect.offsetMax = Vector2.zero;
-
-            AddBaekjungBorderEdge(rootRect, "Top", new Vector2(0f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, BaekjungDayCounterBorderPixels));
-            AddBaekjungBorderEdge(rootRect, "Bottom", new Vector2(0f, 0f), new Vector2(1f, 0f),
-                new Vector2(0f, BaekjungDayCounterBorderPixels));
-            AddBaekjungBorderEdge(rootRect, "Left", new Vector2(0f, 0f), new Vector2(0f, 1f),
-                new Vector2(BaekjungDayCounterBorderPixels, 0f));
-            AddBaekjungBorderEdge(rootRect, "Right", new Vector2(1f, 0f), new Vector2(1f, 1f),
-                new Vector2(BaekjungDayCounterBorderPixels, 0f));
-            return root;
-        }
-
-        private static void AddBaekjungBorderEdge(RectTransform parent, string edgeName,
-            Vector2 anchorMin, Vector2 anchorMax, Vector2 sizeDelta)
-        {
-            var edge = new GameObject(edgeName, typeof(RectTransform), typeof(Image));
-            var edgeRect = (RectTransform)edge.transform;
-            edgeRect.SetParent(parent, false);
-            edgeRect.anchorMin = anchorMin;
-            edgeRect.anchorMax = anchorMax;
-            edgeRect.pivot = (anchorMin + anchorMax) * .5f;
-            edgeRect.anchoredPosition = Vector2.zero;
-            edgeRect.sizeDelta = sizeDelta;
-            var image = edge.GetComponent<Image>();
-            image.color = new Color32(0x9B, 0x6D, 0xD6, 0xFF);
-            image.raycastTarget = false;
-        }
-
         private void BuildBossHealthBar()
         {
-            if (bossStatusText == null || bossHealthBarRoot != null) return;
+            if (bossStatusText == null) return;
+            if (bossHealthBarRoot == null || bossHealthPortrait == null || bossHealthValueText == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameHudController: BossHealthBar 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             bossStatusDefaultPosition = bossStatusText.rectTransform.anchoredPosition;
             bossStatusDefaultFontSize = bossStatusText.fontSize;
             hasBossStatusDefaultLayout = true;
             bossStatusText.alignment = TextAnchor.UpperCenter;
 
-            bossHealthBarRoot = new GameObject("BossHealthBar", typeof(RectTransform));
-            var rootRect = (RectTransform)bossHealthBarRoot.transform;
-            var nativeRoot = MainGameUiResolutionController.ResolveNativeRoot(transform) ?? transform;
-            rootRect.SetParent(nativeRoot, false);
-            rootRect.anchorMin = rootRect.anchorMax = rootRect.pivot = new Vector2(.5f, 1f);
-            rootRect.anchoredPosition = new Vector2(0f, BossHealthBarBelowClockY);
-            rootRect.sizeDelta = new Vector2(BossHealthBarWidth, BossHealthBarHeight);
-
-            var segmentStarts = new[] { 19.5f, 48f, 76.5f, 120f, 148.5f };
-            var segmentWidths = new[] { 24f, 24f, 39f, 24f, 24f };
-            for (var index = 0; index < segmentStarts.Length; index++)
-                BuildBossHealthSegment(rootRect, index, segmentStarts[index], segmentWidths[index]);
-            var portraitObject = new GameObject("BossArt", typeof(RectTransform));
-            portraitObject.transform.SetParent(rootRect, false);
-            bossHealthPortrait = portraitObject.AddComponent<Image>();
-            bossHealthPortrait.preserveAspect = false;
-            bossHealthPortrait.raycastTarget = false;
-            var portraitRect = bossHealthPortrait.rectTransform;
-            portraitRect.anchorMin = portraitRect.anchorMax = portraitRect.pivot = new Vector2(.5f, .5f);
-            portraitRect.anchoredPosition = Vector2.zero;
-            portraitRect.sizeDelta = new Vector2(177f, BossHealthBarHeight);
-
-            var valueObject = new GameObject("CurrentHealth", typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(Text), typeof(Outline));
-            valueObject.transform.SetParent(rootRect, false);
-            bossHealthValueText = valueObject.GetComponent<Text>();
-            bossHealthValueText.font = dayText != null ? dayText.font : bossStatusText.font;
-            bossHealthValueText.fontSize = 7;
-            bossHealthValueText.fontStyle = FontStyle.Bold;
-            bossHealthValueText.alignment = TextAnchor.MiddleCenter;
-            bossHealthValueText.color = Color.white;
-            bossHealthValueText.raycastTarget = false;
-            bossHealthValueText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            bossHealthValueText.verticalOverflow = VerticalWrapMode.Overflow;
-            bossHealthValueRect = bossHealthValueText.rectTransform;
-            bossHealthValueRect.anchorMin = bossHealthValueRect.anchorMax = bossHealthValueRect.pivot =
-                new Vector2(.5f, .5f);
-            bossHealthValueRect.anchoredPosition = Vector2.zero;
-            bossHealthValueRect.sizeDelta = new Vector2(96f, 16f);
-            var valueOutline = valueObject.GetComponent<Outline>();
-            valueOutline.effectColor = new Color(0f, 0f, 0f, .9f);
-            valueOutline.effectDistance = new Vector2(1f, -1f);
+            var valueObject = bossHealthValueText.gameObject;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
                 bossHealthValueText.text = string.Empty;
                 bossHealthValueText.enabled = false;
-                bossHealthValueGlyphs = valueObject.AddComponent<RuntimePixelGlyphPresenter>();
+                bossHealthValueGlyphs = valueObject.GetComponent<RuntimePixelGlyphPresenter>() ??
+                                        valueObject.AddComponent<RuntimePixelGlyphPresenter>();
                 bossHealthValueGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs,
                     BossHealthValueGlyphScale);
             }
@@ -1556,18 +1165,11 @@ namespace Nyangbingo.UI
             ResizeBossHealthBar(1f);
             bossHealthBarRoot.SetActive(false);
 
-            bossEntranceFlashRoot = new GameObject("BossEntranceHorrorFlash", typeof(RectTransform));
-            var entranceRect = (RectTransform)bossEntranceFlashRoot.transform;
-            entranceRect.SetParent(nativeRoot, false);
-            entranceRect.anchorMin = Vector2.zero;
-            entranceRect.anchorMax = Vector2.one;
-            entranceRect.offsetMin = Vector2.zero;
-            entranceRect.offsetMax = Vector2.zero;
-            bossEntranceFlash = bossEntranceFlashRoot.AddComponent<Image>();
-            bossEntranceFlash.color = Color.clear;
-            bossEntranceFlash.raycastTarget = false;
-            bossEntranceFlashRoot.transform.SetAsLastSibling();
-            bossEntranceFlashRoot.SetActive(false);
+            if (bossEntranceFlashRoot != null)
+            {
+                bossEntranceFlashRoot.transform.SetAsLastSibling();
+                bossEntranceFlashRoot.SetActive(false);
+            }
         }
 
         private void RestoreBossStatusLayout()
@@ -1577,40 +1179,13 @@ namespace Nyangbingo.UI
             bossStatusText.rectTransform.anchoredPosition = bossStatusDefaultPosition;
         }
 
-        private void BuildBossHealthSegment(RectTransform parent, int index, float start, float width)
-        {
-            var backgroundObject = new GameObject($"Depleted_{index + 1}", typeof(RectTransform));
-            backgroundObject.transform.SetParent(parent, false);
-            var background = backgroundObject.AddComponent<Image>();
-            background.color = new Color32(0x1A, 0x1A, 0x24, 0xFF);
-            background.raycastTarget = false;
-            ConfigureBossHealthSegmentRect(background.rectTransform, start, width);
-            bossHealthSegmentRects.Add(background.rectTransform);
-
-            var fillObject = new GameObject($"Fill_{index + 1}", typeof(RectTransform));
-            fillObject.transform.SetParent(parent, false);
-            var fill = fillObject.AddComponent<Image>();
-            fill.color = new Color32(0x91, 0xDA, 0xA1, 0xFF);
-            fill.raycastTarget = false;
-            ConfigureBossHealthSegmentRect(fill.rectTransform, start, width);
-            bossHealthSegmentRects.Add(fill.rectTransform);
-            bossHealthBarFills.Add(fill);
-            bossHealthSegmentWidths.Add(width);
-        }
-
-        private static void ConfigureBossHealthSegmentRect(RectTransform rect, float start, float width)
-        {
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, .5f);
-            rect.anchoredPosition = new Vector2(start, -2.25f);
-            rect.sizeDelta = new Vector2(width, BossHealthSegmentHeight);
-        }
-
         private void ConfigureBossHealthVerticalLayout(string bossId)
         {
             var verticalOffset = BossHealthContentVerticalOffset(bossId);
-            for (var index = 0; index < bossHealthSegmentRects.Count; index++)
+            for (var index = 0; index < bossHealthSegmentRects.Length; index++)
             {
                 var rect = bossHealthSegmentRects[index];
+                if (rect == null) continue;
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, verticalOffset);
             }
             if (bossHealthValueRect != null)
@@ -1634,15 +1209,16 @@ namespace Nyangbingo.UI
 
         private Sprite ResolveBossHealthArt(string bossId)
         {
-            if (runtimeBossHealthSprite != null && runtimeBossHealthSpriteId == bossId)
-                return runtimeBossHealthSprite;
+            if (runtimeBossHealthSpriteCache.TryGetValue(bossId, out var cached) && cached != null)
+                return cached;
 
             // boss_health_frame is the authoritative four-row sheet. The per-boss Aseprite
             // assets contain the same sheet with different canvas offsets, so cropping those
             // imports again can select another boss after a reimport.
+            // Cropped once per bossId and cached for the component's lifetime (see cache
+            // cleanup in OnDestroy) instead of re-cropping every time the active boss changes.
             var source = gameplayArtCatalog?.BossHealthFrame ?? BossHealthArtSource(bossId);
             if (source == null) return null;
-            if (runtimeBossHealthSprite != null) Destroy(runtimeBossHealthSprite);
 
             var sourceRect = source.textureRect;
             float topStart;
@@ -1661,11 +1237,11 @@ namespace Nyangbingo.UI
             var croppedRect = new Rect(sourceRect.x,
                 sourceRect.y + sourceRect.height - topEnd,
                 sourceRect.width, topEnd - topStart);
-            runtimeBossHealthSprite = Sprite.Create(source.texture, croppedRect, new Vector2(.5f, .5f),
+            var cropped = Sprite.Create(source.texture, croppedRect, new Vector2(.5f, .5f),
                 source.pixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false);
-            runtimeBossHealthSprite.name = $"{bossId}_health_bar_runtime";
-            runtimeBossHealthSpriteId = bossId;
-            return runtimeBossHealthSprite;
+            cropped.name = $"{bossId}_health_bar_runtime";
+            runtimeBossHealthSpriteCache[bossId] = cropped;
+            return cropped;
         }
 
         public static int BossHealthArtRow(string bossId)
@@ -1763,17 +1339,18 @@ namespace Nyangbingo.UI
 
         private void ResizeBossHealthBar(float ratio)
         {
-            if (bossHealthBarRoot == null || bossHealthBarFills.Count == 0) return;
+            if (bossHealthBarRoot == null || bossHealthBarFills.Length == 0) return;
             ratio = Mathf.Clamp01(ratio);
             var totalWidth = 0f;
-            for (var index = 0; index < bossHealthSegmentWidths.Count; index++)
-                totalWidth += bossHealthSegmentWidths[index];
+            for (var index = 0; index < BossHealthSegmentWidths.Length; index++)
+                totalWidth += BossHealthSegmentWidths[index];
             var remainingWidth = totalWidth * ratio;
-            for (var index = 0; index < bossHealthBarFills.Count; index++)
+            for (var index = 0; index < bossHealthBarFills.Length; index++)
             {
-                var segmentWidth = bossHealthSegmentWidths[index];
+                var segmentWidth = BossHealthSegmentWidths[index];
                 var visibleWidth = Mathf.Clamp(remainingWidth, 0f, segmentWidth);
                 var fill = bossHealthBarFills[index];
+                if (fill == null) continue;
                 var fillRect = fill.rectTransform;
                 fillRect.sizeDelta = new Vector2(visibleWidth, BossHealthSegmentHeight);
                 fill.enabled = visibleWidth > 0f;
@@ -1831,7 +1408,9 @@ namespace Nyangbingo.UI
                 bossManager.BossStarted -= HandleBossStarted;
                 bossManager.BossEnded -= HandleBossEnded;
             }
-            if (runtimeBossHealthSprite != null) Destroy(runtimeBossHealthSprite);
+            foreach (var sprite in runtimeBossHealthSpriteCache.Values)
+                if (sprite != null) Destroy(sprite);
+            runtimeBossHealthSpriteCache.Clear();
             if (bootstrap?.TimeService != null) bootstrap.TimeService.Dawn -= HandleDayCounterDawn;
             if (dayCounterScrollPresenter != null)
                 dayCounterScrollPresenter.PresentationCompleted -= HandleDayCounterPresentationCompleted;

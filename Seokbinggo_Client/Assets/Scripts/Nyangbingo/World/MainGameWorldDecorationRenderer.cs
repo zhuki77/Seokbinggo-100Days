@@ -19,6 +19,7 @@ namespace Nyangbingo.World
         public const string RebarItemId = "rebar";
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private WorldDecorationArtCatalog artCatalog;
+        [SerializeField] private ItemArtCatalog itemArtCatalog;
         private Transform decorationRoot;
         // Legacy surface-cover fields remain only for clearing old runtime instances during
         // hot reload. New worlds no longer create this non-interactive grass layer.
@@ -226,8 +227,7 @@ namespace Nyangbingo.World
             var visual = new GameObject($"Catnip_{id}");
             visual.transform.SetParent(decorationRoot, false);
             var renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = FindAnyObjectByType<Nyangbingo.UI.MainGameHudController>()?
-                .BoundItemArtCatalog?.FindSprite(PlayerHealthRecoveryService.CatnipItemId);
+            renderer.sprite = itemArtCatalog?.FindSprite(PlayerHealthRecoveryService.CatnipItemId);
             renderer.flipX = flipX;
             renderer.sortingOrder = 3;
             if (renderer.sprite == null)

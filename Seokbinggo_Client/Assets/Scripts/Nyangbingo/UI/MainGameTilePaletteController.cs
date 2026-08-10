@@ -58,15 +58,15 @@ namespace Nyangbingo.UI
         private readonly List<SlotView> slotViews = new List<SlotView>();
         private readonly List<WorldRangeOverlay> rangeOverlays = new List<WorldRangeOverlay>();
         private readonly List<Vector2> rangePositions = new List<Vector2>();
-        private GameObject paletteRoot;
-        private RectTransform content;
+        [SerializeField] private GameObject paletteRoot;
+        [SerializeField] private RectTransform content;
+        [SerializeField] private Text rangeToggleStatusText;
+        [SerializeField] private Text interactionPromptText;
         private GameShellController shell;
         private Camera worldCamera;
         private Transform playerTransform;
         private MainGameEnvironmentState environmentState;
         private WorldRangeOverlayRenderer rangeOverlayRenderer;
-        private Text rangeToggleStatusText;
-        private Text interactionPromptText;
         private SpriteRenderer foregroundPreview;
         private string selectedItemId = string.Empty;
         private int selectedSlotIndex = -1;
@@ -334,76 +334,12 @@ namespace Nyangbingo.UI
 
         private void BuildPaletteUi()
         {
-            paletteRoot = new GameObject("TilePalette", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
-            paletteRoot.transform.SetParent(transform, false);
-            var rootRect = (RectTransform)paletteRoot.transform;
-            rootRect.anchorMin = rootRect.anchorMax = rootRect.pivot = new Vector2(.5f, 0f);
-            rootRect.anchoredPosition = new Vector2(0f, 5f);
-            rootRect.sizeDelta = new Vector2(PaletteLogicalWidth, PaletteLogicalHeight);
-            var rootImage = paletteRoot.GetComponent<Image>();
-            rootImage.color = new Color(.025f, .04f, .065f, .9f);
-
-            var viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
-            viewportObject.transform.SetParent(paletteRoot.transform, false);
-            var viewport = (RectTransform)viewportObject.transform;
-            viewport.anchorMin = Vector2.zero;
-            viewport.anchorMax = Vector2.one;
-            viewport.offsetMin = new Vector2(3f, 3f);
-            viewport.offsetMax = new Vector2(-3f, -3f);
-
-            var contentObject = new GameObject("Content", typeof(RectTransform), typeof(HorizontalLayoutGroup),
-                typeof(ContentSizeFitter));
-            contentObject.transform.SetParent(viewport, false);
-            content = (RectTransform)contentObject.transform;
-            content.anchorMin = content.anchorMax = content.pivot = new Vector2(0f, .5f);
-            content.anchoredPosition = Vector2.zero;
-            content.sizeDelta = new Vector2(0f, SlotPixelSize);
-            var layout = contentObject.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 2f;
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-            var fitter = contentObject.GetComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
-
-            var scroll = paletteRoot.GetComponent<ScrollRect>();
-            scroll.viewport = viewport;
-            scroll.content = content;
-            scroll.horizontal = true;
-            scroll.vertical = false;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = SlotPixelSize;
-
-            var statusObject = new GameObject("RangeToggleStatus", typeof(RectTransform), typeof(Text));
-            statusObject.transform.SetParent(transform, false);
-            var statusRect = (RectTransform)statusObject.transform;
-            statusRect.anchorMin = statusRect.anchorMax = statusRect.pivot = new Vector2(.5f, 0f);
-            statusRect.anchoredPosition = new Vector2(0f, BottomStatusBaseY);
-            statusRect.sizeDelta = new Vector2(PaletteLogicalWidth, BottomStatusLineHeight);
-            rangeToggleStatusText = statusObject.GetComponent<Text>();
-            rangeToggleStatusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            rangeToggleStatusText.fontSize = 9;
-            rangeToggleStatusText.alignment = TextAnchor.MiddleCenter;
-            rangeToggleStatusText.color = Color.white;
-            rangeToggleStatusText.raycastTarget = false;
-            rangeToggleStatusText.gameObject.SetActive(false);
-
-            var promptObject = new GameObject(
-                "PlacedObjectInteractionPrompt", typeof(RectTransform), typeof(Text));
-            promptObject.transform.SetParent(transform, false);
-            var promptRect = (RectTransform)promptObject.transform;
-            promptRect.anchorMin = promptRect.anchorMax = promptRect.pivot = new Vector2(.5f, 0f);
-            promptRect.anchoredPosition = new Vector2(0f, BottomStatusBaseY);
-            promptRect.sizeDelta = new Vector2(PaletteLogicalWidth, BottomStatusLineHeight);
-            interactionPromptText = promptObject.GetComponent<Text>();
-            interactionPromptText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            interactionPromptText.fontSize = 9;
-            interactionPromptText.alignment = TextAnchor.MiddleCenter;
-            interactionPromptText.color = Color.white;
-            interactionPromptText.raycastTarget = false;
+            if (paletteRoot == null || content == null || rangeToggleStatusText == null ||
+                interactionPromptText == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameTilePaletteController: TilePalette 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             interactionPromptText.text = string.Empty;
             placementRuntime?.BindInteractionStatus(interactionPromptText);
         }
@@ -472,67 +408,23 @@ namespace Nyangbingo.UI
 
         private void RebuildSlots()
         {
-            foreach (var view in slotViews)
-                if (view?.Button != null) Destroy(view.Button.gameObject);
             slotViews.Clear();
             for (var slotIndex = 0; slotIndex < ShortcutSlotCount; slotIndex++)
             {
                 var itemId = slotIndex < paletteItemIds.Count ? paletteItemIds[slotIndex] : string.Empty;
                 var capturedIndex = slotIndex;
-                var slotObject = new GameObject($"Slot_{slotIndex + 1}",
-                    typeof(RectTransform), typeof(Image), typeof(Button));
-                slotObject.transform.SetParent(content, false);
-                ((RectTransform)slotObject.transform).sizeDelta = new Vector2(SlotPixelSize, SlotPixelSize);
-                var background = slotObject.GetComponent<Image>();
-                var button = slotObject.GetComponent<Button>();
-                button.targetGraphic = background;
-                button.onClick.AddListener(() => TrySelectPaletteSlot(capturedIndex));
-
-                var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-                iconObject.transform.SetParent(slotObject.transform, false);
-                var iconRect = (RectTransform)iconObject.transform;
-                iconRect.anchorMin = Vector2.zero;
-                iconRect.anchorMax = Vector2.one;
-                iconRect.offsetMin = new Vector2(3f, 3f);
-                iconRect.offsetMax = new Vector2(-3f, -3f);
-                var icon = iconObject.GetComponent<Image>();
-                icon.preserveAspect = true;
-                icon.raycastTarget = false;
-
-                var amountObject = new GameObject("Amount", typeof(RectTransform), typeof(Text));
-                amountObject.transform.SetParent(slotObject.transform, false);
-                var amountRect = (RectTransform)amountObject.transform;
-                amountRect.anchorMin = Vector2.zero;
-                amountRect.anchorMax = Vector2.one;
-                amountRect.offsetMin = new Vector2(1f, 0f);
-                amountRect.offsetMax = new Vector2(-2f, -1f);
-                var amount = amountObject.GetComponent<Text>();
-                amount.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                amount.fontSize = 8;
-                amount.alignment = TextAnchor.LowerRight;
-                amount.color = Color.white;
-                amount.raycastTarget = false;
-                amount.horizontalOverflow = HorizontalWrapMode.Overflow;
-
-                Text shortcut = null;
-                if (slotIndex < ShortcutSlotCount)
+                var slotTransform = content.Find($"Slot_{slotIndex + 1}");
+                if (slotTransform == null)
                 {
-                    var shortcutObject = new GameObject("Shortcut", typeof(RectTransform), typeof(Text));
-                    shortcutObject.transform.SetParent(slotObject.transform, false);
-                    var shortcutRect = (RectTransform)shortcutObject.transform;
-                    shortcutRect.anchorMin = Vector2.zero;
-                    shortcutRect.anchorMax = Vector2.one;
-                    shortcutRect.offsetMin = new Vector2(2f, 1f);
-                    shortcutRect.offsetMax = new Vector2(-2f, -1f);
-                    shortcut = shortcutObject.GetComponent<Text>();
-                    shortcut.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                    shortcut.fontSize = 7;
-                    shortcut.fontStyle = FontStyle.Bold;
-                    shortcut.alignment = TextAnchor.UpperLeft;
-                    shortcut.color = Color.white;
-                    shortcut.raycastTarget = false;
-                    shortcut.text = (slotIndex + 1).ToString();
+                    Debug.LogError($"[Nyangbingo] MainGameTilePaletteController: Slot_{slotIndex + 1} 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                    continue;
                 }
+                var button = slotTransform.GetComponent<Button>();
+                button.onClick.AddListener(() => TrySelectPaletteSlot(capturedIndex));
+                var icon = slotTransform.Find("Icon").GetComponent<Image>();
+                var amount = slotTransform.Find("Amount").GetComponent<Text>();
+                var shortcutTransform = slotTransform.Find("Shortcut");
+                var shortcut = shortcutTransform != null ? shortcutTransform.GetComponent<Text>() : null;
 
                 slotViews.Add(new SlotView
                 {

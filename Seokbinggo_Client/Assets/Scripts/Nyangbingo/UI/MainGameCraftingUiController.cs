@@ -17,7 +17,7 @@ namespace Nyangbingo.UI
     /// MainGame의 범용 제작·제련 제품 UI. 공식 데이터는 전부 적재하되 crafting_b_ui 정책에 따라
     /// scope B 레시피만 표시 단계에서 제외한다.
     /// </summary>
-    [DefaultExecutionOrder(-60)]
+    [DefaultExecutionOrder(-50)]
     public sealed class MainGameCraftingUiController : MonoBehaviour
     {
         private enum Page { Gathering, Crafting, Equipment, Codex }
@@ -36,14 +36,14 @@ namespace Nyangbingo.UI
         private readonly List<SmeltingDefinition> smeltingRecipes = new List<SmeltingDefinition>();
         private readonly List<ItemDefinition> activeSlotItems = new List<ItemDefinition>();
         private readonly List<EquipmentDefinition> ownedEquipment = new List<EquipmentDefinition>();
-        private GameObject panel;
-        private Text titleText;
-        private Text detailsText;
-        private Text messageText;
-        private ScrollRect detailsScrollRect;
-        private RectTransform detailsViewportRect;
-        private RectTransform detailsScrollbarRect;
-        private GameObject inventoryGridRoot;
+        [SerializeField] private GameObject panel;
+        [SerializeField] private Text titleText;
+        [SerializeField] private Text detailsText;
+        [SerializeField] private Text messageText;
+        [SerializeField] private ScrollRect detailsScrollRect;
+        [SerializeField] private RectTransform detailsViewportRect;
+        [SerializeField] private RectTransform detailsScrollbarRect;
+        [SerializeField] private GameObject inventoryGridRoot;
         private GameObject craftingListRoot;
         private ScrollRect craftingListScrollRect;
         private Button[] craftingListButtons = Array.Empty<Button>();
@@ -52,50 +52,51 @@ namespace Nyangbingo.UI
         private Text[] craftingListOutputCounts = Array.Empty<Text>();
         private Image[][] craftingListIngredientIcons = Array.Empty<Image[]>();
         private Text[][] craftingListIngredientCounts = Array.Empty<Text[]>();
-        private GameObject codexGridRoot;
-        private GameObject storageModeRoot;
-        private readonly Text[] storagePlayerLabels = new Text[Nyangbingo.Inventory.Inventory.SlotCount];
-        private readonly Text[] storageLabels = new Text[JangdokStorageRuntime.SlotCount];
-        private readonly Image[] storagePlayerIcons = new Image[Nyangbingo.Inventory.Inventory.SlotCount];
-        private readonly Image[] storageIcons = new Image[JangdokStorageRuntime.SlotCount];
-        private Text storageLabelText;
-        private Text storageHintText;
+        [SerializeField] private GameObject codexGridRoot;
+        [SerializeField] private GameObject storageModeRoot;
+        [SerializeField] private Text[] storagePlayerLabels = new Text[Nyangbingo.Inventory.Inventory.SlotCount];
+        [SerializeField] private Text[] storageLabels = new Text[JangdokStorageRuntime.SlotCount];
+        [SerializeField] private Image[] storagePlayerIcons = new Image[Nyangbingo.Inventory.Inventory.SlotCount];
+        [SerializeField] private Image[] storageIcons = new Image[JangdokStorageRuntime.SlotCount];
+        [SerializeField] private Text storageLabelText;
+        [SerializeField] private Text storageHintText;
         private string storageObjectId = string.Empty;
         private ChestProgress chestProgress;
         private string chestId = string.Empty;
         private bool HasStorageMode => !string.IsNullOrEmpty(storageObjectId) || chestProgress != null;
-        private readonly Text[] inventoryGridLabels =
+        [SerializeField] private Text[] inventoryGridLabels =
             new Text[Nyangbingo.Inventory.Inventory.SlotCount];
-        private readonly Button[] inventoryGridButtons =
+        [SerializeField] private Button[] inventoryGridButtons =
             new Button[Nyangbingo.Inventory.Inventory.SlotCount];
-        private readonly Image[] inventoryGridIcons =
+        [SerializeField] private Image[] inventoryGridIcons =
             new Image[Nyangbingo.Inventory.Inventory.SlotCount];
-        private GameObject equipmentVisualRoot;
-        private Image equipmentCharacter;
-        private readonly Image[] equipmentSlotBackgrounds = new Image[6];
-        private readonly Button[] equipmentSlotButtons = new Button[6];
-        private readonly Image[] equipmentSlotIcons = new Image[6];
-        private readonly Text[] equipmentSlotFallbackLabels = new Text[6];
-        private readonly Button[] codexCardButtons = new Button[YokaiCodexPresentationModel.ExpectedCardCount];
-        private readonly Text[] codexCardLabels = new Text[YokaiCodexPresentationModel.ExpectedCardCount];
-        private readonly Image[] codexCardPortraits = new Image[YokaiCodexPresentationModel.ExpectedCardCount];
-        private GameObject codexExpandedBackdrop;
-        private Image codexExpandedCardBackground;
-        private Image codexExpandedPortrait;
-        private Text codexExpandedTitle;
-        private Text codexExpandedFrontText;
-        private Text codexExpandedBackText;
-        private Text codexExpandedHintText;
-        private Button previousButton;
-        private Button nextButton;
-        private Button primaryButton;
-        private Button collectButton;
-        private Button debugCompleteButton;
-        private GameObject summonConfirmationRoot;
-        private Text summonConfirmationText;
-        private Text inventoryHintText;
+        [SerializeField] private GameObject equipmentVisualRoot;
+        [SerializeField] private Image equipmentCharacter;
+        [SerializeField] private Image[] equipmentSlotBackgrounds = new Image[6];
+        [SerializeField] private Button[] equipmentSlotButtons = new Button[6];
+        [SerializeField] private Image[] equipmentSlotIcons = new Image[6];
+        [SerializeField] private Text[] equipmentSlotFallbackLabels = new Text[6];
+        [SerializeField] private Button[] codexCardButtons = new Button[YokaiCodexPresentationModel.ExpectedCardCount];
+        [SerializeField] private Text[] codexCardLabels = new Text[YokaiCodexPresentationModel.ExpectedCardCount];
+        [SerializeField] private Image[] codexCardPortraits = new Image[YokaiCodexPresentationModel.ExpectedCardCount];
+        [SerializeField] private GameObject codexExpandedBackdrop;
+        [SerializeField] private Image codexExpandedCardBackground;
+        [SerializeField] private Image codexExpandedPortrait;
+        [SerializeField] private Text codexExpandedTitle;
+        [SerializeField] private Text codexExpandedFrontText;
+        [SerializeField] private Text codexExpandedBackText;
+        [SerializeField] private Text codexExpandedHintText;
+        [SerializeField] private Button previousButton;
+        [SerializeField] private Button nextButton;
+        [SerializeField] private Button primaryButton;
+        [SerializeField] private Button collectButton;
+        [SerializeField] private Button closeButton;
+        [SerializeField] private Button debugCompleteButton;
+        [SerializeField] private GameObject summonConfirmationRoot;
+        [SerializeField] private Text summonConfirmationText;
+        [SerializeField] private Text inventoryHintText;
         private string pendingSummonItemId = string.Empty;
-        private readonly Button[] tabButtons = new Button[4];
+        [SerializeField] private Button[] tabButtons = new Button[4];
         private Page page;
         private int selectedIndex;
         private string message;
@@ -350,124 +351,58 @@ namespace Nyangbingo.UI
 
         private void BuildUi()
         {
-            var uiRoot = MainGameUiResolutionController.ResolveNativeRoot(transform) ?? transform;
-            panel = CreateUiObject("CraftingAndSmeltingPanel", uiRoot, new Vector2(470f, 260f), Vector2.zero);
-            var background = panel.AddComponent<Image>();
-            background.color = new Color(.035f, .05f, .075f, .96f);
-            titleText = CreateText(panel.transform, "Title", 15, TextAnchor.MiddleCenter,
-                new Vector2(450f, 20f), new Vector2(0f, 118f));
-            tabButtons[0] = CreateButton(panel.transform, "GatheringTab", "F1 · 인벤토리",
-                new Vector2(-165f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Gathering));
-            tabButtons[1] = CreateButton(panel.transform, "CraftingTab", "F2 · 제작/제련",
-                new Vector2(-55f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Crafting));
-            tabButtons[2] = CreateButton(panel.transform, "EquipmentTab", "F3 · 장비",
-                new Vector2(55f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Equipment));
-            tabButtons[3] = CreateButton(panel.transform, "CodexTab", "F4 · 도감",
-                new Vector2(165f, 94f), new Vector2(108f, 20f), () => TogglePage(Page.Codex));
+            if (panel == null || titleText == null || tabButtons == null || tabButtons.Length != 4)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: CraftingAndSmeltingPanel 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            tabButtons[0].onClick.AddListener(() => TogglePage(Page.Gathering));
+            tabButtons[1].onClick.AddListener(() => TogglePage(Page.Crafting));
+            tabButtons[2].onClick.AddListener(() => TogglePage(Page.Equipment));
+            tabButtons[3].onClick.AddListener(() => TogglePage(Page.Codex));
             BuildDetailsScrollArea();
             BuildCraftingList();
             BuildInventoryGrid();
             BuildEquipmentVisual();
             BuildStorageUi();
             BuildCodexGrid();
-            messageText = CreateText(panel.transform, "Message", 9, TextAnchor.MiddleCenter,
-                new Vector2(450f, 18f), new Vector2(0f, -68f));
 
-            previousButton = CreateButton(panel.transform, "Previous", "◀ 이전", new Vector2(-165f, -91f),
-                new Vector2(90f, 22f), () => SelectRelative(-1));
-            nextButton = CreateButton(panel.transform, "Next", "다음 ▶", new Vector2(-70f, -91f),
-                new Vector2(90f, 22f), () => SelectRelative(1));
-            primaryButton = CreateButton(panel.transform, "Primary", "제작", new Vector2(110f, -91f),
-                new Vector2(240f, 22f), TryPrimaryAction);
-            debugCompleteButton = CreateButton(panel.transform, "DebugComplete", "TEST · 즉시 완료",
-                new Vector2(-170f, -118f), new Vector2(100f, 20f), TryCompleteCurrentProcessForDebug);
-            debugCompleteButton.GetComponent<Image>().color = new Color(.48f, .29f, .12f, 1f);
-            collectButton = CreateButton(panel.transform, "Collect", "완료품 회수", new Vector2(-52f, -118f),
-                new Vector2(130f, 20f), TrySecondaryAction);
-            CreateButton(panel.transform, "Close", "ESC · 닫기", new Vector2(145f, -118f),
-                new Vector2(150f, 22f), () => SetOpen(false));
+            previousButton.onClick.AddListener(() => SelectRelative(-1));
+            nextButton.onClick.AddListener(() => SelectRelative(1));
+            primaryButton.onClick.AddListener(TryPrimaryAction);
+            debugCompleteButton.onClick.AddListener(TryCompleteCurrentProcessForDebug);
+            collectButton.onClick.AddListener(TrySecondaryAction);
+            closeButton.onClick.AddListener(() => SetOpen(false));
             BuildCodexExpandedView();
             BuildSummonConfirmation();
         }
 
         private void BuildSummonConfirmation()
         {
-            inventoryHintText = CreateText(panel.transform, "InventoryUseHint", 8, TextAnchor.MiddleCenter,
-                new Vector2(300f, 12f), new Vector2(0f, -76f));
+            if (inventoryHintText == null || summonConfirmationRoot == null || summonConfirmationText == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: SummonConfirmation 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             inventoryHintText.gameObject.SetActive(false);
-
-            summonConfirmationRoot = CreateUiObject("SummonConfirmation", panel.transform,
-                new Vector2(470f, 260f), Vector2.zero);
-            var backdrop = summonConfirmationRoot.AddComponent<Image>();
-            backdrop.color = new Color(.01f, .015f, .025f, .82f);
-            var card = CreateUiObject("Card", summonConfirmationRoot.transform,
-                new Vector2(250f, 94f), Vector2.zero);
-            var cardImage = card.AddComponent<Image>();
-            cardImage.color = new Color(.055f, .075f, .105f, 1f);
-            summonConfirmationText = CreateText(card.transform, "Message", 11, TextAnchor.MiddleCenter,
-                new Vector2(224f, 44f), new Vector2(0f, 18f));
-            summonConfirmationText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            summonConfirmationText.verticalOverflow = VerticalWrapMode.Truncate;
-            CreateButton(card.transform, "ConfirmSummon", "E · 소환", new Vector2(-55f, -27f),
-                new Vector2(96f, 22f), ConfirmSummonItemUse);
-            CreateButton(card.transform, "CancelSummon", "취소", new Vector2(55f, -27f),
-                new Vector2(96f, 22f), CancelSummonConfirmation);
+            var card = summonConfirmationRoot.transform.Find("Card");
+            card.Find("ConfirmSummon").GetComponent<Button>().onClick.AddListener(ConfirmSummonItemUse);
+            card.Find("CancelSummon").GetComponent<Button>().onClick.AddListener(CancelSummonConfirmation);
             summonConfirmationRoot.SetActive(false);
         }
 
         private void BuildDetailsScrollArea()
         {
-            var viewportObject = CreateUiObject("DetailsViewport", panel.transform,
-                new Vector2(438f, 134f), new Vector2(-5f, 11f));
-            detailsViewportRect = (RectTransform)viewportObject.transform;
-            var viewportRaycast = viewportObject.AddComponent<Image>();
-            viewportRaycast.color = new Color(0f, 0f, 0f, 0f);
-            viewportObject.AddComponent<RectMask2D>();
-
-            var contentObject = CreateUiObject("Details", viewportObject.transform, Vector2.zero, Vector2.zero);
-            var contentRect = (RectTransform)contentObject.transform;
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(.5f, 1f);
-            contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = Vector2.zero;
-
-            detailsText = contentObject.AddComponent<Text>();
-            detailsText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            detailsText.fontSize = 11;
-            detailsText.lineSpacing = .95f;
-            detailsText.alignment = TextAnchor.UpperLeft;
-            detailsText.color = new Color(.93f, .96f, 1f);
-            detailsText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            detailsText.verticalOverflow = VerticalWrapMode.Overflow;
-
-            var fitter = contentObject.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            detailsScrollRect = viewportObject.AddComponent<ScrollRect>();
-            detailsScrollRect.content = contentRect;
-            detailsScrollRect.viewport = detailsViewportRect;
-            detailsScrollRect.horizontal = false;
-            detailsScrollRect.vertical = true;
-            detailsScrollRect.movementType = ScrollRect.MovementType.Clamped;
-            detailsScrollRect.scrollSensitivity = 14f;
-
-            var scrollbarObject = CreateUiObject("DetailsScrollbar", panel.transform,
-                new Vector2(6f, 134f), new Vector2(222f, 11f));
-            detailsScrollbarRect = (RectTransform)scrollbarObject.transform;
-            var scrollbarBackground = scrollbarObject.AddComponent<Image>();
-            scrollbarBackground.color = new Color(.08f, .12f, .17f, .9f);
-            var scrollbar = scrollbarObject.AddComponent<Scrollbar>();
-            scrollbar.direction = Scrollbar.Direction.BottomToTop;
-
-            var handleObject = CreateUiObject("Handle", scrollbarObject.transform,
-                new Vector2(5f, 36f), Vector2.zero);
-            var handleRect = (RectTransform)handleObject.transform;
-            var handleImage = handleObject.AddComponent<Image>();
-            handleImage.color = new Color(.35f, .55f, .72f, 1f);
+            if (detailsViewportRect == null || detailsText == null || detailsScrollRect == null ||
+                detailsScrollbarRect == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: 상세설명 스크롤 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            var scrollbar = detailsScrollbarRect.GetComponent<Scrollbar>();
+            var handleRect = detailsScrollbarRect.Find("Handle") as RectTransform;
             scrollbar.handleRect = handleRect;
-            scrollbar.targetGraphic = handleImage;
+            scrollbar.targetGraphic = handleRect.GetComponent<Image>();
             detailsScrollRect.verticalScrollbar = scrollbar;
             detailsScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
         }
@@ -570,179 +505,58 @@ namespace Nyangbingo.UI
 
         private void BuildInventoryGrid()
         {
-            inventoryGridRoot = CreateUiObject("InventoryGrid10x5", panel.transform,
-                new Vector2(297f, 147f), new Vector2(0f, 3f));
-            var grid = inventoryGridRoot.AddComponent<GridLayoutGroup>();
-            grid.padding = new RectOffset();
-            grid.cellSize = Vector2.one * InventorySlotPixelSize;
-            grid.spacing = Vector2.one * 3f;
-            grid.childAlignment = TextAnchor.UpperLeft;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = InventoryGridColumns;
-
-            for (var index = 0; index < inventoryGridLabels.Length; index++)
+            if (inventoryGridRoot == null || inventoryGridButtons == null ||
+                inventoryGridButtons.Length != Nyangbingo.Inventory.Inventory.SlotCount)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: InventoryGrid10x5 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            for (var index = 0; index < inventoryGridButtons.Length; index++)
             {
                 var capturedIndex = index;
-                var button = CreateButton(inventoryGridRoot.transform,
-                    $"InventorySlot_{index + 1:00}", string.Empty, Vector2.zero, grid.cellSize,
-                    () => SelectInventorySlot(capturedIndex), false);
-                inventoryGridButtons[index] = button;
-                inventoryGridLabels[index] = button.GetComponentInChildren<Text>();
-                inventoryGridLabels[index].fontSize = 8;
-                inventoryGridLabels[index].fontStyle = FontStyle.Bold;
-                inventoryGridLabels[index].alignment = TextAnchor.LowerRight;
-                inventoryGridLabels[index].horizontalOverflow = HorizontalWrapMode.Overflow;
-                inventoryGridLabels[index].verticalOverflow = VerticalWrapMode.Truncate;
-                var labelRect = inventoryGridLabels[index].rectTransform;
-                labelRect.offsetMin = new Vector2(2f, 1f);
-                labelRect.offsetMax = new Vector2(-2f, -1f);
-                var shadow = inventoryGridLabels[index].gameObject.AddComponent<Shadow>();
-                shadow.effectColor = new Color(0f, 0f, 0f, .9f);
-                shadow.effectDistance = Vector2.one;
-
-                var iconObject = CreateUiObject("Icon", button.transform, new Vector2(19f, 19f), Vector2.zero);
-                var icon = iconObject.AddComponent<Image>();
-                icon.preserveAspect = true;
-                icon.raycastTarget = false;
-                icon.enabled = false;
-                iconObject.transform.SetAsFirstSibling();
-                inventoryGridIcons[index] = icon;
-
-                if (index < InventoryHotbarSlotCount)
-                {
-                    var shortcut = CreateText(button.transform, "HotbarShortcut", 7,
-                        TextAnchor.UpperLeft, grid.cellSize, Vector2.zero);
-                    shortcut.text = (index + 1).ToString();
-                    shortcut.fontStyle = FontStyle.Bold;
-                    shortcut.color = Color.white;
-                    shortcut.raycastTarget = false;
-                    shortcut.horizontalOverflow = HorizontalWrapMode.Overflow;
-                    var shortcutRect = shortcut.rectTransform;
-                    shortcutRect.anchorMin = Vector2.zero;
-                    shortcutRect.anchorMax = Vector2.one;
-                    shortcutRect.offsetMin = new Vector2(2f, 1f);
-                    shortcutRect.offsetMax = new Vector2(-2f, -1f);
-                    var shortcutShadow = shortcut.gameObject.AddComponent<Shadow>();
-                    shortcutShadow.effectColor = new Color(0f, 0f, 0f, .9f);
-                    shortcutShadow.effectDistance = Vector2.one;
-                }
+                inventoryGridButtons[index].onClick.AddListener(() => SelectInventorySlot(capturedIndex));
             }
-
             inventoryGridRoot.SetActive(false);
         }
 
         private void BuildEquipmentVisual()
         {
-            equipmentVisualRoot = CreateUiObject("EquipmentVisual", panel.transform,
-                new Vector2(142f, 142f), new Vector2(-145f, 4f));
-            equipmentCharacter = CreateArtImage(equipmentVisualRoot.transform, "Character",
-                gameplayArtCatalog?.EquipmentCharacter, Vector2.zero, new Vector2(36f, 60f));
-            var positions = new[]
+            if (equipmentVisualRoot == null || equipmentSlotButtons == null || equipmentSlotButtons.Length != 6)
             {
-                new Vector2(48f, 43f), new Vector2(-48f, 43f), new Vector2(-48f, 0f),
-                new Vector2(-48f, -43f), new Vector2(48f, 0f), new Vector2(48f, -43f)
-            };
-            for (var index = 0; index < equipmentSlotBackgrounds.Length; index++)
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: EquipmentVisual 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            equipmentCharacter.sprite = gameplayArtCatalog?.EquipmentCharacter;
+            equipmentCharacter.enabled = equipmentCharacter.sprite != null;
+            for (var index = 0; index < equipmentSlotButtons.Length; index++)
             {
-                var slot = CreateUiObject($"EquipmentSlot_{index}", equipmentVisualRoot.transform,
-                    new Vector2(34f, 34f), positions[index]);
-                var background = slot.AddComponent<Image>();
-                background.raycastTarget = true;
-                equipmentSlotBackgrounds[index] = background;
-                var button = slot.AddComponent<Button>();
-                button.targetGraphic = background;
-                button.transition = Selectable.Transition.None;
                 var capturedIndex = index;
-                button.onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex));
-                equipmentSlotButtons[index] = button;
-                equipmentSlotIcons[index] = CreateArtImage(slot.transform, "Icon", null,
-                    Vector2.zero, new Vector2(22f, 22f));
-                equipmentSlotIcons[index].enabled = false;
-                var fallback = CreateText(slot.transform, "FallbackLabel", 8, TextAnchor.MiddleCenter,
-                    new Vector2(24f, 24f), Vector2.zero);
-                fallback.fontStyle = FontStyle.Bold;
-                fallback.raycastTarget = false;
-                fallback.enabled = false;
-                var shadow = fallback.gameObject.AddComponent<Shadow>();
-                shadow.effectColor = new Color(0f, 0f, 0f, .9f);
-                shadow.effectDistance = Vector2.one;
-                equipmentSlotFallbackLabels[index] = fallback;
+                equipmentSlotButtons[index].onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex));
             }
             equipmentVisualRoot.SetActive(false);
         }
 
         private void BuildStorageUi()
         {
-            storageModeRoot = CreateUiObject("JangdokStorageMode", panel.transform,
-                new Vector2(450f, 206f), new Vector2(0f, -2f));
-            storageLabelText = CreateText(storageModeRoot.transform, "StorageLabel", 9, TextAnchor.MiddleCenter,
-                new Vector2(175f, 16f), new Vector2(-120f, 75f));
+            if (storageModeRoot == null || storageLabels == null || storagePlayerLabels == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: JangdokStorageMode 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             storageLabelText.text = "장독 창고 · 40슬롯";
-            CreateText(storageModeRoot.transform, "PlayerLabel", 9, TextAnchor.MiddleCenter,
-                new Vector2(215f, 16f), new Vector2(100f, 75f)).text = "플레이어 · 50슬롯";
 
-            BuildTransferGrid(storageModeRoot.transform, "StorageGrid", new Vector2(-120f, 5f),
-                8, 5, storageLabels, storageIcons, TransferStorageSlot,
-                gameplayArtCatalog?.JangdokStorageGrid, true);
-            BuildTransferGrid(storageModeRoot.transform, "PlayerGrid", new Vector2(100f, 5f),
-                10, 5, storagePlayerLabels, storagePlayerIcons, TransferPlayerSlot,
-                null, false);
-            storageHintText = CreateText(storageModeRoot.transform, "Hint", 8, TextAnchor.MiddleCenter,
-                new Vector2(430f, 16f), new Vector2(0f, -65f));
+            WireTransferGrid(storageLabels, TransferStorageSlot);
+            WireTransferGrid(storagePlayerLabels, TransferPlayerSlot);
             storageHintText.text = "슬롯 클릭: 묶음 이동  |  E 또는 ESC: 닫기";
             storageModeRoot.SetActive(false);
         }
 
-        private void BuildTransferGrid(Transform parent, string name, Vector2 position, int columns,
-            int rows, Text[] labels, Image[] icons, Action<int> clicked, Sprite gridArt,
-            bool transparentButtons)
+        private static void WireTransferGrid(Text[] labels, Action<int> clicked)
         {
-            const float scale = 1.5f;
-            const float cellSize = 13f * scale;
-            const float spacing = 1f * scale;
-            const int padding = 3;
-            var size = new Vector2(columns * cellSize + (columns - 1) * spacing + padding * 2f,
-                rows * cellSize + (rows - 1) * spacing + padding * 2f);
-            var root = CreateUiObject(name, parent, size, position);
-            var background = root.AddComponent<Image>();
-            background.sprite = gridArt;
-            background.color = gridArt != null ? Color.white : new Color(.1f, .1f, .14f, 1f);
-            background.raycastTarget = false;
-            var grid = root.AddComponent<GridLayoutGroup>();
-            grid.padding = new RectOffset(padding, padding, padding, padding);
-            grid.cellSize = Vector2.one * cellSize;
-            grid.spacing = Vector2.one * spacing;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = columns;
-            grid.childAlignment = TextAnchor.UpperLeft;
             for (var index = 0; index < labels.Length; index++)
             {
                 var captured = index;
-                var button = CreateButton(root.transform, $"Slot_{index + 1:00}", string.Empty,
-                    Vector2.zero, grid.cellSize, () => clicked(captured), false);
-                var label = button.GetComponentInChildren<Text>();
-                label.fontSize = 7;
-                label.fontStyle = FontStyle.Bold;
-                label.alignment = TextAnchor.LowerRight;
-                label.horizontalOverflow = HorizontalWrapMode.Overflow;
-                label.verticalOverflow = VerticalWrapMode.Overflow;
-                label.raycastTarget = false;
-                label.rectTransform.offsetMin = Vector2.one;
-                label.rectTransform.offsetMax = -Vector2.one;
-                labels[index] = label;
-                var buttonImage = button.targetGraphic as Image;
-                if (buttonImage != null)
-                {
-                    buttonImage.sprite = transparentButtons ? null : gameplayArtCatalog?.InventorySlot;
-                    buttonImage.color = transparentButtons ? Color.clear : Color.white;
-                }
-                var iconObject = CreateUiObject("Icon", button.transform, Vector2.one * 15f, Vector2.zero);
-                var icon = iconObject.AddComponent<Image>();
-                icon.preserveAspect = true;
-                icon.raycastTarget = false;
-                icon.enabled = false;
-                iconObject.transform.SetAsFirstSibling();
-                icons[index] = icon;
+                labels[index].transform.parent.GetComponent<Button>().onClick.AddListener(() => clicked(captured));
             }
         }
 
@@ -806,104 +620,31 @@ namespace Nyangbingo.UI
 
         private void BuildCodexGrid()
         {
-            codexGridRoot = CreateUiObject("IntegratedCodexViewport", panel.transform,
-                new Vector2(244f, 184f), new Vector2(0f, -14f));
-            var viewport = (RectTransform)codexGridRoot.transform;
-            var viewportImage = codexGridRoot.AddComponent<Image>();
-            viewportImage.color = new Color(.025f, .035f, .045f, .72f);
-            codexGridRoot.AddComponent<RectMask2D>();
-
-            var gridObject = CreateUiObject("CardGrid", codexGridRoot.transform, Vector2.zero, Vector2.zero);
-            var gridRect = (RectTransform)gridObject.transform;
-            gridRect.anchorMin = gridRect.anchorMax = gridRect.pivot = new Vector2(.5f, 1f);
-            gridRect.anchoredPosition = Vector2.zero;
-            var rows = Mathf.CeilToInt((float)YokaiCodexPresentationModel.ExpectedCardCount /
-                                       YokaiCodexPresentationModel.GridColumns);
-            const float spacing = 6f;
-            gridRect.sizeDelta = new Vector2(
-                YokaiCodexPresentationModel.GridColumns * YokaiCodexPresentationModel.GridCardSize.x +
-                (YokaiCodexPresentationModel.GridColumns - 1) * spacing,
-                rows * YokaiCodexPresentationModel.GridCardSize.y + (rows - 1) * spacing);
-            var grid = gridObject.AddComponent<GridLayoutGroup>();
-            grid.padding = new RectOffset();
-            grid.cellSize = YokaiCodexPresentationModel.GridCardSize;
-            grid.spacing = Vector2.one * spacing;
-            grid.childAlignment = TextAnchor.UpperLeft;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = YokaiCodexPresentationModel.GridColumns;
-
-            var scroll = codexGridRoot.AddComponent<ScrollRect>();
-            scroll.content = gridRect;
-            scroll.viewport = viewport;
-            scroll.horizontal = false;
-            scroll.vertical = true;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 18f;
-
+            if (codexGridRoot == null || codexCardButtons == null ||
+                codexCardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: IntegratedCodexViewport 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
             for (var index = 0; index < codexCardButtons.Length; index++)
             {
                 var capturedIndex = index;
-                var button = CreateButton(gridObject.transform, $"CodexCard_{index + 1:00}", "?",
-                    Vector2.zero, grid.cellSize, () => SelectCodexCard(capturedIndex), false);
-                RuntimeUiButtonArt.ApplyCodexCard(button, gameplayArtCatalog);
-                var label = button.GetComponentInChildren<Text>();
-                label.fontSize = 8;
-                label.horizontalOverflow = HorizontalWrapMode.Wrap;
-                label.verticalOverflow = VerticalWrapMode.Truncate;
-                var labelRect = label.rectTransform;
-                labelRect.anchorMin = new Vector2(0f, 0f);
-                labelRect.anchorMax = new Vector2(1f, .3f);
-                labelRect.offsetMin = new Vector2(3f, 2f);
-                labelRect.offsetMax = new Vector2(-3f, -1f);
-
-                var portraitObject = CreateUiObject("Portrait", button.transform, Vector2.zero, Vector2.zero);
-                var portraitRect = (RectTransform)portraitObject.transform;
-                portraitRect.anchorMin = new Vector2(.08f, .31f);
-                portraitRect.anchorMax = new Vector2(.92f, .94f);
-                portraitRect.offsetMin = portraitRect.offsetMax = Vector2.zero;
-                var portrait = portraitObject.AddComponent<Image>();
-                portrait.preserveAspect = true;
-                portrait.raycastTarget = false;
-                labelRect.SetAsLastSibling();
-                codexCardButtons[index] = button;
-                codexCardLabels[index] = label;
-                codexCardPortraits[index] = portrait;
+                RuntimeUiButtonArt.ApplyCodexCard(codexCardButtons[index], gameplayArtCatalog);
+                codexCardButtons[index].onClick.AddListener(() => SelectCodexCard(capturedIndex));
             }
             codexGridRoot.SetActive(false);
         }
 
         private void BuildCodexExpandedView()
         {
-            codexExpandedBackdrop = CreateUiObject("CodexExpandedBackdrop", panel.transform,
-                new Vector2(470f, 260f), Vector2.zero);
-            var backdropImage = codexExpandedBackdrop.AddComponent<Image>();
-            backdropImage.color = new Color(.01f, .015f, .02f, .9f);
-            var backdropButton = codexExpandedBackdrop.AddComponent<Button>();
-            backdropButton.targetGraphic = backdropImage;
-            backdropButton.onClick.AddListener(HandleCodexExpandedBackdropClicked);
-
-            var cardObject = CreateUiObject("CodexExpandedCard", codexExpandedBackdrop.transform,
-                YokaiCodexPresentationModel.EnlargedCardSize, Vector2.zero);
-            codexExpandedCardBackground = cardObject.AddComponent<Image>();
+            if (codexExpandedBackdrop == null || codexExpandedCardBackground == null)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: CodexExpandedBackdrop 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            codexExpandedBackdrop.GetComponent<Button>().onClick.AddListener(HandleCodexExpandedBackdropClicked);
             RuntimeUiButtonArt.ApplyCodexCard(codexExpandedCardBackground, gameplayArtCatalog);
-            var cardButton = cardObject.AddComponent<Button>();
-            cardButton.targetGraphic = codexExpandedCardBackground;
-            cardButton.onClick.AddListener(HandleCodexExpandedCardClicked);
-
-            codexExpandedTitle = CreateText(cardObject.transform, "Title", 15, TextAnchor.MiddleCenter,
-                new Vector2(140f, 18f), new Vector2(0f, 86f));
-            var portraitObject = CreateUiObject("Portrait", cardObject.transform,
-                new Vector2(116f, 112f), new Vector2(0f, 16f));
-            codexExpandedPortrait = portraitObject.AddComponent<Image>();
-            codexExpandedPortrait.preserveAspect = true;
-            codexExpandedPortrait.raycastTarget = false;
-            codexExpandedFrontText = CreateText(cardObject.transform, "Front", 10, TextAnchor.UpperCenter,
-                new Vector2(140f, 40f), new Vector2(0f, -61f));
-            codexExpandedBackText = CreateText(cardObject.transform, "Back", 10, TextAnchor.UpperLeft,
-                new Vector2(140f, 168f), new Vector2(0f, -8f));
-            codexExpandedHintText = CreateText(cardObject.transform, "Hint", 8, TextAnchor.MiddleCenter,
-                new Vector2(142f, 14f), new Vector2(0f, -113f));
-            codexExpandedHintText.color = new Color(.78f, .83f, .86f, 1f);
+            codexExpandedCardBackground.GetComponent<Button>().onClick.AddListener(HandleCodexExpandedCardClicked);
             codexExpandedBackdrop.SetActive(false);
         }
 

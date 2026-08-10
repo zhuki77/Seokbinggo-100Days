@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Nyangbingo.Audio;
 using Nyangbingo.Data;
 using Nyangbingo.Save;
@@ -5,77 +7,41 @@ using Nyangbingo.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// <summary>제품 타이틀 씬(월드 없음)을 생성하고 빌드 첫 씬으로 등록한다.</summary>
+/// <summary>타이틀 화면 전용 Title.unity를 재현 가능하게 생성하고 필수 배선을 검증한다.</summary>
 public static class NyangbingoTitleSceneCreator
 {
-    private const string ScenePath = "Assets/Scenes/Title.unity";
+    private const string ScenePath = NyangbingoSceneBuildSettings.TitleScenePath;
+    private const string CharacterArtCatalogPath = "Assets/Art/Characters/CharacterArtCatalog.asset";
     private const string EnvironmentArtCatalogPath = "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset";
     private const string GameplayArtCatalogPath = "Assets/Art/Gameplay/GameplayArtCatalog.asset";
-    private const string CharacterArtCatalogPath = "Assets/Art/Characters/CharacterArtCatalog.asset";
 
-    [InitializeOnLoadMethod]
-    private static void EnsureTitleSceneOnLoad()
-    {
-        EditorApplication.delayCall += () =>
-        {
-            EnsureBuildSettingsQuiet();
-            if (!System.IO.File.Exists(ScenePath))
-            {
-                CreateOrUpdate();
-                return;
-            }
-
-            var sceneText = System.IO.File.ReadAllText(ScenePath);
-            if (sceneText.IndexOf("TitleShellUiController", System.StringComparison.Ordinal) < 0 &&
-                sceneText.IndexOf("TitleBootstrap", System.StringComparison.Ordinal) < 0)
-                CreateOrUpdate();
-        };
-    }
-
-    [MenuItem("Nyangbingo/Main Game/Create or Update Title Scene")]
+    [MenuItem("Nyangbingo/Title/Create or Update Title Scene")]
     public static void CreateOrUpdate()
     {
-        var environmentArt = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentArtCatalogPath);
-        var gameplayArt = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
-        var characterArt = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(CharacterArtCatalogPath);
-        if (environmentArt == null)
+        var characterArtCatalog = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(CharacterArtCatalogPath);
+        var environmentArtCatalog = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentArtCatalogPath);
+        var gameplayArtCatalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+        if (environmentArtCatalog == null || gameplayArtCatalog == null)
         {
-            Debug.LogError("[Nyangbingo] Title 씬 생성 실패: EnvironmentArtCatalog를 찾을 수 없습니다.");
+            Debug.LogError("[Nyangbingo] Title 씬 생성 실패: EnvironmentArtCatalog 또는 GameplayArtCatalog " +
+                           "에셋을 찾을 수 없습니다. 기존 Title 씬은 덮어쓰지 않습니다.");
             return;
         }
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        CreateCamera();
-        CreateTitleShell(environmentArt, gameplayArt, characterArt);
-        EditorSceneManager.SaveScene(scene, ScenePath);
-        EnsureBuildSettings();
-        AssetDatabase.SaveAssets();
-        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        Debug.Log("[Nyangbingo] Title 씬 생성/갱신 완료: " + ScenePath);
-    }
 
-    private static void CreateCamera()
-    {
         var cameraObject = new GameObject("Main Camera");
-        var camera = cameraObject.AddComponent<Camera>();
-        camera.clearFlags = CameraClearFlags.SolidColor;
-        camera.backgroundColor = new Color(.02f, .035f, .05f, 1f);
-        camera.orthographic = true;
-        camera.orthographicSize = 5f;
         cameraObject.tag = "MainCamera";
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.orthographic = true;
+        camera.backgroundColor = new Color(.02f, .035f, .05f, 1f);
+        camera.clearFlags = CameraClearFlags.SolidColor;
         cameraObject.AddComponent<AudioListener>();
-    }
-
-    private static void CreateTitleShell(EnvironmentArtCatalog environmentArt,
-        GameplayArtCatalog gameplayArt, CharacterArtCatalog characterArt)
-    {
-        var root = new GameObject("TitleBootstrap");
-        var saveManager = root.AddComponent<SaveManager>();
-        var audioService = root.AddComponent<NyangbingoAudioService>();
 
         var eventSystemObject = new GameObject("EventSystem");
         eventSystemObject.AddComponent<EventSystem>();
@@ -88,22 +54,28 @@ public static class NyangbingoTitleSceneCreator
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         canvasObject.AddComponent<GraphicRaycaster>();
+        canvasObject.AddComponent<MainGameUiResolutionController>();
 
-        var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel",
-            new Color(.02f, .035f, .05f, 1f));
-        // 좌표는 구 MainGame 타이틀 × TitleChromeScale(3).
-        CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(-336f, 264f),
-            new Vector2(540f, 90f), 60);
+        var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel", new Color(.02f, .035f, .05f, 1f));
+        CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(0f, 180f),
+            new Vector2(620f, 80f), 48);
         var titleContinue = CreateMenuButton(titlePanel.transform, "Continue", "이어하기",
-            new Vector2(-336f, 51f), new Vector2(450f, 81f));
+            new Vector2(0f, 60f), new Vector2(300f, 58f));
         var titleNew = CreateMenuButton(titlePanel.transform, "NewGame", "새 게임",
-            new Vector2(-336f, -51f), new Vector2(450f, 81f));
+            new Vector2(0f, -10f), new Vector2(300f, 58f));
         var titleQuit = CreateMenuButton(titlePanel.transform, "Quit", "게임 종료",
-            new Vector2(-336f, -153f), new Vector2(450f, 81f));
-        var statusText = CreateMenuText(titlePanel.transform, "Status", "", new Vector2(-336f, -330f),
-            new Vector2(840f, 84f), 42);
+            new Vector2(0f, -80f), new Vector2(300f, 58f));
 
-        var confirmationPanel = CreateOverlayPanel(canvasObject.transform, "ConfirmationPanel",
+        var demoButtons = new List<Button>();
+        for (var index = 0; index < GameShellController.DemoSaveDays.Length; index++)
+        {
+            var day = GameShellController.DemoSaveDays[index];
+            var demoButton = CreateMenuButton(titlePanel.transform, $"DemoSaveDay{day}", $"{day}일차 데모",
+                new Vector2(-648f + index * 200f, -328f), new Vector2(184f, 60f));
+            demoButtons.Add(demoButton);
+        }
+
+        var confirmationPanel = CreateOverlayPanel(titlePanel.transform, "ConfirmationPanel",
             new Color(.06f, .04f, .05f, 1f));
         var confirmationText = CreateMenuText(confirmationPanel.transform, "Message", "확인하시겠습니까?",
             new Vector2(0f, 70f), new Vector2(720f, 120f), 26);
@@ -111,41 +83,75 @@ public static class NyangbingoTitleSceneCreator
             new Vector2(-110f, -65f), new Vector2(190f, 52f));
         var cancelButton = CreateMenuButton(confirmationPanel.transform, "Cancel", "취소",
             new Vector2(110f, -65f), new Vector2(190f, 52f));
-        confirmationPanel.SetActive(false);
 
-        var shell = canvasObject.AddComponent<GameShellController>();
-        shell.ConfigureViews(titlePanel, null, null, null, confirmationPanel);
-        var titleShell = canvasObject.AddComponent<TitleShellUiController>();
-        titleShell.ConfigureForScene(shell, saveManager, audioService, titleContinue, titleNew, titleQuit,
-            confirmButton, cancelButton, confirmationText, statusText, environmentArt, gameplayArt, characterArt);
+        var statusText = CreateMenuText(titlePanel.transform, "Status", "", new Vector2(0f, -140f),
+            new Vector2(760f, 48f), 20);
 
-        EditorUtility.SetDirty(shell);
-        EditorUtility.SetDirty(titleShell);
+        var saveManager = canvasObject.AddComponent<SaveManager>();
+        var audioService = canvasObject.AddComponent<NyangbingoAudioService>();
+        ConfigureAudioMixer(audioService);
+
+        var shell = canvasObject.AddComponent<TitleShellController>();
+        var shellUi = canvasObject.AddComponent<TitleUiController>();
+        shellUi.ConfigureForScene(shell, saveManager, audioService, titleContinue, titleNew, titleQuit,
+            demoButtons, confirmationPanel, confirmButton, cancelButton, confirmationText, statusText,
+            environmentArtCatalog, gameplayArtCatalog, characterArtCatalog);
+
         EditorUtility.SetDirty(saveManager);
         EditorUtility.SetDirty(audioService);
+        EditorUtility.SetDirty(shell);
+        EditorUtility.SetDirty(shellUi);
+
+        EditorSceneManager.SaveScene(scene, ScenePath);
+        NyangbingoSceneBuildSettings.SyncBuildSettings();
+        AssetDatabase.SaveAssets();
+        EditorApplication.delayCall += Validate;
+        Selection.activeGameObject = canvasObject;
     }
 
-    private static void EnsureBuildSettings()
+    [MenuItem("Nyangbingo/Title/Validate Title Scene")]
+    public static void Validate()
     {
-        EnsureBuildSettingsQuiet();
-        Debug.Log("[Nyangbingo] Build settings: Title → MainGame.");
+        var scene = SceneManager.GetActiveScene().path == ScenePath
+            ? SceneManager.GetActiveScene()
+            : EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+        var shell = Object.FindAnyObjectByType<TitleShellController>();
+        var shellUi = Object.FindAnyObjectByType<TitleUiController>();
+        var eventSystem = Object.FindAnyObjectByType<EventSystem>();
+        var camera = Camera.main;
+        var buildScene = EditorBuildSettings.scenes.FirstOrDefault(entry => entry.path == ScenePath);
+
+        var missingBindings = new List<string>();
+        void Require(bool condition, string name) { if (!condition) missingBindings.Add(name); }
+        Require(scene.IsValid(), "scene");
+        Require(shell != null, "TitleShellController");
+        Require(shellUi != null, "TitleUiController");
+        Require(eventSystem != null, "EventSystem");
+        Require(camera != null, "Main Camera");
+        Require(buildScene != null && buildScene.enabled, "Build Settings");
+
+        if (missingBindings.Count == 0)
+            Debug.Log("[Nyangbingo] Title 씬 검증 완료: TitleShellController, TitleUiController, " +
+                      "EventSystem, Main Camera, Build Settings 배선 정상.");
+        else
+            Debug.LogError("[Nyangbingo] Title 씬 검증 실패: 누락 Binding=" +
+                           $"[{string.Join(", ", missingBindings)}]. Create or Update Title Scene을 다시 실행하세요.");
     }
 
-    private static void EnsureBuildSettingsQuiet()
+    private static void ConfigureAudioMixer(NyangbingoAudioService audioService)
     {
-        const string mainPath = "Assets/Scenes/MainGame.unity";
-        var ordered = new System.Collections.Generic.List<EditorBuildSettingsScene>
-        {
-            new EditorBuildSettingsScene(ScenePath, true),
-            new EditorBuildSettingsScene(mainPath, true)
-        };
-        foreach (var entry in EditorBuildSettings.scenes)
-        {
-            if (entry.path == ScenePath || entry.path == mainPath) continue;
-            ordered.Add(entry);
-        }
-
-        EditorBuildSettings.scenes = ordered.ToArray();
+        var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>(NyangbingoAudioMixerIntegrator.MixerPath);
+        if (mixer == null || audioService == null) return;
+        var bgm = mixer.FindMatchingGroups(NyangbingoAudioMixerIntegrator.BgmGroupName)
+            .FirstOrDefault(group => group.name == NyangbingoAudioMixerIntegrator.BgmGroupName);
+        var sfx = mixer.FindMatchingGroups(NyangbingoAudioMixerIntegrator.SfxGroupName)
+            .FirstOrDefault(group => group.name == NyangbingoAudioMixerIntegrator.SfxGroupName);
+        var serialized = new SerializedObject(audioService);
+        serialized.FindProperty("audioMixer").objectReferenceValue = mixer;
+        serialized.FindProperty("bgmOutput").objectReferenceValue = bgm;
+        serialized.FindProperty("sfxOutput").objectReferenceValue = sfx;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static GameObject CreateOverlayPanel(Transform parent, string name, Color color)
@@ -167,10 +173,7 @@ public static class NyangbingoTitleSceneCreator
         var textObject = new GameObject(name, typeof(RectTransform));
         textObject.transform.SetParent(parent, false);
         var text = textObject.AddComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = fontSize;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = new Color(.94f, .96f, 1f, 1f);
+        ConfigureText(text, TextAnchor.MiddleCenter, fontSize);
         text.text = value;
         var rect = text.rectTransform;
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
@@ -184,15 +187,33 @@ public static class NyangbingoTitleSceneCreator
     {
         var buttonObject = new GameObject(name, typeof(RectTransform));
         buttonObject.transform.SetParent(parent, false);
-        var image = buttonObject.AddComponent<Image>();
-        image.color = new Color(.14f, .2f, .28f, .96f);
-        var button = buttonObject.AddComponent<Button>();
-        button.targetGraphic = image;
         var rect = buttonObject.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
         rect.anchoredPosition = position;
         rect.sizeDelta = size;
-        CreateMenuText(buttonObject.transform, "Label", label, Vector2.zero, size, 22);
+        var image = buttonObject.AddComponent<Image>();
+        image.color = new Color(.17f, .22f, .28f, 1f);
+        var button = buttonObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        var labelObject = new GameObject("Label", typeof(RectTransform));
+        labelObject.transform.SetParent(buttonObject.transform, false);
+        var text = labelObject.AddComponent<Text>();
+        ConfigureText(text, TextAnchor.MiddleCenter, 21);
+        text.text = label;
+        text.rectTransform.anchorMin = Vector2.zero;
+        text.rectTransform.anchorMax = Vector2.one;
+        text.rectTransform.offsetMin = Vector2.zero;
+        text.rectTransform.offsetMax = Vector2.zero;
         return button;
+    }
+
+    private static void ConfigureText(Text text, TextAnchor alignment, int fontSize)
+    {
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = fontSize;
+        text.alignment = alignment;
+        text.color = new Color(.94f, .96f, 1f, 1f);
+        text.horizontalOverflow = HorizontalWrapMode.Wrap;
+        text.verticalOverflow = VerticalWrapMode.Truncate;
     }
 }

@@ -78,7 +78,7 @@ public static class NyangbingoAudioMixerIntegrator
             failures.Add($"Audio provenance manifest missing: {CreditsPath}");
 
         var scene = EditorSceneManager.OpenScene(
-            "Assets/Scenes/MainGame.unity", OpenSceneMode.Single);
+            NyangbingoSceneBuildSettings.MainGameScenePath, OpenSceneMode.Single);
         var service = scene.GetRootGameObjects()
             .SelectMany(root => root.GetComponentsInChildren<NyangbingoAudioService>(true))
             .FirstOrDefault();

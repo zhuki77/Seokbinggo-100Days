@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Audio;
@@ -12,20 +10,20 @@ using UnityEngine.UI;
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// Title 씬 전용 셸. 월드 없이 메뉴만 다루고 MainGame으로 Intent를 넘긴다.
+    /// Title.unity 전용 버튼 배선/연출. MainGameShellUiController에서 타이틀 관련 부분만 분리했다.
+    /// FindAnyObjectByType을 쓰지 않고, 모든 대상은 인스펙터에서 사전에 연결한다.
+    /// demoSaveButtons는 GameShellController.DemoSaveDays(1/15/30일차)와 인덱스로 1:1 대응한다.
     /// </summary>
-    [DefaultExecutionOrder(-55)]
-    public sealed class TitleShellUiController : MonoBehaviour
+    public sealed class TitleUiController : MonoBehaviour
     {
-        // 셸 아이콘은 22~44px 픽셀아트. 1920 캔버스에서 읽히도록 레이아웃·라벨을 함께 확대한다.
-        private const float TitleChromeScale = 3f;
-
-        [SerializeField] private GameShellController shell;
+        [SerializeField] private TitleShellController shell;
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private NyangbingoAudioService audioService;
         [SerializeField] private Button titleContinueButton;
         [SerializeField] private Button titleNewGameButton;
         [SerializeField] private Button titleQuitButton;
+        [SerializeField] private List<Button> demoSaveButtons = new List<Button>();
+        [SerializeField] private GameObject confirmationPanel;
         [SerializeField] private Button confirmButton;
         [SerializeField] private Button cancelButton;
         [SerializeField] private Text confirmationText;
@@ -34,20 +32,17 @@ namespace Nyangbingo.UI
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
         [SerializeField] private CharacterArtCatalog characterArtCatalog;
 
-        private readonly List<Button> demoSaveButtons = new List<Button>();
         private Text titleDayCounterText;
         private RuntimePixelGlyphPresenter titleDayCounterGlyphs;
         private GameObject titlePlayerArtRoot;
-        private GameObject shellLoadingOverlay;
-        private Image shellLoadingImage;
-        private Sprite[] shellLoadingFrames = Array.Empty<Sprite>();
-        private bool shellLoadingTransitionActive;
+        private bool isInitialized;
 
-        public void ConfigureForScene(GameShellController shellController, SaveManager saves,
+        /// <summary>NyangbingoTitleSceneCreator(에디터 씬 생성 도구) 전용 빌드타임 배선 진입점.</summary>
+        public void ConfigureForScene(TitleShellController shellController, SaveManager saves,
             NyangbingoAudioService audio, Button continueGame, Button newGame, Button quit,
-            Button confirm, Button cancel, Text confirmationLabel, Text status,
-            EnvironmentArtCatalog environmentArt = null, GameplayArtCatalog gameplayArt = null,
-            CharacterArtCatalog characterArt = null)
+            List<Button> demoButtons, GameObject confirmation, Button confirm, Button cancel,
+            Text confirmationLabel, Text status, EnvironmentArtCatalog environmentArt,
+            GameplayArtCatalog gameplayArt, CharacterArtCatalog characterArt)
         {
             shell = shellController;
             saveManager = saves;
@@ -55,6 +50,8 @@ namespace Nyangbingo.UI
             titleContinueButton = continueGame;
             titleNewGameButton = newGame;
             titleQuitButton = quit;
+            demoSaveButtons = demoButtons;
+            confirmationPanel = confirmation;
             confirmButton = confirm;
             cancelButton = cancel;
             confirmationText = confirmationLabel;
@@ -67,103 +64,78 @@ namespace Nyangbingo.UI
         private void Start()
         {
             if (shell == null || saveManager == null || audioService == null ||
-                titleContinueButton == null || titleNewGameButton == null || titleQuitButton == null)
+                titleContinueButton == null || titleNewGameButton == null || titleQuitButton == null ||
+                confirmButton == null || cancelButton == null || confirmationText == null ||
+                demoSaveButtons.Count != GameShellController.DemoSaveDays.Length)
             {
-                Debug.LogError("[Nyangbingo] TitleShellUiController: Title 셸 필수 배선이 올바르지 않습니다.");
+                Debug.LogError("[Nyangbingo] TitleUiController: 타이틀 셸 필수 배선이 올바르지 않습니다.");
                 enabled = false;
                 return;
             }
 
             audioService.Initialize();
             audioService.EnsureAudiblePlayback(MusicTrack.Title);
-            shell.ConfigureForRuntime(saveManager, audioService, null, null,
-                Application.isMobilePlatform, Debug.isDebugBuild || Application.isEditor);
+            shell.ConfigureForRuntime(saveManager, Application.isMobilePlatform,
+                Debug.isDebugBuild || Application.isEditor);
             shell.NewGameRequested += HandleNewGameRequested;
             shell.ContinueRequested += HandleContinueRequested;
             shell.DemoSaveRequested += HandleDemoSaveRequested;
-            BindButtons();
-            CreateDemoSaveButtons();
+
+            BindTitleButtons();
             ConfigureTitleMenuLayout();
-            ResolveShellArtCatalogs();
-            ApplyDeliveredShellArt();
-            EnsureShellLoadingOverlay();
-            shell.EnterTitle();
+            ApplyDeliveredTitleArt();
             RefreshTitleControls();
             SetStatus(string.Empty);
-            if (GameSceneFlow.RevealLoadingAfterLoad)
-            {
-                GameSceneFlow.ConsumePending(out _, out _, out _);
-                StartCoroutine(PlayShellLoadingRevealOnly());
-            }
-
-            Debug.Log("[Nyangbingo] TitleShellUiController: Title 씬 셸 연결 완료.");
+            if (confirmationPanel != null) confirmationPanel.SetActive(false);
+            isInitialized = true;
         }
 
-        private void BindButtons()
+        private void Update()
         {
-            if (confirmButton != null) confirmButton.onClick.AddListener(ConfirmPendingAction);
-            if (cancelButton != null) cancelButton.onClick.AddListener(() => shell.CancelConfirmation());
+            if (!isInitialized) return;
+            var confirming = shell.IsAwaitingDemoLoadConfirmation;
+            if (confirmationPanel != null) confirmationPanel.SetActive(confirming);
+            if (confirmationText != null && confirming)
+                confirmationText.text = $"{shell.PendingDemoDay}일차 데모를 자동저장 슬롯에 복사할까요?";
+            if (Input.GetKeyDown(KeyCode.Escape) && confirming)
+                shell.CancelDemoLoad();
+        }
+
+        private void BindTitleButtons()
+        {
             titleContinueButton.onClick.AddListener(() =>
                 SetStatus(shell.TryContinue() ? "불러오는 중..." : "저장 파일이 없습니다."));
             titleNewGameButton.onClick.AddListener(() => shell.RequestNewGame());
             titleQuitButton.onClick.AddListener(() => shell.RequestQuit());
-        }
-
-        private void HandleNewGameRequested(int _)
-        {
-            BeginShellLoadingTransition(() =>
+            confirmButton.onClick.AddListener(ConfirmDemoLoad);
+            cancelButton.onClick.AddListener(() => shell.CancelDemoLoad());
+            for (var index = 0; index < demoSaveButtons.Count; index++)
             {
-                var previousSeed = 0;
-                if (saveManager.TryLoad(GameShellController.AutoSaveSlot, out var previousSave))
-                    previousSeed = previousSave.seed;
-                saveManager.DeleteAll();
-                MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed);
-                GameSceneFlow.RequestNewGame(revealLoading: true);
-                GameSceneFlow.GoToMainGame();
-            });
-        }
-
-        private void HandleContinueRequested(int slot, SaveGame _)
-        {
-            BeginShellLoadingTransition(() =>
-            {
-                GameSceneFlow.RequestContinue(slot, revealLoading: true);
-                GameSceneFlow.GoToMainGame();
-            });
-        }
-
-        private void HandleDemoSaveRequested(SaveGame _)
-        {
-            BeginShellLoadingTransition(() =>
-            {
-                // Confirm already copied the demo into the autosave slot.
-                GameSceneFlow.RequestContinue(GameShellController.AutoSaveSlot, revealLoading: true);
-                GameSceneFlow.GoToMainGame();
-            });
-        }
-
-        private void ConfirmPendingAction()
-        {
-            var confirmation = shell.PendingConfirmation;
-            var demoDay = shell.PendingDemoDay;
-            if (shell.Confirm())
-            {
-                if (confirmation == GameShellConfirmation.LoadDemoSave)
-                    SetStatus($"{demoDay}일차 데모를 불러오는 중...");
-                return;
+                var day = GameShellController.DemoSaveDays[index];
+                demoSaveButtons[index].onClick.AddListener(() => RequestDemoSave(day));
             }
+        }
 
-            if (confirmation == GameShellConfirmation.LoadDemoSave)
+        private void RequestDemoSave(int day)
+        {
+            if (shell.RequestDemoSave(day))
+                SetStatus($"{day}일차 데모를 자동저장 슬롯에 복사할까요?");
+        }
+
+        private void ConfirmDemoLoad()
+        {
+            var demoDay = shell.PendingDemoDay;
+            if (shell.ConfirmDemoLoad())
+                SetStatus($"{demoDay}일차 데모를 자동저장 슬롯에 복사합니다.");
+            else
                 SetStatus($"{demoDay}일차 데모 세이브가 없거나 올바르지 않습니다.");
         }
 
         private void RefreshTitleControls()
         {
-            var countdown = GameShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat);
-            if (titleDayCounterGlyphs != null)
-                titleDayCounterGlyphs.SetText(countdown);
-            else if (titleDayCounterText != null)
-                titleDayCounterText.text = countdown;
+            var countdown = TitleShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat);
+            if (titleDayCounterGlyphs != null) titleDayCounterGlyphs.SetText(countdown);
+            else if (titleDayCounterText != null) titleDayCounterText.text = countdown;
             if (titlePlayerArtRoot != null) titlePlayerArtRoot.SetActive(true);
             if (titleContinueButton != null) titleContinueButton.interactable = shell.Title.CanContinue;
             if (titleQuitButton != null) titleQuitButton.gameObject.SetActive(shell.Title.ShowsQuit);
@@ -176,74 +148,56 @@ namespace Nyangbingo.UI
             }
         }
 
-        private void ConfigureTitleMenuLayout()
+        private void SetStatus(string value)
         {
-            // 기준 좌표는 구 MainGame 타이틀 레이아웃. TitleChromeScale로 HD에서 읽히게 확대.
-            ConfigureShellButton(titleContinueButton, Scaled(new Vector2(-112f, 17f)), Scaled(new Vector2(150f, 27f)));
-            ConfigureShellButton(titleNewGameButton, Scaled(new Vector2(-112f, -17f)), Scaled(new Vector2(150f, 27f)));
-            ConfigureShellButton(titleQuitButton, Scaled(new Vector2(-112f, -51f)), Scaled(new Vector2(150f, 27f)));
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-                ConfigureShellButton(demoSaveButtons[index],
-                    Scaled(new Vector2(-162f + index * 50f, -82f)), Scaled(new Vector2(46f, 15f)));
+            if (statusText != null) statusText.text = value;
         }
 
-        private static Vector2 Scaled(Vector2 value) => value * TitleChromeScale;
+        private void HandleNewGameRequested()
+        {
+            MainGameLaunchRequest.RequestedMode = MainGameLaunchRequest.Mode.NewGame;
+            MainGameLaunchRequest.SaveSlot = GameShellController.AutoSaveSlot;
+            var previousSeed = saveManager.TryLoad(GameShellController.AutoSaveSlot, out var previousSave)
+                ? previousSave.seed
+                : 0;
+            MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed);
+            SceneTransitionRequest.BeginDirect("MainGame");
+        }
+
+        private void HandleContinueRequested(int slot, SaveGame loadedSave)
+        {
+            MainGameLaunchRequest.RequestedMode = MainGameLaunchRequest.Mode.Continue;
+            MainGameLaunchRequest.SaveSlot = slot;
+            SceneTransitionRequest.BeginDirect("MainGame");
+        }
+
+        private void HandleDemoSaveRequested(SaveGame demo)
+        {
+            MainGameLaunchRequest.RequestedMode = MainGameLaunchRequest.Mode.DemoLoad;
+            MainGameLaunchRequest.SaveSlot = GameShellController.AutoSaveSlot;
+            SceneTransitionRequest.BeginDirect("MainGame");
+        }
+
+        private void ConfigureTitleMenuLayout()
+        {
+            ConfigureShellButton(titleContinueButton, new Vector2(-112f, 17f), new Vector2(150f, 27f));
+            ConfigureShellButton(titleNewGameButton, new Vector2(-112f, -17f), new Vector2(150f, 27f));
+            ConfigureShellButton(titleQuitButton, new Vector2(-112f, -51f), new Vector2(150f, 27f));
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+                ConfigureShellButton(demoSaveButtons[index],
+                    new Vector2(-162f + index * 50f, -82f), new Vector2(46f, 15f));
+        }
 
         private static void ConfigureShellButton(Button button, Vector2 position, Vector2 size)
         {
             if (button == null) return;
             var rect = button.GetComponent<RectTransform>();
             if (rect == null) return;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
         }
 
-        private void CreateDemoSaveButtons()
-        {
-            if (titleNewGameButton == null || titleQuitButton == null) return;
-            var parent = titleNewGameButton.transform.parent;
-            if (parent == null) return;
-
-            for (var index = 0; index < GameShellController.DemoSaveDays.Length; index++)
-            {
-                var day = GameShellController.DemoSaveDays[index];
-                var button = Instantiate(titleNewGameButton, parent);
-                button.name = $"DemoSaveDay{day}";
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(() =>
-                {
-                    if (shell.RequestDemoSave(day))
-                        SetStatus($"{day}일차 데모를 자동저장 슬롯에 복사합니다.");
-                });
-                var rect = button.GetComponent<RectTransform>();
-                rect.anchoredPosition = Scaled(new Vector2(-162f + index * 50f, -82f));
-                rect.sizeDelta = Scaled(new Vector2(46f, 15f));
-                var label = button.GetComponentInChildren<Text>(true);
-                if (label != null)
-                {
-                    label.text = $"{day}일차 데모";
-                    label.fontSize = Mathf.RoundToInt(8f * TitleChromeScale);
-                }
-
-                demoSaveButtons.Add(button);
-            }
-        }
-
-        private void ResolveShellArtCatalogs()
-        {
-            if (environmentArtCatalog == null)
-                environmentArtCatalog = Resources.FindObjectsOfTypeAll<EnvironmentArtCatalog>()
-                    .FirstOrDefault(catalog => catalog != null && catalog.name == "EnvironmentArtCatalog");
-            if (gameplayArtCatalog == null)
-                gameplayArtCatalog = Resources.FindObjectsOfTypeAll<GameplayArtCatalog>()
-                    .FirstOrDefault(catalog => catalog != null && catalog.name == "GameplayArtCatalog");
-            if (characterArtCatalog == null)
-                characterArtCatalog = Resources.FindObjectsOfTypeAll<CharacterArtCatalog>()
-                    .FirstOrDefault(catalog => catalog != null && catalog.name == "CharacterArtCatalog");
-        }
-
-        private void ApplyDeliveredShellArt()
+        private void ApplyDeliveredTitleArt()
         {
             EnsureTitleBackground();
             EnsureTitleLogo();
@@ -259,6 +213,28 @@ namespace Nyangbingo.UI
             ApplyButtonLabelArt(titleContinueButton, gameplayArtCatalog.ShellContinue);
             ApplyButtonLabelArt(titleNewGameButton, gameplayArtCatalog.ShellStart);
             ApplyButtonLabelArt(titleQuitButton, gameplayArtCatalog.ShellLeave);
+        }
+
+        private static void ApplyButtonLabelArt(Button button, Sprite sprite)
+        {
+            if (button == null || sprite == null) return;
+            var label = button.GetComponentInChildren<Text>(true);
+            if (label != null) label.gameObject.SetActive(false);
+            var artTransform = button.transform.Find("DeliveredArt") as RectTransform;
+            if (artTransform == null)
+            {
+                var artObject = new GameObject("DeliveredArt", typeof(RectTransform), typeof(Image));
+                artObject.transform.SetParent(button.transform, false);
+                artTransform = (RectTransform)artObject.transform;
+            }
+            artTransform.anchorMin = artTransform.anchorMax = artTransform.pivot = new Vector2(.5f, .5f);
+            artTransform.anchoredPosition = Vector2.zero;
+            artTransform.sizeDelta = sprite.rect.size;
+            var image = artTransform.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
         }
 
         private void EnsureTitleBackground()
@@ -280,7 +256,6 @@ namespace Nyangbingo.UI
                 backgroundObject.transform.SetParent(titlePanel, false);
                 backgroundTransform = (RectTransform)backgroundObject.transform;
             }
-
             backgroundTransform.anchorMin = Vector2.zero;
             backgroundTransform.anchorMax = Vector2.one;
             backgroundTransform.offsetMin = Vector2.zero;
@@ -308,21 +283,19 @@ namespace Nyangbingo.UI
             {
                 titleLabel.gameObject.SetActive(true);
                 titleLabel.text = "100일의 냥빙고";
-                titleLabel.fontSize = Mathf.RoundToInt(20f * TitleChromeScale);
+                titleLabel.fontSize = 20;
                 titleLabel.alignment = TextAnchor.MiddleCenter;
                 var labelRect = titleLabel.rectTransform;
                 labelRect.anchorMin = labelRect.anchorMax = labelRect.pivot = new Vector2(.5f, .5f);
-                labelRect.anchoredPosition = Scaled(new Vector2(-112f, 88f));
-                labelRect.sizeDelta = Scaled(new Vector2(180f, 30f));
+                labelRect.anchoredPosition = new Vector2(-112f, 88f);
+                labelRect.sizeDelta = new Vector2(180f, 30f);
             }
-
             var titleArtTransform = titlePanel.Find("TitleArt") as RectTransform;
             if (deliveredLogo == null)
             {
                 if (titleArtTransform != null) titleArtTransform.gameObject.SetActive(false);
                 return;
             }
-
             if (titleLabel != null) titleLabel.gameObject.SetActive(false);
             if (titleArtTransform == null)
             {
@@ -330,12 +303,11 @@ namespace Nyangbingo.UI
                 titleArtObject.transform.SetParent(titlePanel, false);
                 titleArtTransform = (RectTransform)titleArtObject.transform;
             }
-
             titleArtTransform.gameObject.SetActive(true);
             titleArtTransform.anchorMin = titleArtTransform.anchorMax = titleArtTransform.pivot =
                 new Vector2(.5f, .5f);
-            titleArtTransform.anchoredPosition = Scaled(new Vector2(-112f, 82f));
-            titleArtTransform.sizeDelta = Scaled(new Vector2(96f, 96f));
+            titleArtTransform.anchoredPosition = new Vector2(-112f, 82f);
+            titleArtTransform.sizeDelta = new Vector2(96f, 96f);
             var titleImage = titleArtTransform.GetComponent<Image>() ??
                              titleArtTransform.gameObject.AddComponent<Image>();
             titleImage.sprite = deliveredLogo;
@@ -358,15 +330,14 @@ namespace Nyangbingo.UI
                 counterObject.transform.SetParent(titlePanel, false);
                 counterTransform = (RectTransform)counterObject.transform;
             }
-
             counterTransform.anchorMin = counterTransform.anchorMax = counterTransform.pivot =
                 new Vector2(.5f, .5f);
-            counterTransform.anchoredPosition = Scaled(new Vector2(176f, 97f));
-            counterTransform.sizeDelta = Scaled(new Vector2(84f, 36f));
+            counterTransform.anchoredPosition = new Vector2(176f, 97f);
+            counterTransform.sizeDelta = new Vector2(84f, 36f);
             titleDayCounterText = counterTransform.GetComponent<Text>();
             var menuLabel = titleNewGameButton.GetComponentInChildren<Text>(true);
             titleDayCounterText.font = menuLabel != null ? menuLabel.font : titleDayCounterText.font;
-            titleDayCounterText.fontSize = Mathf.RoundToInt(22f * TitleChromeScale);
+            titleDayCounterText.fontSize = 22;
             titleDayCounterText.fontStyle = FontStyle.Bold;
             titleDayCounterText.alignment = TextAnchor.MiddleCenter;
             titleDayCounterText.color = Color.white;
@@ -376,7 +347,7 @@ namespace Nyangbingo.UI
                 titleDayCounterText.text = string.Empty;
                 titleDayCounterGlyphs = counterTransform.GetComponent<RuntimePixelGlyphPresenter>() ??
                                         counterTransform.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                titleDayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, TitleChromeScale);
+                titleDayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs);
             }
 
             var playerEntry = characterArtCatalog?.Find("player");
@@ -388,10 +359,9 @@ namespace Nyangbingo.UI
                 playerObject.transform.SetParent(titlePanel, false);
                 playerTransform = (RectTransform)playerObject.transform;
             }
-
             playerTransform.anchorMin = playerTransform.anchorMax = playerTransform.pivot = new Vector2(1f, 0f);
-            playerTransform.anchoredPosition = Scaled(new Vector2(-54f, 34f));
-            playerTransform.sizeDelta = Scaled(new Vector2(72f, 72f));
+            playerTransform.anchoredPosition = new Vector2(-54f, 34f);
+            playerTransform.sizeDelta = new Vector2(72f, 72f);
             var playerImage = playerTransform.GetComponent<Image>();
             playerImage.preserveAspect = true;
             playerImage.raycastTarget = false;
@@ -405,108 +375,8 @@ namespace Nyangbingo.UI
             playerTransform.SetSiblingIndex(titleBackground != null ? 2 : 1);
         }
 
-        private static void ApplyButtonLabelArt(Button button, Sprite sprite)
-        {
-            if (button == null || sprite == null) return;
-            var label = button.GetComponentInChildren<Text>(true);
-            if (label != null) label.gameObject.SetActive(false);
-            var artTransform = button.transform.Find("DeliveredArt") as RectTransform;
-            if (artTransform == null)
-            {
-                // 이전 Title 분기에서 LabelArt로 만든 경우 정리
-                var legacy = button.transform.Find("LabelArt");
-                if (legacy != null) Destroy(legacy.gameObject);
-
-                var artObject = new GameObject("DeliveredArt", typeof(RectTransform), typeof(Image));
-                artObject.transform.SetParent(button.transform, false);
-                artTransform = (RectTransform)artObject.transform;
-            }
-
-            artTransform.anchorMin = artTransform.anchorMax = artTransform.pivot = new Vector2(.5f, .5f);
-            artTransform.anchoredPosition = Vector2.zero;
-            artTransform.sizeDelta = sprite.rect.size * TitleChromeScale;
-            var image = artTransform.GetComponent<Image>();
-            image.sprite = sprite;
-            image.color = Color.white;
-            image.preserveAspect = true;
-            image.raycastTarget = false;
-        }
-
-        private void EnsureShellLoadingOverlay()
-        {
-            if (shellLoadingOverlay != null) return;
-            var canvas = GetComponentInParent<Canvas>();
-            if (canvas == null) return;
-            shellLoadingOverlay = new GameObject("ShellLoadingOverlay", typeof(RectTransform), typeof(Canvas),
-                typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(Image));
-            shellLoadingOverlay.transform.SetParent(canvas.transform, false);
-            var overlayCanvas = shellLoadingOverlay.GetComponent<Canvas>();
-            overlayCanvas.overrideSorting = true;
-            overlayCanvas.sortingOrder = MainGameShellUiController.ShellLoadingSortingOrder;
-            var rect = (RectTransform)shellLoadingOverlay.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            shellLoadingImage = shellLoadingOverlay.GetComponent<Image>();
-            shellLoadingImage.color = Color.black;
-            shellLoadingImage.raycastTarget = true;
-            shellLoadingOverlay.SetActive(false);
-            BuildShellLoadingFrames();
-        }
-
-        private void BuildShellLoadingFrames()
-        {
-            // Frames are optional on Title; reveal uses solid black if unavailable.
-            shellLoadingFrames = Array.Empty<Sprite>();
-        }
-
-        private void BeginShellLoadingTransition(Action completion)
-        {
-            if (shellLoadingTransitionActive)
-            {
-                completion?.Invoke();
-                return;
-            }
-
-            StartCoroutine(PlayShellLoadingTransition(completion));
-        }
-
-        private IEnumerator PlayShellLoadingTransition(Action completion)
-        {
-            shellLoadingTransitionActive = true;
-            MainGameShellUiController.IsLoadingTransitionActive = true;
-            EnsureShellLoadingOverlay();
-            if (shellLoadingOverlay != null)
-            {
-                shellLoadingOverlay.SetActive(true);
-                if (shellLoadingImage != null)
-                    shellLoadingImage.color = Color.black;
-            }
-
-            yield return new WaitForSecondsRealtime(.15f);
-            completion?.Invoke();
-            shellLoadingTransitionActive = false;
-        }
-
-        private IEnumerator PlayShellLoadingRevealOnly()
-        {
-            EnsureShellLoadingOverlay();
-            if (shellLoadingOverlay != null) shellLoadingOverlay.SetActive(true);
-            yield return new WaitForSecondsRealtime(.35f);
-            if (shellLoadingOverlay != null) shellLoadingOverlay.SetActive(false);
-            MainGameShellUiController.IsLoadingTransitionActive = false;
-            shell.RestoreTimeScaleAfterLoading();
-        }
-
-        private void SetStatus(string value)
-        {
-            if (statusText != null) statusText.text = value;
-        }
-
         private void OnDestroy()
         {
-            MainGameShellUiController.IsLoadingTransitionActive = false;
             if (shell != null)
             {
                 shell.NewGameRequested -= HandleNewGameRequested;

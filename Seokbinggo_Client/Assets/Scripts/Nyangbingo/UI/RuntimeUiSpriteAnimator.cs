@@ -162,9 +162,10 @@ namespace Nyangbingo.UI
         private float glyphScale = 1f;
         private string displayedText = string.Empty;
         private Color glyphColor = Color.white;
+        private int activeGlyphCount;
 
         public string DisplayedText => displayedText;
-        public int VisibleGlyphCount => images.Count;
+        public int VisibleGlyphCount => activeGlyphCount;
         public float RenderedWidth => content != null ? content.sizeDelta.x : 0f;
 
         public void ConfigureForRuntime(IReadOnlyList<Sprite> source, float scale = 1f)
@@ -222,19 +223,16 @@ namespace Nyangbingo.UI
             content.anchoredPosition = Vector2.zero;
         }
 
+        // 매 SetText마다 Image를 Destroy/재생성하지 않도록, 필요한 만큼만 풀에서 재사용하고
+        // 남는 풀 항목은 비활성화만 한다 (Instantiate/Destroy churn 방지).
         private void RefreshImages()
         {
             EnsureContent();
-            foreach (var image in images)
-                if (image != null)
-                {
-                    if (Application.isPlaying) Destroy(image.gameObject);
-                    else DestroyImmediate(image.gameObject);
-                }
-            images.Clear();
 
             if (glyphs.Length != ExpectedGlyphCount)
             {
+                DeactivateFrom(0);
+                activeGlyphCount = 0;
                 content.gameObject.SetActive(false);
                 return;
             }
@@ -256,17 +254,18 @@ namespace Nyangbingo.UI
             }
             var cursor = -width * .5f;
             var maximumHeight = 0f;
-            foreach (var character in characters)
+            for (var charIndex = 0; charIndex < characters.Count; charIndex++)
             {
+                var character = characters[charIndex];
                 var size = LayoutSize(character);
-                var imageObject = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
-                imageObject.transform.SetParent(content, false);
-                var image = imageObject.GetComponent<Image>();
+                var image = GetOrCreateImage(charIndex);
+                image.gameObject.SetActive(true);
                 image.color = glyphColor;
                 image.preserveAspect = true;
                 image.raycastTarget = false;
                 var rect = image.rectTransform;
                 rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+                rect.localRotation = Quaternion.identity;
                 rect.anchoredPosition = new Vector2(cursor + size.x * .5f, 0f);
                 if (character == '/')
                 {
@@ -289,10 +288,29 @@ namespace Nyangbingo.UI
                 }
                 cursor += size.x + SpacingPixels * glyphScale;
                 maximumHeight = Mathf.Max(maximumHeight, size.y);
-                images.Add(image);
             }
+            DeactivateFrom(characters.Count);
+            activeGlyphCount = characters.Count;
             content.sizeDelta = new Vector2(width, maximumHeight);
             content.gameObject.SetActive(true);
+        }
+
+        private Image GetOrCreateImage(int index)
+        {
+            if (index < images.Count && images[index] != null) return images[index];
+
+            var imageObject = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
+            imageObject.transform.SetParent(content, false);
+            var image = imageObject.GetComponent<Image>();
+            if (index < images.Count) images[index] = image;
+            else images.Add(image);
+            return image;
+        }
+
+        private void DeactivateFrom(int index)
+        {
+            for (; index < images.Count; index++)
+                if (images[index] != null) images[index].gameObject.SetActive(false);
         }
 
         private Vector2 LayoutSize(char character)

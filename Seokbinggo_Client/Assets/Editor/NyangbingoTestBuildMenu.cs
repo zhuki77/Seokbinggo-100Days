@@ -10,7 +10,7 @@ using UnityEngine;
 public static class NyangbingoTestBuildMenu
 {
     private const string RequestFileName = "CodexWindowsTestBuild.request";
-    internal const string ProductScenePath = "Assets/Scenes/MainGame.unity";
+    internal const string ProductScenePath = NyangbingoSceneBuildSettings.MainGameScenePath;
     internal const string ProductExecutableName = "Nyangbingo.exe";
     internal const string TestExecutableName = "Nyangbingo_Test.exe";
 

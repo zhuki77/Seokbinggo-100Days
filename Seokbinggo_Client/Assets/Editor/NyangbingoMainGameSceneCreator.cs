@@ -22,7 +22,7 @@ using WorldTilemapRenderer = Nyangbingo.World.TilemapRenderer;
 /// <summary>제품용 메인 플레이 씬을 재현 가능하게 생성하고 B-08 필수 배선을 검증한다.</summary>
 public static class NyangbingoMainGameSceneCreator
 {
-    private const string ScenePath = "Assets/Scenes/MainGame.unity";
+    private const string ScenePath = NyangbingoSceneBuildSettings.MainGameScenePath;
     private const string ConfigPath = "Assets/Data/SO/WorldGenerationConfig.asset";
     private const string CatalogPath = "Assets/Data/SO/GameDataCatalog.asset";
     private const string CharacterArtCatalogPath = "Assets/Art/Characters/CharacterArtCatalog.asset";
@@ -66,7 +66,7 @@ public static class NyangbingoMainGameSceneCreator
             environmentArtCatalog, worldRenderer);
 
         EditorSceneManager.SaveScene(scene, ScenePath);
-        AddSceneToBuildSettings();
+        NyangbingoSceneBuildSettings.SyncBuildSettings();
         AssetDatabase.SaveAssets();
 
         var reopenedScene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -586,18 +586,6 @@ public static class NyangbingoMainGameSceneCreator
         codexController.ConfigureForScene(saveCoordinator, codexPanel, cardButtons, cardTexts, detailText);
         codexPanel.SetActive(false);
 
-        var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel", new Color(.02f, .035f, .05f, 1f));
-        CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(0f, 180f),
-            new Vector2(620f, 80f), 48);
-        var titleContinue = CreateMenuButton(titlePanel.transform, "Continue", "이어하기",
-            new Vector2(0f, 60f), new Vector2(300f, 58f));
-        var titleNew = CreateMenuButton(titlePanel.transform, "NewGame", "새 게임",
-            new Vector2(0f, -10f), new Vector2(300f, 58f));
-        var titleQuit = CreateMenuButton(titlePanel.transform, "Quit", "게임 종료",
-            new Vector2(0f, -80f), new Vector2(300f, 58f));
-        // Title UI lives in Title.unity; keep inactive stubs so legacy MainGame scenes still serialize.
-        titlePanel.SetActive(false);
-
         var pausePanel = CreateOverlayPanel(canvasObject.transform, "PausePanel", new Color(.025f, .035f, .05f, .94f));
         CreateMenuText(pausePanel.transform, "Title", "일시정지", new Vector2(0f, 250f),
             new Vector2(500f, 68f), 40);
@@ -654,13 +642,13 @@ public static class NyangbingoMainGameSceneCreator
             new Vector2(0f, -30f), new Vector2(260f, 54f));
 
         var shell = canvasObject.AddComponent<GameShellController>();
-        shell.ConfigureViews(null, pausePanel, resultPanel, settingsPanel, confirmationPanel);
+        shell.ConfigureViews(pausePanel, resultPanel, settingsPanel, confirmationPanel);
         codexController.ConfigureGameShell(shell);
         var shellUi = canvasObject.AddComponent<MainGameShellUiController>();
         shellUi.ConfigureForScene(shell, saveCoordinator, saveManager, audioService, dayNight, codexController,
             resumeButton, saveButtons, loadButtons, settingsButton, returnTitleButton, applySettings, backSettings,
-            bgmSlider, sfxSlider, fullscreenToggle, confirmButton, cancelButton, confirmationText, titleContinue,
-            titleNew, titleQuit, resultTitle, statusText, environmentArtCatalog, gameplayArtCatalog);
+            bgmSlider, sfxSlider, fullscreenToggle, confirmButton, cancelButton, confirmationText,
+            resultTitle, statusText, gameplayArtCatalog);
 
         var bossSummonUi = canvasObject.AddComponent<MainGameBossSummonUiController>();
         bossSummonUi.ConfigureForScene(catalog, bootstrap, runtimeServices,
@@ -681,7 +669,6 @@ public static class NyangbingoMainGameSceneCreator
             playerController.GetComponent<Health>(), Object.FindAnyObjectByType<BossManager>(), bossStatus,
             deathPanel, slots, slotIcons, itemArtCatalog, temperatureArt, gameplayArtCatalog,
             craftingProgressPanel, craftingText, craftingFill, environmentArtCatalog);
-        titlePanel.SetActive(false);
         inventoryPanel.SetActive(false);
         turretBuildOpen.gameObject.SetActive(false);
         EditorUtility.SetDirty(codexController);
@@ -896,20 +883,4 @@ public static class NyangbingoMainGameSceneCreator
         return tilemap;
     }
 
-    private static void AddSceneToBuildSettings()
-    {
-        const string titlePath = "Assets/Scenes/Title.unity";
-        var ordered = new System.Collections.Generic.List<EditorBuildSettingsScene>();
-        if (System.IO.File.Exists(titlePath) ||
-            AssetDatabase.LoadAssetAtPath<SceneAsset>(titlePath) != null)
-            ordered.Add(new EditorBuildSettingsScene(titlePath, true));
-        ordered.Add(new EditorBuildSettingsScene(ScenePath, true));
-        foreach (var entry in EditorBuildSettings.scenes)
-        {
-            if (entry.path == ScenePath || entry.path == titlePath) continue;
-            ordered.Add(entry);
-        }
-
-        EditorBuildSettings.scenes = ordered.ToArray();
-    }
 }
