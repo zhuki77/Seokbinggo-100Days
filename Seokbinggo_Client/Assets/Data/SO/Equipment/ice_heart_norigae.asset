@@ -27,3 +27,6 @@ MonoBehaviour:
   setId: 
   setTemperatureRiseModifier: 0
   setFireDamageModifier: 0
+  verbId: 
+  usageLimitPerDay: 0
+  activationCondition: None

@@ -51,7 +51,8 @@ namespace Nyangbingo.Inventory
             Defense = (int)defenseTotal;
             MovementMultiplier = UnityEngine.Mathf.Max(0f, ToFiniteFloat(movementTotal));
             MiningCriticalChance = UnityEngine.Mathf.Clamp(ToFiniteFloat(miningCriticalTotal), 0f, .25f);
-            TemperatureRiseModifier = UnityEngine.Mathf.Max(-.35f, ToFiniteFloat(temperatureTotal));
+            TemperatureRiseModifier = UnityEngine.Mathf.Max(ArmorSetRules.TemperatureRiseFloor,
+                ToFiniteFloat(temperatureTotal));
             FireDamageModifier = ToFiniteFloat(fireTotal);
             VisionRadiusBonus = UnityEngine.Mathf.Max(0f, ToFiniteFloat(visionTotal));
         }

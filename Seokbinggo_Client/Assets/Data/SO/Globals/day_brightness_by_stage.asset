@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: day_brightness_by_stage
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: day_brightness_by_stage
+  value: 1.00/1.05/1.10/1.15/1.20/1.25/1.30/1.35/1.40/1.45
+  unit: curve
+  note: "v41 \uB0AE \uBC1D\uAE30 \uCEE4\uBE0C(v46 \uD558\uB4DC\uCF54\uB529 \uAE08\uC9C0) \u2014 stage 1~10"

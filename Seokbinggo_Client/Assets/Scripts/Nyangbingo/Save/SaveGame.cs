@@ -198,7 +198,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 18;
+        public const int CurrentSchemaVersion = 19;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -217,6 +217,9 @@ namespace Nyangbingo.Save
         public List<TileChangeRecord> backgroundChanges = new List<TileChangeRecord>();
         public List<string> modulesDone = new List<string>();
         public int seokbinggoStage;
+        public int altarClears;
+        public List<string> gimmickWeaponsGranted = new List<string>();
+        public List<string> frostPendingCells = new List<string>();
         public float sealPct;
         public int yokaiTears;
         public List<BossRecord> bossRecords = new List<BossRecord>();
@@ -271,6 +274,8 @@ namespace Nyangbingo.Save
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
+            if (gimmickWeaponsGranted == null) gimmickWeaponsGranted = new List<string>();
+            if (frostPendingCells == null) frostPendingCells = new List<string>();
             if (bossRecords == null) bossRecords = new List<BossRecord>();
             if (forcedBossEncounters == null) forcedBossEncounters = new List<ForcedBossEncounterRecord>();
             if (dogam == null) dogam = new List<CodexRecord>();
@@ -321,6 +326,9 @@ namespace Nyangbingo.Save
             if (loadedSchemaVersion < 7) MigrateHapjukseonIds();
             if (loadedSchemaVersion < 8) MigrateV24Ids();
             seokbinggoStage = Math.Clamp(seokbinggoStage, 0, 6);
+            altarClears = Math.Max(0, altarClears);
+            gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
+            frostPendingCells.RemoveAll(string.IsNullOrWhiteSpace);
             if (schemaVersion < CurrentSchemaVersion) schemaVersion = CurrentSchemaVersion;
         }
 

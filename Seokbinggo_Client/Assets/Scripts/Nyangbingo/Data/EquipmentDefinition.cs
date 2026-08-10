@@ -21,6 +21,10 @@ namespace Nyangbingo.Data
         [SerializeField] private string setId;
         [SerializeField] private float setTemperatureRiseModifier;
         [SerializeField] private float setFireDamageModifier;
+        [SerializeField] private string verbId;
+        [SerializeField] private int usageLimitPerDay;
+        [SerializeField] private string activationCondition = "None";
+
         public string Id => id;
         public EquipmentSlot Slot => slot;
         public bool IsAccessory => accessory;
@@ -36,12 +40,22 @@ namespace Nyangbingo.Data
         public string SetId => setId;
         public float SetTemperatureRiseModifier => setTemperatureRiseModifier;
         public float SetFireDamageModifier => setFireDamageModifier;
+        public string VerbIdRaw => verbId ?? string.Empty;
+        public int UsageLimitPerDay => usageLimitPerDay;
+        public string ActivationConditionRaw =>
+            string.IsNullOrWhiteSpace(activationCondition) ? "None" : activationCondition;
+
+        public ArtifactVerbId VerbId => ArtifactVerbParsing.ParseVerb(verbId);
+
+        public ArtifactActivationCondition ActivationCondition =>
+            ArtifactVerbParsing.ParseActivation(activationCondition);
 
         public static EquipmentDefinition CreateRuntime(string itemId, EquipmentSlot equipmentSlot, bool isAccessory,
             int itemDefense = 0, float moveBonus = 0f, float miningCritical = 0f,
             float temperatureModifier = 0f, float fireModifier = 0f, bool doubleJump = false,
             float visionBonus = 0f, bool theftBlocked = false, float doubleJumpRatio = 0f,
-            string equipmentSetId = null, float setTemperatureModifier = 0f, float setFireModifier = 0f)
+            string equipmentSetId = null, float setTemperatureModifier = 0f, float setFireModifier = 0f,
+            string artifactVerbId = null, int usageLimit = 0, string activation = "None")
         {
             var definition = CreateInstance<EquipmentDefinition>();
             definition.id = itemId;
@@ -59,6 +73,9 @@ namespace Nyangbingo.Data
             definition.setId = equipmentSetId ?? string.Empty;
             definition.setTemperatureRiseModifier = setTemperatureModifier;
             definition.setFireDamageModifier = setFireModifier;
+            definition.verbId = artifactVerbId ?? string.Empty;
+            definition.usageLimitPerDay = System.Math.Max(0, usageLimit);
+            definition.activationCondition = string.IsNullOrWhiteSpace(activation) ? "None" : activation;
             return definition;
         }
     }

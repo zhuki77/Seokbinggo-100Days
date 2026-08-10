@@ -374,7 +374,7 @@ if (opened) save.openedChestIds.Add(chestId);
 |----|------|
 | MVP 코어 (§0~§4) | ✅ 대체로 닫힘 |
 | v46 CSV (items 160, bosses 10, modules 11, night-waves 15 등) | 🔴 로컬 `Assets/Data/CSV`는 데모 규모 (items≈86, bosses≈4, modules≈5, **night-waves 없음**) |
-| v46 모듈 20종 (WaveNight·FrostSpread·대장간·진화·DayLight assert 등) | 🔴 대부분 미착수 / 부분만 존재 |
+| v46 모듈 20종 (WaveNight·FrostSpread·대장간·진화·DayLight assert 등) | 🟢 P1~P5 스키마 착수 / P0 kit·아티팩트 효과 구현 후속 |
 | 문서 지도 열린 판단 3건 (아티팩트 equipment·AccessoryTwo 데이터·T4~T6 세트) | 🟡 AccessoryTwo는 코드에 있음, 데이터·세트는 열림 |
 
 상세 표·다음 순서는 **`V46_CONTINUE_HANDOFF.md`** 에 둔다. 파트 A/B는 Notion상 파일 소유 표기이며 저장소는 통합 `main`이다.

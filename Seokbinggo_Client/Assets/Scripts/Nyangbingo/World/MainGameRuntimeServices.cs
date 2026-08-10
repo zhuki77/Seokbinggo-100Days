@@ -42,9 +42,12 @@ namespace Nyangbingo.World
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
         public SeokbinggoUpgradeService Seokbinggo { get; private set; }
+        public FrostSpreadService FrostSpread { get; private set; }
+        public GimmickWeaponProgress GimmickWeapons { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
+        private bool worldLoadedHooked;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             InventoryRuntime itemReceiver)
@@ -136,6 +139,11 @@ namespace Nyangbingo.World
             }
             JangdokStorage = new JangdokStorageRuntime(gameDataCatalog.FindItem, jangdokSlots);
             Seokbinggo = new SeokbinggoUpgradeService(gameDataCatalog, () => PlayerInventory);
+            FrostSpread = new FrostSpreadService();
+            GimmickWeapons = new GimmickWeaponProgress(gameDataCatalog.FindItem);
+            FrostSpread.FirstFrostRevealed += HandleFirstFrostRevealed;
+            GameEvents.OnBaekjungEnd += HandleGimmickBaekjungSurvived;
+            GameEvents.OnBossDefeated += HandleGimmickBossDefeated;
 
             Register(CraftingProcess);
             Register(UtilityService);
@@ -147,6 +155,12 @@ namespace Nyangbingo.World
 
             if (IsInitialized)
             {
+                BindFrostSpreadToWorld();
+                if (bootstrap != null && !worldLoadedHooked)
+                {
+                    bootstrap.WorldReady += BindFrostSpreadToWorld;
+                    worldLoadedHooked = true;
+                }
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
                           $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·휴대용 등불 Tick 소비자 6개 등록 완료.");
             }
@@ -174,6 +188,17 @@ namespace Nyangbingo.World
         private void OnDestroy()
         {
             IsInitialized = false;
+            if (FrostSpread != null)
+                FrostSpread.FirstFrostRevealed -= HandleFirstFrostRevealed;
+            GameEvents.OnBaekjungEnd -= HandleGimmickBaekjungSurvived;
+            GameEvents.OnBossDefeated -= HandleGimmickBossDefeated;
+            if (bootstrap != null && worldLoadedHooked)
+            {
+                bootstrap.WorldReady -= BindFrostSpreadToWorld;
+                worldLoadedHooked = false;
+            }
+            if (bootstrap?.TileService != null && ReferenceEquals(bootstrap.TileService.FrostSpread, FrostSpread))
+                bootstrap.TileService.FrostSpread = null;
             PortableLantern?.Dispose();
             PortableLantern = null;
             NapService?.Dispose();
@@ -182,6 +207,8 @@ namespace Nyangbingo.World
             DeathTearPouches = null;
             JangdokStorage = null;
             Seokbinggo = null;
+            FrostSpread = null;
+            GimmickWeapons = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
             if (bootstrap?.TickDriver != null)
@@ -190,6 +217,24 @@ namespace Nyangbingo.World
                     bootstrap.TickDriver.Unregister(consumer);
             }
             registered.Clear();
+        }
+
+        private void BindFrostSpreadToWorld()
+        {
+            if (FrostSpread == null || bootstrap?.TileService == null) return;
+            bootstrap.TileService.FrostSpread = FrostSpread;
+        }
+
+        private void HandleFirstFrostRevealed() => GimmickWeapons?.NotifyFirstFrost();
+
+        private void HandleGimmickBaekjungSurvived() => GimmickWeapons?.NotifyBaekjungSurvived();
+
+        private void HandleGimmickBossDefeated(BossDefinition definition)
+        {
+            GimmickWeapons?.NotifyBossDefeated(definition);
+            if (definition == null || definition.Kind != BossKind.Imugi || FrostSpread == null) return;
+            var nextClear = FrostSpread.AltarClears + 1;
+            FrostSpread.OnAltarClear(nextClear, bootstrap?.TileService);
         }
 
         private static bool TryGetSharedCapacity(IReadOnlyList<SmeltingDefinition> definitions, out int capacity)

@@ -1,7 +1,7 @@
 # V46 Continue 인수인계 — Notion 정본 정렬
 
-작성일: 2026-08-08  
-브랜치: `main`  
+작성일: 2026-08-10  
+브랜치: `main` (세션 반영)  
 Unity: `6000.5.3f1`
 
 ## 정본 링크 (에이전트는 여기서 시작)
@@ -13,6 +13,7 @@ Unity: `6000.5.3f1`
 | **개발 명세서 ⑤ (v46)** | https://app.notion.com/p/8cfae468d16b8200b98d01b38164d4ad | 모듈 20종·밤 조합·CSV 델타 |
 | 눈물 원장 재검산 v46 | https://app.notion.com/p/729ae468d16b82dc8f2c01fb685a90c7 | 경제 검산 |
 | 로컬 갭(구 MVP) | `PLAN_VS_CODE_GAP_ANALYSIS.md` | 7/16 갭 → 8/8 재검증(P0~P2 닫힘). **100일 v46 범위는 아래 §2** |
+| **세션 인수인계 (상대 main 이후)** | `V46_SESSION_HANDOFF.md` | Title 분리 + P1~P5 작업 범위 단일 진입점 |
 
 > **규칙 (문서 지도)**: 현행에 없는 문서는 참고일 뿐. 문서와 CSV가 다르면 **CSV가 맞다.**  
 > **코드**: 개발 A/B 파트 분리는 Notion상 파일 소유 표기일 뿐, 저장소는 **합쳐진 `main` 한 제품**.
@@ -22,7 +23,7 @@ Unity: `6000.5.3f1`
 ## 0. 한 줄 요약
 
 Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/Data/CSV`·런타임은 **대략 30일 MVP/데모 규모**에 가깝다.  
-이전에 닫은 항목(새벽 180초·DawnAutoSave·밀폐 처방 C·문 개폐·Development 단축키)은 **MVP 층에서는 유효**하고, **P1 WaveNight·P2 석빙고/Smithy/터렛 슬롯**은 kit 없이 착수됨. **제품 진입 씬은 `Title` → `MainGame` 분리**. **v46 전량 CSV(P0)·DayLight(P3)·Frost/Evolution(P4)** 는 아직 대기.
+이전에 닫은 항목(새벽 180초·DawnAutoSave·밀폐 처방 C·문 개폐·Development 단축키)은 **MVP 층에서는 유효**하고, **P1~P5**까지 kit 없이 착수됨. **제품 진입 씬은 `Title` → `MainGame` 분리**. **v46 전량 CSV(P0)** 와 **아티팩트 동사 효과 구현**은 후속.
 
 ---
 
@@ -64,26 +65,26 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 
 | 모듈 | 담당(문서) | 로컬 |
 |------|------------|------|
-| `DayLight.intensityFor` / `assertInvariants` | A | 부분 — `MainGamePresentationController.DayLighting`만. globals `day_brightness_by_stage`·assert **없음** |
+| `DayLight.intensityFor` / `assertInvariants` | A | ✅ `DayLight.cs` + Presentation 연동. globals `day_brightness_by_stage`·`heat_stage_period` |
 | `Seokbinggo.upgrade` (s1~s6) | A | ✅ `SeokbinggoUpgradeService` + Builtin/CSV materials. ice_core E 승급 |
-| `Insulation.total` (3티어 합산) | A | 부분(기존 단열/벽지) — v36 3티어 합산식 미확인 |
+| `Insulation.total` (3티어 합산) | A | ✅ `InsulationPanels.Total` (상한 6·`insul_straw_bonus`). 체온 런타임 합산 배선은 후속 |
 | `Armor.effectiveDamage` (min 1) | A | 전투 경로 존재 가능 — globals `armor_def_by_tier` 미확인 |
 | `Furniture.applyModifier` (죽부인·대발) | A | 죽부인은 냥잠 배율만; **대발·반경 가구 효과 미흡** |
 | `Boss.dodgePhase` | A | 미확인/미완 |
 | `Yokai.clubCrack` | A | 기존 벽 DPS 경로 있을 수 있음 — v46 수치 재검증 필요 |
 | `Turret.canPlace` (슬롯=석빙고 단계) | A | ✅ Stage 캡 + `turret_damage_slot_cap`(3) |
 | `WaveNight.*` (조합·큰밤·파도·배율) | B | ✅ P1 |
-| `FrostSpread.*` / `BedrockLayer.unseal` | B | **없음** |
-| `EvolutionCraft` / `Smithy.isUnlocked` | B | ✅ `IsUnlocked`(stage≥4) 게이트. EvolutionCraft 전량은 P4 |
-| `GimmickWeapon.check` | B | **없음** |
+| `FrostSpread.*` / `BedrockLayer.unseal` | B | ✅ `FrostSpreadService` + TileService 연동. 이무기 격퇴 시 altar clear |
+| `EvolutionCraft` / `Smithy.isUnlocked` | B | ✅ `EvolutionCraft` + UI `IsSmithyUnlocked`(stage≥4) |
+| `GimmickWeapon.check` | B | ✅ `GimmickWeapon`/`GimmickWeaponProgress` + Baekjung/Imugi/첫서리 훅 |
 
 ### 2-3. 문서 지도 «열린 판단 3건»
 
 | # | 안건 | 로컬 |
 |---|------|------|
-| ① | 아티팩트 20종 → equipment 스키마 | accessories/아티팩트 CSV·장착 경로 미완 |
-| ② | `AccessoryTwo` 슬롯 | **코드/enum/UI는 있음** — 데이터·밸런스 완성도 별도 |
-| ③ | T4~T6 세트 효과 | equipment 15행 수준 — T4~T6 미확정 |
+| ① | 아티팩트 20종 → equipment 스키마 | ✅ A안: `verb_id`·`usage_limit_per_day`·`activation_condition`. 카탈로그 20 + SO 등록 |
+| ② | `AccessoryTwo` 슬롯 | ✅ enum=4 · UI/세이브 기존 · 회귀 확인 |
+| ③ | T4~T6 세트 효과 | ✅ T4/T5 `none`(정본). T6 `hanpa` 체온−0.40·화염−0.45. T3 설한풍 존치 |
 
 ---
 
@@ -96,9 +97,9 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 | 0b | P0b | `WaveNightRules` 순수 규칙 + Dev B 계약 | ✅ 착수 | 스폰 런타임 배선은 P1 |
 | 1 | **P1** | Encounter에 WaveNight 배선 (빈 슬롯만·HP-only·큰밤) | ✅ kit 없이 착수 | day≥31 · CSV 없으면 Builtin 15행 |
 | 2 | **P2** | 석빙고 s1~s6 + `Smithy.isUnlocked` + `turret_slot_cap` | ✅ 착수 | Builtin materials + CSV 수동 행. kit zip 오면 modules 덮어쓰기 |
-| 3 | **P3** | `DayLight.intensityFor` + `assertInvariants` | 대기 | `day_brightness_by_stage` P0 의존 |
-| 4 | **P4** | FrostSpread / Bedrock / EvolutionCraft / GimmickWeapon | 대기 | crafting·items P0 의존 |
-| 5 | **P5** | 열린 판단 ①~③ (아티팩트 스키마·AccessoryTwo·T4~T6 세트) | 대기 | 오너 결정 |
+| 3 | **P3** | `DayLight.intensityFor` + `assertInvariants` | ✅ | Presentation 배선. `Nyangbingo/Run DayLight Regression Tests` |
+| 4 | **P4** | FrostSpread / Bedrock / EvolutionCraft / GimmickWeapon | ✅ | `Nyangbingo/Run P4 Regression Tests`. 기믹 아이템 CSV는 P0 |
+| 5 | **P5** | 열린 판단 ①~③ (아티팩트 스키마·AccessoryTwo·T4~T6 세트) | ✅ | `Nyangbingo/Run P5 Regression Tests`. 동사 **효과 구현**은 후속 |
 
 하드코딩 금지 4곳(명세서): 파도 108초(`wave_advance_sec`) · 방어 min1 · 터렛 슬롯 상한 · 낮 밝기 곡선 → **전부 globals**.
 
@@ -113,7 +114,22 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 
 ### 회귀
 - [ ] Nyangbingo → Run Dev B Integration Regression Tests → `27/27`
+- [ ] Nyangbingo → Run DayLight Regression Tests → Console `passed`
+- [ ] Nyangbingo → **Run P4 Regression Tests** → Console `passed`
+- [ ] Nyangbingo → **Run P5 Regression Tests** → Console `passed`
 - [ ] (여유) Run Dev A Regression Tests
+
+### P5 플레이/데이터 스모크
+- [ ] `equipment.csv` 44행(갑옷 18+악세 6+아티팩트 20) · `accessories.csv` 26행
+- [ ] 장비 UI: 악세 1·2칸에 아티팩트/악세 장착
+- [ ] 한파 3피스 장착 시 체온 −40%·화염 −45% (StatSheet)
+- [ ] (후속) ArtifactEffect 20종 Apply 구현 · 채널 SO 등록
+
+### P4 플레이 스모크
+- [ ] 이무기 격퇴 → `FrostSpread.AltarClears` 증가(세이브에 `altarClears` 반영)
+- [ ] 서리 pending 셀 채굴 1타 → 광물 확정만, 2타 → 채굴
+- [ ] 백중 종료 → `baekjung_bundle` 지급 시도(아이템 SO 없으면 granted만 기록)
+- [ ] 대장간: 석빙고 stage < 4면 Smithy 레시피 잠금, ≥4면 해제
 
 ### 씬 분리 (Title / MainGame)
 - [ ] 에디터 포커스 시 Title 씬 자동 생성, 또는 `Nyangbingo/Main Game/Create or Update Title Scene`
@@ -134,5 +150,5 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 
 ## 5. 푸시·잡음
 
-- 단축키·문 개폐·문서 정렬은 로컬 변경분 — 사용자 요청 시만 `main` 푸시  
+- 세션 작업분 + `V46_SESSION_HANDOFF.md`는 `main`에 반영됨 (2026-08-10)  
 - URP/ProjectSettings 잡음은 커밋하지 않음  

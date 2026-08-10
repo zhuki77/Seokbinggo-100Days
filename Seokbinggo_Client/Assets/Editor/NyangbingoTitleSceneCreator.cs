@@ -91,16 +91,17 @@ public static class NyangbingoTitleSceneCreator
 
         var titlePanel = CreateOverlayPanel(canvasObject.transform, "TitlePanel",
             new Color(.02f, .035f, .05f, 1f));
-        CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(0f, 180f),
-            new Vector2(620f, 80f), 48);
+        // 좌표는 구 MainGame 타이틀 × TitleChromeScale(3).
+        CreateMenuText(titlePanel.transform, "Title", "100일의 냥빙고", new Vector2(-336f, 264f),
+            new Vector2(540f, 90f), 60);
         var titleContinue = CreateMenuButton(titlePanel.transform, "Continue", "이어하기",
-            new Vector2(0f, 60f), new Vector2(300f, 58f));
+            new Vector2(-336f, 51f), new Vector2(450f, 81f));
         var titleNew = CreateMenuButton(titlePanel.transform, "NewGame", "새 게임",
-            new Vector2(0f, -10f), new Vector2(300f, 58f));
+            new Vector2(-336f, -51f), new Vector2(450f, 81f));
         var titleQuit = CreateMenuButton(titlePanel.transform, "Quit", "게임 종료",
-            new Vector2(0f, -80f), new Vector2(300f, 58f));
-        var statusText = CreateMenuText(titlePanel.transform, "Status", "", new Vector2(0f, -160f),
-            new Vector2(760f, 48f), 20);
+            new Vector2(-336f, -153f), new Vector2(450f, 81f));
+        var statusText = CreateMenuText(titlePanel.transform, "Status", "", new Vector2(-336f, -330f),
+            new Vector2(840f, 84f), 42);
 
         var confirmationPanel = CreateOverlayPanel(canvasObject.transform, "ConfirmationPanel",
             new Color(.06f, .04f, .05f, 1f));

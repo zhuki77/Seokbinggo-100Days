@@ -5,6 +5,7 @@ day_total_sec,1440,sec,1일 24분 (테라리아 동일)
 mvp_days,30,day,MVP 확대(오너지시 — 20→30 + 콘텐츠 폭)
 total_days,100,day,백일폭염 도래(정본)
 heat_stage_period,10,day,10일마다 더위단계+1(정본)
+day_brightness_by_stage,1.00/1.05/1.10/1.15/1.20/1.25/1.30/1.35/1.40/1.45,curve,v41 day brightness curve (v46 no hardcode) — stage 1~10
 temp_min,0,gauge,체온 시원
 temp_max,100,gauge,체온 열사병
 temp_start,40,gauge,시작 체온
@@ -101,4 +102,5 @@ wave_advance_sec,108,sec,파도 시간 임계(v46 하드코딩 금지) — 540÷
 turret_slot_cap,0,count,터렛 동시 가동 상한(v46 하드코딩 금지) — 런타임 소스는 석빙고 Stage. CSV는 문서·초기값
 turret_damage_slot_cap,3,count,화력형 터렛 상한(v46) — 유틸 터렛에 자리를 남긴다
 evolution_bench_t456,smithy,rule,T4~T6 진화 제작대 id — Smithy.isUnlocked = seokbinggo_stage>=4
+gimmick_weapon_bonus,1.10,mult,기믹 무기 DPS 배율(v38/v46) — 동시 티어 무기 × 이 값
 

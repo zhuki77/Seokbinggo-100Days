@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Audio;
+using Nyangbingo.Data;
 using Nyangbingo.Save;
 using Nyangbingo.World;
 using UnityEngine;
@@ -16,6 +17,9 @@ namespace Nyangbingo.UI
     [DefaultExecutionOrder(-55)]
     public sealed class TitleShellUiController : MonoBehaviour
     {
+        // 셸 아이콘은 22~44px 픽셀아트. 1920 캔버스에서 읽히도록 레이아웃·라벨을 함께 확대한다.
+        private const float TitleChromeScale = 3f;
+
         [SerializeField] private GameShellController shell;
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private NyangbingoAudioService audioService;
@@ -174,19 +178,37 @@ namespace Nyangbingo.UI
 
         private void ConfigureTitleMenuLayout()
         {
+            // 기준 좌표는 구 MainGame 타이틀 레이아웃. TitleChromeScale로 HD에서 읽히게 확대.
+            ConfigureShellButton(titleContinueButton, Scaled(new Vector2(-112f, 17f)), Scaled(new Vector2(150f, 27f)));
+            ConfigureShellButton(titleNewGameButton, Scaled(new Vector2(-112f, -17f)), Scaled(new Vector2(150f, 27f)));
+            ConfigureShellButton(titleQuitButton, Scaled(new Vector2(-112f, -51f)), Scaled(new Vector2(150f, 27f)));
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+                ConfigureShellButton(demoSaveButtons[index],
+                    Scaled(new Vector2(-162f + index * 50f, -82f)), Scaled(new Vector2(46f, 15f)));
+        }
+
+        private static Vector2 Scaled(Vector2 value) => value * TitleChromeScale;
+
+        private static void ConfigureShellButton(Button button, Vector2 position, Vector2 size)
+        {
+            if (button == null) return;
+            var rect = button.GetComponent<RectTransform>();
+            if (rect == null) return;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
         }
 
         private void CreateDemoSaveButtons()
         {
             if (titleNewGameButton == null || titleQuitButton == null) return;
             var parent = titleNewGameButton.transform.parent;
-            var quitRect = titleQuitButton.GetComponent<RectTransform>();
-            if (parent == null || quitRect == null) return;
+            if (parent == null) return;
 
             for (var index = 0; index < GameShellController.DemoSaveDays.Length; index++)
             {
                 var day = GameShellController.DemoSaveDays[index];
-                var button = Object.Instantiate(titleNewGameButton, parent);
+                var button = Instantiate(titleNewGameButton, parent);
                 button.name = $"DemoSaveDay{day}";
                 button.onClick.RemoveAllListeners();
                 button.onClick.AddListener(() =>
@@ -195,19 +217,17 @@ namespace Nyangbingo.UI
                         SetStatus($"{day}일차 데모를 자동저장 슬롯에 복사합니다.");
                 });
                 var rect = button.GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2(-162f + index * 50f, -82f);
-                rect.sizeDelta = new Vector2(46f, 15f);
+                rect.anchoredPosition = Scaled(new Vector2(-162f + index * 50f, -82f));
+                rect.sizeDelta = Scaled(new Vector2(46f, 15f));
                 var label = button.GetComponentInChildren<Text>(true);
                 if (label != null)
                 {
                     label.text = $"{day}일차 데모";
-                    label.fontSize = 8;
+                    label.fontSize = Mathf.RoundToInt(8f * TitleChromeScale);
                 }
 
                 demoSaveButtons.Add(button);
             }
-
-            quitRect.anchoredPosition = new Vector2(-112f, -51f);
         }
 
         private void ResolveShellArtCatalogs()
@@ -229,19 +249,34 @@ namespace Nyangbingo.UI
             EnsureTitleLogo();
             EnsureTitleStatePresentation();
             if (gameplayArtCatalog == null) return;
+            RuntimeUiButtonArt.Apply(titleContinueButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(titleNewGameButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(titleQuitButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(confirmButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(cancelButton, gameplayArtCatalog);
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+                RuntimeUiButtonArt.Apply(demoSaveButtons[index], gameplayArtCatalog);
             ApplyButtonLabelArt(titleContinueButton, gameplayArtCatalog.ShellContinue);
             ApplyButtonLabelArt(titleNewGameButton, gameplayArtCatalog.ShellStart);
+            ApplyButtonLabelArt(titleQuitButton, gameplayArtCatalog.ShellLeave);
         }
 
         private void EnsureTitleBackground()
         {
-            if (titleNewGameButton == null || environmentArtCatalog?.TitleBackground == null) return;
-            var titlePanel = titleNewGameButton.transform.parent as RectTransform;
+            if (titleNewGameButton == null) return;
+            var titlePanel = titleNewGameButton.transform.parent;
             if (titlePanel == null) return;
+
+            var panelImage = titlePanel.GetComponent<Image>();
+            if (panelImage != null)
+                panelImage.color = new Color(.02f, .035f, .05f, 1f);
+
+            if (environmentArtCatalog == null || environmentArtCatalog.TitleBackground == null) return;
             var backgroundTransform = titlePanel.Find("TitleBackground") as RectTransform;
             if (backgroundTransform == null)
             {
-                var backgroundObject = new GameObject("TitleBackground", typeof(RectTransform), typeof(Image));
+                var backgroundObject = new GameObject("TitleBackground", typeof(RectTransform), typeof(Image),
+                    typeof(AspectRatioFitter));
                 backgroundObject.transform.SetParent(titlePanel, false);
                 backgroundTransform = (RectTransform)backgroundObject.transform;
             }
@@ -273,12 +308,12 @@ namespace Nyangbingo.UI
             {
                 titleLabel.gameObject.SetActive(true);
                 titleLabel.text = "100일의 냥빙고";
-                titleLabel.fontSize = 20;
+                titleLabel.fontSize = Mathf.RoundToInt(20f * TitleChromeScale);
                 titleLabel.alignment = TextAnchor.MiddleCenter;
                 var labelRect = titleLabel.rectTransform;
                 labelRect.anchorMin = labelRect.anchorMax = labelRect.pivot = new Vector2(.5f, .5f);
-                labelRect.anchoredPosition = new Vector2(-112f, 88f);
-                labelRect.sizeDelta = new Vector2(180f, 30f);
+                labelRect.anchoredPosition = Scaled(new Vector2(-112f, 88f));
+                labelRect.sizeDelta = Scaled(new Vector2(180f, 30f));
             }
 
             var titleArtTransform = titlePanel.Find("TitleArt") as RectTransform;
@@ -299,8 +334,8 @@ namespace Nyangbingo.UI
             titleArtTransform.gameObject.SetActive(true);
             titleArtTransform.anchorMin = titleArtTransform.anchorMax = titleArtTransform.pivot =
                 new Vector2(.5f, .5f);
-            titleArtTransform.anchoredPosition = new Vector2(-112f, 82f);
-            titleArtTransform.sizeDelta = new Vector2(96f, 96f);
+            titleArtTransform.anchoredPosition = Scaled(new Vector2(-112f, 82f));
+            titleArtTransform.sizeDelta = Scaled(new Vector2(96f, 96f));
             var titleImage = titleArtTransform.GetComponent<Image>() ??
                              titleArtTransform.gameObject.AddComponent<Image>();
             titleImage.sprite = deliveredLogo;
@@ -326,12 +361,12 @@ namespace Nyangbingo.UI
 
             counterTransform.anchorMin = counterTransform.anchorMax = counterTransform.pivot =
                 new Vector2(.5f, .5f);
-            counterTransform.anchoredPosition = new Vector2(176f, 97f);
-            counterTransform.sizeDelta = new Vector2(84f, 36f);
+            counterTransform.anchoredPosition = Scaled(new Vector2(176f, 97f));
+            counterTransform.sizeDelta = Scaled(new Vector2(84f, 36f));
             titleDayCounterText = counterTransform.GetComponent<Text>();
             var menuLabel = titleNewGameButton.GetComponentInChildren<Text>(true);
             titleDayCounterText.font = menuLabel != null ? menuLabel.font : titleDayCounterText.font;
-            titleDayCounterText.fontSize = 22;
+            titleDayCounterText.fontSize = Mathf.RoundToInt(22f * TitleChromeScale);
             titleDayCounterText.fontStyle = FontStyle.Bold;
             titleDayCounterText.alignment = TextAnchor.MiddleCenter;
             titleDayCounterText.color = Color.white;
@@ -341,7 +376,7 @@ namespace Nyangbingo.UI
                 titleDayCounterText.text = string.Empty;
                 titleDayCounterGlyphs = counterTransform.GetComponent<RuntimePixelGlyphPresenter>() ??
                                         counterTransform.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                titleDayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs);
+                titleDayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, TitleChromeScale);
             }
 
             var playerEntry = characterArtCatalog?.Find("player");
@@ -355,8 +390,8 @@ namespace Nyangbingo.UI
             }
 
             playerTransform.anchorMin = playerTransform.anchorMax = playerTransform.pivot = new Vector2(1f, 0f);
-            playerTransform.anchoredPosition = new Vector2(-54f, 34f);
-            playerTransform.sizeDelta = new Vector2(72f, 72f);
+            playerTransform.anchoredPosition = Scaled(new Vector2(-54f, 34f));
+            playerTransform.sizeDelta = Scaled(new Vector2(72f, 72f));
             var playerImage = playerTransform.GetComponent<Image>();
             playerImage.preserveAspect = true;
             playerImage.raycastTarget = false;
@@ -375,19 +410,24 @@ namespace Nyangbingo.UI
             if (button == null || sprite == null) return;
             var label = button.GetComponentInChildren<Text>(true);
             if (label != null) label.gameObject.SetActive(false);
-            var art = button.transform.Find("LabelArt") as RectTransform;
-            if (art == null)
+            var artTransform = button.transform.Find("DeliveredArt") as RectTransform;
+            if (artTransform == null)
             {
-                var artObject = new GameObject("LabelArt", typeof(RectTransform), typeof(Image));
+                // 이전 Title 분기에서 LabelArt로 만든 경우 정리
+                var legacy = button.transform.Find("LabelArt");
+                if (legacy != null) Destroy(legacy.gameObject);
+
+                var artObject = new GameObject("DeliveredArt", typeof(RectTransform), typeof(Image));
                 artObject.transform.SetParent(button.transform, false);
-                art = (RectTransform)artObject.transform;
+                artTransform = (RectTransform)artObject.transform;
             }
 
-            art.anchorMin = art.anchorMax = art.pivot = new Vector2(.5f, .5f);
-            art.anchoredPosition = Vector2.zero;
-            art.sizeDelta = new Vector2(120f, 28f);
-            var image = art.GetComponent<Image>();
+            artTransform.anchorMin = artTransform.anchorMax = artTransform.pivot = new Vector2(.5f, .5f);
+            artTransform.anchoredPosition = Vector2.zero;
+            artTransform.sizeDelta = sprite.rect.size * TitleChromeScale;
+            var image = artTransform.GetComponent<Image>();
             image.sprite = sprite;
+            image.color = Color.white;
             image.preserveAspect = true;
             image.raycastTarget = false;
         }

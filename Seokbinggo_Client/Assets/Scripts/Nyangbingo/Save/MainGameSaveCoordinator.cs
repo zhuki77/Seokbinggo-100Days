@@ -181,6 +181,9 @@ namespace Nyangbingo.Save
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .ToList();
             save.seokbinggoStage = runtimeServices.Seokbinggo?.Stage ?? 0;
+            save.altarClears = runtimeServices.FrostSpread?.AltarClears ?? 0;
+            save.gimmickWeaponsGranted = runtimeServices.GimmickWeapons?.Export() ?? new List<string>();
+            save.frostPendingCells = runtimeServices.FrostSpread?.ExportPendingCells() ?? new List<string>();
             save.coolingSources = environmentState.ExportCoolingSources();
             save.jangdokStorages = runtimeServices.JangdokStorage.Export();
             save.deathTearPouches = runtimeServices.DeathTearPouches.Export();
@@ -365,6 +368,22 @@ namespace Nyangbingo.Save
         {
             if (runtimeServices?.Seokbinggo == null) return false;
             runtimeServices.Seokbinggo.RestoreStage(save?.seokbinggoStage ?? 0);
+
+            var frost = runtimeServices.FrostSpread;
+            if (frost != null && save != null)
+            {
+                frost.SetAltarClears(save.altarClears);
+                frost.RestorePendingCells(save.frostPendingCells);
+                var tiles = bootstrap?.TileService;
+                if (tiles != null)
+                {
+                    tiles.FrostSpread = frost;
+                    if (save.altarClears >= 3)
+                        FrostSpreadService.UnsealBedrockLayer(tiles);
+                }
+            }
+
+            runtimeServices.GimmickWeapons?.Restore(save?.gimmickWeaponsGranted);
             return true;
         }
 

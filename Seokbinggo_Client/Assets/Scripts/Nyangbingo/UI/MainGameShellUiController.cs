@@ -82,7 +82,8 @@ namespace Nyangbingo.UI
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
         public bool IsInitialized { get; private set; }
-        public static bool IsLoadingTransitionActive { get; private set; }
+        /// <summary>Title→MainGame 로딩 중에도 TitleShell이 설정할 수 있다.</summary>
+        public static bool IsLoadingTransitionActive { get; internal set; }
 
         public void ConfigureForScene(GameShellController shellController, MainGameSaveCoordinator coordinator,
             SaveManager saves, NyangbingoAudioService audio, DayNightService clock, MainGameCodexController codexUi,

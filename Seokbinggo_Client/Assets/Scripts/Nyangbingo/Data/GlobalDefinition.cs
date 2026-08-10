@@ -43,6 +43,10 @@ namespace Nyangbingo.Data
         public const string TurretSlotCap = "turret_slot_cap";
         public const string TurretDamageSlotCap = "turret_damage_slot_cap";
         public const string EvolutionBenchT456 = "evolution_bench_t456";
+        public const string HeatStagePeriod = "heat_stage_period";
+        public const string DayBrightnessByStage = "day_brightness_by_stage";
+        public const string InsulStrawBonus = "insul_straw_bonus";
+        public const string GimmickWeaponBonus = "gimmick_weapon_bonus";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Global Value")]

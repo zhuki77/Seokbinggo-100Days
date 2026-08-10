@@ -27,3 +27,6 @@ MonoBehaviour:
   setId: seolhanpung
   setTemperatureRiseModifier: -0.2
   setFireDamageModifier: -0.25
+  verbId: 
+  usageLimitPerDay: 0
+  activationCondition: None

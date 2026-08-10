@@ -944,6 +944,9 @@ public static class NyangbingoDataMenu
         var setIds = new string[rows.Count];
         var setTemperatureModifiers = new float[rows.Count];
         var setFireModifiers = new float[rows.Count];
+        var verbIds = new string[rows.Count];
+        var usageLimits = new int[rows.Count];
+        var activations = new string[rows.Count];
         var setMembers = new Dictionary<string, List<int>>(System.StringComparer.Ordinal);
         for (var i = 0; i < rows.Count; i++)
         {
@@ -979,6 +982,36 @@ public static class NyangbingoDataMenu
             }
 
             setIds[i] = row["setId"] == "none" ? string.Empty : row["setId"].Trim();
+            verbIds[i] = row.TryGetValue("verb_id", out var verbRaw) ? (verbRaw ?? string.Empty).Trim() : string.Empty;
+            if (!row.TryGetValue("usage_limit_per_day", out var usageRaw) || string.IsNullOrWhiteSpace(usageRaw))
+                usageLimits[i] = 0;
+            else if (!int.TryParse(usageRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out usageLimits[i]) ||
+                     usageLimits[i] < 0)
+            {
+                Debug.LogError($"[Nyangbingo] Equipment '{id}' has invalid usage_limit_per_day.");
+                return;
+            }
+
+            activations[i] = row.TryGetValue("activation_condition", out var activationRaw) &&
+                             !string.IsNullOrWhiteSpace(activationRaw)
+                ? activationRaw.Trim()
+                : "None";
+            if (Nyangbingo.Core.ArtifactVerbParsing.ParseActivation(activations[i]) ==
+                    Nyangbingo.Core.ArtifactActivationCondition.None &&
+                !string.Equals(activations[i], "None", System.StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(activations[i]))
+            {
+                Debug.LogError($"[Nyangbingo] Equipment '{id}' has invalid activation_condition.");
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(verbIds[i]) &&
+                Nyangbingo.Core.ArtifactVerbParsing.ParseVerb(verbIds[i]) == Nyangbingo.Core.ArtifactVerbId.None)
+            {
+                Debug.LogError($"[Nyangbingo] Equipment '{id}' has invalid verb_id '{verbIds[i]}'.");
+                return;
+            }
+
             var jumpRatioMatches = doubleJumps[i] ? doubleJumpRatios[i] > 0f : doubleJumpRatios[i] == 0f;
             var hasSet = !string.IsNullOrEmpty(setIds[i]);
             if (!jumpRatioMatches || doubleJumpRatios[i] < 0f ||
@@ -1056,11 +1089,96 @@ public static class NyangbingoDataMenu
             serialized.FindProperty("setId").stringValue = setIds[i];
             serialized.FindProperty("setTemperatureRiseModifier").floatValue = setTemperatureModifiers[i];
             serialized.FindProperty("setFireDamageModifier").floatValue = setFireModifiers[i];
+            var verbProperty = serialized.FindProperty("verbId");
+            if (verbProperty != null) verbProperty.stringValue = verbIds[i];
+            var usageProperty = serialized.FindProperty("usageLimitPerDay");
+            if (usageProperty != null) usageProperty.intValue = usageLimits[i];
+            var activationProperty = serialized.FindProperty("activationCondition");
+            if (activationProperty != null) activationProperty.stringValue = activations[i];
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(definition);
         }
         AssetDatabase.SaveAssets(); AssetDatabase.Refresh();
         Debug.Log($"[Nyangbingo] Equipment CSV reimport completed: {rows.Count} assets.");
+    }
+
+    /// <summary>
+    /// accessories.csv에만 있고 equipment SO가 없는 id를 AccessoryOne(수치 0)으로 생성.
+    /// 런타임 정본은 equipment.csv — 이 메뉴는 기획 원장 동기화 보조.
+    /// </summary>
+    [MenuItem("Nyangbingo/Reimport Accessories As Equipment")]
+    private static void ReimportAccessoriesAsEquipment()
+    {
+        const string accessoriesPath = "Assets/Data/CSV/accessories.csv";
+        const string equipmentDirectory = "Assets/Data/SO/Equipment";
+        if (!File.Exists(accessoriesPath))
+        {
+            Debug.LogError("[Nyangbingo] accessories.csv was not found.");
+            return;
+        }
+
+        List<Dictionary<string, string>> rows;
+        try
+        {
+            rows = NyangbingoCsvUtility.ReadRows(accessoriesPath);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError($"[Nyangbingo] Accessories CSV validation failed: {exception.Message}");
+            return;
+        }
+
+        EnsureFolder(equipmentDirectory);
+        var created = 0;
+        var skipped = 0;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var id = rows[i]["id"];
+            if (string.IsNullOrWhiteSpace(id) || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                Debug.LogError($"[Nyangbingo] Accessory '{id}' has an unsafe ID.");
+                return;
+            }
+
+            var assetPath = $"{equipmentDirectory}/{id}.asset";
+            if (AssetDatabase.LoadAssetAtPath<EquipmentDefinition>(assetPath) != null)
+            {
+                skipped++;
+                continue;
+            }
+
+            var definition = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            AssetDatabase.CreateAsset(definition, assetPath);
+            var serialized = new SerializedObject(definition);
+            serialized.FindProperty("id").stringValue = id;
+            serialized.FindProperty("slot").enumValueIndex = (int)Nyangbingo.Core.EquipmentSlot.AccessoryOne;
+            serialized.FindProperty("accessory").boolValue = true;
+            serialized.FindProperty("defense").intValue = 0;
+            serialized.FindProperty("movementBonus").floatValue = 0f;
+            serialized.FindProperty("miningCriticalBonus").floatValue = 0f;
+            serialized.FindProperty("temperatureRiseModifier").floatValue = 0f;
+            serialized.FindProperty("fireDamageModifier").floatValue = 0f;
+            serialized.FindProperty("grantsDoubleJump").boolValue = false;
+            serialized.FindProperty("doubleJumpHeightRatio").floatValue = 0f;
+            serialized.FindProperty("visionRadiusBonus").floatValue = 0f;
+            serialized.FindProperty("blocksInventoryTheft").boolValue = false;
+            serialized.FindProperty("setId").stringValue = string.Empty;
+            serialized.FindProperty("setTemperatureRiseModifier").floatValue = 0f;
+            serialized.FindProperty("setFireDamageModifier").floatValue = 0f;
+            var verbProperty = serialized.FindProperty("verbId");
+            if (verbProperty != null) verbProperty.stringValue = string.Empty;
+            var usageProperty = serialized.FindProperty("usageLimitPerDay");
+            if (usageProperty != null) usageProperty.intValue = 0;
+            var activationProperty = serialized.FindProperty("activationCondition");
+            if (activationProperty != null) activationProperty.stringValue = "None";
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(definition);
+            created++;
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[Nyangbingo] Accessories-as-equipment import completed: created={created}, skippedExisting={skipped}.");
     }
 
     [MenuItem("Nyangbingo/Reimport Player Combat CSV")]
@@ -1707,7 +1825,7 @@ public static class NyangbingoDataMenu
         }
 
         var textUnits = new HashSet<string>(System.StringComparer.Ordinal)
-            { "ore:ingot", "recipe", "rule", "scope", "file" };
+            { "ore:ingot", "recipe", "rule", "scope", "file", "curve", "list", "ref", "mult" };
         var integerUnits = new HashSet<string>(System.StringComparer.Ordinal)
             { "count", "day", "gauge", "hp", "person", "px" };
         var keys = new HashSet<string>(System.StringComparer.Ordinal);

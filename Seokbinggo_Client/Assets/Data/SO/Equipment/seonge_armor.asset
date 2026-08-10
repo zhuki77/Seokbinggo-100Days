@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cddcb694b202b6748b9a9f3a968ec6b8, type: 3}
+  m_Name: seonge_armor
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.EquipmentDefinition
+  id: seonge_armor
+  slot: 1
+  accessory: 0
+  defense: 5
+  movementBonus: 0
+  miningCriticalBonus: 0
+  temperatureRiseModifier: 0
+  fireDamageModifier: 0
+  grantsDoubleJump: 0
+  doubleJumpHeightRatio: 0
+  visionRadiusBonus: 0
+  blocksInventoryTheft: 0
+  setId: 
+  setTemperatureRiseModifier: 0
+  setFireDamageModifier: 0
+  verbId: 
+  usageLimitPerDay: 0
+  activationCondition: None

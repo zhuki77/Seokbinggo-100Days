@@ -70,6 +70,9 @@ namespace Nyangbingo.World
         public int Width { get; }
         public int Height { get; }
 
+        /// <summary>서리 확산 서비스. 월드 로드 후 RuntimeServices가 연결한다.</summary>
+        public FrostSpreadService FrostSpread { get; set; }
+
         public TileService(TileData[,] tiles, TilemapRenderer renderer, GameDataCatalog catalog, int seed)
         {
             this.tiles = tiles ?? throw new ArgumentNullException(nameof(tiles));
@@ -86,6 +89,66 @@ namespace Nyangbingo.World
 
         public TileData GetTile(Vector3Int cell) => InBounds(cell) ? tiles[cell.x, cell.y] : default;
 
+        /// <summary>열 x의 최상위 자연 고체 Y. 없으면 -1.</summary>
+        public int FindSurfaceNaturalY(int x)
+        {
+            if (x < 0 || x >= Width || Height <= 1) return -1;
+            for (var y = Height - 1; y >= 0; y--)
+            {
+                var tile = tiles[x, y];
+                if (!tile.IsAir && tile.isNaturalTerrain) return y;
+            }
+
+            return -1;
+        }
+
+        public bool IsAirAdjacent(Vector3Int cell)
+        {
+            if (!InBounds(cell)) return false;
+            var neighbors = new[]
+            {
+                cell + Vector3Int.left,
+                cell + Vector3Int.right,
+                cell + Vector3Int.up,
+                cell + Vector3Int.down
+            };
+            for (var i = 0; i < neighbors.Length; i++)
+            {
+                if (!InBounds(neighbors[i])) continue;
+                if (GetTile(neighbors[i]).IsAir) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 전경 element만 교체(채굴/설치 아님). 서리 광물 확정·경계암 개방에 사용.
+        /// </summary>
+        public bool TrySetForegroundElement(Vector3Int cell, string elementType, int hardness)
+        {
+            if (!InBounds(cell) || string.IsNullOrEmpty(elementType)) return false;
+            elementType = TileIdAlias.ToCanonical(elementType);
+            var current = tiles[cell.x, cell.y];
+            if (current.IsAir) return false;
+
+            tiles[cell.x, cell.y] = new TileData
+            {
+                hardness = Mathf.Max(1, hardness),
+                isNaturalTerrain = current.isNaturalTerrain,
+                elementType = elementType,
+                backgroundElementType = string.IsNullOrEmpty(current.backgroundElementType)
+                    ? WorldTileTypes.Air
+                    : current.backgroundElementType,
+                naturalBackgroundElementType = string.IsNullOrEmpty(current.naturalBackgroundElementType)
+                    ? WorldTileTypes.Air
+                    : current.naturalBackgroundElementType
+            };
+            ApplyForegroundVisual(cell, elementType);
+            RefreshEdgeOverlayAround(cell);
+            renderer?.NotifyForegroundCollisionDirty();
+            return true;
+        }
+
         /// <summary>
         /// 전경 타일 파괴(채굴). 성공 시 전경만 비우고 기존 배경·자연 배경 기준은 유지한다(A-16).
         /// </summary>
@@ -95,6 +158,10 @@ namespace Nyangbingo.World
             droppedAmount = 0;
 
             if (!InBounds(cell)) return false;
+
+            // 서리 pending: 공기 인접 시 광물로만 확정하고 이번 타격은 소비한다.
+            if (FrostSpread != null && FrostSpread.TryRevealOnInteract(this, cell))
+                return false;
 
             var current = tiles[cell.x, cell.y];
             if (current.IsAir) return false;
