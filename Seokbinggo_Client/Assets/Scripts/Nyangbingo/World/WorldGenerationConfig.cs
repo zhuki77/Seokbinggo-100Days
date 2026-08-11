@@ -29,6 +29,8 @@ namespace Nyangbingo.World
         [Min(1)][SerializeField] private int middleLayerThickness = 45;
         [Min(1)][SerializeField] private int bedrockThickness = 5;
         [Range(0f, 1f)][SerializeField] private float upperDirtRatio = 0.64f; // 흙45:돌25 ≈ 64:36 (6-4 표)
+        // 지표(포함)부터 이 깊이까지는 석탄·돌·점토 등 T1 광물/돌 필을 넣지 않는다(지상 노출 금지).
+        [Min(1)][SerializeField] private int surfaceMineralBanDepth = 3;
 
         [Header("동굴 — Pass 2 (2D 펄린 임계값, 상층10%→심층25%)")]
         [Min(0.0001f)][SerializeField] private float caveNoiseFrequency = 0.08f;
@@ -63,6 +65,8 @@ namespace Nyangbingo.World
         [SerializeField]
         private OreVeinProfile[] oreVeins =
         {
+            // 상층 돌은 노이즈 필이 아니라 광맥 클러스터로만 배치(지표 ban depth 아래).
+            new OreVeinProfile { elementType = WorldTileTypes.Stone, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 25f, minClusterSize = 4, maxClusterSize = 8, depthMin = 1, depthMax = 45 },
             new OreVeinProfile { elementType = WorldTileTypes.Coal, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 8f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
             new OreVeinProfile { elementType = WorldTileTypes.Clay, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
             new OreVeinProfile { elementType = WorldTileTypes.IronOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 18f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
@@ -92,11 +96,14 @@ namespace Nyangbingo.World
         [Min(2)][SerializeField] private int iceLakeWidth = 6;
         [Min(2)][SerializeField] private int iceLakeHeight = 3;
 
-        [Header("구조물 — Pass 4 : 보물 상자 (6-12 표: 폐허4·상층6·중층6·심층4)")]
-        [Min(0)][SerializeField] private int chestCountRuins = 4;
-        [Min(0)][SerializeField] private int chestCountUpper = 6;
-        [Min(0)][SerializeField] private int chestCountMiddle = 6;
-        [Min(0)][SerializeField] private int chestCountDeep = 4;
+        [Header("구조물 — Pass 4 : 보물 상자 (대형 동굴당 0~2, 지상 배치 없음)")]
+        // 레거시 지역별 카운트(폐허/상·중·심). 동굴 배치로 전환 후 기본 0 — DataMenu 호환용으로만 유지.
+        [Min(0)][SerializeField] private int chestCountRuins = 0;
+        [Min(0)][SerializeField] private int chestCountUpper = 0;
+        [Min(0)][SerializeField] private int chestCountMiddle = 0;
+        [Min(0)][SerializeField] private int chestCountDeep = 0;
+        [Min(0)][SerializeField] private int chestPerCavernMin = 0;
+        [Min(0)][SerializeField] private int chestPerCavernMax = 2;
         [SerializeField] private string chestIdPrefix = "chest_";
 
         [Header("검증/리롤 (개발 가이드② §5, 실패 시 seed+1)")]
@@ -115,6 +122,7 @@ namespace Nyangbingo.World
         public int MiddleLayerThickness => middleLayerThickness;
         public int BedrockThickness => bedrockThickness;
         public float UpperDirtRatio => upperDirtRatio;
+        public int SurfaceMineralBanDepth => Mathf.Max(1, surfaceMineralBanDepth);
 
         public float CaveNoiseFrequency => caveNoiseFrequency;
         public float CaveChanceUpper => caveChanceUpper;
@@ -159,7 +167,12 @@ namespace Nyangbingo.World
         public int ChestCountUpper => chestCountUpper;
         public int ChestCountMiddle => chestCountMiddle;
         public int ChestCountDeep => chestCountDeep;
-        public int TotalChestCount => chestCountRuins + chestCountUpper + chestCountMiddle + chestCountDeep;
+        public int ChestPerCavernMin => Mathf.Min(chestPerCavernMin, chestPerCavernMax);
+        public int ChestPerCavernMax => Mathf.Max(chestPerCavernMin, chestPerCavernMax);
+        /// <summary>레거시 지역 합 + 동굴 상한(리스트 용량·경고용). 실제 개수는 시드·동굴 수에 따라 달라진다.</summary>
+        public int TotalChestCount =>
+            chestCountRuins + chestCountUpper + chestCountMiddle + chestCountDeep +
+            LargeCavernCountMax * ChestPerCavernMax;
         public string ChestIdPrefix => string.IsNullOrEmpty(chestIdPrefix) ? "chest_" : chestIdPrefix;
 
         public int MaxRerollAttempts => maxRerollAttempts;

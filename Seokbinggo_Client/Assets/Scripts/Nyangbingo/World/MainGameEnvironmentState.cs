@@ -442,7 +442,8 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 좌클릭 회수용. 마우스가 가리키는 칸의 설치물만 대상이다(빈 칸 설치·채굴을 가로채지 않음).
+        /// 좌클릭 회수용. 마우스 칸의 설치물을 우선하고, 스프라이트가 옆·아래 칸으로 넘어간 경우에도
+        /// 비주얼 bounds 안의 설치물을 고른다(주변 지형 채굴로 새지 않게).
         /// </summary>
         public bool TryResolvePlacedObjectMiningTarget(Vector2 playerPosition, Vector2? mouseWorld,
             float reach, out PlacedObjectRecord record)
@@ -461,16 +462,98 @@ namespace Nyangbingo.World
             var mouse = mouseWorld.Value;
             if (!IsFinite(mouse.x) || !IsFinite(mouse.y)) return false;
 
+            var reachSq = reach * reach;
             var mouseCell = bootstrap?.TileService != null
                 ? bootstrap.TileService.WorldToCell(mouse)
                 : CellFrom(mouse);
-            if (!byCell.TryGetValue(mouseCell, out var entry) || entry == null ||
-                (entry.Record.position - playerPosition).sqrMagnitude > reach * reach)
-                return false;
+            if (byCell.TryGetValue(mouseCell, out var entry) && entry != null &&
+                (entry.Record.position - playerPosition).sqrMagnitude <= reachSq)
+            {
+                record = entry.Record;
+                hitCell = mouseCell;
+                return true;
+            }
 
-            record = entry.Record;
-            hitCell = mouseCell;
+            Entry best = null;
+            var bestDistance = float.PositiveInfinity;
+            var bestHit = default(Vector3Int);
+            foreach (var candidate in byObjectId.Values)
+            {
+                if (candidate == null ||
+                    (candidate.Record.position - playerPosition).sqrMagnitude > reachSq)
+                    continue;
+                if (!TryGetPlacedObjectSpriteBounds(candidate.Record.objectId, out var bounds) ||
+                    !MainGameWorldDecorationRenderer.ContainsWorldPointXY(bounds, mouse))
+                    continue;
+                var distance = ((Vector2)bounds.center - mouse).sqrMagnitude;
+                if (distance >= bestDistance) continue;
+                best = candidate;
+                bestDistance = distance;
+                bestHit = ResolveOccupiedHitCell(candidate, mouseCell);
+            }
+
+            if (best == null) return false;
+            record = best.Record;
+            hitCell = bestHit;
             return true;
+        }
+
+        /// <summary>
+        /// 설치 미리보기용. 기존 설치물 스프라이트 위면 그 설치물 칸으로 고정한다.
+        /// </summary>
+        public bool TryResolvePlacementCellUnderPlacedObject(Vector2 worldPosition, out Vector3Int cell)
+        {
+            cell = default;
+            if (!IsFinite(worldPosition.x) || !IsFinite(worldPosition.y)) return false;
+
+            Entry best = null;
+            var bestArea = float.PositiveInfinity;
+            var bestDistance = float.PositiveInfinity;
+            foreach (var candidate in byObjectId.Values)
+            {
+                if (candidate == null ||
+                    !TryGetPlacedObjectSpriteBounds(candidate.Record.objectId, out var bounds) ||
+                    !MainGameWorldDecorationRenderer.ContainsWorldPointXY(bounds, worldPosition))
+                    continue;
+                var area = bounds.size.x * bounds.size.y;
+                var distance = ((Vector2)bounds.center - worldPosition).sqrMagnitude;
+                const float areaEpsilon = .0001f;
+                if (area + areaEpsilon < bestArea ||
+                    Mathf.Abs(area - bestArea) <= areaEpsilon && distance < bestDistance)
+                {
+                    best = candidate;
+                    bestArea = area;
+                    bestDistance = distance;
+                }
+            }
+
+            if (best == null) return false;
+            var mouseCell = bootstrap?.TileService != null
+                ? bootstrap.TileService.WorldToCell(worldPosition)
+                : CellFrom(worldPosition);
+            cell = ResolveOccupiedHitCell(best, mouseCell);
+            return true;
+        }
+
+        private bool TryGetPlacedObjectSpriteBounds(string objectId, out Bounds bounds)
+        {
+            bounds = default;
+            if (string.IsNullOrWhiteSpace(objectId) ||
+                !visualsByObjectId.TryGetValue(objectId, out var visual) || visual == null)
+                return false;
+            var renderer = visual.GetComponentInChildren<SpriteRenderer>();
+            if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                return false;
+            bounds = renderer.bounds;
+            return true;
+        }
+
+        private static Vector3Int ResolveOccupiedHitCell(Entry entry, Vector3Int mouseCell)
+        {
+            if (entry == null) return mouseCell;
+            if (mouseCell == entry.Cell || mouseCell == entry.Cell + Vector3Int.up)
+                return mouseCell;
+            return entry.Cell;
         }
 
         public List<PlacedObjectRecord> ExportPlacedObjects() => byObjectId.Values

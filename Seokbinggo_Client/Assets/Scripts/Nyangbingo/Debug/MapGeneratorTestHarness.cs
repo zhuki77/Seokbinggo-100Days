@@ -385,8 +385,10 @@ namespace Nyangbingo.Debugging
                       $"리롤 {result.rerollAttempts}회, 검증 통과:{result.passedValidation}, 상자 {result.chests.Count}개, " +
                       $"스폰({result.spawnPoint.x},{result.spawnPoint.y}), 제단({result.altarPosition.x},{result.altarPosition.y})");
 
-            if (result.chests.Count != config.TotalChestCount)
-                Debug.LogWarning($"[Nyangbingo] 상자 개수가 목표치({config.TotalChestCount})와 다릅니다: {result.chests.Count}개.");
+            if (result.chests.Count > config.TotalChestCount)
+                Debug.LogWarning($"[Nyangbingo] 상자 개수가 상한({config.TotalChestCount})을 초과합니다: {result.chests.Count}개.");
+            else
+                Debug.Log($"[Nyangbingo] 상자 {result.chests.Count}개 (동굴당 0~{config.ChestPerCavernMax}, 상한 {config.TotalChestCount}).");
         }
 
         /// <summary>실제 Tilemap 위에는 색상 텍스처 대신, 스폰/제단/상자 위치만 작은 색점으로 얹어서 표시한다.

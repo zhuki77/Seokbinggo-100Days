@@ -924,8 +924,9 @@ namespace Nyangbingo.World
                     ref bestKind);
             if (environmentState != null &&
                 environmentState.TryResolvePlacedObjectMiningTarget(origin, mouseWorld, miningReach,
-                    out var placedRecord))
-                ConsiderMiningTarget(placedRecord.position, aim, MiningWorldTargetKind.PlacedObject,
+                    out _))
+                // 커서가 설치물 위면 조준 거리를 0으로 둬 주변 지형보다 항상 우선한다.
+                ConsiderMiningTarget(aim, aim, MiningWorldTargetKind.PlacedObject,
                     ref bestAimDist, ref bestKind);
             if (TryResolveMiningCell(tileService, out var tileCell))
             {
@@ -1523,7 +1524,30 @@ namespace Nyangbingo.World
         private void UpdateMiningTargetFeedback(bool blocked)
         {
             var tileService = bootstrap?.TileService;
-            if (blocked || tileService == null || !TryResolveMiningCell(tileService, out var cell))
+            if (blocked || tileService == null)
+            {
+                HideMiningTargetFeedback();
+                return;
+            }
+
+            // 설치물 스프라이트/칸 위면 주변 지형 하이라이트로 새지 않게 설치물 칸을 우선한다.
+            if (environmentState != null &&
+                TryGetInteractionAimWorld(out var mouseAim) &&
+                environmentState.TryResolvePlacedObjectMiningTarget(
+                    transform.position, mouseAim, miningReach, out _, out var placedCell))
+            {
+                var reclaimable = ResolvePlacedObjectMiningSeconds(ResolveMiningClawTier()) > 0f;
+                if (miningTargetVisible && miningTargetCell == placedCell &&
+                    miningTargetMineable == reclaimable)
+                    return;
+                miningTargetVisible = true;
+                miningTargetCell = placedCell;
+                miningTargetMineable = reclaimable;
+                GameEvents.RaiseMiningTargetChanged(placedCell, true, reclaimable);
+                return;
+            }
+
+            if (!TryResolveMiningCell(tileService, out var cell))
             {
                 HideMiningTargetFeedback();
                 return;

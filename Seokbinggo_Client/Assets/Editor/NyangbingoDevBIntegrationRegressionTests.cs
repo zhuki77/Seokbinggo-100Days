@@ -2779,6 +2779,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 playerSource.Contains("out var record, out var hitCell") &&
                 playerSource.Contains("placedObjectInteractions.TryRecoverPlacedObject(toRecover)") &&
                 environmentSource.Contains("byCell.TryGetValue(mouseCell, out var entry)") &&
+                environmentSource.Contains("TryResolvePlacementCellUnderPlacedObject(") &&
+                environmentSource.Contains("TryGetPlacedObjectSpriteBounds(") &&
+                playerSource.Contains("TryResolvePlacedObjectMiningTarget(") &&
                 !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
                     @"GetKeyDown\(KeyCode\.E\)[\s\S]{0,400}TryRecoverNearestPlacedObject"),
             "Placed-object recovery must use hold-to-mine left-click instead of Shift+E, " +

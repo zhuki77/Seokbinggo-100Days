@@ -468,10 +468,8 @@ namespace Nyangbingo.World
                 placementPosition = (Vector2)playerController.transform.position +
                                     playerController.HorizontalFacingDirection * 2f;
             var tileService = environmentState?.TileService;
-            var placementCell = tileService != null
-                ? tileService.WorldToCell(placementPosition)
-                : new Vector3Int(Mathf.FloorToInt(placementPosition.x),
-                    Mathf.FloorToInt(placementPosition.y), 0);
+            var mouseWorld = (Vector2)placementPosition;
+            var placementCell = ResolvePlacementCell(mouseWorld, tileService);
             placementPosition = tileService != null
                 ? (Vector2)tileService.GetCellCenterWorld(placementCell)
                 : new Vector2(placementCell.x + .5f, placementCell.y + .5f);
@@ -494,6 +492,17 @@ namespace Nyangbingo.World
                 placementRangeRenderer.startColor = color;
                 placementRangeRenderer.endColor = color;
             }
+        }
+
+        private Vector3Int ResolvePlacementCell(Vector2 worldPosition, TileService tileService)
+        {
+            if (environmentState != null &&
+                environmentState.TryResolvePlacementCellUnderPlacedObject(worldPosition, out var occupied))
+                return occupied;
+            return tileService != null
+                ? tileService.WorldToCell(worldPosition)
+                : new Vector3Int(Mathf.FloorToInt(worldPosition.x),
+                    Mathf.FloorToInt(worldPosition.y), 0);
         }
 
         private bool TryPlaceTurretAt(Vector2 position)

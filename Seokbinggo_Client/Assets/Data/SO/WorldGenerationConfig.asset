@@ -21,6 +21,7 @@ MonoBehaviour:
   middleLayerThickness: 45
   bedrockThickness: 5
   upperDirtRatio: 0.64
+  surfaceMineralBanDepth: 3
   caveNoiseFrequency: 0.08
   caveChanceUpper: 0.1
   caveChanceDeep: 0.25
@@ -36,6 +37,14 @@ MonoBehaviour:
   largeCavernMarginFromAltar: 28
   largeCavernMaxPlacementAttempts: 120
   oreVeins:
+  - elementType: stone
+    layer: 1
+    hardness: 1
+    frequencyPer100Tiles: 25
+    minClusterSize: 4
+    maxClusterSize: 8
+    depthMin: 1
+    depthMax: 45
   - elementType: coal
     layer: 1
     hardness: 1
@@ -105,10 +114,12 @@ MonoBehaviour:
   altarHardness: 3
   iceLakeWidth: 6
   iceLakeHeight: 3
-  chestCountRuins: 4
-  chestCountUpper: 6
-  chestCountMiddle: 6
-  chestCountDeep: 4
+  chestCountRuins: 0
+  chestCountUpper: 0
+  chestCountMiddle: 0
+  chestCountDeep: 0
+  chestPerCavernMin: 0
+  chestPerCavernMax: 2
   chestIdPrefix: chest_
   maxRerollAttempts: 200
   onboardingSearchRadius: 18

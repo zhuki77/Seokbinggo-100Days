@@ -120,6 +120,117 @@ namespace Nyangbingo.World
             return false;
         }
 
+        /// <summary>
+        /// 설치 미리보기용. 나무·풀 스프라이트가 옆 칸까지 넘어가도, 마우스가 그 스프라이트 위에 있으면
+        /// WorldToCell(옆 빈 칸) 대신 장식이 차지한 칸을 고른다.
+        /// </summary>
+        public bool TryResolvePlacementCellUnderDecoration(Vector2 worldPosition, out Vector3Int cell)
+        {
+            cell = default;
+            if (!IsFinite(worldPosition.x) || !IsFinite(worldPosition.y)) return false;
+
+            var bestArea = float.PositiveInfinity;
+            var bestDistance = float.PositiveInfinity;
+            var found = false;
+
+            foreach (var patch in catnipPatches.Values)
+            {
+                if (!IsCatnipAvailable(patch) ||
+                    !TryPickOccupiedCellUnderSprite(worldPosition, patch.Renderer,
+                        patch.SupportCell + Vector3Int.up, out var occupied, out var area,
+                        out var distance))
+                    continue;
+                if (!IsBetterDecorationHit(area, distance, bestArea, bestDistance)) continue;
+                bestArea = area;
+                bestDistance = distance;
+                cell = occupied;
+                found = true;
+            }
+
+            foreach (var patch in hempPatches.Values)
+            {
+                if (!IsHempAvailable(patch) ||
+                    !TryPickOccupiedCellUnderSprite(worldPosition, patch.Renderer,
+                        patch.SupportCell + Vector3Int.up, out var occupied, out var area,
+                        out var distance))
+                    continue;
+                if (!IsBetterDecorationHit(area, distance, bestArea, bestDistance)) continue;
+                bestArea = area;
+                bestDistance = distance;
+                cell = occupied;
+                found = true;
+            }
+
+            foreach (var tree in treePatches.Values)
+            {
+                if (!IsTreeAvailable(tree) || tree.Renderer == null) continue;
+                var lower = tree.SupportCell + Vector3Int.up;
+                var upper = tree.SupportCell + Vector3Int.up * 2;
+                if (!ContainsWorldPointXY(tree.Renderer.bounds, worldPosition)) continue;
+                var occupied = PickCloserCell(worldPosition, lower, upper);
+                var area = tree.Renderer.bounds.size.x * tree.Renderer.bounds.size.y;
+                var center = bootstrap?.TileService != null
+                    ? (Vector2)bootstrap.TileService.GetCellCenterWorld(occupied)
+                    : new Vector2(occupied.x + .5f, occupied.y + .5f);
+                var distance = (center - worldPosition).sqrMagnitude;
+                if (!IsBetterDecorationHit(area, distance, bestArea, bestDistance)) continue;
+                bestArea = area;
+                bestDistance = distance;
+                cell = occupied;
+                found = true;
+            }
+
+            return found;
+        }
+
+        private bool TryPickOccupiedCellUnderSprite(Vector2 worldPosition, SpriteRenderer renderer,
+            Vector3Int occupiedCell, out Vector3Int cell, out float area, out float distance)
+        {
+            cell = occupiedCell;
+            area = float.PositiveInfinity;
+            distance = float.PositiveInfinity;
+            if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                return false;
+            var bounds = renderer.bounds;
+            if (!ContainsWorldPointXY(bounds, worldPosition)) return false;
+            area = bounds.size.x * bounds.size.y;
+            var center = bootstrap?.TileService != null
+                ? (Vector2)bootstrap.TileService.GetCellCenterWorld(occupiedCell)
+                : new Vector2(occupiedCell.x + .5f, occupiedCell.y + .5f);
+            distance = (center - worldPosition).sqrMagnitude;
+            return true;
+        }
+
+        private Vector3Int PickCloserCell(Vector2 worldPosition, Vector3Int a, Vector3Int b)
+        {
+            var tileService = bootstrap?.TileService;
+            var centerA = tileService != null
+                ? (Vector2)tileService.GetCellCenterWorld(a)
+                : new Vector2(a.x + .5f, a.y + .5f);
+            var centerB = tileService != null
+                ? (Vector2)tileService.GetCellCenterWorld(b)
+                : new Vector2(b.x + .5f, b.y + .5f);
+            return (centerA - worldPosition).sqrMagnitude <= (centerB - worldPosition).sqrMagnitude
+                ? a
+                : b;
+        }
+
+        private static bool IsBetterDecorationHit(float area, float distance,
+            float bestArea, float bestDistance)
+        {
+            const float areaEpsilon = .0001f;
+            if (area + areaEpsilon < bestArea) return true;
+            if (area > bestArea + areaEpsilon) return false;
+            return distance < bestDistance;
+        }
+
+        public static bool ContainsWorldPointXY(Bounds bounds, Vector2 worldPosition) =>
+            worldPosition.x >= bounds.min.x && worldPosition.x <= bounds.max.x &&
+            worldPosition.y >= bounds.min.y && worldPosition.y <= bounds.max.y;
+
+        private static bool IsFinite(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value);
+
         private void Rebuild()
         {
             bootstrap?.TileService?.SetForegroundPlacementBlocker(IsForegroundPlacementBlocked);

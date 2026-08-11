@@ -1504,7 +1504,11 @@ namespace Nyangbingo.Save
 
     public static class WorldSaveAdapter
     {
-        private const int RequiredChestCount = 20;
+        /// <summary>
+        /// 상자 개수는 시드·대형 동굴 수에 따라 가변(동굴당 0~2).
+        /// 캡처/복원은 "생성된 IChestSource와 저장 목록이 동일 집합"만 요구한다.
+        /// </summary>
+        private const int MaxChestCount = 64;
 
         public static bool CaptureWorld(SaveGame save, IEnumerable<TileChangeRecord> tileChanges,
             IEnumerable<PlacedObjectRecord> placedObjects, IChestSource chestSource, ChestProgress chestProgress)
@@ -1588,6 +1592,7 @@ namespace Nyangbingo.Save
             save.NormalizeAfterLoad();
             if (save.chests.Count == 0)
             {
+                // 구버전(schema): chests 목록 없이 openedChestIds만 있던 경우 + 신규 0상자 월드.
                 var legacyGeneratedIds = new HashSet<string>(generatedChestIds, StringComparer.Ordinal);
                 var legacyOpenedIds = new HashSet<string>(StringComparer.Ordinal);
                 for (var i = 0; i < save.openedChestIds.Count; i++)
@@ -1600,7 +1605,6 @@ namespace Nyangbingo.Save
                 return true;
             }
 
-            if (save.chests.Count != RequiredChestCount) return false;
             var generatedIds = new HashSet<string>(generatedChestIds, StringComparer.Ordinal);
             if (generatedIds.Count != save.chests.Count) return false;
             var openedIds = new List<string>();
@@ -1645,7 +1649,8 @@ namespace Nyangbingo.Save
         private static bool TryValidateChestSource(IChestSource chestSource, out List<string> chestIds)
         {
             chestIds = null;
-            if (chestSource?.ChestIds == null || chestSource.ChestIds.Count != RequiredChestCount) return false;
+            if (chestSource?.ChestIds == null) return false;
+            if (chestSource.ChestIds.Count > MaxChestCount) return false;
 
             var ids = new HashSet<string>(StringComparer.Ordinal);
             var positions = new HashSet<Vector2>();

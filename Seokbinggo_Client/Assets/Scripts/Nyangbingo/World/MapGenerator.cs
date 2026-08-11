@@ -408,7 +408,7 @@ namespace Nyangbingo.World
         }
 
         /// <summary>IChestSource는 ID→좌표만 노출하므로(§7.1 계약 그대로 유지), 우클릭 좌표→상자ID 역조회는
-        /// 여기 별도 공개 메서드로 추가한다. 상자는 정확히 20개뿐이라 선형 탐색으로도 비용이 무시할 만하다.</summary>
+        /// 여기 별도 공개 메서드로 추가한다. 상자 수는 시드·동굴에 따라 소량이라 선형 탐색으로도 충분하다.</summary>
         public bool TryGetChestIdAt(Vector2Int position, out string chestId)
         {
             foreach (var pair in chestsById)
@@ -438,14 +438,15 @@ namespace Nyangbingo.World
             var resourceRng = new System.Random(seed + 3);
             var structureRng = new System.Random(seed + 4);
             var largeCavernRng = new System.Random(seed + 5);
+            var cavernChestRng = new System.Random(seed + 6);
 
             // Pass 1 — 지형
             var surfaceHeights = GenerateTerrain(grid, terrainRng, config);
             // Pass 2 — 펄린 동굴(후처리 없음)
             CarveCaves(grid, surfaceHeights, caveRng, config);
-            // Pass 3 — 광맥
+            // Pass 3 — 광맥(돌·석탄 포함, 지표 ban depth 아래)
             PlaceOreVeins(grid, surfaceHeights, resourceRng, config);
-            // Pass 4 — 구조물·스폰·얕은 입구 (protectedAir는 스폰 발밑 3×3·제단 최소만)
+            // Pass 4 — 구조물·스폰·얕은 입구 (상자는 대형 동굴 개척 이후)
             var structures = PlaceStructures(grid, surfaceHeights, structureRng, config, protectedAir);
             // Pass 4b — 심층 제단 접근(지표·crust 절대 미개척). 스폰 연결은 PostProcess 이후 4c에서 보장.
             CarveConnectivityShafts(grid, surfaceHeights, caveRng, config,
@@ -454,9 +455,11 @@ namespace Nyangbingo.World
             PostProcessCaveCavities(grid, surfaceHeights, config, protectedAir);
             // Hard Fill 후 공식 얕은 입구만 재개방
             ReopenSpawnEntrance(grid, surfaceHeights, structures.spawnPoint, config);
-            // Pass 4b2 — 시드 기반 중간층 공동(≈30×20, 여러 개). cave_max_height Hard Cut 이후에만 개척.
-            CarveLargeCaverns(grid, surfaceHeights, largeCavernRng, config, protectedAir,
+            // Pass 4b2 — 시드 기반 중간층 공동 + 동굴당 상자 0~2
+            var caverns = CarveLargeCaverns(grid, surfaceHeights, largeCavernRng, config, protectedAir,
                 structures.spawnPoint, structures.altarPosition);
+            structures.chests = PlaceCavernChests(grid, surfaceHeights, caverns, cavernChestRng, config,
+                protectedAir);
             // Pass 4c — v27: 지상→심층 인공 통로 Carve 금지. 지하 공동 간 최소 벽(≤3)만 천공.
             EnsureReachabilityByCavityBridges(grid, surfaceHeights, structures.spawnPoint,
                 structures.altarPosition, config);
@@ -489,8 +492,6 @@ namespace Nyangbingo.World
             var surfaceHeights = new int[width];
 
             var heightNoiseOffset = (float)(rng.NextDouble() * 100000.0);
-            var fillNoiseOffsetX = (float)(rng.NextDouble() * 100000.0);
-            var fillNoiseOffsetY = (float)(rng.NextDouble() * 100000.0);
 
             var baseHeight = Mathf.RoundToInt(height * config.SurfaceBaseHeightRatio);
             var minSurfaceY = Mathf.Min(height - 1, config.BedrockThickness + config.MiddleLayerThickness + config.UpperLayerThickness);
@@ -507,11 +508,11 @@ namespace Nyangbingo.World
                     var layer = ClassifyLayer(y, surfaceY, config);
                     grid[x, y] = layer switch
                     {
-                        // A-16: 하늘은 전경·배경 모두 비움. 지하 고체는 전경+지층 자연 배경을 함께 생성.
+                        // A-16: 하늘은 전경·배경 모두 비움. 상층은 흙 매트릭스 + Pass 3 돌/석탄 광맥.
                         WorldLayer.Surface => TileData.CreateAir(),
                         WorldLayer.Bedrock => TileData.CreateNaturalWithBackground(WorldTileTypes.Bedrock, 3, WorldTileTypes.BackgroundDeep),
                         WorldLayer.Upper => TileData.CreateNaturalWithBackground(
-                            PickUpperFillElement(x, y, fillNoiseOffsetX, fillNoiseOffsetY, config), 1, WorldTileTypes.BackgroundDirt),
+                            WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt),
                         WorldLayer.Middle => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
                         _ => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneDeep, 3, WorldTileTypes.BackgroundDeep)
                     };
@@ -521,11 +522,11 @@ namespace Nyangbingo.World
             return surfaceHeights;
         }
 
-        private static string PickUpperFillElement(int x, int y, float offsetX, float offsetY, WorldGenerationConfig config)
-        {
-            var noise = Mathf.PerlinNoise((x + offsetX) * 0.15f, (y + offsetY) * 0.15f);
-            return noise < config.UpperDirtRatio ? WorldTileTypes.Dirt : WorldTileTypes.Stone;
-        }
+        /// <summary>지표에서 내려간 깊이(1=지표 타일). surfaceMineralBanDepth 이하면 광물/돌 금지.</summary>
+        private static int DepthFromSurface(int y, int surfaceY) => surfaceY - y + 1;
+
+        private static bool IsInSurfaceMineralBan(int y, int surfaceY, WorldGenerationConfig config) =>
+            y <= surfaceY && DepthFromSurface(y, surfaceY) <= config.SurfaceMineralBanDepth;
 
         /// <summary>주어진 y좌표(0=최하단)가 해당 column에서 어떤 레이어에 속하는지 분류한다.</summary>
         private static WorldLayer ClassifyLayer(int y, int surfaceY, WorldGenerationConfig config)
@@ -611,20 +612,31 @@ namespace Nyangbingo.World
             }
         }
 
-        /// <summary>
-        /// 시드 기반 중간층 공동(기본 ≈30×20)을 띄엄띄엄 배치.
-        /// <see cref="PostProcessCaveCavities"/> Hard Cut 이후에만 호출해 cave_max_height에 잘리지 않게 한다.
-        /// 중간층 y대역·지표 crust·스폰/제단 보호칸·호수/제단 타일은 개척하지 않는다.
-        /// </summary>
-        private static void CarveLargeCaverns(TileData[,] grid, int[] surfaceHeights, System.Random rng,
-            WorldGenerationConfig config, bool[,] protectedAir, Vector2Int spawnPoint, Vector2Int altarPosition)
+        private struct LargeCavernPlacement
         {
+            public int CenterX;
+            public int CenterY;
+            public float HalfW;
+            public float HalfH;
+            public int MinX;
+            public int MaxX;
+        }
+
+        /// <summary>
+        /// 시드 기반 중간층 공동(기본 ≈30×20)을 띄엄띄엄 배치하고 배치 정보를 반환한다.
+        /// <see cref="PostProcessCaveCavities"/> Hard Cut 이후에만 호출해 cave_max_height에 잘리지 않게 한다.
+        /// </summary>
+        private static List<LargeCavernPlacement> CarveLargeCaverns(TileData[,] grid, int[] surfaceHeights,
+            System.Random rng, WorldGenerationConfig config, bool[,] protectedAir,
+            Vector2Int spawnPoint, Vector2Int altarPosition)
+        {
+            var placements = new List<LargeCavernPlacement>();
             var countMin = config.LargeCavernCountMin;
             var countMax = config.LargeCavernCountMax;
-            if (countMax <= 0) return;
+            if (countMax <= 0) return placements;
 
             var targetCount = rng.Next(countMin, countMax + 1);
-            if (targetCount <= 0) return;
+            if (targetCount <= 0) return placements;
 
             var width = config.MapWidth;
             var cavernW = Mathf.Max(4, config.LargeCavernWidth);
@@ -670,8 +682,19 @@ namespace Nyangbingo.World
 
                 placedMinX[placedCount] = minX;
                 placedMaxX[placedCount] = maxX;
+                placements.Add(new LargeCavernPlacement
+                {
+                    CenterX = centerX,
+                    CenterY = centerY,
+                    HalfW = halfW,
+                    HalfH = halfH,
+                    MinX = minX,
+                    MaxX = maxX
+                });
                 placedCount++;
             }
+
+            return placements;
         }
 
         private static int HorizontalDistanceToPoint(int a, int b) => Mathf.Abs(a - b);
@@ -1655,6 +1678,8 @@ namespace Nyangbingo.World
                         }
                         else if (stone < config.OnboardingRequiredStone)
                         {
+                            // 지상 노출 금지 — ban depth 아래에서만 온보딩 돌 보정.
+                            if (IsInSurfaceMineralBan(y, surfaceY, config)) continue;
                             grid[x, y] = TileData.CreateNaturalWithBackground(
                                 WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
                             stone++;
@@ -1831,8 +1856,14 @@ namespace Nyangbingo.World
                         : GetLayerRange(x, profile.layer, surfaceHeights, config);
                     if (high < low) continue;
 
+                    // 지표 근처 ban — 시드도 금지 깊이 아래에서만 고른다.
+                    var banFloor = surfaceHeights[x] - config.SurfaceMineralBanDepth;
+                    if (high > banFloor) high = banFloor;
+                    if (high < low) continue;
+
                     var seedY = rng.Next(low, high + 1);
-                    if (grid[x, seedY].IsAir) continue; // 이미 동굴로 뚫린 자리는 건너뛴다 — 소량 손실은 허용.
+                    if (grid[x, seedY].IsAir) continue;
+                    if (IsInSurfaceMineralBan(seedY, surfaceHeights[x], config)) continue;
 
                     GrowVeinCluster(grid, new Vector2Int(x, seedY), width, height, profile, surfaceHeights, config, rng);
                 }
@@ -1867,6 +1898,8 @@ namespace Nyangbingo.World
             var hasExplicitDepth = profile.depthMax > 0;
             var size = rng.Next(profile.minClusterSize, profile.maxClusterSize + 1);
             var current = seed;
+            // 같은 방향을 이어가기 쉽게 해 방울보다 광맥처럼 보이게 한다.
+            var direction = FourNeighbors[rng.Next(FourNeighbors.Length)];
 
             for (var i = 0; i < size; i++)
             {
@@ -1874,10 +1907,16 @@ namespace Nyangbingo.World
                     ? GetDepthRange(current.x, profile.depthMin, profile.depthMax, surfaceHeights, config)
                     : GetLayerRange(current.x, profile.layer, surfaceHeights, config);
 
+                var banFloor = surfaceHeights[Mathf.Clamp(current.x, 0, surfaceHeights.Length - 1)] -
+                               config.SurfaceMineralBanDepth;
+                if (high > banFloor) high = banFloor;
+
                 if (high >= low)
                 {
                     current.y = Mathf.Clamp(current.y, low, high);
-                    if (InBounds(current, width, height) && !grid[current.x, current.y].IsAir)
+                    if (InBounds(current, width, height) &&
+                        !grid[current.x, current.y].IsAir &&
+                        !IsInSurfaceMineralBan(current.y, surfaceHeights[current.x], config))
                     {
                         var existing = grid[current.x, current.y];
                         var naturalBg = existing.HasNaturalBackground
@@ -1888,14 +1927,17 @@ namespace Nyangbingo.World
                     }
                 }
 
-                var direction = FourNeighbors[rng.Next(FourNeighbors.Length)];
+                // ~70% 직진, 가끔만 꺾어 기다란 광맥 형태를 만든다.
+                if (rng.NextDouble() >= 0.7)
+                    direction = FourNeighbors[rng.Next(FourNeighbors.Length)];
                 current += direction;
                 current.x = Mathf.Clamp(current.x, 0, width - 1);
             }
         }
 
         // ==============================================================
-        // Pass 4 — 구조물 (반지하 알코브 · 지상 폐허 · 심층 얼음호수+제단 · 상자 20개)
+        // Pass 4 — 구조물 (반지하 알코브 · 지상 폐허 · 심층 얼음호수+제단)
+        // 상자는 Pass 4b2 대형 동굴 개척 이후 PlaceCavernChests에서 배치한다.
         // ==============================================================
         private struct StructurePlacement
         {
@@ -1910,12 +1952,8 @@ namespace Nyangbingo.World
             var occupied = new HashSet<Vector2Int>();
 
             var spawnPoint = PlaceSafeSurfaceSpawn(grid, surfaceHeights, config, occupied);
-            var ruinFootprints = PlaceRuins(grid, surfaceHeights, rng, config, occupied, spawnPoint);
+            PlaceRuins(grid, surfaceHeights, rng, config, occupied, spawnPoint);
             var altarPosition = PlaceDeepAltarAndLake(grid, surfaceHeights, rng, config, occupied);
-            var chests = PlaceChests(grid, surfaceHeights, rng, config, occupied, ruinFootprints);
-            foreach (var chest in chests)
-                if (InBounds(chest.position, config.MapWidth, config.MapHeight))
-                    protectedAir[chest.position.x, chest.position.y] = true;
 
             // protectedAir: 스폰 발밑 3×3 + 제단 주변 최소만. 입구/연결 통로 전체 마스킹 금지.
             MarkSpawnFootingProtectedAir(surfaceHeights, spawnPoint, config, protectedAir);
@@ -1925,7 +1963,7 @@ namespace Nyangbingo.World
             {
                 spawnPoint = spawnPoint,
                 altarPosition = altarPosition,
-                chests = chests
+                chests = new List<ChestSpawnPoint>()
             };
         }
 
@@ -2217,102 +2255,88 @@ namespace Nyangbingo.World
             return new Vector2Int(altarOriginX, altarOriginY);
         }
 
-        /// <summary>정확히 (6-12 표 기본값 합계 = 20)개의 결정론적 상자를 지역별로 겹치지 않게 배치한다.</summary>
-        private static List<ChestSpawnPoint> PlaceChests(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config,
-            HashSet<Vector2Int> occupied, List<RectInt> ruinFootprints)
+        /// <summary>
+        /// 대형 동굴마다 0~2개의 상자를 바닥(공기 + 아래 고체)에 배치한다. 지표에는 두지 않는다.
+        /// </summary>
+        private static List<ChestSpawnPoint> PlaceCavernChests(TileData[,] grid, int[] surfaceHeights,
+            List<LargeCavernPlacement> caverns, System.Random rng, WorldGenerationConfig config,
+            bool[,] protectedAir)
         {
+            var chests = new List<ChestSpawnPoint>();
+            if (caverns == null || caverns.Count == 0) return chests;
+
             var width = config.MapWidth;
             var height = config.MapHeight;
-            var chests = new List<ChestSpawnPoint>(config.TotalChestCount);
+            var crust = Mathf.Max(1, config.CaveSurfaceCrustThickness);
+            var perMin = config.ChestPerCavernMin;
+            var perMax = config.ChestPerCavernMax;
             var nextIndex = 0;
+            var occupied = new HashSet<Vector2Int>();
+            var floorCandidates = new List<Vector2Int>(64);
 
-            PlaceChestsForRegion(ChestRegion.Ruins, config.ChestCountRuins, WorldLayer.Surface);
-            PlaceChestsForRegion(ChestRegion.Upper, config.ChestCountUpper, WorldLayer.Upper);
-            PlaceChestsForRegion(ChestRegion.Middle, config.ChestCountMiddle, WorldLayer.Middle);
-            PlaceChestsForRegion(ChestRegion.Deep, config.ChestCountDeep, WorldLayer.Deep);
-
-            // 안전망: 지형 굴곡 등의 이유로 특정 지역에서 목표 개수를 못 채웠다면, "정확히 TotalChestCount개"
-            // 계약(Dev B 인수인계 §1-9)을 지키기 위해 맵 전역에서 남은 자리를 결정론적으로 채워 넣는다.
-            var fallbackAttempts = 0;
-            var maxFallbackAttempts = Mathf.Max(200, config.TotalChestCount * 200);
-            while (chests.Count < config.TotalChestCount && fallbackAttempts < maxFallbackAttempts)
+            foreach (var cavern in caverns)
             {
-                fallbackAttempts++;
-                var x = rng.Next(0, width);
-                var y = rng.Next(config.BedrockThickness, height);
-                var position = new Vector2Int(x, y);
-                if (occupied.Contains(position)) continue;
+                var want = rng.Next(perMin, perMax + 1);
+                if (want <= 0) continue;
 
-                var layer = ClassifyLayer(y, surfaceHeights[x], config);
-                if (layer == WorldLayer.Bedrock) continue;
+                floorCandidates.Clear();
+                var invHalfW = cavern.HalfW > 0.001f ? 1f / cavern.HalfW : 0f;
+                var invHalfH = cavern.HalfH > 0.001f ? 1f / cavern.HalfH : 0f;
+                var minY = Mathf.Max(config.BedrockThickness, Mathf.FloorToInt(cavern.CenterY - cavern.HalfH) - 1);
+                var maxY = Mathf.Min(height - 1, Mathf.CeilToInt(cavern.CenterY + cavern.HalfH) + 1);
 
-                // A-16: 상자 자리도 동굴과 같이 전경·배경을 비운다(지상 Ruins는 빈 하늘 배경).
-                if (!grid[position.x, position.y].IsAir)
-                    grid[position.x, position.y] = TileData.CreateAir();
-
-                occupied.Add(position);
-                var region = layer switch
+                for (var x = cavern.MinX; x <= cavern.MaxX; x++)
                 {
-                    WorldLayer.Surface => ChestRegion.Ruins,
-                    WorldLayer.Upper => ChestRegion.Upper,
-                    WorldLayer.Middle => ChestRegion.Middle,
-                    _ => ChestRegion.Deep
-                };
-                chests.Add(new ChestSpawnPoint { id = config.ChestIdPrefix + nextIndex.ToString("00"), position = position, region = region });
-                nextIndex++;
-            }
+                    if (x < 0 || x >= width) continue;
+                    var surfaceY = surfaceHeights[x];
+                    var carveMaxY = surfaceY - crust;
+                    for (var y = minY; y <= maxY; y++)
+                    {
+                        if (y > carveMaxY || y < config.BedrockThickness) continue;
+                        if (IsInSurfaceMineralBan(y, surfaceY, config)) continue;
 
-            if (chests.Count < config.TotalChestCount)
-            {
-                Debug.LogWarning($"[MapGenerator] Only placed {chests.Count}/{config.TotalChestCount} chests — map is extremely cramped for the configured chest count.");
-            }
+                        var nx = (x - cavern.CenterX) * invHalfW;
+                        var ny = (y - cavern.CenterY) * invHalfH;
+                        if (nx * nx + ny * ny > 1.05f) continue;
+                        if (!grid[x, y].IsAir) continue;
+                        if (y - 1 < config.BedrockThickness || grid[x, y - 1].IsAir) continue;
+                        if (ShouldPreserveSpecialAir(grid[x, y])) continue;
+                        if (IsProtectedAirCell(x, y, protectedAir)) continue;
 
-            return chests;
+                        var cell = new Vector2Int(x, y);
+                        if (occupied.Contains(cell)) continue;
+                        floorCandidates.Add(cell);
+                    }
+                }
 
-            void PlaceChestsForRegion(ChestRegion region, int count, WorldLayer layer)
-            {
+                // 결정론적 셔플
+                for (var i = floorCandidates.Count - 1; i > 0; i--)
+                {
+                    var j = rng.Next(i + 1);
+                    (floorCandidates[i], floorCandidates[j]) = (floorCandidates[j], floorCandidates[i]);
+                }
+
                 var placed = 0;
-                var attempts = 0;
-                var maxAttempts = Mathf.Max(count * 40, 40);
-
-                while (placed < count && attempts < maxAttempts)
+                for (var i = 0; i < floorCandidates.Count && placed < want; i++)
                 {
-                    attempts++;
-                    var x = rng.Next(0, width);
-
-                    int y;
-                    if (region == ChestRegion.Ruins)
-                    {
-                        if (ruinFootprints.Count == 0) break;
-                        var footprint = ruinFootprints[rng.Next(ruinFootprints.Count)];
-                        x = footprint.x + rng.Next(0, Mathf.Max(1, footprint.width));
-                        y = footprint.y;
-                    }
-                    else
-                    {
-                        var (low, high) = GetLayerRange(x, layer, surfaceHeights, config);
-                        if (high < low) continue;
-                        y = rng.Next(low, high + 1);
-                    }
-
-                    var position = new Vector2Int(x, y);
-                    if (!InBounds(position, width, height) || occupied.Contains(position)) continue;
-
-                    // 자리가 막혀 있으면 상자 한 칸만 파서 안치한다(지하 보물상자 관용).
-                    if (!grid[position.x, position.y].IsAir)
-                        grid[position.x, position.y] = TileData.CreateAir();
-
+                    var position = floorCandidates[i];
+                    if (occupied.Contains(position)) continue;
                     occupied.Add(position);
+                    if (InBounds(position, width, height))
+                        protectedAir[position.x, position.y] = true;
+
                     chests.Add(new ChestSpawnPoint
                     {
                         id = config.ChestIdPrefix + nextIndex.ToString("00"),
                         position = position,
-                        region = region
+                        region = ChestRegion.Middle
                     });
                     nextIndex++;
                     placed++;
                 }
             }
+
+            return chests;
         }
 
         private static void EnsureChestCellsHaveNoForeground(TileData[,] grid,

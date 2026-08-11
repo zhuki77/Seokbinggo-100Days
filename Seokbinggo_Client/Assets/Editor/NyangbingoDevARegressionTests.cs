@@ -162,31 +162,31 @@ public static class NyangbingoDevARegressionTests
     }
 
     // ------------------------------------------------------------------
-    // 2) 상자 분포 — 정확히 20개, 지역별 개수, 중복 ID 없음, seed로 결정론적.
+    // 2) 상자 분포 — 대형 동굴당 0~2개, 지상 금지, 중복 ID 없음, seed로 결정론적.
     // ------------------------------------------------------------------
     private static void TestChestDistribution(WorldGenerationConfig config)
     {
         const int seed = 13579;
 
         var result = new MapGenerator(config).GenerateDetailed(seed);
-        Assert(result.chests.Count == config.TotalChestCount, $"상자 개수 불일치: {result.chests.Count} != {config.TotalChestCount}");
+        Assert(result.chests != null, "상자 리스트가 null");
+        Assert(result.chests.Count <= config.TotalChestCount,
+            $"상자 개수 상한 초과: {result.chests.Count} > {config.TotalChestCount}");
+        Assert(GetOrZero(CountByRegion(result), ChestRegion.Ruins) == 0, "지상(폐허) 상자가 배치됨");
 
         var ids = new HashSet<string>(StringComparer.Ordinal);
-        var perRegion = new Dictionary<ChestRegion, int>();
         foreach (var chest in result.chests)
         {
             Assert(ids.Add(chest.id), $"중복된 상자 ID 발견: {chest.id}");
             Assert(result.tiles[chest.position.x, chest.position.y].IsAir,
                 $"상자 셀에 전경 타일이 겹침: {chest.id} at {chest.position}");
-            perRegion.TryGetValue(chest.region, out var count);
-            perRegion[chest.region] = count + 1;
+            var surfaceY = result.surfaceHeights[chest.position.x];
+            Assert(chest.position.y < surfaceY - config.CaveSurfaceCrustThickness,
+                $"상자가 지표 근처에 배치됨: {chest.id} at {chest.position}, surfaceY={surfaceY}");
+            Assert(chest.region != ChestRegion.Ruins, $"상자 region이 Ruins: {chest.id}");
         }
 
-        Assert(GetOrZero(perRegion, ChestRegion.Ruins) == config.ChestCountRuins, "폐허 상자 개수가 설정값과 다름");
-        Assert(GetOrZero(perRegion, ChestRegion.Upper) == config.ChestCountUpper, "상층 상자 개수가 설정값과 다름");
-        Assert(GetOrZero(perRegion, ChestRegion.Middle) == config.ChestCountMiddle, "중층 상자 개수가 설정값과 다름");
-        Assert(GetOrZero(perRegion, ChestRegion.Deep) == config.ChestCountDeep, "심층 상자 개수가 설정값과 다름");
-
+        // 같은 시드는 동일 배치.
         var repeat = new MapGenerator(config).GenerateDetailed(seed);
         Assert(repeat.chests.Count == result.chests.Count, "같은 seed인데 상자 개수가 다름");
         for (var i = 0; i < result.chests.Count; i++)
@@ -195,7 +195,26 @@ public static class NyangbingoDevARegressionTests
                 $"같은 seed인데 상자 배치가 다름 (index {i})");
         }
 
+        // 여러 시드에서 동굴당 0~2 상한을 지킨다(동굴이 없으면 0).
+        for (var s = seed; s < seed + 5; s++)
+        {
+            var sample = new MapGenerator(config).GenerateDetailed(s);
+            Assert(sample.chests.Count <= config.LargeCavernCountMax * config.ChestPerCavernMax,
+                $"seed {s}: 상자 {sample.chests.Count}가 동굴당 상한 합을 초과");
+        }
+
         Debug.Log("[Nyangbingo] Dev A chest distribution test completed.");
+    }
+
+    private static Dictionary<ChestRegion, int> CountByRegion(WorldGenerationResult result)
+    {
+        var perRegion = new Dictionary<ChestRegion, int>();
+        foreach (var chest in result.chests)
+        {
+            perRegion.TryGetValue(chest.region, out var count);
+            perRegion[chest.region] = count + 1;
+        }
+        return perRegion;
     }
 
     private static int GetOrZero(Dictionary<ChestRegion, int> map, ChestRegion region) => map.TryGetValue(region, out var value) ? value : 0;
@@ -274,7 +293,7 @@ public static class NyangbingoDevARegressionTests
                 $"mineral-tiers.csv({csvDepth.min}~{csvDepth.max})와 다름");
             matched++;
         }
-        Assert(matched == profiles.Length, $"WorldGenerationConfig.OreVeins 7종 중 {profiles.Length - matched}개가 CSV와 대조되지 않음");
+        Assert(matched == profiles.Length, $"WorldGenerationConfig.OreVeins {profiles.Length}종 중 일부가 CSV와 대조되지 않음");
 
         // 완료 조건 3: 실제로 생성된 월드에서 각 광물 타일이 자신의 depth_min~depth_max 밖에 배치되지 않았는지.
         const int seed = 987654;
@@ -285,24 +304,38 @@ public static class NyangbingoDevARegressionTests
         var depthConstrainedTypes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var profile in profiles) if (profile.depthMax > 0) depthConstrainedTypes.Add(profile.elementType);
 
+        var surfaceBannedTypes = new HashSet<string>(StringComparer.Ordinal)
+        {
+            WorldTileTypes.Stone, WorldTileTypes.Coal, WorldTileTypes.Clay
+        };
+
         var checkedTiles = 0;
         var violations = 0;
+        var surfaceBanViolations = 0;
         for (var x = 0; x < result.width; x++)
         {
             var surfaceY = result.surfaceHeights[x];
             for (var y = 0; y < result.height; y++)
             {
                 var elementType = result.tiles[x, y].elementType;
+                if (surfaceBannedTypes.Contains(elementType))
+                {
+                    var depth = surfaceY - y + 1;
+                    if (depth >= 1 && depth <= config.SurfaceMineralBanDepth)
+                        surfaceBanViolations++;
+                }
                 if (!depthConstrainedTypes.Contains(elementType)) continue;
                 if (!depthByResourceId.TryGetValue(elementType, out var range)) continue;
 
                 checkedTiles++;
-                var depth = surfaceY - y + 1;
-                if (depth < range.min || depth > range.max) violations++;
+                var oreDepth = surfaceY - y + 1;
+                if (oreDepth < range.min || oreDepth > range.max) violations++;
             }
         }
         Assert(checkedTiles > 0, "테스트 시드에서 depth 제약이 걸린 광물 타일을 하나도 찾지 못함 — 픽스처 시드 교체 필요");
         Assert(violations == 0, $"depth_min~depth_max 범위를 벗어난 광물 타일 {violations}/{checkedTiles}개 발견");
+        Assert(surfaceBanViolations == 0,
+            $"지표 {config.SurfaceMineralBanDepth}칸 안에 돌/석탄/점토 {surfaceBanViolations}개 발견");
 
         Debug.Log("[Nyangbingo] Dev A layer depth & mineral range test completed.");
     }
