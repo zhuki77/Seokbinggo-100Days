@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Nyangbingo.Audio;
 using Nyangbingo.Bosses;
 using Nyangbingo.Data;
@@ -119,8 +120,7 @@ namespace Nyangbingo.UI
 
             if (!TryResolveLaunchSave(out var launchSave))
             {
-                LoadingOverlayRequest.MarkReady();
-                SceneTransitionRequest.Begin("Title");
+                StartCoroutine(AbortLaunchToTitle());
                 return;
             }
 
@@ -131,6 +131,22 @@ namespace Nyangbingo.UI
             IsInitialized = true;
             LoadingOverlayRequest.MarkReady();
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지 4항목·현재 슬롯 저장·설정 셸 연결 완료.");
+        }
+
+        /// <summary>
+        /// Start() 중 Single 씬 전환은 카메라/캔버스가 비어 검은 화면이 될 수 있어 한 프레임 미룬다.
+        /// </summary>
+        private IEnumerator AbortLaunchToTitle()
+        {
+            var failedSlot = MainGameLaunchRequest.SaveSlot;
+            MainGameLaunchRequest.Reset();
+            if (saveManager != null && failedSlot >= 0 && failedSlot < SaveManager.SlotCount)
+                saveManager.Delete(failedSlot);
+            LoadingOverlayRequest.MarkReady();
+            yield return null;
+            Time.timeScale = 1f;
+            Debug.Log("[Nyangbingo] 세이브 복원 실패 — Title 씬으로 복귀합니다. 새 게임으로 시작하세요.");
+            SceneTransitionRequest.BeginDirect("Title");
         }
 
         private bool TryResolveLaunchSave(out SaveGame launchSave)
@@ -609,8 +625,35 @@ namespace Nyangbingo.UI
             ConfigureNamedRect(settingsPanel, "SfxLabel", new Vector2(-72f, -5f), new Vector2(54f, 18f));
             ConfigureNamedRect(settingsPanel, "SfxVolume", new Vector2(31f, -5f), new Vector2(96f, 18f));
             ConfigureFullscreenToggleLayout(settingsPanel);
-            ConfigureShellButton(settingsApplyButton, new Vector2(-43f, -78f), new Vector2(78f, 22f));
-            ConfigureShellButton(settingsBackButton, new Vector2(43f, -78f), new Vector2(78f, 22f));
+            EnsureDifficultyPlaceholder(settingsPanel);
+            ConfigureShellButton(settingsApplyButton, new Vector2(-43f, -88f), new Vector2(78f, 22f));
+            ConfigureShellButton(settingsBackButton, new Vector2(43f, -88f), new Vector2(78f, 22f));
+        }
+
+        /// <summary>B-UI-v71 B-6: 난이도 옵션은 자리만 잡고 비활성(구현은 이후).</summary>
+        private static void EnsureDifficultyPlaceholder(Transform settingsPanel)
+        {
+            if (settingsPanel == null) return;
+            var existing = settingsPanel.Find("DifficultyPlaceholder") as RectTransform;
+            if (existing == null)
+            {
+                var go = new GameObject("DifficultyPlaceholder", typeof(RectTransform), typeof(Text));
+                go.transform.SetParent(settingsPanel, false);
+                existing = (RectTransform)go.transform;
+                var text = go.GetComponent<Text>();
+                text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                text.fontSize = 7;
+                text.alignment = TextAnchor.MiddleCenter;
+                text.color = new Color(.55f, .6f, .68f, .85f);
+                text.text = "난이도 · 준비 중";
+                text.raycastTarget = false;
+            }
+
+            existing.anchorMin = existing.anchorMax = existing.pivot = new Vector2(.5f, .5f);
+            existing.anchoredPosition = new Vector2(0f, -58f);
+            existing.sizeDelta = new Vector2(180f, 14f);
+            var card = settingsPanel.Find("SettingsMenuCard") as RectTransform;
+            if (card != null) card.sizeDelta = new Vector2(220f, 230f);
         }
 
         private static void ConfigureFullscreenToggleLayout(Transform settingsPanel)
@@ -820,7 +863,11 @@ namespace Nyangbingo.UI
         private void HandleTitleRequested()
         {
             Time.timeScale = 1f;
-            SceneTransitionRequest.Begin("Title");
+            // Loading 오버레이가 떠 있으면 Begin이 막히므로 BeginDirect로 우회한다.
+            if (SceneTransitionRequest.IsLoadingSceneLoaded())
+                SceneTransitionRequest.BeginDirect("Title");
+            else
+                SceneTransitionRequest.Begin("Title");
         }
 
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }

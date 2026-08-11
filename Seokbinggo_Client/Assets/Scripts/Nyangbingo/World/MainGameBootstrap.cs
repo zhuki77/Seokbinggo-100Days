@@ -33,6 +33,7 @@ namespace Nyangbingo.World
         private bool servicesInitialized;
         private static bool freshWorldRequested;
         private static int freshWorldSeed;
+        private static int pendingMapWidth;
 
         public WorldSessionController Session => session;
         public TileService TileService => session?.TileService;
@@ -75,9 +76,10 @@ namespace Nyangbingo.World
                 StartNewWorld(ConsumeStartupSeed());
         }
 
-        public static void RequestFreshWorldForNextScene(int previousSeed)
+        public static void RequestFreshWorldForNextScene(int previousSeed, int mapWidth = 0)
         {
             freshWorldRequested = true;
+            pendingMapWidth = mapWidth;
             do
             {
                 freshWorldSeed = Guid.NewGuid().GetHashCode() & int.MaxValue;
@@ -117,6 +119,8 @@ namespace Nyangbingo.World
                 Debug.LogError($"[Nyangbingo] MainGameBootstrap: 필수 배선 누락 — {string.Join(", ", missing)}.");
                 return false;
             }
+
+            ApplyPendingMapWidthFromLaunch();
 
             if (!dayNightService.ConfigureOfficialData(gameDataCatalog))
             {
@@ -158,6 +162,15 @@ namespace Nyangbingo.World
             Debug.Log($"[Nyangbingo] MainGameBootstrap: 월드 준비 완료 " +
                       $"(seed={session.Seed}, day={dayNightService.Day}, tickDriver={tickDriver != null}).");
             WorldReady?.Invoke();
+        }
+
+        private void ApplyPendingMapWidthFromLaunch()
+        {
+            if (worldConfig == null || pendingMapWidth <= 0) return;
+            // 런타임 가로만 바꾸므로 에셋 원본을 더럽히지 않게 복제한다.
+            worldConfig = Instantiate(worldConfig);
+            worldConfig.ApplyRuntimeMapWidth(pendingMapWidth);
+            pendingMapWidth = 0;
         }
 
         private void OnDestroy()

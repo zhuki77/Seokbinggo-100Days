@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Nyangbingo.UI;
 using Nyangbingo.World;
 using UnityEngine;
 
@@ -185,6 +186,7 @@ namespace Nyangbingo.Save
                 .ToList();
             save.seokbinggoStage = runtimeServices.Seokbinggo?.Stage ?? 0;
             save.altarClears = runtimeServices.FrostSpread?.AltarClears ?? 0;
+            save.heatStage = ResolveCapturedHeatStage();
             save.gimmickWeaponsGranted = runtimeServices.GimmickWeapons?.Export() ?? new List<string>();
             save.frostPendingCells = runtimeServices.FrostSpread?.ExportPendingCells() ?? new List<string>();
             save.coolingSources = environmentState.ExportCoolingSources();
@@ -238,6 +240,14 @@ namespace Nyangbingo.Save
         {
             Debug.LogError($"[Nyangbingo] MainGameSaveCoordinator: save capture failed at stage '{stage}'.");
             return null;
+        }
+
+        private int ResolveCapturedHeatStage()
+        {
+            var curve = timeService?.CurrentDayCurve;
+            if (curve != null) return Mathf.Clamp(curve.HeatStage, 1, 3);
+            var day = timeService != null ? timeService.Day : 1;
+            return HeatStagePresentation.ResolveForDay(day);
         }
 
         public bool SaveNow(int slot)

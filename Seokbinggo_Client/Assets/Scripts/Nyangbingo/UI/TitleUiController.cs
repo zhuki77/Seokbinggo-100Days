@@ -35,6 +35,9 @@ namespace Nyangbingo.UI
         private Text titleDayCounterText;
         private RuntimePixelGlyphPresenter titleDayCounterGlyphs;
         private GameObject titlePlayerArtRoot;
+        private Slider mapWidthSlider;
+        private Text mapWidthLabel;
+        private int selectedMapWidth = WorldGenerationConfig.DefaultMapWidth;
         private bool isInitialized;
 
         /// <summary>NyangbingoTitleSceneCreator(에디터 씬 생성 도구) 전용 빌드타임 배선 진입점.</summary>
@@ -82,12 +85,14 @@ namespace Nyangbingo.UI
             shell.DemoSaveRequested += HandleDemoSaveRequested;
 
             BindTitleButtons();
+            EnsureMapWidthSlider();
             ConfigureTitleMenuLayout();
             ApplyDeliveredTitleArt();
             RefreshTitleControls();
             SetStatus(string.Empty);
             if (confirmationPanel != null) confirmationPanel.SetActive(false);
             isInitialized = true;
+            Debug.Log("[Nyangbingo] TitleUiController: 타이틀 셸·맵 크기 슬라이더 연결 완료.");
         }
 
         private void Update()
@@ -133,12 +138,13 @@ namespace Nyangbingo.UI
 
         private void RefreshTitleControls()
         {
-            var countdown = TitleShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat);
-            if (titleDayCounterGlyphs != null) titleDayCounterGlyphs.SetText(countdown);
-            else if (titleDayCounterText != null) titleDayCounterText.text = countdown;
+            var badge = TitleShellController.FormatTitleHeatStage(shell.Title.DisplayedHeatStage);
+            if (titleDayCounterGlyphs != null) titleDayCounterGlyphs.SetText(badge);
+            else if (titleDayCounterText != null) titleDayCounterText.text = badge;
             if (titlePlayerArtRoot != null) titlePlayerArtRoot.SetActive(true);
             if (titleContinueButton != null) titleContinueButton.interactable = shell.Title.CanContinue;
             if (titleQuitButton != null) titleQuitButton.gameObject.SetActive(shell.Title.ShowsQuit);
+            RefreshMapWidthLabel();
             for (var index = 0; index < demoSaveButtons.Count; index++)
             {
                 var visible = shell.Title.ShowsDemoSaves;
@@ -160,7 +166,7 @@ namespace Nyangbingo.UI
             var previousSeed = saveManager.TryLoad(GameShellController.AutoSaveSlot, out var previousSave)
                 ? previousSave.seed
                 : 0;
-            MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed);
+            MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed, selectedMapWidth);
             SceneTransitionRequest.BeginDirect("MainGame");
         }
 
@@ -186,6 +192,92 @@ namespace Nyangbingo.UI
             for (var index = 0; index < demoSaveButtons.Count; index++)
                 ConfigureShellButton(demoSaveButtons[index],
                     new Vector2(-162f + index * 50f, -82f), new Vector2(46f, 15f));
+            if (mapWidthSlider != null)
+            {
+                var rect = mapWidthSlider.GetComponent<RectTransform>();
+                rect.anchoredPosition = new Vector2(-112f, -100f);
+                rect.sizeDelta = new Vector2(150f, 14f);
+            }
+            if (mapWidthLabel != null)
+            {
+                var labelRect = mapWidthLabel.rectTransform;
+                labelRect.anchoredPosition = new Vector2(-112f, -114f);
+                labelRect.sizeDelta = new Vector2(150f, 12f);
+            }
+        }
+
+        private void EnsureMapWidthSlider()
+        {
+            if (titleNewGameButton == null || mapWidthSlider != null) return;
+            var titlePanel = titleNewGameButton.transform.parent;
+            if (titlePanel == null) return;
+
+            var labelObject = new GameObject("MapWidthLabel", typeof(RectTransform), typeof(Text));
+            labelObject.transform.SetParent(titlePanel, false);
+            mapWidthLabel = labelObject.GetComponent<Text>();
+            mapWidthLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            mapWidthLabel.fontSize = 8;
+            mapWidthLabel.alignment = TextAnchor.MiddleCenter;
+            mapWidthLabel.color = new Color(.85f, .9f, .95f, .95f);
+            mapWidthLabel.raycastTarget = false;
+
+            var sliderObject = new GameObject("MapWidthSlider", typeof(RectTransform), typeof(Slider),
+                typeof(Image));
+            sliderObject.transform.SetParent(titlePanel, false);
+            var background = sliderObject.GetComponent<Image>();
+            background.color = new Color(.12f, .16f, .22f, .95f);
+            mapWidthSlider = sliderObject.GetComponent<Slider>();
+            mapWidthSlider.minValue = WorldGenerationConfig.MinMapWidth;
+            mapWidthSlider.maxValue = WorldGenerationConfig.MaxMapWidth;
+            mapWidthSlider.wholeNumbers = true;
+            mapWidthSlider.value = selectedMapWidth;
+
+            var fillArea = new GameObject("Fill Area", typeof(RectTransform));
+            fillArea.transform.SetParent(sliderObject.transform, false);
+            var fillAreaRect = fillArea.GetComponent<RectTransform>();
+            fillAreaRect.anchorMin = new Vector2(0f, .25f);
+            fillAreaRect.anchorMax = new Vector2(1f, .75f);
+            fillAreaRect.offsetMin = new Vector2(4f, 0f);
+            fillAreaRect.offsetMax = new Vector2(-4f, 0f);
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(fillArea.transform, false);
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+            fill.GetComponent<Image>().color = new Color(.35f, .7f, .95f, .9f);
+            mapWidthSlider.fillRect = fillRect;
+
+            var handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
+            handleArea.transform.SetParent(sliderObject.transform, false);
+            var handleAreaRect = handleArea.GetComponent<RectTransform>();
+            handleAreaRect.anchorMin = Vector2.zero;
+            handleAreaRect.anchorMax = Vector2.one;
+            handleAreaRect.offsetMin = new Vector2(4f, 0f);
+            handleAreaRect.offsetMax = new Vector2(-4f, 0f);
+            var handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handle.transform.SetParent(handleArea.transform, false);
+            var handleRect = handle.GetComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(10f, 0f);
+            handle.GetComponent<Image>().color = Color.white;
+            mapWidthSlider.handleRect = handleRect;
+            mapWidthSlider.targetGraphic = handle.GetComponent<Image>();
+            mapWidthSlider.onValueChanged.AddListener(OnMapWidthChanged);
+            RefreshMapWidthLabel();
+        }
+
+        private void OnMapWidthChanged(float value)
+        {
+            selectedMapWidth = Mathf.Clamp(Mathf.RoundToInt(value),
+                WorldGenerationConfig.MinMapWidth, WorldGenerationConfig.MaxMapWidth);
+            RefreshMapWidthLabel();
+        }
+
+        private void RefreshMapWidthLabel()
+        {
+            if (mapWidthLabel == null) return;
+            mapWidthLabel.text =
+                $"맵 가로 {selectedMapWidth} (깊이≥{WorldGenerationConfig.UndergroundDepthMinTiles})";
         }
 
         private static void ConfigureShellButton(Button button, Vector2 position, Vector2 size)

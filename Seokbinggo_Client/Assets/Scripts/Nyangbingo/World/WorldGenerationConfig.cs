@@ -115,6 +115,18 @@ namespace Nyangbingo.World
         public int MapWidth => mapWidth;
         public int MapHeight => mapHeight;
 
+        public const int DefaultMapWidth = 600;
+        public const int MinMapWidth = 600;
+        public const int MaxMapWidth = 1200;
+        /// <summary>지표→심층 광물 깊이 하한(B-5). 현 레이어 두께 합과 동일해야 한다.</summary>
+        public const int UndergroundDepthMinTiles = 135;
+
+        /// <summary>타이틀 새 게임 슬라이더(B-5). 에셋 기본값 미만으로 줄이지 않는다(하한=현 맵).</summary>
+        public void ApplyRuntimeMapWidth(int width)
+        {
+            mapWidth = Mathf.Clamp(width, MinMapWidth, MaxMapWidth);
+        }
+
         public float SurfaceBaseHeightRatio => surfaceBaseHeightRatio;
         public float SurfaceNoiseAmplitude => surfaceNoiseAmplitude;
         public float SurfaceNoiseFrequency => surfaceNoiseFrequency;

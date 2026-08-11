@@ -110,6 +110,8 @@ namespace Nyangbingo.Save
                 if (parsed == null) return false;
                 if (!json.Contains("\"schemaVersion\"")) parsed.schemaVersion = 0;
                 if (parsed.schemaVersion > SaveGame.CurrentSchemaVersion) return false;
+                // B-UI-v71: 구 스키마는 heatStage 등이 빠져 이어하기 시 폭염·서리가 깨지므로 거부한다.
+                if (parsed.schemaVersion < SaveGame.MinimumCompatibleSchemaVersion) return false;
                 parsed.NormalizeAfterLoad();
                 data = parsed;
                 return true;

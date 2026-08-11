@@ -9,7 +9,7 @@ namespace Nyangbingo.UI
     {
         public bool CanContinue { get; internal set; }
         public int LatestSlot { get; internal set; } = -1;
-        public int DaysUntilBaegilHeat { get; internal set; } = DayNightService.DefaultSurvivalDayLimit;
+        public int DisplayedHeatStage { get; internal set; } = 1;
         public bool ShowsDemoSaves { get; internal set; }
         public bool ShowsQuit { get; internal set; }
     }
@@ -58,13 +58,22 @@ namespace Nyangbingo.UI
             SaveGame latest = null;
             Title.CanContinue = saveManager != null && saveManager.TryLoadLatest(out slot, out latest);
             Title.LatestSlot = Title.CanContinue ? slot : -1;
-            Title.DaysUntilBaegilHeat = Title.CanContinue
-                ? DayNightService.CalculateDaysRemaining(DayNightService.DefaultSurvivalDayLimit, latest.day)
-                : DayNightService.DefaultSurvivalDayLimit;
+            if (Title.CanContinue && latest != null)
+            {
+                Title.DisplayedHeatStage = latest.heatStage > 0
+                    ? Mathf.Clamp(latest.heatStage, 1, HeatStagePresentation.StageCount)
+                    : HeatStagePresentation.ResolveForDay(latest.day);
+            }
+            else
+                Title.DisplayedHeatStage = 1;
         }
 
         public static string FormatTitleCountdown(int daysUntilBaegilHeat) =>
-            $"D-{Mathf.Max(0, daysUntilBaegilHeat)}";
+            HeatStagePresentation.FormatBadge(HeatStagePresentation.ResolveForDay(
+                DayNightService.DefaultSurvivalDayLimit - Mathf.Max(0, daysUntilBaegilHeat) + 1));
+
+        public static string FormatTitleHeatStage(int heatStage) =>
+            HeatStagePresentation.FormatBadge(heatStage);
 
         public bool TryContinue()
         {

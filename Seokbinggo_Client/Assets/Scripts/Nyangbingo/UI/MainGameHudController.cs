@@ -280,7 +280,7 @@ namespace Nyangbingo.UI
             BuildAlertOverlay();
             RefreshInventory();
             RefreshStatus();
-            Debug.Log("[Nyangbingo] MainGameHudController: 체온·석빙고 온도·D-100·발톱 티어 HUD와 " +
+            Debug.Log("[Nyangbingo] MainGameHudController: 체온·석빙고 온도·폭염 단계·발톱 티어 HUD와 " +
                       "v29 50슬롯 통합 인벤토리 연결 완료.");
         }
 
@@ -335,20 +335,20 @@ namespace Nyangbingo.UI
             }
             if (dayText != null)
             {
-                var displayedDays = dayCounterScrollPresenter != null
-                    ? dayCounterScrollPresenter.DisplayedDaysRemaining
-                    : bootstrap.TimeService.DaysRemaining;
+                var heatStage = ResolveDisplayedHeatStage();
+                var badge = HeatStagePresentation.FormatBadge(heatStage);
                 var counterVisible = dayCounterScrollPresenter == null || dayCounterScrollPresenter.IsFullyOpen;
                 if (dayCounterGlyphs != null)
                 {
                     dayText.text = string.Empty;
                     dayText.enabled = false;
-                    dayCounterGlyphs.SetText($"D-{displayedDays}");
+                    // B-UI-v71: D-100 슬롯에 폭염 단계만 표시(태양 아이콘은 기존 시계/아트 유지).
+                    dayCounterGlyphs.SetText(badge);
                     dayCounterGlyphs.SetVisible(counterVisible);
                 }
                 else
                 {
-                    dayText.text = $"D-{displayedDays}";
+                    dayText.text = badge;
                     dayText.enabled = counterVisible;
                 }
                 if (dayClockText != null)
@@ -949,6 +949,14 @@ namespace Nyangbingo.UI
         {
             if (timeService == null) return string.Empty;
             return FormatRemainingTime(timeService.SecondsUntilNextTransition);
+        }
+
+        private int ResolveDisplayedHeatStage()
+        {
+            var curve = bootstrap?.TimeService?.CurrentDayCurve;
+            if (curve != null) return Mathf.Clamp(curve.HeatStage, 1, HeatStagePresentation.StageCount);
+            var day = bootstrap?.TimeService != null ? bootstrap.TimeService.Day : 1;
+            return HeatStagePresentation.ResolveForDay(day);
         }
 
         public static int ResolveDayNightClockFrameIndex(float timeOfDaySeconds,

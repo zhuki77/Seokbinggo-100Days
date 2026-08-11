@@ -259,7 +259,9 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 21;
+        public const int CurrentSchemaVersion = 22;
+        /// <summary>v71: heatStage·승리조건 개편으로 구 세이브는 이어하기 불가(새 게임 유도).</summary>
+        public const int MinimumCompatibleSchemaVersion = 22;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
@@ -285,8 +287,11 @@ namespace Nyangbingo.Save
         public List<string> modulesDone = new List<string>();
         public int seokbinggoStage;
         public int altarClears;
+        /// <summary>폭염 단계(1~3). 날짜만으로 역산하지 말고 반드시 저장한다(B-UI-v71 B-9-1).</summary>
+        public int heatStage = 1;
         public List<string> gimmickWeaponsGranted = new List<string>();
         public List<string> frostPendingCells = new List<string>();
+        /// <summary>진단·표시용 잔존. 승리 판정에는 쓰지 않는다(win_condition=final_boss_kill).</summary>
         public float sealPct;
         public int yokaiTears;
         public List<BossRecord> bossRecords = new List<BossRecord>();
@@ -413,6 +418,7 @@ namespace Nyangbingo.Save
             if (loadedSchemaVersion < 8) MigrateV24Ids();
             seokbinggoStage = Math.Clamp(seokbinggoStage, 0, 6);
             altarClears = Math.Max(0, altarClears);
+            heatStage = Math.Clamp(heatStage <= 0 ? 1 : heatStage, 1, 3);
             gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
             frostPendingCells.RemoveAll(string.IsNullOrWhiteSpace);
             if (schemaVersion < CurrentSchemaVersion) schemaVersion = CurrentSchemaVersion;

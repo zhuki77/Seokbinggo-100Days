@@ -18,5 +18,8 @@ namespace Nyangbingo.UI
         }
 
         public static void MarkReady() => IsReady = true;
+
+        /// <summary>강제 씬 전환(BeginDirect) 전에 오버레이 대기 상태를 초기화한다.</summary>
+        public static void Reset() => IsReady = false;
     }
 }

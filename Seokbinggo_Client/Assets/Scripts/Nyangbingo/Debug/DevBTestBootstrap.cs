@@ -2909,8 +2909,13 @@ namespace Nyangbingo.Debugging
             saveManager.Save(GameShellController.AutoSaveSlot, new SaveGame { day = 15 });
             shell.RefreshTitle();
             var titleMatches = shell.Title.CanContinue && shell.Title.LatestSlot >= 0 &&
-                               shell.Title.DaysUntilBaegilHeat >= 70 && shell.Title.DaysUntilBaegilHeat <= 100 &&
-                               TitleShellController.FormatTitleCountdown(shell.Title.DaysUntilBaegilHeat) == "D-85" &&
+                               shell.Title.DisplayedHeatStage >= 1 &&
+                               shell.Title.DisplayedHeatStage <= HeatStagePresentation.StageCount &&
+                               TitleShellController.FormatTitleHeatStage(shell.Title.DisplayedHeatStage) == "1" &&
+                               TitleShellController.FormatTitleCountdown(85) ==
+                               HeatStagePresentation.FormatBadge(
+                                   HeatStagePresentation.ResolveForDay(
+                                       DayNightService.DefaultSurvivalDayLimit - 85 + 1)) &&
                                shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit;
 
             var newGameRequested = false;

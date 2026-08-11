@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Nyangbingo.UI
@@ -18,6 +19,12 @@ namespace Nyangbingo.UI
         {
             TargetSceneName = targetSceneName;
             IsTransitionActive = true;
+            // 이미 Loading이 떠 있으면 Additive 재로드가 무시되어 전환이 멈춘다 → Single로 우회.
+            if (IsLoadingSceneLoaded())
+            {
+                BeginDirect(targetSceneName);
+                return;
+            }
             SceneManager.LoadScene(LoadingSceneName, LoadSceneMode.Additive);
         }
 
@@ -29,6 +36,8 @@ namespace Nyangbingo.UI
         {
             TargetSceneName = null;
             IsTransitionActive = false;
+            LoadingOverlayRequest.Reset();
+            Time.timeScale = 1f;
             SceneManager.LoadScene(targetSceneName, LoadSceneMode.Single);
         }
 
@@ -37,5 +46,11 @@ namespace Nyangbingo.UI
         public static void ClearTarget() => TargetSceneName = null;
 
         public static void Complete() => IsTransitionActive = false;
+
+        public static bool IsLoadingSceneLoaded()
+        {
+            var loading = SceneManager.GetSceneByName(LoadingSceneName);
+            return loading.IsValid() && loading.isLoaded;
+        }
     }
 }
