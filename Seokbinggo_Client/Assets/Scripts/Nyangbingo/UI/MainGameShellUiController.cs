@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using Nyangbingo.Audio;
 using Nyangbingo.Bosses;
 using Nyangbingo.Data;
@@ -94,8 +93,18 @@ namespace Nyangbingo.UI
                 timeService == null || !saveCoordinator.Initialize() || saveButtons == null || loadButtons == null ||
                 saveButtons.Length != SaveManager.SlotCount || loadButtons.Length != SaveManager.SlotCount)
             {
-                Debug.LogError("[Nyangbingo] MainGameShellUiController: 게임 셸 필수 배선이 올바르지 않습니다.");
+                Debug.LogError("[Nyangbingo] MainGameShellUiController: 게임 셸 필수 배선이 올바르지 않습니다 — Title로 복귀합니다.");
+                Time.timeScale = 1f;
+                MainGameLaunchRequest.Reset();
+                SceneTransitionRequest.BeginDirectTitle();
                 enabled = false;
+                return;
+            }
+
+            // 세이브 판정을 Loading 오버레이보다 먼저 한다.
+            if (!TryResolveLaunchSave(out var launchSave))
+            {
+                ReturnToTitleAfterFailedLaunch();
                 return;
             }
 
@@ -118,12 +127,6 @@ namespace Nyangbingo.UI
                 Debug.LogError("[Nyangbingo] MainGameShellUiController: gameplayArtCatalog 배선이 비어 있습니다.");
             ApplyDeliveredShellArt();
 
-            if (!TryResolveLaunchSave(out var launchSave))
-            {
-                StartCoroutine(AbortLaunchToTitle());
-                return;
-            }
-
             MainGameLaunchRequest.Reset();
             shell.EnterGameplay(launchSave);
             Time.timeScale = 1f;
@@ -134,19 +137,27 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// Start() 중 Single 씬 전환은 카메라/캔버스가 비어 검은 화면이 될 수 있어 한 프레임 미룬다.
+        /// 복원 실패 시 Title로 복귀. MarkReady/WaitForEndOfFrame을 쓰지 않고 BeginDirect만 예약한다.
         /// </summary>
-        private IEnumerator AbortLaunchToTitle()
+        private void ReturnToTitleAfterFailedLaunch()
         {
             var failedSlot = MainGameLaunchRequest.SaveSlot;
             MainGameLaunchRequest.Reset();
-            if (saveManager != null && failedSlot >= 0 && failedSlot < SaveManager.SlotCount)
-                saveManager.Delete(failedSlot);
-            LoadingOverlayRequest.MarkReady();
-            yield return null;
+            try
+            {
+                if (saveManager != null && failedSlot >= 0 && failedSlot < SaveManager.SlotCount)
+                    saveManager.Delete(failedSlot);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[Nyangbingo] 실패 세이브 슬롯 삭제 중 예외(무시하고 타이틀로 복귀): {exception.Message}");
+            }
+
             Time.timeScale = 1f;
-            Debug.Log("[Nyangbingo] 세이브 복원 실패 — Title 씬으로 복귀합니다. 새 게임으로 시작하세요.");
-            SceneTransitionRequest.BeginDirect("Title");
+            LoadingOverlayRequest.Reset();
+            Debug.LogError("[Nyangbingo] 세이브 복원 실패 — Title 씬으로 복귀합니다. 새 게임으로 시작하세요.");
+            SceneTransitionRequest.BeginDirectTitle();
+            enabled = false;
         }
 
         private bool TryResolveLaunchSave(out SaveGame launchSave)
@@ -169,7 +180,7 @@ namespace Nyangbingo.UI
                     Debug.LogError("[Nyangbingo] 데모 세이브 적용 실패 — 타이틀로 복귀합니다.");
                     launchSave = null;
                     return false;
-                default:
+                case MainGameLaunchRequest.Mode.Continue:
                     if (saveCoordinator.TryLoad(MainGameLaunchRequest.SaveSlot))
                     {
                         launchSave = saveCoordinator.CaptureSnapshot();
@@ -178,6 +189,16 @@ namespace Nyangbingo.UI
                     Debug.LogError(
                         "[Nyangbingo] 저장 데이터 복원 실패 — 타이틀로 복귀합니다. " +
                         "최근 맵 생성 변경(가로 1.5배·중간층 동굴 등) 이후에는 구 세이브가 호환되지 않을 수 있습니다. '새 게임'으로 시작하세요.");
+                    launchSave = null;
+                    return false;
+                default:
+                    // Mode.None 등으로 MainGame에 직접 들어온 경우 — 이어하기와 동일하게 최신 슬롯 시도.
+                    if (saveCoordinator.TryLoad(MainGameLaunchRequest.SaveSlot))
+                    {
+                        launchSave = saveCoordinator.CaptureSnapshot();
+                        return launchSave != null;
+                    }
+                    Debug.LogError("[Nyangbingo] 런치 요청이 없어 타이틀로 복귀합니다. Title에서 새 게임/이어하기를 선택하세요.");
                     launchSave = null;
                     return false;
             }
@@ -865,9 +886,9 @@ namespace Nyangbingo.UI
             Time.timeScale = 1f;
             // Loading 오버레이가 떠 있으면 Begin이 막히므로 BeginDirect로 우회한다.
             if (SceneTransitionRequest.IsLoadingSceneLoaded())
-                SceneTransitionRequest.BeginDirect("Title");
+                SceneTransitionRequest.BeginDirectTitle();
             else
-                SceneTransitionRequest.Begin("Title");
+                SceneTransitionRequest.Begin(SceneTransitionRequest.TitleSceneName);
         }
 
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }

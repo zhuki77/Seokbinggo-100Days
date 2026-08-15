@@ -24,7 +24,10 @@ namespace Nyangbingo.Audio
         BossAppearedOrFled,
         EoduksiniBloomed,
         PlayerHeatPanting,
-        GoalBadgeCompleted
+        GoalBadgeCompleted,
+        InvasionAnnounced,
+        HypothermiaEntered,
+        FrostMineralRevealed
     }
 
     public enum MusicTrack { Day, Night, Boss, Title }
@@ -39,7 +42,7 @@ namespace Nyangbingo.Audio
     public sealed class AudioEventRouter : IDisposable
     {
         public const int P1CueCount = 13;
-        public const int P2CueCount = 3;
+        public const int P2CueCount = 6;
 
         private bool disposed;
         private bool isNight;
@@ -72,6 +75,9 @@ namespace Nyangbingo.Audio
             GameEvents.OnEoduksiniBloomed += HandleEoduksiniBloomed;
             GameEvents.OnPlayerHeatPanting += HandlePlayerHeatPanting;
             GameEvents.OnGoalBadgeCompleted += HandleGoalBadgeCompleted;
+            GameEvents.OnInvasionAnnounced += HandleInvasionAnnounced;
+            GameEvents.OnHypothermiaEntered += HandleHypothermiaEntered;
+            GameEvents.OnFrostMineralRevealed += HandleFrostMineralRevealed;
         }
 
         public void Dispose()
@@ -98,6 +104,9 @@ namespace Nyangbingo.Audio
             GameEvents.OnEoduksiniBloomed -= HandleEoduksiniBloomed;
             GameEvents.OnPlayerHeatPanting -= HandlePlayerHeatPanting;
             GameEvents.OnGoalBadgeCompleted -= HandleGoalBadgeCompleted;
+            GameEvents.OnInvasionAnnounced -= HandleInvasionAnnounced;
+            GameEvents.OnHypothermiaEntered -= HandleHypothermiaEntered;
+            GameEvents.OnFrostMineralRevealed -= HandleFrostMineralRevealed;
         }
 
         private void HandleDayStart()
@@ -166,6 +175,9 @@ namespace Nyangbingo.Audio
         private void HandleEoduksiniBloomed() => CueRequested?.Invoke(AudioCue.EoduksiniBloomed);
         private void HandlePlayerHeatPanting() => CueRequested?.Invoke(AudioCue.PlayerHeatPanting);
         private void HandleGoalBadgeCompleted() => CueRequested?.Invoke(AudioCue.GoalBadgeCompleted);
+        private void HandleInvasionAnnounced() => CueRequested?.Invoke(AudioCue.InvasionAnnounced);
+        private void HandleHypothermiaEntered() => CueRequested?.Invoke(AudioCue.HypothermiaEntered);
+        private void HandleFrostMineralRevealed() => CueRequested?.Invoke(AudioCue.FrostMineralRevealed);
     }
 
     public sealed class NyangbingoAudioService : MonoBehaviour

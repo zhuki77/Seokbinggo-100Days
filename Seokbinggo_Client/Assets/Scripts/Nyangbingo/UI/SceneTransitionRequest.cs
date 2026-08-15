@@ -1,16 +1,20 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// Title.unity/MainGame.unity 사이의 전환을 Loading.unity를 경유해 수행하기 위한 정적 요청.
-    /// MainGameBootstrap.RequestFreshWorldForNextScene과 동일하게 DontDestroyOnLoad 없이
-    /// 정적 필드로 "다음에 무엇을 로드할지"만 넘긴다.
+    /// Title ↔ MainGame 전환 요청. BeginDirect는 EventSystem.Update/Start 도중
+    /// 동기 LoadScene을 쓰지 않고, DontDestroyOnLoad 러너가 다음 프레임에 Single 로드한다.
+    /// (UI 클릭 중 동기 LoadScene은 EventSystem을 파괴해 MainGame이 검게 멈출 수 있음)
     /// </summary>
     public static class SceneTransitionRequest
     {
         public const string LoadingSceneName = "Loading";
+        public const string TitleSceneName = "Title";
+        public const string MainGameSceneName = "MainGame";
+        public const int TitleBuildIndex = 0;
 
         public static string TargetSceneName { get; private set; }
         public static bool IsTransitionActive { get; private set; }
@@ -19,7 +23,6 @@ namespace Nyangbingo.UI
         {
             TargetSceneName = targetSceneName;
             IsTransitionActive = true;
-            // 이미 Loading이 떠 있으면 Additive 재로드가 무시되어 전환이 멈춘다 → Single로 우회.
             if (IsLoadingSceneLoaded())
             {
                 BeginDirect(targetSceneName);
@@ -28,21 +31,24 @@ namespace Nyangbingo.UI
             SceneManager.LoadScene(LoadingSceneName, LoadSceneMode.Additive);
         }
 
-        /// <summary>
-        /// Loading.unity를 거치지 않고 대상 씬으로 곧바로 전환한다. 대상 씬이 자체적으로
-        /// LoadingOverlayRequest를 통해 자신의 초기화 구간을 가리는 경우(예: Title -> MainGame)에 쓰인다.
-        /// </summary>
         public static void BeginDirect(string targetSceneName)
         {
+            if (string.IsNullOrWhiteSpace(targetSceneName))
+            {
+                Debug.LogError("[Nyangbingo] SceneTransitionRequest.BeginDirect: 대상 씬 이름이 비어 있습니다.");
+                return;
+            }
+
             TargetSceneName = null;
             IsTransitionActive = false;
             LoadingOverlayRequest.Reset();
             Time.timeScale = 1f;
-            SceneManager.LoadScene(targetSceneName, LoadSceneMode.Single);
+            Debug.Log($"[Nyangbingo] SceneTransitionRequest: BeginDirect 예약 → {targetSceneName}");
+            SceneTransitionRunner.EnqueueSingleLoad(targetSceneName);
         }
 
-        /// <summary>LoadingSceneController가 대상 씬 값을 소비한 뒤, 이후의 Loading 오버레이 로드와
-        /// 혼동되지 않도록 초기화한다.</summary>
+        public static void BeginDirectTitle() => BeginDirect(TitleSceneName);
+
         public static void ClearTarget() => TargetSceneName = null;
 
         public static void Complete() => IsTransitionActive = false;
@@ -51,6 +57,79 @@ namespace Nyangbingo.UI
         {
             var loading = SceneManager.GetSceneByName(LoadingSceneName);
             return loading.IsValid() && loading.isLoaded;
+        }
+
+        internal static int ResolveBuildIndex(string sceneName)
+        {
+            for (var i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+            {
+                var path = SceneUtility.GetScenePathByBuildIndex(i);
+                if (string.IsNullOrEmpty(path)) continue;
+                var name = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (string.Equals(name, sceneName, System.StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// UI/Start 문맥 밖에서 Single 씬 로드를 수행하는 1회용 러너.
+    /// WaitForEndOfFrame은 쓰지 않는다(렌더 없으면 영구 대기).
+    /// </summary>
+    internal sealed class SceneTransitionRunner : MonoBehaviour
+    {
+        private static SceneTransitionRunner instance;
+        private string pendingSceneName;
+
+        public static void EnqueueSingleLoad(string sceneName)
+        {
+            if (instance == null)
+            {
+                var host = new GameObject(nameof(SceneTransitionRunner));
+                DontDestroyOnLoad(host);
+                instance = host.AddComponent<SceneTransitionRunner>();
+            }
+
+            instance.pendingSceneName = sceneName;
+            instance.StopAllCoroutines();
+            instance.StartCoroutine(instance.LoadNextFrame());
+        }
+
+        private IEnumerator LoadNextFrame()
+        {
+            // EventSystem.Update / Start 스택이 완전히 끝난 뒤 로드.
+            yield return null;
+
+            var sceneName = pendingSceneName;
+            pendingSceneName = null;
+            if (string.IsNullOrEmpty(sceneName))
+            {
+                Cleanup();
+                yield break;
+            }
+
+            Time.timeScale = 1f;
+            var buildIndex = SceneTransitionRequest.ResolveBuildIndex(sceneName);
+            if (buildIndex >= 0)
+            {
+                Debug.Log(
+                    $"[Nyangbingo] SceneTransitionRunner: LoadScene Single buildIndex={buildIndex} ({sceneName})");
+                SceneManager.LoadScene(buildIndex, LoadSceneMode.Single);
+            }
+            else
+            {
+                Debug.Log($"[Nyangbingo] SceneTransitionRunner: LoadScene Single name='{sceneName}'");
+                SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
+            }
+
+            Cleanup();
+        }
+
+        private void Cleanup()
+        {
+            instance = null;
+            Destroy(gameObject);
         }
     }
 }

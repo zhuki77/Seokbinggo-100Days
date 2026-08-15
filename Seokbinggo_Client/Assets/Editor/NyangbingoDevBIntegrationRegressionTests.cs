@@ -65,12 +65,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestMultiHitDefenseContract();
         TestForcedInvasionSpawnCapContract();
         TestBaekjungWaveCompositionContract();
+        TestBUiV71InvasionAndCraftingContract();
         TestDaySurfaceFireContract();
         TestUndergroundTemperatureRecoveryContract();
         TestPlayerFireMitigationContract();
         TestPlayerVisionBonusContract();
         TestYagwangRuntimeTheftContract();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (48/48).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (49/49).");
     }
 
     private static void TestChestLootInterfaceContract()
@@ -318,6 +319,35 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 flattened.Count(kind => kind == YokaiKind.Yagwanggwi) == 6 &&
                 flattened.Count(kind => kind == YokaiKind.Gaekgwi) == 1,
             "Baekjung wave balancing must preserve the complete official 12-yokai composition.");
+    }
+
+    private static void TestBUiV71InvasionAndCraftingContract()
+    {
+        Require(InvasionScheduleRules.IsInvasionNight(6) &&
+                InvasionScheduleRules.IsInvasionNight(96) &&
+                !InvasionScheduleRules.IsInvasionNight(5) &&
+                InvasionScheduleRules.ShouldShowAnnouncement(5, false, true) &&
+                !InvasionScheduleRules.ShouldShowAnnouncement(5, true, true) &&
+                InvasionScheduleRules.IsBedLocked(6, true, true) &&
+                !InvasionScheduleRules.IsBedLocked(6, false, true),
+            "Invasion schedule must announce on the eve and lock beds on invasion nights.");
+        Require(RoomTempPresentation.FormatCelsius(-12) == "-12℃" &&
+                RoomTempPresentation.ResolveBand(0) == RoomTempPresentation.Band.Warm &&
+                RoomTempPresentation.ResolveBand(-7) == RoomTempPresentation.Band.Chilled &&
+                RoomTempPresentation.ResolveBand(-11) == RoomTempPresentation.Band.Frozen &&
+                RoomTempPresentation.ShouldWarnHypothermia(-10),
+            "Room temperature presentation must use signed Celsius and frozen-band warnings.");
+        var hudSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
+        var audioSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Audio/NyangbingoAudioService.cs");
+        Require(hudSource.Contains("RoomTempPresentation.FormatCelsius") &&
+                hudSource.Contains("InvasionScheduleRules.AnnouncementBannerText") &&
+                hudSource.Contains("RaiseHypothermiaEntered") &&
+                audioSource.Contains("InvasionAnnounced") &&
+                audioSource.Contains("HypothermiaEntered") &&
+                audioSource.Contains("FrostMineralRevealed"),
+            "B-UI-v71 HUD and audio hooks must wire invasion, hypothermia, and frost reveal cues.");
     }
 
     private static void TestForcedInvasionSpawnCapContract()
@@ -3277,11 +3307,20 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var shellUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(craftingUiSource.Contains("$\"{index + 1} · {UnifiedTabLabel(index)}\"") &&
-                craftingUiSource.Contains("showingSmelting = !showingSmelting") &&
-                craftingUiSource.Contains("2 제작/제련 전환") &&
+                craftingUiSource.Contains("craftingFilter = (CraftingStationFilter)") &&
+                craftingUiSource.Contains("CraftingFilterCount") &&
+                craftingUiSource.Contains("2 제작 탭(제작대/화로/얼음 모루)") &&
+                MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Workbench,
+                    MainGameCraftingUiController.CraftingStationFilter.Workbench) &&
+                MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Furnace,
+                    MainGameCraftingUiController.CraftingStationFilter.Furnace) &&
+                MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.IceAnvil,
+                    MainGameCraftingUiController.CraftingStationFilter.IceAnvil) &&
+                !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Furnace,
+                    MainGameCraftingUiController.CraftingStationFilter.Workbench) &&
                 shellUiSource.Contains("!MainGameCraftingUiController.BlocksGameplayInput") &&
                 shellUiSource.Contains("!MainGameCraftingUiController.ConsumedEscapeThisFrame"),
-            "Number key 2 must visibly toggle both ways between crafting and smelting at a shared station, " +
+            "Number key 2 must cycle the three crafting station filters, " +
             "and Escape must close any 1-4 panel without opening pause in the same frame.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&

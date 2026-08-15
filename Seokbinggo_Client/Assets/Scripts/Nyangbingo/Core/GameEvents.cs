@@ -40,6 +40,9 @@ namespace Nyangbingo.Core
         public static event Action OnPlayerHeatPanting;
         public static event Action OnGoalBadgeCompleted;
         public static event Action OnPlayerDied;
+        public static event Action OnInvasionAnnounced;
+        public static event Action OnHypothermiaEntered;
+        public static event Action OnFrostMineralRevealed;
 
         public static void RaiseDayStart() => OnDayStart?.Invoke();
         public static void RaiseNightStart() => OnNightStart?.Invoke();
@@ -85,5 +88,8 @@ namespace Nyangbingo.Core
         public static void RaisePlayerHeatPanting() => OnPlayerHeatPanting?.Invoke();
         public static void RaiseGoalBadgeCompleted() => OnGoalBadgeCompleted?.Invoke();
         public static void RaisePlayerDied() => OnPlayerDied?.Invoke();
+        public static void RaiseInvasionAnnounced() => OnInvasionAnnounced?.Invoke();
+        public static void RaiseHypothermiaEntered() => OnHypothermiaEntered?.Invoke();
+        public static void RaiseFrostMineralRevealed() => OnFrostMineralRevealed?.Invoke();
     }
 }

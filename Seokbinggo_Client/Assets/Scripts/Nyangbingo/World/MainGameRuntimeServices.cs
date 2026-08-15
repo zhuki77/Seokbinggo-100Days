@@ -49,6 +49,7 @@ namespace Nyangbingo.World
         public SmeltingStation Furnace { get; private set; }
         public SmeltingStation Foundry { get; private set; }
         public PlayerTemperatureState PlayerTemperature { get; private set; }
+        public RoomTempService RoomTemperature { get; private set; }
         public PlayerHealthRecoveryService PlayerHealthRecovery { get; private set; }
         public PlayerDayHeatDamageService PlayerDayHeatDamage { get; private set; }
         public MagpieCompanionRuntime MagpieCompanion { get; private set; }
@@ -144,6 +145,8 @@ namespace Nyangbingo.World
             Foundry = new SmeltingStation(PlayerInventory, SmeltingStationKind.Foundry, foundryCapacity);
             PlayerTemperature = new PlayerTemperatureState(gameDataCatalog, bootstrap.TimeService,
                 bootstrap.SealSystem, EquipmentSystem, environmentState, bootstrap.Session);
+            RoomTemperature = new RoomTempService(gameDataCatalog, bootstrap.SealSystem,
+                bootstrap.TimeService, environmentState);
             DeathTearPouches = new DeathTearPouchRuntime(PlayerInventory, bootstrap.TimeService);
             var jangdokDefinition = gameDataCatalog.FindGlobal(GlobalKeys.JangdokStorageSlots);
             if (jangdokDefinition == null || !jangdokDefinition.TryGetInt(out var jangdokSlots) ||
@@ -339,7 +342,11 @@ namespace Nyangbingo.World
             bootstrap.TileService.FrostSpread = FrostSpread;
         }
 
-        private void HandleFirstFrostRevealed() => GimmickWeapons?.NotifyFirstFrost();
+        private void HandleFirstFrostRevealed()
+        {
+            GameEvents.RaiseFrostMineralRevealed();
+            GimmickWeapons?.NotifyFirstFrost();
+        }
 
         private void HandleGimmickBaekjungSurvived() => GimmickWeapons?.NotifyBaekjungSurvived();
 

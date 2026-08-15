@@ -148,7 +148,20 @@ namespace Nyangbingo.UI
         private float sealDeltaRemaining;
         private float lastSealPercent;
         private bool hasLastSealPercent;
+        private int invasionBannerDay;
+        private bool hypothermiaCuePlayed;
         private static MainGameHudController activeHud;
+
+        public static bool IsInvasionBedLocked(GameDataCatalog catalog, DayNightService timeService)
+        {
+            if (catalog == null || timeService == null) return false;
+            var period = InvasionScheduleRules.ReadPeriod(catalog);
+            var offset = InvasionScheduleRules.ReadOffset(catalog);
+            var bedLock = InvasionScheduleRules.ReadBedLockEnabled(catalog);
+            return InvasionScheduleRules.IsBedLocked(timeService.Day, timeService.IsNight, bedLock, period, offset);
+        }
+
+        public static string InvasionBedLockedMessage => InvasionScheduleRules.BedLockedMessage;
 
         public int BoundSlotCount => inventorySlotTexts?.Length ?? 0;
         public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
@@ -315,6 +328,7 @@ namespace Nyangbingo.UI
             RefreshAlertOverlay();
             RefreshStatus();
             SynchronizeSealPercentBaseline();
+            RefreshInvasionAnnouncement();
             if (deathPanel != null && playerController != null && deathPanel.activeSelf != playerController.IsDead)
                 deathPanel.SetActive(playerController.IsDead);
         }
@@ -328,11 +342,7 @@ namespace Nyangbingo.UI
             else if (temperatureText != null)
                 temperatureText.text = displayedTemperature;
             RefreshTemperatureArt();
-            if (sealText != null)
-            {
-                sealText.text = string.Empty;
-                sealText.gameObject.SetActive(false);
-            }
+            RefreshRoomTemperature();
             if (dayText != null)
             {
                 var heatStage = ResolveDisplayedHeatStage();
@@ -573,9 +583,13 @@ namespace Nyangbingo.UI
             playerHealthFill.enabled = healthRatio > 0f;
 
             var temperatureRatio = Mathf.Clamp01(runtimeServices.PlayerTemperature.Normalized);
-            playerTemperatureFill.color = VitalsTemperatureColor(temperatureBucket);
+            var hypothermiaBlink = IsHypothermiaWarningActive() &&
+                                   IsSunsetWarningBrightPhase(Time.unscaledTime);
+            playerTemperatureFill.color = hypothermiaBlink
+                ? new Color(.35f, .72f, 1f, 1f)
+                : VitalsTemperatureColor(temperatureBucket);
             playerTemperatureFill.rectTransform.sizeDelta = new Vector2(42f * temperatureRatio, 2.5f);
-            playerTemperatureFill.enabled = temperatureRatio > 0f;
+            playerTemperatureFill.enabled = temperatureRatio > 0f || hypothermiaBlink;
 
             var tearFrames = gameplayArtCatalog?.YokaiTearBalanceFrames;
             var tearBalance = inventory?.Count(DeathTearPouchRuntime.TearItemId) ?? 0;
@@ -738,6 +752,21 @@ namespace Nyangbingo.UI
                     new Color(1f, .82f, .28f), true);
                 return;
             }
+            if (IsHypothermiaWarningActive())
+            {
+                var pulse = IsSunsetWarningBrightPhase(Time.unscaledTime);
+                var alpha = pulse ? .22f : .12f;
+                SetAlertOverlay(new Color(.12f, .28f, .62f, alpha), string.Empty,
+                    new Color(.72f, .88f, 1f), false);
+                return;
+            }
+            if (ShouldShowInvasionBanner())
+            {
+                SetAlertOverlay(new Color(.42f, .08f, .06f, .14f),
+                    InvasionScheduleRules.AnnouncementBannerText,
+                    new Color(1f, .82f, .68f), false);
+                return;
+            }
             alertOverlayRoot.gameObject.SetActive(false);
         }
 
@@ -746,7 +775,8 @@ namespace Nyangbingo.UI
             alertOverlayRoot.gameObject.SetActive(true);
             alertOverlayRoot.SetAsLastSibling();
             alertOverlayTint.color = tint;
-            alertOverlayText.text = string.Empty;
+            alertOverlayText.text = message ?? string.Empty;
+            alertOverlayText.enabled = !string.IsNullOrEmpty(message);
             alertOverlayText.color = textColor;
             var hasDangerArt = gameplayArtCatalog?.DangerIcon != null;
             alertDangerIcon.gameObject.SetActive(showThreatDirection && hasDangerArt);
@@ -867,6 +897,60 @@ namespace Nyangbingo.UI
             var index = Mathf.RoundToInt((1f - cooling) * (frames.Count - 1));
             temperatureArt.sprite = frames[Mathf.Clamp(index, 0, frames.Count - 1)];
             temperatureArt.enabled = temperatureArt.sprite != null;
+        }
+
+        private void RefreshRoomTemperature()
+        {
+            if (sealText == null || runtimeServices?.RoomTemperature == null ||
+                playerController == null) return;
+            var roomService = runtimeServices.RoomTemperature;
+            var celsius = roomService.Resolve(playerController.transform.position);
+            var band = RoomTempPresentation.ResolveBand(celsius, roomService.ColdEnterCelsius,
+                roomService.FrozenEnterCelsius);
+            sealText.text = RoomTempPresentation.FormatCelsius(celsius);
+            sealText.color = RoomTempPresentation.BandColor(band);
+            sealText.gameObject.SetActive(true);
+            if (RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius) &&
+                !hypothermiaCuePlayed)
+            {
+                hypothermiaCuePlayed = true;
+                GameEvents.RaiseHypothermiaEntered();
+            }
+            else if (!RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius))
+                hypothermiaCuePlayed = false;
+        }
+
+        private bool IsHypothermiaWarningActive()
+        {
+            if (runtimeServices?.RoomTemperature == null || playerController == null) return false;
+            var roomService = runtimeServices.RoomTemperature;
+            var celsius = roomService.Resolve(playerController.transform.position);
+            return RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius);
+        }
+
+        private void RefreshInvasionAnnouncement()
+        {
+            var time = bootstrap?.TimeService;
+            if (time == null || gameDataCatalog == null) return;
+            if (time.Day != invasionBannerDay)
+            {
+                invasionBannerDay = time.Day;
+                if (InvasionScheduleRules.ShouldShowAnnouncement(time.Day, time.IsNight,
+                        InvasionScheduleRules.ReadAnnounceEnabled(gameDataCatalog),
+                        InvasionScheduleRules.ReadPeriod(gameDataCatalog),
+                        InvasionScheduleRules.ReadOffset(gameDataCatalog)))
+                    GameEvents.RaiseInvasionAnnounced();
+            }
+        }
+
+        private bool ShouldShowInvasionBanner()
+        {
+            var time = bootstrap?.TimeService;
+            if (time == null || gameDataCatalog == null || time.IsNight) return false;
+            return InvasionScheduleRules.ShouldShowAnnouncement(time.Day, time.IsNight,
+                InvasionScheduleRules.ReadAnnounceEnabled(gameDataCatalog),
+                InvasionScheduleRules.ReadPeriod(gameDataCatalog),
+                InvasionScheduleRules.ReadOffset(gameDataCatalog));
         }
 
         private void RefreshBossStatus()

@@ -7,14 +7,14 @@ namespace Nyangbingo.UI
     /// </summary>
     public static class MainGameLaunchRequest
     {
-        public enum Mode { Continue, NewGame, DemoLoad }
+        public enum Mode { None, Continue, NewGame, DemoLoad }
 
-        public static Mode RequestedMode { get; set; } = Mode.Continue;
+        public static Mode RequestedMode { get; set; } = Mode.None;
         public static int SaveSlot { get; set; } = GameShellController.AutoSaveSlot;
 
         public static void Reset()
         {
-            RequestedMode = Mode.Continue;
+            RequestedMode = Mode.None;
             SaveSlot = GameShellController.AutoSaveSlot;
         }
     }

@@ -46,6 +46,12 @@ namespace Nyangbingo.Data
         public const string EvolutionBenchT456 = "evolution_bench_t456";
         public const string HeatStagePeriod = "heat_stage_period";
         public const string DayBrightnessByStage = "day_brightness_by_stage";
+        public const string InvasionPeriodDays = "invasion_period_days";
+        public const string InvasionOffsetDays = "invasion_offset_days";
+        public const string InvasionAnnounce = "invasion_announce";
+        public const string BedLockedOnInvasion = "bed_locked_on_invasion";
+        public const string RoomTempColdEnter = "room_temp_cold_enter";
+        public const string RoomTempFrozenEnter = "room_temp_frozen_enter";
         public const string InsulStrawBonus = "insul_straw_bonus";
         public const string GimmickWeaponBonus = "gimmick_weapon_bonus";
         public const string LayerT2Depth = "layer_t2_depth";
