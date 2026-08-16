@@ -1,12 +1,16 @@
 {
-    "schemaVersion": 16,
-    "seed": 12347,
+    "schemaVersion": 25,
+    "isOfficialDemo": true,
+    "seed": 12345,
     "day": 1,
     "timeOfDaySec": 900.0,
     "inventory": [
         {
             "itemId": "insul_wall",
-            "amount": 12
+            "amount": 12,
+            "hasStorageCondition": false,
+            "storageCondition01": 0.0,
+            "storageMeltRemainder": 0.0
         }
     ],
     "unlockedRecipes": [],
@@ -32,6 +36,13 @@
         }
     ],
     "deathTearPouches": [],
+    "worldDrops": [],
+    "doorStates": [],
+    "wallDamage": [],
+    "catnipPatches": [],
+    "hempPatches": [],
+    "harvestedTrees": [],
+    "harvestedRebar": [],
     "tileChanges": [
         {
             "x": 16,
@@ -100,21 +111,21 @@
             "x": 18,
             "y": 9,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
             "x": 18,
             "y": 10,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
             "x": 18,
             "y": 11,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
@@ -202,15 +213,27 @@
             "placed": false
         }
     ],
+    "backgroundChanges": [],
     "modulesDone": [
         "ice_core"
     ],
+    "seokbinggoStage": 0,
+    "altarClears": 0,
+    "heatStage": 1,
+    "invasionTemperatureRise": 0.0,
+    "invasionRecoolAvailableDay": 0,
+    "invasionLastInfiltrationDay": 0,
+    "talismanStrideRemaining": 0.0,
+    "talismanHideRemaining": 0.0,
+    "talismanFrostRemaining": 0.0,
+    "gimmickWeaponsGranted": [],
+    "frostPendingCells": [],
     "sealPct": 10.0,
     "yokaiTears": 0,
     "bossRecords": [],
     "forcedBossEncounters": [
         {
-            "bossId": "gangcheol_boss",
+            "bossId": "imugi_boss",
             "triggered": false
         }
     ],
@@ -220,6 +243,9 @@
         "x": 0.0,
         "y": 0.0
     },
+    "magpieKillCount": 0,
+    "magpieBaekjungSurvived": false,
+    "magpieStorage": [],
     "turretFuel": [],
     "equipment": [],
     "ownedEquipmentIds": [],
@@ -240,169 +266,45 @@
         {
             "chestId": "chest_00",
             "position": {
-                "x": 378.0,
-                "y": 137.0
+                "x": 243.0,
+                "y": 57.0
             },
-            "opened": false
+            "opened": false,
+            "contents": []
         },
         {
             "chestId": "chest_01",
             "position": {
-                "x": 326.0,
-                "y": 139.0
+                "x": 248.0,
+                "y": 57.0
             },
-            "opened": false
+            "opened": false,
+            "contents": []
         },
         {
             "chestId": "chest_02",
             "position": {
-                "x": 379.0,
-                "y": 137.0
+                "x": 514.0,
+                "y": 63.0
             },
-            "opened": false
+            "opened": false,
+            "contents": []
         },
         {
             "chestId": "chest_03",
             "position": {
-                "x": 380.0,
-                "y": 137.0
+                "x": 511.0,
+                "y": 63.0
             },
-            "opened": false
-        },
-        {
-            "chestId": "chest_04",
-            "position": {
-                "x": 0.0,
-                "y": 110.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_05",
-            "position": {
-                "x": 321.0,
-                "y": 102.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_06",
-            "position": {
-                "x": 191.0,
-                "y": 130.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_07",
-            "position": {
-                "x": 186.0,
-                "y": 92.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_08",
-            "position": {
-                "x": 30.0,
-                "y": 134.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_09",
-            "position": {
-                "x": 316.0,
-                "y": 136.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_10",
-            "position": {
-                "x": 254.0,
-                "y": 65.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_11",
-            "position": {
-                "x": 12.0,
-                "y": 92.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_12",
-            "position": {
-                "x": 229.0,
-                "y": 70.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_13",
-            "position": {
-                "x": 357.0,
-                "y": 64.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_14",
-            "position": {
-                "x": 47.0,
-                "y": 81.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_15",
-            "position": {
-                "x": 384.0,
-                "y": 82.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_16",
-            "position": {
-                "x": 231.0,
-                "y": 23.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_17",
-            "position": {
-                "x": 378.0,
-                "y": 37.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_18",
-            "position": {
-                "x": 258.0,
-                "y": 20.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_19",
-            "position": {
-                "x": 128.0,
-                "y": 41.0
-            },
-            "opened": false
+            "opened": false,
+            "contents": []
         }
     ],
     "playerState": {
         "hasValue": true,
         "position": {
-            "x": 202.5,
-            "y": 132.38099670410157,
+            "x": 300.5,
+            "y": 141.3800048828125,
             "z": 0.0
         },
         "currentHealth": 100,
@@ -421,7 +323,12 @@
         "day": 1,
         "isNight": true,
         "discardRegularForCurrentNight": false,
-        "remainingRegularYokaiIds": []
+        "remainingRegularYokaiIds": [],
+        "usesDetailedYokaiState": false,
+        "activeYokai": [],
+        "pendingRegularYokaiIds": [],
+        "pendingRaidYokaiIds": [],
+        "residentLastKilledDays": []
     },
     "baekjungProgress": {
         "startedEventIds": [],

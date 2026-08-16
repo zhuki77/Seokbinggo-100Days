@@ -778,7 +778,7 @@ namespace Nyangbingo.UI
 
         private void HandleMvpDawn()
         {
-            if (!GameShellController.ShouldEndDemoAtDawn(timeService.Day,
+            if (!GameShellController.ShouldEndDemoAtDawn(shell.IsOfficialDemo, timeService.Day,
                     timeService.MvpContentDayLimit)) return;
             var snapshot = saveCoordinator.CaptureSnapshot();
             if (snapshot == null)

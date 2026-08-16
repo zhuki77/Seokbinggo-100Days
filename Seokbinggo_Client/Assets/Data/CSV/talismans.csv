@@ -1,0 +1,6 @@
+id,name_ko,form,station_id,materials,effect_ko,why_ko,note
+tal_return,귀환부,소모품,workbench,"hemp_stalk:3,yokai_tear:2",사용 시 석빙고 코어로 즉시 귀환,밤 왕복 예산을 편도로 바꾼다 — 도달 밴드 2배(밴드10 133초→67초),"전진 초소는 '가는' 장치, 귀환부는 '오는' 장치 — 니치 분리"
+tal_stride,축지부,소모품,workbench,"hemp_stalk:2,wood:2",이동 속도 +50% · 60초,오너 '이동 거리를 줄이는' — 3.0 → 4.5타일/초,"⚠️ 야광귀 이속 3.5를 넘는다 — 지속 중엔 절도 도주를 따라잡는다(6-7 체 카운터의 상위 대체 아님, 소모품 1회)"
+tal_waypoint,이정표 부적,설치물,ice_anvil,"hemp_stalk:6,frost_essence:1",설치 지점 ↔ 석빙고 양방향 이동,전진 초소(석빙고 4단)의 저가 선행판,석빙고 4단 전진 초소 해금 시 상위 호환 — 계단식(6-15 냉기원과 같은 구조)
+tal_hide,은신부,소모품,workbench,"hemp_stalk:2,yokai_tear:1",요괴 인식 범위 무시 · 30초,v63 신설 인식 범위 시스템의 카운터,벽 공격형(방망이·불가사리)에는 무효 — 그들은 인식과 무관하게 기지로 온다
+tal_frost,한기부,소모품,ice_anvil,"ice_shard:4,frost_essence:1",저체온 체온 하강 정지 · 120초,빙결 구간 원정용 — 얼음강철 세트 없이도 잠시 버틴다,순환 잠금 방지의 보조 장치 — 심층 첫 진입을 부드럽게(4-7 원칙)

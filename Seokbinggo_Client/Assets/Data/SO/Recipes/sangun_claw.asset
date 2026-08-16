@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: sangun_claw
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: sangun_claw
+  station: 5
+  ingredients:
+  - item: {fileID: 11400000, guid: d4cfecc71d1d3224a93bdf7c1c315824, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: d7cfced86e1ffb34b990b9ae25706dce, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 8b3e44f82e51b6a438f899de7021eaab, type: 2}
+    amount: 4
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 45
+  output:
+    item: {fileID: 11400000, guid: c01171c6a8326aa428a783a2422754a9, type: 2}
+    amount: 1
+  durationSeconds: 90
+  type: 17
+  mvpScope: 2
+  note: "\uBC1C\uD1B1 T5 \uC9C4\uD654 \u2014 \uC6D0\uBCF8 \uC18C\uBAA8(\uC815\uBCF8
+    6-14)"

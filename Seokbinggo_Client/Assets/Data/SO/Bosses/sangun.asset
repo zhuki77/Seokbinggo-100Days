@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: sangun
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: sangun
+  displayName: "\uC0B0\uAD70"
+  kind: 6
+  hitPoints: 22500
+  expectedCombatSeconds: 170
+  summonItem: {fileID: 0}
+  summonMaterials: []
+  summonStation: 0
+  recommendedDay: 60
+  requiresDeepAltar: 0
+  forcedDay: 60
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 6
+  - item: {fileID: 11400000, guid: d7cfced86e1ffb34b990b9ae25706dce, type: 2}
+    amount: 1
+  wallDamageDefault: 0
+  wallDamageIce: 0
+  wallDamageIronWall: 0
+  contactDamage: 22
+  specialDescription: "\uC9C0\uC0C1 \uC804\uC6A9 \uB0B4\uC2B5 \u2014 \uB3C4\uB9DD\uCE58\uBA74
+    \uCD94\uACA9, \uC815\uBA74\uC73C\uB85C \uC11C\uBA74 \uBB3C\uB7EC\uC120\uB2E4(\uBB3C\uB7EC\uC124
+    \uB54C \uB51C \uBD88\uAC00). \uD68C\uD53C \uAD6C\uAC04 80\uCD08"
+  telegraphSeconds: 1
+  specialShape: 0
+  specialRangeTiles: 2
+  specialArcDegrees: 0
+  specialDamagePerHit: 24
+  specialDurationSeconds: 0
+  specialTickSeconds: 0
+  specialKnockbackTiles: 3
+  specialCooldownSeconds: 10
+  specialHasFireTag: 0
+  specialAimLocks: 0
+  mvpScope: 2
+  arenaLayer: surface
+  heatStage: 3
+  arenaNote: "\uC9C0\uC0C1 \uC81C\uB2E8 \uC544\uB808\uB098(v63 \uC624\uB108 \uC9C0\uC2DC
+    \u2014 \uC544\uB808\uB098 \uC804\uBD80 \uC9C0\uC0C1)"

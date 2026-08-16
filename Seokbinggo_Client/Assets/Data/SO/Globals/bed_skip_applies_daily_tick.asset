@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: bed_skip_applies_daily_tick
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: bed_skip_applies_daily_tick
+  value: 1
+  unit: bool
+  note: "\U0001F511 \uC2A4\uD0B5\uD574\uB3C4 \uD558\uB8E8 \uD310\uC815\uC740 \uADF8\uB300\uB85C
+    \uC801\uC6A9(\uBCF4\uAD00 \uC0C1\uD568\xB7\uB179\uC74C\xB7\uC7AC\uB0C9\uAC01\xB7\uC11C\uB9AC
+    \uD655\uC815). \uB370\uB4DC\uB77C\uC778\uC774 \uC5C6\uC5B4 \uC2A4\uD0B5\uC758
+    \uC2DC\uAC04 \uBE44\uC6A9\uC774 0\uC774\uB77C, \uD310\uC815\uAE4C\uC9C0 \uAC74\uB108\uB6F0\uBA74
+    6-19\uAC00 \uCE68\uACF5 \uBC24\uC744 \uB9C9\uC544\uB454 \uC774\uC720\uAC00 \uC77C\uBC18
+    \uBC24\uC5D0\uC11C \uC7AC\uD604\uB41C\uB2E4 \u2014 \uBA54\uC778 \uD5E4\uB4DC
+    \uD310\uB2E8"

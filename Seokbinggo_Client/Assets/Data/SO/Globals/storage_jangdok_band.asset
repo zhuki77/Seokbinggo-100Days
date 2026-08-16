@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: storage_jangdok_band
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: storage_jangdok_band
+  value: chilled
+  unit: '-'
+  note: "\U0001F511 **\uC7A5\uB3C5 \uCC3D\uACE0 = \uB0C9\uC7A5 \uC800\uC7A5\uACE0**.
+    \uC9C0\uAE08\uAE4C\uC9C0 \uB458 \uB2E4 \uADF8\uB0E5 \uC0C1\uC790\uC600\uB358
+    \uC7A5\uB3C5\xB7\uC5BC\uC74C \uC800\uC7A5\uACE0\uC758 \uC5ED\uD560\uC774 \uC5EC\uAE30\uC11C
+    \uAC08\uB9B0\uB2E4 \u2014 \uC870\uC120 \uACE0\uC99D \uADF8\uB300\uB85C(\uC7A5\uB3C5=\uC2DD\uD488,
+    \uC11D\uBE59\uACE0=\uC5BC\uC74C)"

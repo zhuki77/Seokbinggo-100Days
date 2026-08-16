@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 696453ddd95456840ad0de4f62b1c9e3, type: 3}
+  m_Name: trait_melee
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
+  id: trait_melee
+  displayName: "\uD560\uD034\uB294 \uB188"
+  shortName: "\uADFC\uAC70\uB9AC"
+  hookField: player-combat.csv attack_dmg
+  hookSource: "\uB9E8\uBC1C\uD1B1 15 / 22.5 DPS"
+  startItemId: bare_claw
+  effect: "\uC77C\uBC18 \uC694\uAD34 \uADFC\uC811 \uD53C\uD574 +10% (**\uBCF4\uC2A4
+    \uC81C\uC678**)"
+  artAssetId: p_trait_melee
+  note: "\uBC1C\uD1B1 \uADFC\uC811\uC774 \uC804 \uCE90\uB9AD\uD130 \uACF5\uD1B5\uC774\uB77C
+    **\uC2E0\uADDC \uBB34\uAE30 0**. \uBD99\uC77C \uC790\uB9AC\uB294 player-combat.csv\uC758
+    attack_dmg \uD558\uB098. \u26A0\uFE0F **\uBCF4\uC2A4\uC5D0\uB294 \uC548 \uAC78\uB9B0\uB2E4.**
+    \uBC95\uCE59\u2460 \u300C\uBCF4\uC2A4 HP = \uD2F0\uC5B4 \uBC1C\uD1B1 DPS \xD7
+    (250\uCD08 \u2212 \uD68C\uD53C\uCD08)\u300D\uAC00 \uBC1C\uD1B1 DPS\uB85C \uC5ED\uC0B0\uB3FC
+    \uC788\uC5B4, \uBCF4\uC2A4\uC5D0 \uBC30\uC728\uC744 \uC8FC\uBA74 6-9 \uD68C\uD53C
+    \uAD6C\uAC04 10\uC885\uC774 \uC804\uBD80 \uC5B4\uAE0B\uB09C\uB2E4. \uBCF4\uC2A4
+    \uC81C\uC678\uB85C **\uBC95\uCE59\u2460\xB7\uBC95\uCE59\u2461 \uBD88\uBCC0**.
+    \u26A0\uFE0F \uC77C\uBC18 \uC694\uAD34 \uCC98\uCE58 \uC2DC\uAC04 \u22129.1% \u2192
+    6-8 \uC6D0\uC7A5\uC758 '1.89 \uB208\uBB3C/\uC2A4\uD3F0(\uCC98\uCE58\uC728 70%
+    \uB0B4\uC7A5)'\uC774 \uC0C1\uD5A5\uB41C\uB2E4 \u2014 **\uBC24 \uC2B5\uACA9 \uB208\uBB3C
+    \uACF5\uAE09 +10% \uC608\uC0C1, \uC6D0\uC7A5 \uC7AC\uAC80\uC0B0 \uD56D\uBAA9**(\uC794\uACE0\uAC00
+    \uB298\uC5B4\uB098\uB294 \uBC29\uD5A5\uC774\uB77C \uBD95\uAD34\uB294 \uC544\uB2C8\uB2E4)"

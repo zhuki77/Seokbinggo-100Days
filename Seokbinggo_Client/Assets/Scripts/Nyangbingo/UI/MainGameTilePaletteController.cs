@@ -112,12 +112,14 @@ namespace Nyangbingo.UI
             TileService.SupportsForegroundPlacement(itemId) || IsWallpaper(itemId);
 
         public static bool IsDirectUseHotbarItem(string itemId) =>
-            string.Equals(itemId, PlayerHealthRecoveryService.CatnipItemId, StringComparison.Ordinal);
+            PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId) ||
+            TalismanRuntime.IsConsumableId(itemId);
 
-        public static bool IsHotbarSelectable(ItemDefinition item, IEnumerable<RecipeDefinition> recipes) =>
+        public static bool IsHotbarSelectable(ItemDefinition item, IEnumerable<RecipeDefinition> recipes,
+            int currentDay = 1) =>
             item != null &&
             (IsDirectUseHotbarItem(item.Id) ||
-             MainGameCraftingUiController.IsInventoryItemPlaceable(item, recipes));
+             MainGameCraftingUiController.IsInventoryItemPlaceable(item, recipes, currentDay));
 
         public static bool ShouldHighlightSlot(
             int slotIndex, int selectedIndex, string selectedItemId) =>
@@ -135,7 +137,8 @@ namespace Nyangbingo.UI
                 runtimeServices.PlayerInventory.Count(itemId) <= 0) return false;
 
             var item = gameDataCatalog?.FindItem(itemId);
-            if (item == null || item.MvpScope == ItemMvpScope.B) return false;
+            var currentDay = bootstrap?.TimeService?.Day ?? 1;
+            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, currentDay)) return false;
 
             selectedItemId = itemId;
             placementRuntime?.CancelPlacementPreview();
@@ -145,7 +148,8 @@ namespace Nyangbingo.UI
             }
             else
             {
-                if (!MainGameCraftingUiController.IsInventoryItemPlaceable(item, gameDataCatalog.Recipes) ||
+                if (!MainGameCraftingUiController.IsInventoryItemPlaceable(
+                        item, gameDataCatalog.Recipes, currentDay) ||
                     placementRuntime == null || !placementRuntime.BeginPlacementPreview(itemId))
                 {
                     ClearSelectedSlot();

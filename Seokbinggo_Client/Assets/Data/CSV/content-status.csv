@@ -1,0 +1,848 @@
+file,row_key,row_id,status,since,note
+accessories.csv,id,bell_norigae,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,wind_daenggi,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,tiger_eye_bead,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,ice_heart_norigae,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,bokjumeoni,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,dokkaebi_gamtu,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,ssireum_knot,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,iron_appetite,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,yeouiju_shard,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,jigwi_ember,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,drought_heart_shard,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,tiger_gait,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,three_horn,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,eop_scale,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,yeongno_mask,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,perfect_core,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,clay_hand,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,skate_pad,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,magpie_bell,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,old_key,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,minhwa_ink,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,vault_seal,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,gate_mark,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,dry_trace,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,altar_echo,수정예정,v70,v63~ 대개편 대상
+accessories.csv,id,frost_map,수정예정,v70,v63~ 대개편 대상
+bosses.csv,id,king_dokkaebi,수정예정,v70,v63~ 대개편 대상
+bosses.csv,id,mother_bulgasari,수정예정,v70,v63~ 대개편 대상
+bosses.csv,id,imugi_boss,수정예정,v70,v63~ 대개편 대상
+bosses.csv,id,jigwi,추가예정,,
+bosses.csv,id,gangcheol_blaze,추가예정,,
+bosses.csv,id,sangun,추가예정,,
+bosses.csv,id,samdugumi,추가예정,,
+bosses.csv,id,eop_guryeongi,추가예정,,
+bosses.csv,id,yeongno,추가예정,,
+bosses.csv,id,gangcheol_perfect,추가예정,,
+chests.csv,pool,지상 폐허,구현됨,,
+chests.csv,pool,상층,구현됨,,
+chests.csv,pool,중층,구현됨,,
+chests.csv,pool,심층,구현됨,,
+codex.csv,id,club,추가예정,,
+codex.csv,id,bulgasari,추가예정,,
+codex.csv,id,yakwang,추가예정,,
+codex.csv,id,eoduksini,추가예정,,
+codex.csv,id,gaekgwi,추가예정,,
+codex.csv,id,imugi,추가예정,,
+codex.csv,id,gangcheol,추가예정,,
+codex.csv,id,king_dokkaebi,추가예정,,
+codex.csv,id,mother_bulgasari,추가예정,,
+codex.csv,id,imugi_boss,추가예정,,
+codex.csv,id,jigwi,추가예정,,
+codex.csv,id,gangcheol_blaze,추가예정,,
+codex.csv,id,sangun,추가예정,,
+codex.csv,id,samdugumi,추가예정,,
+codex.csv,id,eop_guryeongi,추가예정,,
+codex.csv,id,yeongno,추가예정,,
+codex.csv,id,gangcheol_perfect,추가예정,,
+crafting-ext.csv,id,seolpungseon,구현됨,,
+crafting-ext.csv,id,frost_bell_rope,구현됨,,
+crafting-tree.csv,id,workbench,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,furnace,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,blast_furnace,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,ice_anvil,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_claw,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,icesteel_claw,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,lantern,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,sieve,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,haetae_statue,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,nest_bed,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,magpie_nest,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,dokkaebi_club,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,frostclaw_gauntlet,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_insul_wall,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,cold_device,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,insul_wall,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,door,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,roof,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,jangdok,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,ice_core,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,ssireum_satba,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_bait_pile,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,ice_altar_offering,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,dokkaebi_fire_tower,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,singijeon_cart,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,ice_crystal_cooler,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,cold_wave_core,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,straw_insul,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,clay_plaster,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,munpungji,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,hapjukseon,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,cheolseon,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_bell_rope,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_sieve,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,frost_lantern,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,bell_rope,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,minhwa_scroll,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,saekdong_lantern,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,onggi_pot,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,wind_chime,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,saekdong_cushion,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,straw_helm,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,straw_armor,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,straw_boots,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_helm,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_armor,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,iron_boots,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,icesteel_helm,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,icesteel_armor,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,icesteel_boots,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,water_jar,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,ice_jar,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,wallpaper,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,seonge_ingot,추가예정,,
+crafting-tree.csv,id,ice_root_bundle,추가예정,,
+crafting-tree.csv,id,cold_wave_ingot,추가예정,,
+crafting-tree.csv,id,seonge_helm,추가예정,,
+crafting-tree.csv,id,seonge_armor,추가예정,,
+crafting-tree.csv,id,seonge_boots,추가예정,,
+crafting-tree.csv,id,ice_root_helm,추가예정,,
+crafting-tree.csv,id,ice_root_armor,추가예정,,
+crafting-tree.csv,id,ice_root_boots,추가예정,,
+crafting-tree.csv,id,cold_wave_helm,추가예정,,
+crafting-tree.csv,id,cold_wave_armor,추가예정,,
+crafting-tree.csv,id,cold_wave_boots,추가예정,,
+crafting-tree.csv,id,straw_sling,추가예정,,
+crafting-tree.csv,id,gakgung,추가예정,,
+crafting-tree.csv,id,singijeon_sondae,추가예정,,
+crafting-tree.csv,id,seonge_gakgung,추가예정,,
+crafting-tree.csv,id,ice_root_bow,추가예정,,
+crafting-tree.csv,id,cold_wave_singijeon,추가예정,,
+crafting-tree.csv,id,seonge_fan,추가예정,,
+crafting-tree.csv,id,ice_root_whipfan,추가예정,,
+crafting-tree.csv,id,cold_wave_fan,추가예정,,
+crafting-tree.csv,id,sangun_claw,추가예정,,
+crafting-tree.csv,id,perfect_claw,추가예정,,
+crafting-tree.csv,id,seonge_tower,추가예정,,
+crafting-tree.csv,id,cold_wave_tower,추가예정,,
+crafting-tree.csv,id,ice_root_battery,추가예정,,
+crafting-tree.csv,id,cold_wave_battery,추가예정,,
+crafting-tree.csv,id,scarecrow,추가예정,,
+crafting-tree.csv,id,ice_trap,추가예정,,
+crafting-tree.csv,id,arrow_supply,추가예정,,
+crafting-tree.csv,id,plaster_doll,추가예정,,
+crafting-tree.csv,id,gong_tower,추가예정,,
+crafting-tree.csv,id,jigwi_summon,추가예정,,
+crafting-tree.csv,id,samdugumi_summon,추가예정,,
+crafting-tree.csv,id,eop_summon,추가예정,,
+crafting-tree.csv,id,jukbuin,추가예정,,
+crafting-tree.csv,id,daebal,추가예정,,
+crops.csv,zone_id,zone01,추가예정,,
+crops.csv,zone_id,zone02,추가예정,,
+crops.csv,zone_id,zone03,추가예정,,
+crops.csv,zone_id,zone04,추가예정,,
+crops.csv,zone_id,zone05,추가예정,,
+crops.csv,zone_id,zone06,추가예정,,
+crops.csv,zone_id,zone07,추가예정,,
+crops.csv,zone_id,zone08,추가예정,,
+crops.csv,zone_id,zone09,추가예정,,
+crops.csv,zone_id,zone10,추가예정,,
+day-curve-ext.csv,day,31,수정예정,v70,v63~ 대개편 대상
+day-curve-ext.csv,day,35,수정예정,v70,v63~ 대개편 대상
+day-curve-ext.csv,day,40,수정예정,v70,v63~ 대개편 대상
+day-curve-ext.csv,day,45,수정예정,v70,v63~ 대개편 대상
+day-curve-ext.csv,day,50,수정예정,v70,v63~ 대개편 대상
+day-curve-ext.csv,day,55,추가예정,,
+day-curve-ext.csv,day,60,추가예정,,
+day-curve-ext.csv,day,65,추가예정,,
+day-curve-ext.csv,day,70,추가예정,,
+day-curve-ext.csv,day,75,추가예정,,
+day-curve-ext.csv,day,80,추가예정,,
+day-curve-ext.csv,day,85,추가예정,,
+day-curve-ext.csv,day,90,추가예정,,
+day-curve-ext.csv,day,95,추가예정,,
+day-curve-ext.csv,day,100,추가예정,,
+day-curve.csv,day,1,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,2,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,3,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,4,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,5,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,6,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,7,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,8,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,9,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,10,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,11,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,12,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,13,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,14,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,15,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,16,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,17,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,18,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,19,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,20,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,21,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,22,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,23,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,24,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,25,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,26,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,27,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,28,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,29,수정예정,v70,v63~ 대개편 대상
+day-curve.csv,day,30,수정예정,v70,v63~ 대개편 대상
+day-events.csv,id,baekjung,구현됨,,
+drops.csv,source_id,club,구현됨,,
+drops.csv,source_id,bulgasari,구현됨,,
+drops.csv,source_id,yakwang,구현됨,,
+drops.csv,source_id,eoduksini,구현됨,,
+drops.csv,source_id,gangcheol,구현됨,,
+drops.csv,source_id,gaekgwi,구현됨,,
+drops.csv,source_id,king_dokkaebi,구현됨,,
+drops.csv,source_id,mother_bulgasari,구현됨,,
+drops.csv,source_id,imugi,구현됨,,
+drops.csv,source_id,imugi_boss,구현됨,,
+drops.csv,source_id,jigwi,추가예정,,
+drops.csv,source_id,gangcheol_blaze,추가예정,,
+drops.csv,source_id,sangun,추가예정,,
+drops.csv,source_id,samdugumi,추가예정,,
+drops.csv,source_id,eop_guryeongi,추가예정,,
+drops.csv,source_id,yeongno,추가예정,,
+drops.csv,source_id,gangcheol_perfect,추가예정,,
+equipment.csv,id,straw_helm,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,straw_armor,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,straw_boots,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,iron_helm,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,iron_armor,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,iron_boots,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,icesteel_helm,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,icesteel_armor,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,icesteel_boots,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,bell_norigae,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,ice_heart_norigae,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,bokjumeoni,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,wind_daenggi,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,tiger_eye_bead,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,dokkaebi_gamtu,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,seonge_helm,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,seonge_armor,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,seonge_boots,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,ice_root_helm,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,ice_root_armor,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,ice_root_boots,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,cold_wave_helm,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,cold_wave_armor,수정예정,v70,v63~ 대개편 대상
+equipment.csv,id,cold_wave_boots,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,day_length_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,night_length_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,day_total_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,mvp_days,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,total_days,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,heat_stage_period,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,temp_min,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,temp_max,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,temp_start,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,temp_rise_per_stage,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,temp_fall_safe,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,hp_regen_delay,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,hp_regen_rate,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,catnip_heal,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,catnip_spawn_per_100tiles,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,catnip_respawn_days,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,heatstroke_threshold,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,safe_threshold,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,yokai_cap,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,win_modules,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,tile_px,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,team_dev,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,team_art,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,team_design,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_day,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,ice_shard_temp_relief,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_spawn_cap,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_spawn_mult,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_tears_mult,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_sig_mult,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,magpie_join_kills,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,magpie_magnet_radius,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,magpie_magnet_interval,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,smelt_iron_ratio,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,smelt_icesteel_ratio,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,claw_t2_mine_crit,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,claw_t3_slow,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,insul_straw_bonus,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,insul_clay_wall_hp,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,eoduksini_bloom_pause_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,eoduksini_rebloom_cd_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,portable_lantern_radius,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,portable_lantern_fuel_rule,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,dev_speed_mult,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,badge_wall_count,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,badge_window_days,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,ice_tile_hp,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,ice_storage_hp,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,seal_window_rx,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,seal_window_ry,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,seal_cap,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,seal_target_cells,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,seal_penalty_start_day,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,cold_source_required,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,muldanji_duration,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,icejar_fuel_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,jukbuin_regen_mult,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,daebal_flame_cut,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,daebal_radius,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,muldanji_mat,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,start_at_night,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,player_move_speed,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,surface_y,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,layer_t1_depth,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,layer_t2_depth,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,layer_t3_depth,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,bedrock_depth,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,multi_hit_defense,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,boss_save_policy,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,boss_night_spawn,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_wave_overflow,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,magpie_nest_limit,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,crafting_b_ui,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_wave_size,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,baekjung_wave_times_sec,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,invasion_boss_in_cap,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,crafting_material_format,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,item_id_rule,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wallpaper_coverage,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wallpaper_coldsource_bonus,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wallpaper_remove_rule,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,boss_field_yokai,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,cave_max_height,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,furniture_mvp_scope,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,inventory_slots,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,jangdok_storage_slots,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,active_slot_rule,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,fall_damage_threshold_tiles,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,fall_damage_per_tile,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,resident_max_per_species,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,resident_spawn_at,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,resident_respawn_rule,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,resident_min_player_distance,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,resident_min_between_distance,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,resident_save_policy,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,armor_def_by_tier,추가예정,,
+globals.csv,key,boss_contact_by_tier,추가예정,,
+globals.csv,key,boss_dodge_sec_curve,추가예정,,
+globals.csv,key,evolution_bench_t456,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,gimmick_weapon_bonus,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,turret_slot_cap,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,turret_damage_slot_cap,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wave_night_period,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wave_mult_target,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,day_brightness_by_stage,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wave_night_offset,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,magpie_guide_mode,추가예정,,
+globals.csv,key,magpie_guide_return_sec,추가예정,,
+globals.csv,key,world_half_width,추가예정,,
+globals.csv,key,spawn_x,추가예정,,
+globals.csv,key,zone_count,추가예정,,
+globals.csv,key,zone_table,추가예정,,
+globals.csv,key,altar_surface,추가예정,,
+globals.csv,key,altar_summon_daytime,추가예정,,
+globals.csv,key,crop_table,추가예정,,
+globals.csv,key,crop_plantable,추가예정,,
+globals.csv,key,trait_select_at_start,추가예정,,
+globals.csv,key,trait_table,추가예정,,
+globals.csv,key,shell_screen_count,추가예정,,
+globals.csv,key,opening_illust_pages,추가예정,,
+globals.csv,key,trait_melee_boss_exempt,추가예정,,
+globals.csv,key,sky_gangcheol_trail,추가예정,,
+globals.csv,key,sky_gangcheol_trail_period_sec,추가예정,,
+globals.csv,key,yokai_path_target,추가예정,,
+globals.csv,key,heat_stage_count,추가예정,,
+globals.csv,key,heat_stage_trigger,추가예정,,
+globals.csv,key,heat_stage_gate_1to2,추가예정,,
+globals.csv,key,heat_stage_gate_2to3,추가예정,,
+globals.csv,key,day_fire_dmg_by_stage,추가예정,,
+globals.csv,key,tree_decay_by_stage,추가예정,,
+globals.csv,key,map_size_user_adjustable,추가예정,,
+globals.csv,key,map_width_default,추가예정,,
+globals.csv,key,map_height_default,추가예정,,
+globals.csv,key,scale_policy,추가예정,,
+globals.csv,key,underground_depth_tiles,추가예정,,
+globals.csv,key,underground_depth_min_tiles,추가예정,,
+globals.csv,key,depth_norm_warm_end_s1,추가예정,,
+globals.csv,key,depth_norm_cold_end_s1,추가예정,,
+globals.csv,key,depth_norm_shift_per_stage,추가예정,,
+globals.csv,key,depth_norm_frozen_min,추가예정,,
+globals.csv,key,layer_norm_upper_end,추가예정,,
+globals.csv,key,layer_norm_mid_end,추가예정,,
+globals.csv,key,layer_norm_deep_end,추가예정,,
+globals.csv,key,temp_system,추가예정,,
+globals.csv,key,room_temp_cold_enter,추가예정,,
+globals.csv,key,room_temp_frozen_enter,추가예정,,
+globals.csv,key,core_range_w,추가예정,,
+globals.csv,key,core_range_h,추가예정,,
+globals.csv,key,core_delta_plain,추가예정,,
+globals.csv,key,core_delta_insulated,추가예정,,
+globals.csv,key,core_stack_mode,추가예정,,
+globals.csv,key,seal_role,추가예정,,
+globals.csv,key,hypothermia_room_temp,추가예정,,
+globals.csv,key,hypothermia_fall_per_sec,추가예정,,
+globals.csv,key,hypothermia_dmg_at_temp,추가예정,,
+globals.csv,key,hypothermia_dmg_per_sec,추가예정,,
+globals.csv,key,gear_temp_rule,추가예정,,
+globals.csv,key,gear_cold_tolerance,추가예정,,
+globals.csv,key,gear_mismatch_penalty,추가예정,,
+globals.csv,key,station_temp_strict,추가예정,,
+globals.csv,key,night_budget_model,추가예정,,
+globals.csv,key,band_roundtrip_formula,추가예정,,
+globals.csv,key,band_roundtrip_sec_per_order_default,추가예정,,
+globals.csv,key,wave_mode,추가예정,,
+globals.csv,key,invasion_period_days,추가예정,,
+globals.csv,key,invasion_offset_days,추가예정,,
+globals.csv,key,invasion_announce,추가예정,,
+globals.csv,key,bed_locked_on_invasion,추가예정,,
+globals.csv,key,terrain_spawn_table,추가예정,,
+globals.csv,key,terrain_count,추가예정,,
+globals.csv,key,terrain_implemented,추가예정,,
+globals.csv,key,base_vicinity_radius,추가예정,,
+globals.csv,key,yokai_aggro_default,추가예정,,
+globals.csv,key,yokai_aggro_max,추가예정,,
+globals.csv,key,talisman_table,추가예정,,
+globals.csv,key,talisman_count,추가예정,,
+globals.csv,key,boss_arena_layer,추가예정,,
+globals.csv,key,altar_count,추가예정,,
+globals.csv,key,win_condition,추가예정,,
+globals.csv,key,deadline_removed,추가예정,,
+globals.csv,key,sun_scale_ties_heat_stage,추가예정,,
+globals.csv,key,turret_slot_cap_source,추가예정,,
+globals.csv,key,turret_tier_early,추가예정,,
+globals.csv,key,turret_tier_late,추가예정,,
+globals.csv,key,turret_midgame_gap,추가예정,,
+globals.csv,key,turret_automation_seed,추가예정,,
+globals.csv,key,player_jump_height_tiles,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,player_gravity,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,player_max_fall_speed,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,player_jump_cut,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,player_mining_reach_tiles,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,large_cavern_count_min,추가예정,,
+globals.csv,key,large_cavern_count_max,추가예정,,
+globals.csv,key,large_cavern_w,추가예정,,
+globals.csv,key,large_cavern_h,추가예정,,
+globals.csv,key,large_cavern_min_edge_gap,추가예정,,
+globals.csv,key,large_cavern_min_depth_below_crust,추가예정,,
+globals.csv,key,large_cavern_margin_from_spawn,추가예정,,
+globals.csv,key,large_cavern_margin_from_altar,추가예정,,
+globals.csv,key,large_cavern_enabled,추가예정,,
+globals.csv,key,difficulty_option,추가예정,,
+globals.csv,key,difficulty_knobs,추가예정,,
+globals.csv,key,frost_spread_enabled,추가예정,,
+globals.csv,key,frost_spread_trigger,추가예정,,
+globals.csv,key,frost_lazy_reveal,추가예정,,
+globals.csv,key,frost_first_reveal_reward,추가예정,,
+globals.csv,key,frost_spread_vfx,추가예정,,
+globals.csv,key,yokai_body_size_table,추가예정,,
+globals.csv,key,yokai_body_size_rule,추가예정,,
+globals.csv,key,wall_breach_rule,추가예정,,
+globals.csv,key,wall_breach_stop_on_path,추가예정,,
+globals.csv,key,wall_repair_not_penalty,추가예정,,
+globals.csv,key,invasion_temp_rise_per_yokai,추가예정,,
+globals.csv,key,invasion_temp_rise_source,추가예정,,
+globals.csv,key,recool_cost,추가예정,,
+globals.csv,key,recool_when,추가예정,,
+globals.csv,key,recool_station,추가예정,,
+globals.csv,key,bedrock_permanent,추가예정,,
+globals.csv,key,frost_bedrock_unseal,추가예정,,
+globals.csv,key,frost_step_count,추가예정,,
+globals.csv,key,frost_band_norm_from_formula,추가예정,,
+globals.csv,key,frost_band_norm_to,추가예정,,
+globals.csv,key,ore_vein_mode,추가예정,,
+globals.csv,key,ore_vein_cluster_min,추가예정,,
+globals.csv,key,ore_vein_cluster_max,추가예정,,
+globals.csv,key,tile_hardness_rule,추가예정,,
+globals.csv,key,tile_hardness_table,추가예정,,
+globals.csv,key,storage_temp_system,추가예정,,
+globals.csv,key,storage_band_ambient,추가예정,,
+globals.csv,key,storage_band_chilled,추가예정,,
+globals.csv,key,storage_band_frozen,추가예정,,
+globals.csv,key,storage_spoil_per_day,추가예정,,
+globals.csv,key,storage_melt_per_day,추가예정,,
+globals.csv,key,storage_jangdok_band,추가예정,,
+globals.csv,key,storage_ice_core_band,추가예정,,
+globals.csv,key,storage_gear_band,추가예정,,
+globals.csv,key,mushroom_heal,추가예정,,
+globals.csv,key,mushroom_table,추가예정,,
+id-migration.csv,legacy_id,club_fragment,구현됨,,
+id-migration.csv,legacy_id,foundry,구현됨,,
+id-migration.csv,legacy_id,goblin_fire_essence,구현됨,,
+id-migration.csv,legacy_id,hemp,구현됨,,
+id-migration.csv,legacy_id,ice_steel_claws,구현됨,,
+id-migration.csv,legacy_id,ice_steel_ingot,구현됨,,
+id-migration.csv,legacy_id,ice_steel_ore,구현됨,,
+id-migration.csv,legacy_id,iron_claws,구현됨,,
+id-migration.csv,legacy_id,iron_furnace_heart,구현됨,,
+id-migration.csv,legacy_id,nest,구현됨,,
+id-migration.csv,legacy_id,reverse_scale,구현됨,,
+id-migration.csv,legacy_id,shadow_fragment,구현됨,,
+id-migration.csv,legacy_id,wrestling_belt,구현됨,,
+id-migration.csv,legacy_id,yokai_tears,구현됨,,
+id-migration.csv,legacy_id,bell_charm,구현됨,,
+id-migration.csv,legacy_id,ice_heart_charm,구현됨,,
+id-migration.csv,legacy_id,lucky_pouch,구현됨,,
+id-migration.csv,legacy_id,wind_ribbon,구현됨,,
+id-migration.csv,legacy_id,tiger_eye_orb,구현됨,,
+id-migration.csv,legacy_id,goblin_hat,구현됨,,
+id-migration.csv,legacy_id,club_goblin,구현됨,,
+id-migration.csv,legacy_id,yagwanggwi,구현됨,,
+id-migration.csv,legacy_id,gangcheori,구현됨,,
+id-migration.csv,legacy_id,goblin_chief,구현됨,,
+id-migration.csv,legacy_id,smelt_ice_steel,구현됨,,
+id-migration.csv,legacy_id,fox_rain_charm,구현됨,,
+items.csv,id,wood,구현됨,,
+items.csv,id,hemp_stalk,구현됨,,
+items.csv,id,rebar,구현됨,,
+items.csv,id,dirt,구현됨,,
+items.csv,id,stone,구현됨,,
+items.csv,id,coal,구현됨,,
+items.csv,id,clay,구현됨,,
+items.csv,id,iron_ore,구현됨,,
+items.csv,id,copper_ore,구현됨,,
+items.csv,id,ice_shard,구현됨,,
+items.csv,id,catnip,구현됨,,
+items.csv,id,icesteel_ore,구현됨,,
+items.csv,id,frost_essence,구현됨,,
+items.csv,id,iron_ingot,구현됨,,
+items.csv,id,copper_ingot,구현됨,,
+items.csv,id,icesteel_ingot,구현됨,,
+items.csv,id,yokai_tear,구현됨,,
+items.csv,id,club_shard,구현됨,,
+items.csv,id,iron_scale,구현됨,,
+items.csv,id,stolen_bundle,구현됨,,
+items.csv,id,shadow_shard,구현됨,,
+items.csv,id,gangcheol_scale,구현됨,,
+items.csv,id,dokkaebi_fire_essence,구현됨,,
+items.csv,id,iron_forge_core,구현됨,,
+items.csv,id,yeouiju,구현됨,,
+items.csv,id,drought_heart,구현됨,,
+items.csv,id,bare_claw,구현됨,,
+items.csv,id,iron_claw,구현됨,,
+items.csv,id,icesteel_claw,구현됨,,
+items.csv,id,dokkaebi_club,구현됨,,
+items.csv,id,frostclaw_gauntlet,구현됨,,
+items.csv,id,hapjukseon,구현됨,,
+items.csv,id,cheolseon,구현됨,,
+items.csv,id,workbench,구현됨,,
+items.csv,id,furnace,구현됨,,
+items.csv,id,blast_furnace,구현됨,,
+items.csv,id,ice_anvil,구현됨,,
+items.csv,id,lantern,구현됨,,
+items.csv,id,sieve,구현됨,,
+items.csv,id,haetae_statue,구현됨,,
+items.csv,id,nest_bed,구현됨,,
+items.csv,id,magpie_nest,구현됨,,
+items.csv,id,bell_rope,구현됨,,
+items.csv,id,iron_bell_rope,구현됨,,
+items.csv,id,iron_sieve,구현됨,,
+items.csv,id,frost_lantern,구현됨,,
+items.csv,id,insul_wall,구현됨,,
+items.csv,id,door,구현됨,,
+items.csv,id,roof,구현됨,,
+items.csv,id,jangdok,구현됨,,
+items.csv,id,ice_core,구현됨,,
+items.csv,id,iron_insul_wall,구현됨,,
+items.csv,id,cold_device,구현됨,,
+items.csv,id,dokkaebi_fire_tower,구현됨,,
+items.csv,id,singijeon_cart,구현됨,,
+items.csv,id,ice_crystal_cooler,구현됨,,
+items.csv,id,cold_wave_core,구현됨,,
+items.csv,id,water_jar,구현됨,,
+items.csv,id,ice_jar,구현됨,,
+items.csv,id,straw_insul,구현됨,,
+items.csv,id,clay_plaster,구현됨,,
+items.csv,id,munpungji,구현됨,,
+items.csv,id,minhwa_scroll,구현됨,,
+items.csv,id,saekdong_lantern,구현됨,,
+items.csv,id,onggi_pot,구현됨,,
+items.csv,id,wind_chime,구현됨,,
+items.csv,id,saekdong_cushion,구현됨,,
+items.csv,id,ssireum_satba,구현됨,,
+items.csv,id,iron_bait_pile,구현됨,,
+items.csv,id,ice_altar_offering,구현됨,,
+items.csv,id,straw_helm,구현됨,,
+items.csv,id,straw_armor,구현됨,,
+items.csv,id,straw_boots,구현됨,,
+items.csv,id,iron_helm,구현됨,,
+items.csv,id,iron_armor,구현됨,,
+items.csv,id,iron_boots,구현됨,,
+items.csv,id,icesteel_helm,구현됨,,
+items.csv,id,icesteel_armor,구현됨,,
+items.csv,id,icesteel_boots,구현됨,,
+items.csv,id,bell_norigae,구현됨,,
+items.csv,id,wind_daenggi,구현됨,,
+items.csv,id,tiger_eye_bead,구현됨,,
+items.csv,id,ice_heart_norigae,구현됨,,
+items.csv,id,bokjumeoni,구현됨,,
+items.csv,id,dokkaebi_gamtu,구현됨,,
+items.csv,id,wallpaper,구현됨,,
+items.csv,id,smithy,구현됨,,
+items.csv,id,seonge_helm,추가예정,,
+items.csv,id,seonge_armor,추가예정,,
+items.csv,id,seonge_boots,추가예정,,
+items.csv,id,ice_root_helm,추가예정,,
+items.csv,id,ice_root_armor,추가예정,,
+items.csv,id,ice_root_boots,추가예정,,
+items.csv,id,cold_wave_helm,추가예정,,
+items.csv,id,cold_wave_armor,추가예정,,
+items.csv,id,cold_wave_boots,추가예정,,
+items.csv,id,straw_sling,추가예정,,
+items.csv,id,gakgung,추가예정,,
+items.csv,id,singijeon_sondae,추가예정,,
+items.csv,id,seonge_gakgung,추가예정,,
+items.csv,id,ice_root_bow,추가예정,,
+items.csv,id,cold_wave_singijeon,추가예정,,
+items.csv,id,seonge_fan,추가예정,,
+items.csv,id,ice_root_whipfan,추가예정,,
+items.csv,id,cold_wave_fan,추가예정,,
+items.csv,id,sangun_claw,추가예정,,
+items.csv,id,perfect_claw,추가예정,,
+items.csv,id,seonge_tower,추가예정,,
+items.csv,id,cold_wave_tower,추가예정,,
+items.csv,id,ice_root_battery,추가예정,,
+items.csv,id,cold_wave_battery,추가예정,,
+items.csv,id,scarecrow,추가예정,,
+items.csv,id,ice_trap,추가예정,,
+items.csv,id,arrow_supply,추가예정,,
+items.csv,id,plaster_doll,추가예정,,
+items.csv,id,gong_tower,추가예정,,
+items.csv,id,first_frost_claw,추가예정,,
+items.csv,id,baekjung_bundle,추가예정,,
+items.csv,id,yeouiju_claw,추가예정,,
+items.csv,id,jigwi_ash,추가예정,,
+items.csv,id,sangun_whisker,추가예정,,
+items.csv,id,yeongno_tooth,추가예정,,
+items.csv,id,seonge_ore,추가예정,,
+items.csv,id,seonge_ingot,추가예정,,
+items.csv,id,ice_root,추가예정,,
+items.csv,id,ice_root_bundle,추가예정,,
+items.csv,id,cold_wave_ore,추가예정,,
+items.csv,id,cold_wave_ingot,추가예정,,
+items.csv,id,jigwi_ember_mat,추가예정,,
+items.csv,id,blaze_yeokrin,추가예정,,
+items.csv,id,sangun_talon,추가예정,,
+items.csv,id,three_horn_mat,추가예정,,
+items.csv,id,eop_scale_mat,추가예정,,
+items.csv,id,yeongno_mask_mat,추가예정,,
+items.csv,id,perfect_heart,추가예정,,
+items.csv,id,ssireum_knot,추가예정,,
+items.csv,id,iron_appetite,추가예정,,
+items.csv,id,yeouiju_shard,추가예정,,
+items.csv,id,jigwi_ember,추가예정,,
+items.csv,id,drought_heart_shard,추가예정,,
+items.csv,id,tiger_gait,추가예정,,
+items.csv,id,three_horn,추가예정,,
+items.csv,id,eop_scale,추가예정,,
+items.csv,id,yeongno_mask,추가예정,,
+items.csv,id,perfect_core,추가예정,,
+items.csv,id,clay_hand,추가예정,,
+items.csv,id,skate_pad,추가예정,,
+items.csv,id,magpie_bell,추가예정,,
+items.csv,id,old_key,추가예정,,
+items.csv,id,minhwa_ink,추가예정,,
+items.csv,id,vault_seal,추가예정,,
+items.csv,id,gate_mark,추가예정,,
+items.csv,id,dry_trace,추가예정,,
+items.csv,id,altar_echo,추가예정,,
+items.csv,id,frost_map,추가예정,,
+items.csv,id,jigwi_summon,추가예정,,
+items.csv,id,samdugumi_summon,추가예정,,
+items.csv,id,eop_summon,추가예정,,
+items.csv,id,jukbuin,추가예정,,
+items.csv,id,daebal,추가예정,,
+items.csv,id,oyster_mushroom,추가예정,,
+items.csv,id,shiitake,추가예정,,
+items.csv,id,seogi,추가예정,,
+mineral-tiers.csv,resource_id,wood,구현됨,,
+mineral-tiers.csv,resource_id,hemp_stalk,구현됨,,
+mineral-tiers.csv,resource_id,rebar,구현됨,,
+mineral-tiers.csv,resource_id,dirt,구현됨,,
+mineral-tiers.csv,resource_id,stone,구현됨,,
+mineral-tiers.csv,resource_id,coal,구현됨,,
+mineral-tiers.csv,resource_id,iron_ore,구현됨,,
+mineral-tiers.csv,resource_id,copper_ore,구현됨,,
+mineral-tiers.csv,resource_id,ice_shard,구현됨,,
+mineral-tiers.csv,resource_id,icesteel_ore,구현됨,,
+mineral-tiers.csv,resource_id,frost_essence,구현됨,,
+mineral-tiers.csv,resource_id,clay,구현됨,,
+mineral-tiers.csv,resource_id,oyster_mushroom,추가예정,,
+mineral-tiers.csv,resource_id,shiitake,추가예정,,
+mineral-tiers.csv,resource_id,seogi,추가예정,,
+modules.csv,id,insul_wall,구현됨,,
+modules.csv,id,door,구현됨,,
+modules.csv,id,roof,구현됨,,
+modules.csv,id,jangdok,구현됨,,
+modules.csv,id,ice_core,구현됨,,
+modules.csv,id,seokbinggo_s1,구현됨,,
+modules.csv,id,seokbinggo_s2,구현됨,,
+modules.csv,id,seokbinggo_s3,구현됨,,
+modules.csv,id,seokbinggo_s4,구현됨,,
+modules.csv,id,seokbinggo_s5,구현됨,,
+modules.csv,id,seokbinggo_s6,구현됨,,
+player-combat.csv,item_id,bare_claw,구현됨,,
+player-combat.csv,item_id,iron_claw,구현됨,,
+player-combat.csv,item_id,icesteel_claw,구현됨,,
+player-combat.csv,item_id,dokkaebi_club,구현됨,,
+player-combat.csv,item_id,cheolseon,구현됨,,
+player-combat.csv,item_id,frostclaw_gauntlet,구현됨,,
+player-combat.csv,item_id,hapjukseon,구현됨,,
+player-combat.csv,item_id,straw_sling,추가예정,,
+player-combat.csv,item_id,gakgung,추가예정,,
+player-combat.csv,item_id,singijeon_sondae,추가예정,,
+player-combat.csv,item_id,seonge_gakgung,추가예정,,
+player-combat.csv,item_id,ice_root_bow,추가예정,,
+player-combat.csv,item_id,cold_wave_singijeon,추가예정,,
+player-combat.csv,item_id,seonge_fan,추가예정,,
+player-combat.csv,item_id,ice_root_whipfan,추가예정,,
+player-combat.csv,item_id,cold_wave_fan,추가예정,,
+player-combat.csv,item_id,sangun_claw,추가예정,,
+player-combat.csv,item_id,perfect_claw,추가예정,,
+seal-whitelist.csv,element,차열벽,구현됨,,
+seal-whitelist.csv,element,무쇠 차열벽,구현됨,,
+seal-whitelist.csv,element,차열 지붕,구현됨,,
+seal-whitelist.csv,element,단열 문,구현됨,,
+seal-whitelist.csv,element,짚 단열재 부착 벽,구현됨,,
+seal-whitelist.csv,element,점토 미장 부착 벽,구현됨,,
+seal-whitelist.csv,element,얼음 저장고,구현됨,,
+seal-whitelist.csv,element,장독 창고,구현됨,,
+seal-whitelist.csv,element,화로/용광로/얼음 모루/작업대,구현됨,,
+seal-whitelist.csv,element,일반 개구부,구현됨,,
+seal-whitelist.csv,element,민화 족자,구현됨,,
+seal-whitelist.csv,element,색동 등롱,구현됨,,
+seal-whitelist.csv,element,옹기 화분,구현됨,,
+seal-whitelist.csv,element,풍경,구현됨,,
+seal-whitelist.csv,element,색동 방석,구현됨,,
+seal-whitelist.csv,element,보금자리,구현됨,,
+seal-whitelist.csv,element,까치 둥지,구현됨,,
+seal-whitelist.csv,element,도깨비불 등탑/신기전 화차,구현됨,,
+seal-whitelist.csv,element,해태 석상/체/등불,구현됨,,
+seal-whitelist.csv,element,빙정 냉각로/한파 코어/냉기 장치,구현됨,,
+seal-whitelist.csv,element,자연 지형(흙·돌·암반),구현됨,,
+seal-whitelist.csv,element,채굴 갱도(공기 칸),구현됨,,
+seal-whitelist.csv,element,배경벽(벽지),구현됨,,
+smelting.csv,id,smelt_iron,구현됨,,
+smelting.csv,id,smelt_copper,구현됨,,
+smelting.csv,id,smelt_icesteel,구현됨,,
+talismans.csv,id,tal_return,추가예정,v70,v63 신설
+talismans.csv,id,tal_stride,추가예정,v70,v63 신설
+talismans.csv,id,tal_waypoint,추가예정,v70,v63 신설
+talismans.csv,id,tal_hide,추가예정,v70,v63 신설
+talismans.csv,id,tal_frost,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,surface_line:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ruins:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_upper:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_mid:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,layer_deep:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,ice_lake:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,woods:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,altar:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,mineshaft:imugi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:club,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:bulgasari,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:yakwang,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:eoduksini,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:gaekgwi,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:gangcheol,추가예정,v70,v63 신설
+terrain-spawn.csv,terrain_id,base_inside:imugi,추가예정,v70,v63 신설
+traits.csv,id,trait_melee,추가예정,,
+traits.csv,id,trait_ranged,추가예정,,
+traits.csv,id,trait_labor,추가예정,,
+traits.csv,id,trait_cool,추가예정,,
+utilities.csv,id,hapjukseon,구현됨,,
+utilities.csv,id,bell_rope,구현됨,,
+yokai-stats.csv,id,club,수정예정,v70,v63~ 대개편 대상
+yokai-stats.csv,id,bulgasari,수정예정,v70,v63~ 대개편 대상
+yokai-stats.csv,id,yakwang,수정예정,v70,v63~ 대개편 대상
+yokai-stats.csv,id,eoduksini,수정예정,v70,v63~ 대개편 대상
+yokai-stats.csv,id,gaekgwi,수정예정,v70,v63~ 대개편 대상
+yokai-stats.csv,id,imugi,수정예정,v70,v63~ 대개편 대상
+yokai-stats.csv,id,gangcheol,수정예정,v70,v63~ 대개편 대상
+zones.csv,zone_id,zone01,추가예정,,
+zones.csv,zone_id,zone02,추가예정,,
+zones.csv,zone_id,zone03,추가예정,,
+zones.csv,zone_id,zone04,추가예정,,
+zones.csv,zone_id,zone05,추가예정,,
+zones.csv,zone_id,zone06,추가예정,,
+zones.csv,zone_id,zone07,추가예정,,
+zones.csv,zone_id,zone08,추가예정,,
+zones.csv,zone_id,zone09,추가예정,,
+zones.csv,zone_id,zone10,추가예정,,
+globals.csv,key,boundary_ice_rock_hardness,수정예정,2026-08-11,v71 정정 — 코드/월드젠의 빙암 경도 3을 2로 내리고 이 키를 단일 출처로 읽을 것
+globals.csv,key,bed_enabled,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
+globals.csv,key,bed_item_id,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
+globals.csv,key,bed_sleep_room_temp_max,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
+globals.csv,key,bed_skip_mode,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
+globals.csv,key,bed_skip_applies_daily_tick,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)

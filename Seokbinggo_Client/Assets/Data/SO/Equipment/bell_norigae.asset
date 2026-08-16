@@ -30,3 +30,6 @@ MonoBehaviour:
   verbId: 
   usageLimitPerDay: 0
   activationCondition: None
+  hasColdTolerance: 0
+  coldToleranceC: 0
+  coldNote: "\uC545\uC138\uC0AC\uB9AC\xB7\uAE30\uD0C0 \u2014 \uC2E4\uC628 \uBB34\uAD00"

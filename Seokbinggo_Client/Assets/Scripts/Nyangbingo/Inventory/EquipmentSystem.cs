@@ -107,6 +107,13 @@ namespace Nyangbingo.Inventory
             return true;
         }
         public EquipmentDefinition Get(EquipmentSlot slot) => equipped.TryGetValue(slot, out var item) ? item : null;
+        public bool ColdOk(int roomTemperatureC)
+        {
+            foreach (var slot in new[] { EquipmentSlot.Head, EquipmentSlot.Body, EquipmentSlot.Feet })
+                if (equipped.TryGetValue(slot, out var item) && item != null && !item.ColdOk(roomTemperatureC))
+                    return false;
+            return true;
+        }
         public bool TryUnequip(EquipmentSlot slot)
         {
             if (!equipped.Remove(slot)) return false;

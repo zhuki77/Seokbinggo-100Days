@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: singijeon_cart
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
   id: singijeon_cart
-  station: 2
+  station: 5
   ingredients:
   - item: {fileID: 11400000, guid: f0f7e812848260f4dbd1d2e58a963b0a, type: 2}
     amount: 1
@@ -27,6 +27,11 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: b59a71231e2983b4f80a63f36a5e93da, type: 2}
     amount: 1
   durationSeconds: 60
-  type: 13
+  type: 14
   mvpScope: 2
-  note: "DPS12 \uC9C1\uC120 \uAD00\uD1B5\xB710\uD0C0\uC77C(v30 \uB3D9\uBC30\uC728)"
+  note: "[v64] \uC81C\uC791\uB300 furnace\u2192smithy. \uC7AC\uB8CC(\uBB34\uC1E0
+    \uC6A9\uAD11\uC2EC=\uC5B4\uBBF8 \uBD88\uAC00\uC0AC\uB9AC)\uB294 \uADF8\uB300\uB85C
+    \uB450\uACE0 \uC81C\uC791\uB300\uB9CC \uC62C\uB824 \uC911\uBC18 \uD130\uB81B
+    \uACF5\uBC31\uC744 \uB9CC\uB4E0\uB2E4 \u2014 \uC7AC\uB8CC \uC18C\uC720\uAD8C\uC744
+    \uC548 \uAC74\uB4DC\uB9AC\uB294 \uCD5C\uC18C \uBCC0\uACBD. DPS12 \uC9C1\uC120
+    \uAD00\uD1B5\xB710\uD0C0\uC77C(v30 \uB3D9\uBC30\uC728)"

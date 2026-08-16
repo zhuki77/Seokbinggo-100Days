@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: storage_gear_band
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: storage_gear_band
+  value: none
+  unit: '-'
+  note: "\u2705 \uC624\uB108 \uD655\uC815 2026-08-11 '\uBD99\uC774\uC9C0 \uB9D0\uC790'
+    \u2014 \uC637\xB7\uC7A5\uBE44\uB294 \uBCF4\uAD00 \uC628\uB3C4 \uBB34\uAD00. \uCC29\uC6A9
+    \uC2DC '\uACAC\uB514\uB294 \uD558\uD55C'(coldToleranceC)\uC774 \uC774\uBBF8 \uAC78\uB824
+    \uC788\uC5B4 \uBCF4\uAD00 \uC628\uB3C4\uAE4C\uC9C0 \uBD99\uC774\uBA74 \uAC19\uC740
+    \uC544\uC774\uD15C\uC5D0 \uBC29\uD5A5\uC774 \uBC18\uB300\uC778 \uC628\uB3C4 \uADDC\uCE59\uC774
+    \uB458\uC774 \uB41C\uB2E4(\uCC29\uC6A9=\uBC84\uD2F4\uB2E4 / \uBCF4\uAD00=\uC774\uB798\uC57C
+    \uD55C\uB2E4). \uD310\uB2E8 \uC885\uB8CC"

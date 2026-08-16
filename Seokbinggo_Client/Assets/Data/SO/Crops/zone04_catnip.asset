@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92820fde8ceb33b40bea2a0220f804fb, type: 3}
+  m_Name: zone04_catnip
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CropDefinition
+  id: zone04:catnip
+  zoneId: zone04
+  order: 4
+  cropId: catnip
+  displayName: "\uCEA3\uB2E2"
+  spawnPerHundredTiles: 6
+  healHitPoints: 30
+  respawnDays: 2
+  plantable: 1
+  riskNote: "\uC774 \uBC34\uB4DC \uB3C4\uB2EC\uC5D0 \uD544\uC694\uD55C \uAC83: \uB098\uBB34
+    \uBC00\uB3C4 0.60 \uAD6C\uAC04 \uD1B5\uACFC \xB7 \uC9C0\uADC0 \uC81C\uB2E8\uAD8C"
+  note: "[\uAC00\uC548 \u2014 \uD310\uB2E8\u2463] **\uC2E0\uADDC \uC885 0.** \uC815\uBCF8
+    \uCEA3\uB2E2(\uBC00\uB3C4 6/100\uD0C0\uC77C \xB7 HP+25 \xB7 2\uC77C \uC7AC\uC0DD)\uC744
+    \uBC34\uB4DC\uB85C \uC2A4\uCF00\uC77C\uD55C \uAC83\uBFD0\uC774\uB2E4 \u2014 \uBA40\uC218\uB85D
+    \uC9C4\uD558\uACE0(\xD71.00) \uC798 \uB4E3\uB294\uB2E4(\xD71.20). \uC624\uB108
+    \uC9C0\uC2DC '\uB18D\uC0AC\uD558\uAE30 \uC88B\uC740 \uC791\uBB3C'\uC744 **\uBC2D\xB7\uC528\uC557\xB7\uC131\uC7A5\uB2E8\uACC4
+    \uC5C6\uC774** \uB9CC\uB4E0\uB2E4. \uC2EC\uAE30(plantable)\uB294 \uAE30\uC874
+    respawn_days\uB97C \uC7AC\uC0AC\uC6A9 \u2014 \uC2E0\uADDC \uD0C0\uC774\uBA38
+    0"

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: mushroom_heal
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: mushroom_heal
+  value: 15/30/50
+  unit: HP
+  note: "[\uAC00\uC548] \uB290\uD0C0\uB9AC\xB7\uD45C\uACE0\xB7\uC11D\uC774 \uD68C\uBCF5\uB7C9
+    \u2014 \uCEA3\uB2E2 25(\uC9C0\uC0C1)\uC640 \uACB9\uCE58\uC9C0 \uC54A\uAC8C \uC0C1\uCE35\uC740
+    \uB0AE\uACE0 \uC2EC\uCE35\uC740 \uB192\uB2E4"

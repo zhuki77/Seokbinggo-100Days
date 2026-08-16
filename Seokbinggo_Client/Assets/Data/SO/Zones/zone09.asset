@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f57c6c5a21284f04da8685c2ef9fa3ba, type: 3}
+  m_Name: zone09
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ZoneDefinition
+  id: zone09
+  order: 9
+  distanceTilesFrom: 240
+  distanceTilesTo: 270
+  distanceNormalizedFrom: 0.8
+  distanceNormalizedTo: 0.9
+  tier: 9
+  altarId: altar_yeongno
+  bossId: yeongno
+  bossDisplayName: "\uC601\uB178"
+  bossDay: '-'
+  bossHitPoints: 20000
+  bossSummonType: "\uB0B4\uC2B5\uD615"
+  treeDensityMultiplier: 0.93
+  note: "[v64] \uB9F5 600 \uAE30\uC900 |x-300| = 240~270\uD0C0\uC77C(\uBC34\uB4DC
+    \uD3ED 30). \uD3ED\uC5FC \uB2E8\uACC4 3 \xB7 \uC120\uD0DD \uBCF4\uC2A4 \xB7 \uC544\uB808\uB098
+    \uC9C0\uC0C1. \uBC34\uB4DC \uD3ED\uC740 map_width/2/zone_count\uB85C \uC720\uB3C4(\uB9F5
+    \uAC00\uBCC0) \u2014 dist_norm_*\uC774 \uC815\uBCF8\uC774\uACE0 dist_tiles_*\uB294
+    \uD604 \uB9F5 \uCC38\uACE0\uAC12. \uC2A4\uD3F0(x=200) \uAE30\uC900 \uC88C\uC6B0
+    \uB300\uCE6D |x-200| = 160~180\uD0C0\uC77C. \uD2F0\uC5B4 9 = \uC601\uB178(90\uC77C\uCC28)
+    \uC81C\uB2E8. \u26A0\uFE0F \uBC34\uB4DC \uC21C\uC11C\uB294 \uBC1C\uBA85\uC774
+    \uC544\uB2C8\uB77C bosses.csv recommended_day \uC21C\uC11C \uADF8\uB300\uB85C\uB2E4.
+    \uBC34\uB4DC \uD3ED 20 = \uB9F5 \uC808\uBC18 200 \xF7 \uBCF4\uC2A4 10\uC885(GDD
+    9\uC7A5 \uB9F5 400\xD7160)."
+  heatStage: 3
+  gateRole: "\uC120\uD0DD \uBCF4\uC2A4"

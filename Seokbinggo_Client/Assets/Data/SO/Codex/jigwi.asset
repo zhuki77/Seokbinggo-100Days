@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63bdae2859c3c1c40b0594aad5a62289, type: 3}
+  m_Name: jigwi
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CodexEntryDefinition
+  id: jigwi
+  kind: "\uBCF4\uC2A4"
+  displayName: "\uC9C0\uADC0"
+  source: "\uC2E0\uB77C \uC124\uD654\uC758 \uD654\uADC0(\u706B\u9B3C)"
+  sourceVerification: "\uBD80\uBD84(\uBB38\uD5CC\uBA85 \uBBF8\uD655\uC778)"
+  cardFrontAssetId: card_jigwi
+  cardBackText: "\uC0AC\uB78C\uC774 \uBD88\uB369\uC774\uAC00 \uB410\uB2E4."
+  portraitAssetId: portrait_jigwi
+  note: "GDD 5\uC7A5 4\uBC88 \uB3C4\uAC10 \u2014 \uCE74\uB4DC \uD074\uB9AD \uD655\uB300(192x256)
+    \u2192 \uD55C \uBC88 \uB354 \uD074\uB9AD \uC2DC \uB4A4\uC9D1\uD600 \uC804\uC2B9
+    \uCD9C\uCC98 1\uC904. \uACB0\uACFC \uD654\uBA74\xB7\uB3C4\uAC10\uC740 HUD\uAC00
+    \uC544\uB2C8\uB77C **\uD14D\uC2A4\uD2B8 \uD5C8\uC6A9 \uAD6C\uC5ED**(5-\uBA54\uD0C0
+    \u2463) \u2014 2\uC7A5 \uBB34\uC2A4\uD1A0\uB9AC \uC6D0\uCE59 \uC704\uBC18 \uC544\uB2D8.
+    \u26A0\uFE0F \uCD9C\uCC98 \uBBF8\uAC80\uC99D \u2014 \uBB38\uD5CC\uBA85\uC744
+    \uC9C0\uC5B4\uB0B4\uC9C0 \uB9D0 \uAC83(v32 \uAC00\uC9DC \uBB38\uD5CC 4\uAC74
+    \uBC18\uB824 \uC804\uB840)."

@@ -25,6 +25,6 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: 246f71f388a0e6643b16de720b2a58b9, type: 2}
     amount: 1
   durationSeconds: 20
-  type: 15
+  type: 16
   mvpScope: 1
   note: "HP900\xB7\uBD88\uAC00\uC0AC\uB9AC \uBA74\uC5ED"

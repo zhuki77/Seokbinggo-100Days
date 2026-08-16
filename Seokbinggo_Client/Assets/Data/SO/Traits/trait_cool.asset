@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 696453ddd95456840ad0de4f62b1c9e3, type: 3}
+  m_Name: trait_cool
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
+  id: trait_cool
+  displayName: "\uC2DC\uC6D0\uD55C \uB188"
+  shortName: "\uC2DC\uC6D0"
+  hookField: globals temp_rise_per_stage
+  hookSource: "\uB0AE \uC9C0\uC0C1 \uCCB4\uC628 \uC0C1\uC2B9 0.10/\uCD08 x \uB2E8\uACC4
+    \xB7 \uC9DA \uB2E8\uC5F4\uC7AC 0.05/\uBCBD"
+  startItemId: 
+  effect: "\uB0AE \uC9C0\uC0C1 \uCCB4\uC628 \uC0C1\uC2B9 \u221210% (0.10 \u2192 0.09/\uCD08\xD7\uB2E8\uACC4)"
+  artAssetId: p_trait_cool
+  note: "\uCCB4\uC628 \uBC30\uC728 \uD544\uB4DC\uAC00 \uC774\uBBF8 \uC788\uB2E4(\uC9DA
+    \uB2E8\uC5F4\uC7AC\xB7\uD55C\uD30C \uC138\uD2B8 setTemperatureRiseModifier\uC640
+    \uAC19\uC740 \uCD95). \uC9DA \uB2E8\uC5F4\uC7AC\xB7\uD55C\uD30C \uC138\uD2B8\uC640
+    **\uAC19\uC740 \uCCB4\uC628 \uCD95**. \u26A0\uFE0F **\uB0AE \uC9C0\uC0C1\uC5D0\uC120
+    \uCCB4\uAC10\uC774 \uAC70\uC758 \uC5C6\uB2E4** \u2014 \uC0AC\uC778\uC774 \uD654\uC0C1\uC774\uB77C(\uB2E8\uACC410
+    \uD654\uC0C1 6.7\uCD08 vs \uC5F4\uC0AC\uBCD1 40\uCD08) \uCCB4\uAC10 \uAD6C\uAC04\uC740
+    **\uC9C0\uD558 \uC6D0\uC815\xB7\uBC00\uD3D0 \uBBF8\uC644\uC131 \uAE30\uC9C0**\uB2E4.
+    \uADF8\uB298(v56) \uB3C4\uC785 \uD6C4\uC5D0\uB3C4 \uC774 \uAD00\uACC4\uB294 \uADF8\uB300\uB85C"

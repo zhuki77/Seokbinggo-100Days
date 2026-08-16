@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: samdugumi_summon
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: samdugumi_summon
+  displayName: "\uC138 \uAC08\uB798 \uB9E4\uB4ED"
+  maxStack: 99
+  category: 8
+  mvpScope: 2
+  note: "\uC0BC\uB450\uAD6C\uBBF8 \uC18C\uD658 \u2014 \uB300\uC7A5\uAC04\xB7\uC5BC\uC74C\uBFCC\uB9AC
+    \uB2E4\uBC1C3+\uB208\uBB3C24"

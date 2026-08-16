@@ -23,6 +23,12 @@ namespace Nyangbingo.Data
         [SerializeField] private BossDefinition[] bosses = Array.Empty<BossDefinition>();
         [SerializeField] private ChestDefinition[] chests = Array.Empty<ChestDefinition>();
         [SerializeField] private DayEventDefinition[] dayEvents = Array.Empty<DayEventDefinition>();
+        [SerializeField] private ZoneDefinition[] zones = Array.Empty<ZoneDefinition>();
+        [SerializeField] private TerrainSpawnDefinition[] terrainSpawns = Array.Empty<TerrainSpawnDefinition>();
+        [SerializeField] private TalismanDefinition[] talismans = Array.Empty<TalismanDefinition>();
+        [SerializeField] private CodexEntryDefinition[] codexEntries = Array.Empty<CodexEntryDefinition>();
+        [SerializeField] private TraitDefinition[] traits = Array.Empty<TraitDefinition>();
+        [SerializeField] private CropDefinition[] crops = Array.Empty<CropDefinition>();
 
         private Dictionary<string, ItemDefinition> itemsById;
         private Dictionary<string, RecipeDefinition> recipesById;
@@ -40,6 +46,12 @@ namespace Nyangbingo.Data
         private Dictionary<string, BossDefinition> bossesById;
         private Dictionary<string, ChestDefinition> chestsById;
         private Dictionary<string, DayEventDefinition> dayEventsById;
+        private Dictionary<string, ZoneDefinition> zonesById;
+        private Dictionary<string, TerrainSpawnDefinition> terrainSpawnsById;
+        private Dictionary<string, TalismanDefinition> talismansById;
+        private Dictionary<string, CodexEntryDefinition> codexEntriesById;
+        private Dictionary<string, TraitDefinition> traitsById;
+        private Dictionary<string, CropDefinition> cropsById;
         private bool indexesValid;
 
         public IReadOnlyList<ItemDefinition> Items => items ?? Array.Empty<ItemDefinition>();
@@ -60,6 +72,14 @@ namespace Nyangbingo.Data
         public IReadOnlyList<BossDefinition> Bosses => bosses ?? Array.Empty<BossDefinition>();
         public IReadOnlyList<ChestDefinition> Chests => chests ?? Array.Empty<ChestDefinition>();
         public IReadOnlyList<DayEventDefinition> DayEvents => dayEvents ?? Array.Empty<DayEventDefinition>();
+        public IReadOnlyList<ZoneDefinition> Zones => zones ?? Array.Empty<ZoneDefinition>();
+        public IReadOnlyList<TerrainSpawnDefinition> TerrainSpawns =>
+            terrainSpawns ?? Array.Empty<TerrainSpawnDefinition>();
+        public IReadOnlyList<TalismanDefinition> Talismans => talismans ?? Array.Empty<TalismanDefinition>();
+        public IReadOnlyList<CodexEntryDefinition> CodexEntries =>
+            codexEntries ?? Array.Empty<CodexEntryDefinition>();
+        public IReadOnlyList<TraitDefinition> Traits => traits ?? Array.Empty<TraitDefinition>();
+        public IReadOnlyList<CropDefinition> Crops => crops ?? Array.Empty<CropDefinition>();
         public bool IsValid { get { EnsureIndex(); return indexesValid; } }
 
         public ItemDefinition FindItem(string id)
@@ -167,6 +187,48 @@ namespace Nyangbingo.Data
             return indexesValid && !string.IsNullOrEmpty(id) && dayEventsById.TryGetValue(id, out var definition) ? definition : null;
         }
 
+        public ZoneDefinition FindZone(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && zonesById.TryGetValue(id, out var value)
+                ? value : null;
+        }
+
+        public TerrainSpawnDefinition FindTerrainSpawn(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && terrainSpawnsById.TryGetValue(id, out var value)
+                ? value : null;
+        }
+
+        public TalismanDefinition FindTalisman(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && talismansById.TryGetValue(id, out var value)
+                ? value : null;
+        }
+
+        public CodexEntryDefinition FindCodexEntry(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && codexEntriesById.TryGetValue(id, out var value)
+                ? value : null;
+        }
+
+        public TraitDefinition FindTrait(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && traitsById.TryGetValue(id, out var value)
+                ? value : null;
+        }
+
+        public CropDefinition FindCrop(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && cropsById.TryGetValue(id, out var value)
+                ? value : null;
+        }
+
         public static GameDataCatalog CreateRuntime(params ItemDefinition[] runtimeItems)
         {
             var catalog = CreateInstance<GameDataCatalog>();
@@ -196,6 +258,12 @@ namespace Nyangbingo.Data
             bossesById = null;
             chestsById = null;
             dayEventsById = null;
+            zonesById = null;
+            terrainSpawnsById = null;
+            talismansById = null;
+            codexEntriesById = null;
+            traitsById = null;
+            cropsById = null;
             indexesValid = false;
         }
 
@@ -225,6 +293,15 @@ namespace Nyangbingo.Data
             bossesById = BuildIndex(bosses, value => value.Id, out var bossesValid); indexesValid &= bossesValid;
             chestsById = BuildIndex(chests, value => value.Id, out var chestsValid); indexesValid &= chestsValid;
             dayEventsById = BuildIndex(dayEvents, value => value.Id, out var dayEventsValid); indexesValid &= dayEventsValid;
+            zonesById = BuildIndex(zones, value => value.Id, out var zonesValid); indexesValid &= zonesValid;
+            terrainSpawnsById = BuildIndex(terrainSpawns, value => value.Id, out var terrainSpawnsValid);
+            indexesValid &= terrainSpawnsValid;
+            talismansById = BuildIndex(talismans, value => value.Id, out var talismansValid);
+            indexesValid &= talismansValid;
+            codexEntriesById = BuildIndex(codexEntries, value => value.Id, out var codexEntriesValid);
+            indexesValid &= codexEntriesValid;
+            traitsById = BuildIndex(traits, value => value.Id, out var traitsValid); indexesValid &= traitsValid;
+            cropsById = BuildIndex(crops, value => value.Id, out var cropsValid); indexesValid &= cropsValid;
         }
 
         private static Dictionary<string, T> BuildIndex<T>(IEnumerable<T> values, Func<T, string> getId,

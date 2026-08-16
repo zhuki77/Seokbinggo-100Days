@@ -200,7 +200,8 @@ namespace Nyangbingo.Debugging
                 Gizmos.color = new Color(1f, 0.85f, 0.1f, 0.9f);
                 Gizmos.DrawWireSphere(new Vector3(core.x + 0.5f, core.y + 0.5f, 0f), 0.6f);
                 Handles.Label(new Vector3(core.x + 0.5f, core.y - 0.8f, 0f),
-                    $"코어: 밀폐 {sealSystem.SealPercent * 100f:0}% / 온도 상한 반영 {sealSystem.TemperaturePercent:0}% (창 {sealSystem.WindowCellCap}칸)");
+                    $"코어: {(sealSystem.IsCoreWindowSealed(core) ? "밀폐 — 냉각 -10℃" : "미밀폐 — 냉각 -5℃")} " +
+                    $"(창 {sealSystem.WindowCellCap}칸)");
             }
 #endif
         }

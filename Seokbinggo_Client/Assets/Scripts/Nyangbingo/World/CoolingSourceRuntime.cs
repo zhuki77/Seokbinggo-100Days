@@ -22,7 +22,7 @@ namespace Nyangbingo.World
     }
 
     /// <summary>
-    /// 설치형 냉기원의 데이터 기반 수명과 상한을 관리한다. 시간은 중앙 game-seconds Tick만 소비하며,
+    /// 설치형 물단지·얼음 항아리의 데이터 기반 수명과 연료를 관리한다. 시간은 중앙 game-seconds Tick만 소비하며,
     /// 월드 좌표·밀폐 영역 계산은 소유하지 않는다.
     /// </summary>
     public sealed class CoolingSourceRuntime : IGameSecondsTickable
@@ -34,7 +34,6 @@ namespace Nyangbingo.World
             public string ObjectId;
             public string DefinitionId;
             public LifetimeKind Lifetime;
-            public float CapPercent;
             public float RemainingGameSeconds;
 
             public bool IsActive => Lifetime == LifetimeKind.Permanent || RemainingGameSeconds > 0f;
@@ -50,29 +49,16 @@ namespace Nyangbingo.World
         private readonly List<string> expired = new List<string>();
         private readonly float waterJarDuration;
         private readonly float iceJarFuelDuration;
-        private readonly float waterJarCap;
-        private readonly float iceJarCap;
-        private readonly float iceStorageCap;
-        private readonly float iceCrystalCoolerCap;
 
         public CoolingSourceRuntime(GameDataCatalog catalog)
         {
             waterJarDuration = Positive(Read(catalog, "muldanji_duration", 180f), 180f);
             iceJarFuelDuration = Positive(Read(catalog, "icejar_fuel_sec", 300f), 300f);
-            waterJarCap = Percent(Read(catalog, "cold_cap_muldanji", 25f));
-            iceJarCap = Percent(Read(catalog, "cold_cap_icejar", 50f));
-            iceStorageCap = Percent(Read(catalog, "cold_cap_icestorage", 100f));
-            iceCrystalCoolerCap = Percent(Read(catalog, "cold_cap_frostcooler", 100f));
         }
 
         public int Count => entries.Count;
         public int ActiveCount => entries.Values.Count(entry => entry.IsActive);
         public bool IsActive => ActiveCount > 0;
-        public float CoolingCapPercent => entries.Values
-            .Where(entry => entry.IsActive)
-            .Select(entry => entry.CapPercent)
-            .DefaultIfEmpty(0f)
-            .Max();
         public event Action<string> ConsumableExpired;
 
         public bool TryRegister(string objectId, string definitionId, bool startFueled = false)
@@ -115,17 +101,14 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool TryGetStatus(string objectId, out float remainingGameSeconds,
-            out float capPercent, out bool active)
+        public bool TryGetStatus(string objectId, out float remainingGameSeconds, out bool active)
         {
             remainingGameSeconds = 0f;
-            capPercent = 0f;
             active = false;
             if (string.IsNullOrWhiteSpace(objectId) || !entries.TryGetValue(objectId, out var entry)) return false;
             remainingGameSeconds = entry.Lifetime == LifetimeKind.Permanent
                 ? float.PositiveInfinity
                 : entry.RemainingGameSeconds;
-            capPercent = entry.CapPercent;
             active = entry.IsActive;
             return true;
         }
@@ -184,28 +167,27 @@ namespace Nyangbingo.World
             switch (definitionId)
             {
                 case WaterJarId:
-                    entry = Create(objectId, definitionId, LifetimeKind.Consumable, waterJarCap);
+                    entry = Create(objectId, definitionId, LifetimeKind.Consumable);
                     break;
                 case IceJarId:
-                    entry = Create(objectId, definitionId, LifetimeKind.Fueled, iceJarCap);
+                    entry = Create(objectId, definitionId, LifetimeKind.Fueled);
                     break;
                 case IceStorageId:
-                    entry = Create(objectId, definitionId, LifetimeKind.Permanent, iceStorageCap);
+                    entry = Create(objectId, definitionId, LifetimeKind.Permanent);
                     break;
                 case IceCrystalCoolerId:
-                    entry = Create(objectId, definitionId, LifetimeKind.Permanent, iceCrystalCoolerCap);
+                    entry = Create(objectId, definitionId, LifetimeKind.Permanent);
                     break;
             }
             return entry != null;
         }
 
-        private static Entry Create(string objectId, string definitionId, LifetimeKind lifetime, float cap) =>
+        private static Entry Create(string objectId, string definitionId, LifetimeKind lifetime) =>
             new Entry
             {
                 ObjectId = objectId,
                 DefinitionId = definitionId,
-                Lifetime = lifetime,
-                CapPercent = cap
+                Lifetime = lifetime
             };
 
         private static float Read(GameDataCatalog catalog, string key, float fallback)
@@ -215,7 +197,6 @@ namespace Nyangbingo.World
         }
 
         private static float Positive(float value, float fallback) => IsFinite(value) && value > 0f ? value : fallback;
-        private static float Percent(float value) => IsFinite(value) ? Mathf.Clamp(value, 0f, 100f) : 0f;
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

@@ -161,6 +161,7 @@ namespace Nyangbingo.World
         public int CoalCount => runtimeServices?.PlayerInventory?.Count(FuelItemId) ?? 0;
         public bool IsCrafting => runtimeServices?.CraftingProcess?.IsCrafting == true;
         public RecipeDefinition TurretRecipe => gameDataCatalog?.FindRecipe(TurretItemId);
+        private int CurrentDay => FindAnyObjectByType<DayNightService>()?.Day ?? 1;
         public event Action BuildStateChanged;
 
         public int GetInventoryCount(string itemId) =>
@@ -327,7 +328,8 @@ namespace Nyangbingo.World
         {
             if (IsPlacementPreviewActive) return true;
             var item = gameDataCatalog?.FindItem(definitionId);
-            if (item == null || item.MvpScope == ItemMvpScope.B || GetInventoryCount(definitionId) <= 0)
+            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, CurrentDay) ||
+                GetInventoryCount(definitionId) <= 0)
             {
                 ShowMessage("설치할 완성품이 없습니다.");
                 return false;
@@ -509,7 +511,8 @@ namespace Nyangbingo.World
         {
             var definitionId = placementDefinitionId;
             var item = gameDataCatalog?.FindItem(definitionId);
-            if (item == null || item.MvpScope == ItemMvpScope.B) return false;
+            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, CurrentDay))
+                return false;
             if (!CanPlaceByTurretSlots(definitionId, out var slotReason))
             {
                 ShowMessage(slotReason);
@@ -579,6 +582,30 @@ namespace Nyangbingo.World
                 ShowMessage("장독 창고 화면을 열 수 없습니다.");
                 return true;
             }
+            if (string.Equals(record.definitionId, BedService.DefaultBedItemId, StringComparison.Ordinal))
+            {
+                var bed = runtimeServices?.Bed;
+                if (bed == null)
+                {
+                    ShowMessage("침대 시간 서비스를 찾을 수 없습니다.");
+                    return true;
+                }
+                bed.TrySleep(record.position, out var bedMessage);
+                ShowMessage(bedMessage);
+                BuildStateChanged?.Invoke();
+                return true;
+            }
+            if (string.Equals(record.definitionId, TalismanRuntime.WaypointId, StringComparison.Ordinal))
+            {
+                var talismans = runtimeServices?.Talismans;
+                var waypointMessage = string.Empty;
+                if (talismans == null || !talismans.TryUseWaypoint(fromCore: false, out waypointMessage))
+                    ShowMessage(string.IsNullOrEmpty(waypointMessage)
+                        ? "이정표 부적을 사용할 수 없습니다."
+                        : waypointMessage);
+                else ShowMessage(waypointMessage);
+                return true;
+            }
             if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
             {
                 TryRefuelTurret(turret);
@@ -597,6 +624,13 @@ namespace Nyangbingo.World
             }
             if (string.Equals(record.definitionId, SeokbinggoRules.IceCoreDefinitionId, StringComparison.Ordinal))
             {
+                if ((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) &&
+                    runtimeServices?.Talismans != null)
+                {
+                    runtimeServices.Talismans.TryUseWaypoint(fromCore: true, out var waypointMessage);
+                    ShowMessage(waypointMessage);
+                    return true;
+                }
                 TryUpgradeSeokbinggo(record.objectId);
                 return true;
             }
@@ -615,13 +649,11 @@ namespace Nyangbingo.World
                 ShowMessage("단열 문을 조작할 수 없습니다.");
                 return true;
             }
-            if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
-                    out var capPercent, out var active))
+            if (environmentState.TryGetCoolingStatus(record.objectId, out var remaining, out var active))
             {
                 var itemName = ItemName(record.definitionId);
                 var lifetime = float.IsPositiveInfinity(remaining) ? "영구" : $"{remaining:0}초";
-                ShowMessage($"{itemName} · 냉각 상한 {capPercent:0}% · " +
-                            $"{(active ? $"가동 중 ({lifetime})" : "정지")}");
+                ShowMessage($"{itemName} · {(active ? $"가동 중 ({lifetime})" : "정지")}");
                 return true;
             }
             ShowMessage($"{ItemName(record.definitionId)} · 좌클릭 유지로 회수");
@@ -670,11 +702,10 @@ namespace Nyangbingo.World
 
         private void TryRefuelIceJar(PlacedObjectRecord record)
         {
-            if (!environmentState.TryGetCoolingStatus(record.objectId, out var remaining,
-                    out var capPercent, out var active)) return;
+            if (!environmentState.TryGetCoolingStatus(record.objectId, out var remaining, out var active)) return;
             if (!runtimeServices.PlayerInventory.TryRemove(IceFuelItemId, 1))
             {
-                ShowMessage($"얼음 항아리 · 냉각 상한 {capPercent:0}% · " +
+                ShowMessage($"얼음 항아리 · " +
                             $"{(active ? $"연료 {remaining:0}초" : "연료 없음")} · 얼음 조각 없음");
                 return;
             }
@@ -684,13 +715,22 @@ namespace Nyangbingo.World
                 ShowMessage("얼음 항아리에 연료를 넣지 못했습니다.");
                 return;
             }
-            environmentState.TryGetCoolingStatus(record.objectId, out remaining, out capPercent, out _);
-            ShowMessage($"얼음 항아리 · 얼음 조각 1개 투입 · 연료 {remaining:0}초 · 상한 {capPercent:0}%");
+            environmentState.TryGetCoolingStatus(record.objectId, out remaining, out _);
+            ShowMessage($"얼음 항아리 · 얼음 조각 1개 투입 · 연료 {remaining:0}초");
             BuildStateChanged?.Invoke();
         }
 
         private void TryUpgradeSeokbinggo(string iceCoreObjectId)
         {
+            var invasion = runtimeServices?.Invasion;
+            if (invasion?.HasPendingRecool == true)
+            {
+                if (invasion.TryRecool(out _, out _, out var recoolMessage))
+                    BuildStateChanged?.Invoke();
+                ShowMessage(recoolMessage);
+                return;
+            }
+
             var service = runtimeServices?.Seokbinggo;
             if (service == null)
             {
@@ -708,11 +748,10 @@ namespace Nyangbingo.World
             if (service.IsMaxStage)
             {
                 if (!string.IsNullOrEmpty(iceCoreObjectId) && environmentState != null &&
-                    environmentState.TryGetCoolingStatus(iceCoreObjectId, out var remaining, out var capPercent,
-                        out var active))
+                    environmentState.TryGetCoolingStatus(iceCoreObjectId, out var remaining, out var active))
                 {
                     var lifetime = float.IsPositiveInfinity(remaining) ? "영구" : $"{remaining:0}초";
-                    ShowMessage($"석빙고 {service.Stage}단계(최고) · 냉각 상한 {capPercent:0}% · " +
+                    ShowMessage($"석빙고 {service.Stage}단계(최고) · " +
                                 $"{(active ? $"가동 중 ({lifetime})" : "정지")}");
                     return;
                 }

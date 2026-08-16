@@ -15,4 +15,6 @@ MonoBehaviour:
   key: evolution_bench_t456
   value: smithy
   unit: rule
-  note: "T4~T6 \uC9C4\uD654 \uC81C\uC791\uB300 id \u2014 Smithy.isUnlocked = seokbinggo_stage>=4"
+  note: "T4~T6 \uC9C4\uD654 \uC804\uC6A9 \uC81C\uC791\uB300 = \uB300\uC7A5\uAC04(v39
+    \uC624\uB108 \uC2B9\uC778). \uC791\uC5C5\uB300T1/\uD654\uB85CT2/\uC5BC\uC74C\uBAA8\uB8E8T3\uC5D0
+    \uC774\uC740 5\uB2E8\uACC4"

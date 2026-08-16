@@ -11,6 +11,12 @@ public static class NyangbingoTestBuildMenu
 {
     private const string RequestFileName = "CodexWindowsTestBuild.request";
     internal const string ProductScenePath = NyangbingoSceneBuildSettings.MainGameScenePath;
+    internal static readonly string[] ProductScenePaths =
+    {
+        NyangbingoSceneBuildSettings.TitleScenePath,
+        NyangbingoSceneBuildSettings.LoadingScenePath,
+        NyangbingoSceneBuildSettings.MainGameScenePath
+    };
     internal const string ProductExecutableName = "Nyangbingo.exe";
     internal const string TestExecutableName = "Nyangbingo_Test.exe";
 
@@ -30,7 +36,7 @@ public static class NyangbingoTestBuildMenu
 
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
-            scenes = new[] { ProductScenePath },
+            scenes = ProductScenePaths,
             locationPathName = outputPath,
             target = BuildTarget.StandaloneWindows64,
             options = BuildOptions.Development | BuildOptions.AllowDebugging
@@ -65,7 +71,7 @@ public static class NyangbingoTestBuildMenu
 
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
-            scenes = new[] { ProductScenePath },
+            scenes = ProductScenePaths,
             locationPathName = outputPath,
             target = BuildTarget.StandaloneWindows64,
             options = ProductBuildOptions
@@ -133,11 +139,10 @@ public static class NyangbingoTestBuildMenu
             .Select(scene => scene.path)
             .ToArray();
         var failures = new System.Collections.Generic.List<string>();
-        if (enabledScenes.Length != 1 ||
-            !string.Equals(enabledScenes[0], ProductScenePath, StringComparison.Ordinal))
-            failures.Add("Build Settings must contain only the enabled MainGame scene.");
-        if (!File.Exists(ProductScenePath))
-            failures.Add($"Product scene missing: {ProductScenePath}");
+        if (!enabledScenes.SequenceEqual(ProductScenePaths, StringComparer.Ordinal))
+            failures.Add("Build Settings must contain Title, Loading, and MainGame in canonical order.");
+        foreach (var scenePath in ProductScenePaths)
+            if (!File.Exists(scenePath)) failures.Add($"Product scene missing: {scenePath}");
         if (string.IsNullOrWhiteSpace(PlayerSettings.productName))
             failures.Add("PlayerSettings.productName is empty.");
         if (!NyangbingoDataBuildGate.TryValidateCurrent(out var dataValidationSummary))
@@ -158,7 +163,7 @@ public static class NyangbingoTestBuildMenu
             Debug.LogWarning("[Nyangbingo] Product identity still uses DefaultCompany. " +
                              "Set the confirmed team/company name before external distribution.");
         Debug.Log("[Nyangbingo] Windows product build validation passed: " +
-                  "MainGame only, Windows x64, non-development flags, current v34 data manifest.");
+                  "Title/Loading/MainGame, Windows x64, non-development flags, current v72 data manifest.");
         return true;
     }
 

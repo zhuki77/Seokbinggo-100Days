@@ -914,26 +914,22 @@ namespace Nyangbingo.Debugging
             runtime.ConsumableExpired += _ => expiredCount++;
             var registered = runtime.TryRegister("water_1", CoolingSourceRuntime.WaterJarId) &&
                              runtime.TryRegister("ice_jar_1", CoolingSourceRuntime.IceJarId, true);
-            var initial = registered && runtime.Count == 2 && runtime.ActiveCount == 2 &&
-                          Mathf.Approximately(runtime.CoolingCapPercent, 50f);
+            var initial = registered && runtime.Count == 2 && runtime.ActiveCount == 2;
             runtime.Tick(180f);
             var waterExpired = expiredCount == 1 && runtime.Count == 1 && runtime.ActiveCount == 1 &&
                                runtime.TryGetRemaining("ice_jar_1", out var iceRemaining) &&
                                Mathf.Approximately(iceRemaining, 120f);
             runtime.Tick(120f);
-            var fuelExhausted = runtime.Count == 1 && runtime.ActiveCount == 0 &&
-                                Mathf.Approximately(runtime.CoolingCapPercent, 0f);
+            var fuelExhausted = runtime.Count == 1 && runtime.ActiveCount == 0;
             var refueled = runtime.TryAddIceFuel("ice_jar_1", 2) &&
                            runtime.TryGetRemaining("ice_jar_1", out iceRemaining) &&
-                           Mathf.Approximately(iceRemaining, 600f) && runtime.ActiveCount == 1 &&
-                           Mathf.Approximately(runtime.CoolingCapPercent, 50f);
+                           Mathf.Approximately(iceRemaining, 600f) && runtime.ActiveCount == 1;
             var productStatus = runtime.TryGetStatus("ice_jar_1", out var statusRemaining,
-                                    out var statusCap, out var statusActive) && statusActive &&
-                                Mathf.Approximately(statusRemaining, 600f) &&
-                                Mathf.Approximately(statusCap, 50f);
+                                    out var statusActive) && statusActive &&
+                                Mathf.Approximately(statusRemaining, 600f);
             var permanent = runtime.TryRegister("storage_1", CoolingSourceRuntime.IceStorageId) &&
                             runtime.TryRegister("cooler_1", CoolingSourceRuntime.IceCrystalCoolerId) &&
-                            runtime.ActiveCount == 3 && Mathf.Approximately(runtime.CoolingCapPercent, 100f);
+                            runtime.ActiveCount == 3;
 
             var save = new SaveGame();
             var snapshots = runtime.ExportSnapshots();
@@ -960,7 +956,6 @@ namespace Nyangbingo.Debugging
                     state.objectId, state.definitionId, state.remainingGameSeconds);
             }
             restoredAll &= restored.Count == 3 && restored.ActiveCount == 3 &&
-                           Mathf.Approximately(restored.CoolingCapPercent, 100f) &&
                            restored.TryGetRemaining("ice_jar_1", out var restoredFuel) &&
                            Mathf.Approximately(restoredFuel, 600f);
 
@@ -970,10 +965,10 @@ namespace Nyangbingo.Debugging
 
             if (initial && waterExpired && fuelExhausted && refueled && productStatus && permanent &&
                 restoredAll && invalidGuard)
-                Debug.Log("[Nyangbingo] Cooling sources completed: water jar 180 seconds, ice jar 300-second fuel, " +
-                          "25/50/100% caps, permanent sources, and versioned save round-trip.");
+                Debug.Log("[Nyangbingo] Cooling source lifetimes completed: water jar 180 seconds, " +
+                          "ice jar 300-second fuel, permanent sources, and versioned save round-trip.");
             else
-                Debug.LogError("[Nyangbingo] Cooling source lifetime, cap, or save contract test failed.");
+                Debug.LogError("[Nyangbingo] Cooling source lifetime or save contract test failed.");
         }
 
         private void TestPlayerHealthRecoveryContract()
@@ -1175,6 +1170,7 @@ namespace Nyangbingo.Debugging
             var tierTwo = new[] { .75f, .25f, 1f, .5f, .5f, .8f, 1.5f, 1.5f, 1f, 4f, 6f, .6f };
             var tierThree = new[] { .4f, .25f, .5f, .25f, .25f, .4f, .75f, .75f, .5f, 2f, 3f, .3f };
             var frequencies = new[] { 8f, 10f, 6f, 45f, 25f, 8f, 18f, 12f, 10f, 12f, 4f, 10f };
+            var hardnesses = new[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1 };
 
             var valid = gameDataCatalog.MineralTiers.Count == ids.Length;
             for (var i = 0; i < ids.Length; i++)
@@ -1186,9 +1182,14 @@ namespace Nyangbingo.Debugging
                          !string.IsNullOrWhiteSpace(definition.UsageDescription) &&
                          !string.IsNullOrWhiteSpace(definition.GateDescription) &&
                          definition.Layer == layers[i] && definition.MinimumDepth == minimumDepths[i] &&
-                         definition.MaximumDepth == maximumDepths[i] &&
-                         definition.MinimumClawTier == minimumClawTiers[i] && definition.GateType == gates[i] &&
-                         Mathf.Approximately(definition.ClawTierOneSeconds, tierOne[i]) &&
+                          definition.MaximumDepth == maximumDepths[i] &&
+                          definition.MinimumClawTier == minimumClawTiers[i] && definition.GateType == gates[i] &&
+                          definition.Hardness == hardnesses[i] &&
+                          definition.CanBreakWithClawTier(1) == (1 >= hardnesses[i]) &&
+                          definition.CanBreakWithClawTier(2) == (2 >= hardnesses[i]) &&
+                          definition.CanBreakWithClawTier(3) == (3 >= hardnesses[i]) &&
+                          !string.IsNullOrWhiteSpace(definition.HardnessDescription) &&
+                          Mathf.Approximately(definition.ClawTierOneSeconds, tierOne[i]) &&
                          Mathf.Approximately(definition.ClawTierTwoSeconds, tierTwo[i]) &&
                          Mathf.Approximately(definition.ClawTierThreeSeconds, tierThree[i]) &&
                          Mathf.Approximately(definition.FrequencyPerHundredTiles, frequencies[i]) &&
@@ -1213,7 +1214,7 @@ namespace Nyangbingo.Debugging
             Destroy(worldConfig);
 
             if (valid)
-                Debug.Log("[Nyangbingo] Official 12 mineral tiers, claw mining times, gates, and vein frequencies completed.");
+                Debug.Log("[Nyangbingo] Official 12 mineral tiers, CSV hardness, claw mining times, gates, and vein frequencies completed.");
             else Debug.LogError("[Nyangbingo] Imported mineral tier definition test failed.");
         }
 
@@ -2912,10 +2913,6 @@ namespace Nyangbingo.Debugging
                                shell.Title.DisplayedHeatStage >= 1 &&
                                shell.Title.DisplayedHeatStage <= HeatStagePresentation.StageCount &&
                                TitleShellController.FormatTitleHeatStage(shell.Title.DisplayedHeatStage) == "1" &&
-                               TitleShellController.FormatTitleCountdown(85) ==
-                               HeatStagePresentation.FormatBadge(
-                                   HeatStagePresentation.ResolveForDay(
-                                       DayNightService.DefaultSurvivalDayLimit - 85 + 1)) &&
                                shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit;
 
             var newGameRequested = false;
@@ -3020,10 +3017,11 @@ namespace Nyangbingo.Debugging
             shell.RequestReturnToTitle();
             var returnToTitleConfirmed = shell.Confirm() && titleRequested;
 
-            var endingPolicy = GameShellController.ShouldEndDemoAtDawn(31, 30) &&
-                               !GameShellController.ShouldEndDemoAtDawn(30, 30) &&
-                               !GameShellController.ShouldEndDemoAtDawn(32, 30) &&
-                               !GameShellController.ShouldEndDemoAtDawn(31, 100);
+            var endingPolicy = GameShellController.ShouldEndDemoAtDawn(true, 31, 30) &&
+                               !GameShellController.ShouldEndDemoAtDawn(true, 30, 30) &&
+                               !GameShellController.ShouldEndDemoAtDawn(true, 32, 30) &&
+                               !GameShellController.ShouldEndDemoAtDawn(true, 31, 100) &&
+                               !GameShellController.ShouldEndDemoAtDawn(false, 31, 30);
             shell.ShowResult(activeSave);
             var result = shell.Result;
             var resultMatches = shell.Screen == GameShellScreen.Result && result != null &&

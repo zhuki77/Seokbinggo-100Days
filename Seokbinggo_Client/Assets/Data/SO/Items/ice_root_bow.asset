@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: ice_root_bow
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: ice_root_bow
+  displayName: "\uB3C4\uAD00 \uB178"
+  maxStack: 1
+  category: 4
+  mvpScope: 2
+  note: "\uD65C T5 1\uB2E8 \uC9C4\uD654 \u2014 \uB0C9\uAE30 \uB3C4\uAD00 \uC704 \uC7A5\uC804
+    \uAC00\uC18D"

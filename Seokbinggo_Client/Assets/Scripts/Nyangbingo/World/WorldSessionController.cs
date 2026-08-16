@@ -44,7 +44,6 @@ namespace Nyangbingo.World
 
         // SealSystem이 최초 생성될 때 주입하고, 이후 월드 로드에서는 같은 인스턴스가 Rebind되므로 유지되는 확장 지점.
         private ISealBarrierRegistry sealBarrierRegistry;
-        private ICoolingSourceProvider coolingSourceProvider;
 
         public TileService TileService => tileService;
         public SealSystem SealSystem => sealSystem;
@@ -83,7 +82,10 @@ namespace Nyangbingo.World
             this.config = config ?? throw new ArgumentNullException(nameof(config));
             this.renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             chestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
-            this.catalog = catalog; // 카탈로그 없이도(상자 보상 미연결) 채굴/밀폐 테스트는 가능해야 한다.
+            // 월드 생성은 mineral-tiers.csv 경도를 읽기 위해 카탈로그가 필수다. 일부 순수 세션 테스트는
+            // 월드를 만들지 않고 내부 서비스만 연결하므로 생성자 단계에서는 null을 허용하고, MapGenerator가
+            // 실제 생성 시 명확하게 거부한다.
+            this.catalog = catalog;
         }
 
         /// <summary>
@@ -100,15 +102,13 @@ namespace Nyangbingo.World
         public void BindTickDriver(IGameSecondsTickDriver tickDriver) => TickDriver = tickDriver;
 
         /// <summary>
-        /// 차열벽/차열 지붕/단열 문(밀폐 화이트리스트) 조회자와 냉기원 가동 상태 조회자를 연결한다. B파트
-        /// 설치물/온도 시스템이 아직 준비되지 않았으면 둘 다 null로 두면 되고(SealSystem은 그 경우 기존
-        /// 동작을 그대로 유지한다), 준비되면 이 메서드 한 번으로 현재 SealSystem에 즉시 반영되고, 이후
+        /// 차열벽/차열 지붕/단열 문(밀폐 화이트리스트) 조회자를 연결한다.
+        /// 이 메서드 한 번으로 현재 SealSystem에 즉시 반영되고, 이후
         /// 로드 등으로 SealSystem이 재생성돼도(RebuildLiveSystems/LoadSnapshot) 자동으로 다시 연결된다.
         /// </summary>
-        public void ConfigureSealExtensions(ISealBarrierRegistry barrierRegistry, ICoolingSourceProvider coolingSourceProvider)
+        public void ConfigureSealExtensions(ISealBarrierRegistry barrierRegistry)
         {
             sealBarrierRegistry = barrierRegistry;
-            this.coolingSourceProvider = coolingSourceProvider;
             ApplySealExtensions();
         }
 
@@ -116,7 +116,6 @@ namespace Nyangbingo.World
         {
             if (sealSystem == null) return;
             sealSystem.SetBarrierRegistry(sealBarrierRegistry);
-            sealSystem.SetCoolingSourceProvider(coolingSourceProvider);
         }
 
         /// <summary>
@@ -151,7 +150,7 @@ namespace Nyangbingo.World
         /// <exception cref="InvalidOperationException">최대 재시도 후에도 월드 생성 검증에 실패한 경우.</exception>
         public WorldGenerationResult StartNewWorld(int requestedSeed)
         {
-            generator = new MapGenerator(config);
+            generator = new MapGenerator(config, catalog);
             var result = generator.GenerateDetailed(requestedSeed);
 
             if (!result.passedValidation)
@@ -202,7 +201,7 @@ namespace Nyangbingo.World
             save.NormalizeAfterLoad();
             if (!Nyangbingo.Save.WorldSaveAdapter.ValidateWorldRecords(save)) return false;
 
-            var loadedGenerator = new MapGenerator(config);
+            var loadedGenerator = new MapGenerator(config, catalog);
             var result = loadedGenerator.GenerateDetailed(save.seed);
             if (result.acceptedSeed != save.seed)
             {
@@ -224,7 +223,8 @@ namespace Nyangbingo.World
             if (result.chests != null)
                 foreach (var chest in result.chests)
                     chestCells.Add(new Vector3Int(chest.position.x, chest.position.y, 0));
-            if (!loadedTileService.RestoreTileChanges(save.tileChanges, chestCells))
+            if (!loadedTileService.RestoreTileChanges(save.tileChanges, chestCells,
+                    save.SourceSchemaVersion < SaveGame.CurrentSchemaVersion))
             {
                 Debug.LogError("[Nyangbingo] WorldSessionController: 타일 변경 이력 재생에 실패해 로드를 중단합니다.");
                 return false;

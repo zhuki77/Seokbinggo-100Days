@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: tal_frost
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: tal_frost
+  station: 3
+  ingredients:
+  - item: {fileID: 11400000, guid: 8a0f12f13c8cd5b4b93c78c17d4ec5ee, type: 2}
+    amount: 4
+  - item: {fileID: 11400000, guid: 3d3a021a3305ee94383f99102a9b7039, type: 2}
+    amount: 1
+  output:
+    item: {fileID: 11400000, guid: 983799eeb7695e24391f058cc7ded044, type: 2}
+    amount: 1
+  durationSeconds: 0
+  type: 15
+  mvpScope: 1
+  note: "\uC800\uCCB4\uC628 \uCCB4\uC628 \uD558\uAC15 \uC815\uC9C0 \xB7 120\uCD08"

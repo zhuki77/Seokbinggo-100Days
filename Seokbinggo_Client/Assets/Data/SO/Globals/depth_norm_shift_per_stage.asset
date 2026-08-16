@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: depth_norm_shift_per_stage
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: depth_norm_shift_per_stage
+  value: 0.074
+  unit: "\uBE44\uC728"
+  note: "\uD3ED\uC5FC \uB2E8\uACC4\uB2F9 \uBC34\uB4DC \uD558\uAC15\uD3ED = 10\uD0C0\uC77C/135(\uC624\uB108
+    \uC2B9\uC778 \u0394=10). \uB9F5\uC774 \uCEE4\uC838\uB3C4 \uBE44\uC728 \uC720\uC9C0"

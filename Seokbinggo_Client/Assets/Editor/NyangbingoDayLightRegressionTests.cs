@@ -26,19 +26,19 @@ public static class NyangbingoDayLightRegressionTests
                 "underground intensity constant");
             Require(Mathf.Approximately(DayLight.IntensityFor(1, true, true, false, null), 1.00f),
                 "day 1 stage1 brightness");
-            Require(Mathf.Approximately(DayLight.IntensityFor(11, true, true, false, null), 1.05f),
-                "day 11 stage2 brightness");
-            Require(Mathf.Approximately(DayLight.IntensityFor(100, true, true, false, null), 1.45f),
-                "day 100 stage10 brightness");
+            Require(Mathf.Approximately(DayLight.IntensityFor(2, true, true, false, null), 1.28f),
+                "named stage2 brightness");
+            Require(Mathf.Approximately(DayLight.IntensityFor(3, true, true, false, null), 1.55f),
+                "named stage3 brightness");
             Require(Mathf.Approximately(DayLight.IntensityFor(100, false, true, false, null), DayLight.NightIntensity),
                 "late-day night still uses night constant");
 
-            var settings = BuildBrightnessSettings("1.00/2.00/3.00/4.00/5.00/6.00/7.00/8.00/9.00/10.00");
+            var settings = BuildBrightnessSettings("1.00/2.00/3.00");
             Require(settings != null && settings.IsValid, "test GlobalSettings must be valid");
             Require(Mathf.Approximately(DayLight.IntensityFor(1, true, true, false, settings), 1f),
                 "globals curve stage1");
-            Require(Mathf.Approximately(DayLight.IntensityFor(95, true, true, false, settings), 10f),
-                "globals curve stage10");
+            Require(Mathf.Approximately(DayLight.IntensityFor(3, true, true, false, settings), 3f),
+                "globals curve stage3");
 
             Debug.Log("[Nyangbingo] DayLight regression tests passed.");
         }
@@ -54,10 +54,10 @@ public static class NyangbingoDayLightRegressionTests
         var brightness = ScriptableObject.CreateInstance<GlobalDefinition>();
         SetDefinitionFields(brightness, GlobalKeys.DayBrightnessByStage, curve, "curve");
 
-        var period = ScriptableObject.CreateInstance<GlobalDefinition>();
-        SetDefinitionFields(period, GlobalKeys.HeatStagePeriod, "10", "day");
+        var count = ScriptableObject.CreateInstance<GlobalDefinition>();
+        SetDefinitionFields(count, GlobalKeys.HeatStageCount, "3", "count");
 
-        return new GlobalSettings(new[] { brightness, period });
+        return new GlobalSettings(new[] { brightness, count });
     }
 
     private static void SetDefinitionFields(GlobalDefinition definition, string key, string value, string unit)

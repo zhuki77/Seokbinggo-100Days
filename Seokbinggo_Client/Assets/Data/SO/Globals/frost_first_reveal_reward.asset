@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: frost_first_reveal_reward
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: frost_first_reveal_reward
+  value: first_frost_claw
+  unit: item_id
+  note: "\uCCAB \uC11C\uB9AC \uAD11\uBB3C \uD655\uC815 \uC2DC 1\uD68C \uC9C0\uAE09(\uAE30\uBBF9
+    \uBB34\uAE30 \uD6C5) \u2014 \uAC1C\uBC1C \uC2E4\uBB3C \uADF8\uB300\uB85C"

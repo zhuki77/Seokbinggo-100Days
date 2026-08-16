@@ -15,5 +15,6 @@ MonoBehaviour:
   key: resident_min_between_distance
   value: 12
   unit: tile
-  note: "v34.1 \uC5B4\uB451\uC2DC\uB2C8\uC640 \uAC15\uCCA0\uC774 \uC0DD\uC131 \uC9C0\uC810
-    \uC0AC\uC774\uC758 \uCD5C\uC18C \uAC70\uB9AC"
+  note: "\uC815\uC608 resident 2\uC885(\uAC15\uCCA0\uC774\xB7\uC5B4\uB451\uC2DC\uB2C8)
+    \uC0C1\uD638 \uCD5C\uC18C \uAC70\uB9AC \u2014 \uC2EC\uCE35 \uD611\uACF5 \uBC29\uC9C0.
+    v34.1"

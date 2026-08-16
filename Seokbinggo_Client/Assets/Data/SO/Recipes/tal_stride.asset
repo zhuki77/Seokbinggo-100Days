@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: tal_stride
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: tal_stride
+  station: 1
+  ingredients:
+  - item: {fileID: 11400000, guid: d0cbb55eb184479478a337cef0a50eb8, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: d821cf6376d84ed44bb84d57fac7b553, type: 2}
+    amount: 2
+  output:
+    item: {fileID: 11400000, guid: dcbf44d87399e8146a0ce82db0ea6ee5, type: 2}
+    amount: 1
+  durationSeconds: 0
+  type: 15
+  mvpScope: 1
+  note: "\uC774\uB3D9 \uC18D\uB3C4 +50% \xB7 60\uCD08"

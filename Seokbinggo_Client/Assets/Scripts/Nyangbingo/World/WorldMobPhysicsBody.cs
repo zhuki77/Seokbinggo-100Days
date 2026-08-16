@@ -926,6 +926,8 @@ namespace Nyangbingo.World
             {
                 case BossKind.Imugi:
                 case BossKind.Gangcheori:
+                case BossKind.GangcheolBlaze:
+                case BossKind.GangcheolPerfect:
                     return WorldMobLocomotion.Flying;
                 default:
                     return WorldMobLocomotion.Grounded;

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: bed_enabled
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: bed_enabled
+  value: 1
+  unit: bool
+  note: "\uCE68\uB300(\uC2DC\uAC04 \uC2A4\uD0B5) \uC2E0\uC124 \u2014 v72 \uC624\uB108
+    \uC9C0\uC2DC. \uAD6C \uC815\uBCF8 \uC2DC\uAC04 \uC2A4\uD0B5 \uC5C6\uC74C(\uC758\uB3C4)\"\uC740
+    \uD3D0\uAE30. \uC2E0\uADDC \uC544\uC774\uD15C 0: \uAE30\uC874 \uBCF4\uAE08\uC790\uB9AC
+    nest_bed\uAC00 \uACB8\uD55C\uB2E4\""

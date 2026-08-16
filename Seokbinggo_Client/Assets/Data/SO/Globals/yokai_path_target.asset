@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: yokai_path_target
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: yokai_path_target
+  value: ice_core
+  unit: rule
+  note: "\U0001F517 **\uAC1C\uC5F0\uC131 \u2461** \u2014 \uC694\uAD34 \uACBD\uB85C
+    \uBAA9\uD45C\uB97C **\uC5BC\uC74C \uC800\uC7A5\uACE0(\uCF54\uC5B4)**\uB85C \uACE0\uC815\uD55C\uB2E4.
+    \uBCBD\uC740 *\uAC00\uB294 \uAE38\uC5D0 \uC788\uC5B4\uC11C* \uBD80\uC21C\uB2E4.
+    \u26A0\uFE0F \uAD6C \uC815\uBCF8\uC740 \uC694\uAD34\uAC00 **\uBCBD \uACF5\uACA9\uD615**\uC774\uB77C
+    \uD654\uBA74\uC0C1 '\uC9D1\uC744 \uBD80\uC21C\uB2E4'\uB85C\uB9CC \uC77D\uD614\uB2E4
+    \u2014 GDD 2\uC7A5\uC774 '\uAC00\uC7A5 \uADC0\uD55C \uBCF4\uBB3C\uC740 \uB0C9\uAE30\uAC00
+    \uB418\uC5C8\uB2E4. \uADF8\uB798\uC11C \uBC24\uB9C8\uB2E4 \uC11D\uBE59\uACE0\uB85C
+    \uBAB0\uB824\uB4E0\uB2E4'\uACE0 \uC801\uC5B4\uB1A8\uB294\uB370 **\uD654\uBA74\uC5D0
+    \uADF8 \uB3D9\uAE30\uAC00 0**\uC774\uC5C8\uB2E4. \uCF54\uC5B4\uB97C \uD5A5\uD574
+    \uC9C1\uC9C4\uD558\uBA74 '\uC800\uAC83\uB4E4\uC774 \uB0C9\uAE30\uB97C \uB178\uB9B0\uB2E4'\uAC00
+    **\uADDC\uCE59\uB9CC\uC73C\uB85C** \uC804\uB2EC\uB41C\uB2E4. **\uBC38\uB7F0\uC2A4
+    \uBD88\uBCC0** \u2014 \uBCBD DPS(6-9)\xB7\uBCBD HP\uB294 \uADF8\uB300\uB85C\uACE0
+    \uACBD\uB85C\uB9CC \uBC14\uB010\uB2E4. \uCF54\uC5B4 \uBBF8\uAC74\uC124 \uC2DC\uC5D4
+    \uAE30\uC874\uB300\uB85C \uCD5C\uADFC\uC811 \uBCBD"

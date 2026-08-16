@@ -39,7 +39,6 @@ MonoBehaviour:
   oreVeins:
   - elementType: stone
     layer: 1
-    hardness: 1
     frequencyPer100Tiles: 25
     minClusterSize: 4
     maxClusterSize: 8
@@ -47,7 +46,6 @@ MonoBehaviour:
     depthMax: 45
   - elementType: coal
     layer: 1
-    hardness: 1
     frequencyPer100Tiles: 8
     minClusterSize: 3
     maxClusterSize: 6
@@ -55,15 +53,20 @@ MonoBehaviour:
     depthMax: 45
   - elementType: clay
     layer: 1
-    hardness: 1
     frequencyPer100Tiles: 10
+    minClusterSize: 3
+    maxClusterSize: 6
+    depthMin: 1
+    depthMax: 45
+  - elementType: oyster_mushroom
+    layer: 1
+    frequencyPer100Tiles: 7
     minClusterSize: 3
     maxClusterSize: 6
     depthMin: 1
     depthMax: 45
   - elementType: iron_ore
     layer: 2
-    hardness: 2
     frequencyPer100Tiles: 18
     minClusterSize: 3
     maxClusterSize: 6
@@ -71,7 +74,6 @@ MonoBehaviour:
     depthMax: 90
   - elementType: copper_ore
     layer: 2
-    hardness: 2
     frequencyPer100Tiles: 12
     minClusterSize: 3
     maxClusterSize: 6
@@ -79,15 +81,20 @@ MonoBehaviour:
     depthMax: 90
   - elementType: ice_shard
     layer: 2
-    hardness: 2
     frequencyPer100Tiles: 10
+    minClusterSize: 3
+    maxClusterSize: 6
+    depthMin: 46
+    depthMax: 90
+  - elementType: shiitake
+    layer: 2
+    frequencyPer100Tiles: 5
     minClusterSize: 3
     maxClusterSize: 6
     depthMin: 46
     depthMax: 90
   - elementType: icesteel_ore
     layer: 3
-    hardness: 3
     frequencyPer100Tiles: 12
     minClusterSize: 3
     maxClusterSize: 6
@@ -95,8 +102,14 @@ MonoBehaviour:
     depthMax: 135
   - elementType: frost_essence
     layer: 3
-    hardness: 3
     frequencyPer100Tiles: 4
+    minClusterSize: 3
+    maxClusterSize: 6
+    depthMin: 91
+    depthMax: 135
+  - elementType: seogi
+    layer: 3
+    frequencyPer100Tiles: 3
     minClusterSize: 3
     maxClusterSize: 6
     depthMin: 91
@@ -114,10 +127,10 @@ MonoBehaviour:
   altarHardness: 3
   iceLakeWidth: 6
   iceLakeHeight: 3
-  chestCountRuins: 0
-  chestCountUpper: 0
-  chestCountMiddle: 0
-  chestCountDeep: 0
+  chestCountRuins: 4
+  chestCountUpper: 6
+  chestCountMiddle: 6
+  chestCountDeep: 4
   chestPerCavernMin: 0
   chestPerCavernMax: 2
   chestIdPrefix: chest_

@@ -47,7 +47,7 @@ namespace Nyangbingo.Combat
             frostSlowDuration = 0f;
             range = profile.RangeTiles;
             arcDegrees = profile.ArcDegrees;
-            damage = profile.AttackDamage;
+            damage = Mathf.Max(1, Mathf.RoundToInt(profile.AttackDamage));
             knockback = profile.KnockbackTiles;
             return true;
         }
@@ -91,7 +91,7 @@ namespace Nyangbingo.Combat
             }
             else if (combatProfile != null)
             {
-                activeDamage = Mathf.Max(1, combatProfile.AttackDamage);
+                activeDamage = Mathf.Max(1, Mathf.RoundToInt(combatProfile.AttackDamage));
                 if (!float.IsNaN(combatProfile.KnockbackTiles) && !float.IsInfinity(combatProfile.KnockbackTiles))
                     activeKnockback = Mathf.Max(0f, combatProfile.KnockbackTiles);
             }
@@ -145,7 +145,7 @@ namespace Nyangbingo.Combat
                             frostSlowFraction, frostSlowDuration);
                 }
                 health.TryApplyKnockback(toTarget.normalized * activeKnockback);
-                if (combatProfile != null && !combatProfile.MultiTarget) break;
+                if (combatProfile != null && LastHitCount >= combatProfile.MaxTargets) break;
             }
             LastHitCount = damagedTargets.Count;
         }

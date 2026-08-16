@@ -234,7 +234,7 @@ namespace Nyangbingo.UI
                 var presentation = mainCamera.GetComponent<MainGamePresentationController>() ??
                                    mainCamera.gameObject.AddComponent<MainGamePresentationController>();
                 presentation.ConfigureForRuntime(bootstrap.TimeService,
-                    mainCamera.GetComponent<MainGameParallaxBackground>());
+                    mainCamera.GetComponent<MainGameParallaxBackground>(), runtimeServices.HeatStage);
             }
             var craftingUi = GetComponent<MainGameCraftingUiController>() ??
                               gameObject.AddComponent<MainGameCraftingUiController>();
@@ -893,8 +893,19 @@ namespace Nyangbingo.UI
                 return;
             }
 
-            var cooling = Mathf.Clamp01(runtimeServices.PlayerTemperature.EffectiveCoolingPercent / 100f);
-            var index = Mathf.RoundToInt((1f - cooling) * (frames.Count - 1));
+            var roomService = runtimeServices?.RoomTemperature;
+            if (roomService == null || playerController == null)
+            {
+                temperatureArt.enabled = false;
+                return;
+            }
+            var celsius = roomService.Resolve(playerController.transform.position);
+            var band = RoomTempPresentation.ResolveBand(
+                celsius, roomService.ColdEnterCelsius, roomService.FrozenEnterCelsius);
+            var normalizedBand = band == RoomTempPresentation.Band.Frozen
+                ? 1f
+                : band == RoomTempPresentation.Band.Chilled ? .5f : 0f;
+            var index = Mathf.RoundToInt(normalizedBand * (frames.Count - 1));
             temperatureArt.sprite = frames[Mathf.Clamp(index, 0, frames.Count - 1)];
             temperatureArt.enabled = temperatureArt.sprite != null;
         }
@@ -1037,10 +1048,7 @@ namespace Nyangbingo.UI
 
         private int ResolveDisplayedHeatStage()
         {
-            var curve = bootstrap?.TimeService?.CurrentDayCurve;
-            if (curve != null) return Mathf.Clamp(curve.HeatStage, 1, HeatStagePresentation.StageCount);
-            var day = bootstrap?.TimeService != null ? bootstrap.TimeService.Day : 1;
-            return HeatStagePresentation.ResolveForDay(day);
+            return runtimeServices?.HeatStage?.Current ?? 1;
         }
 
         public static int ResolveDayNightClockFrameIndex(float timeOfDaySeconds,

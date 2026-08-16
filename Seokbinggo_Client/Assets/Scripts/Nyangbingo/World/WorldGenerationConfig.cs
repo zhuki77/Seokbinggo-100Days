@@ -66,14 +66,17 @@ namespace Nyangbingo.World
         private OreVeinProfile[] oreVeins =
         {
             // 상층 돌은 노이즈 필이 아니라 광맥 클러스터로만 배치(지표 ban depth 아래).
-            new OreVeinProfile { elementType = WorldTileTypes.Stone, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 25f, minClusterSize = 4, maxClusterSize = 8, depthMin = 1, depthMax = 45 },
-            new OreVeinProfile { elementType = WorldTileTypes.Coal, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 8f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
-            new OreVeinProfile { elementType = WorldTileTypes.Clay, layer = WorldLayer.Upper, hardness = 1, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
-            new OreVeinProfile { elementType = WorldTileTypes.IronOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 18f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
-            new OreVeinProfile { elementType = WorldTileTypes.CopperOre, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
-            new OreVeinProfile { elementType = WorldTileTypes.IceShard, layer = WorldLayer.Middle, hardness = 2, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
-            new OreVeinProfile { elementType = WorldTileTypes.IceSteelOre, layer = WorldLayer.Deep, hardness = 3, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 },
-            new OreVeinProfile { elementType = WorldTileTypes.FrostEssence, layer = WorldLayer.Deep, hardness = 3, frequencyPer100Tiles = 4f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 }
+            new OreVeinProfile { elementType = WorldTileTypes.Stone, layer = WorldLayer.Upper, frequencyPer100Tiles = 25f, minClusterSize = 4, maxClusterSize = 8, depthMin = 1, depthMax = 45 },
+            new OreVeinProfile { elementType = WorldTileTypes.Coal, layer = WorldLayer.Upper, frequencyPer100Tiles = 8f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
+            new OreVeinProfile { elementType = WorldTileTypes.Clay, layer = WorldLayer.Upper, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
+            new OreVeinProfile { elementType = WorldTileTypes.OysterMushroom, layer = WorldLayer.Upper, frequencyPer100Tiles = 7f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
+            new OreVeinProfile { elementType = WorldTileTypes.IronOre, layer = WorldLayer.Middle, frequencyPer100Tiles = 18f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.CopperOre, layer = WorldLayer.Middle, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.IceShard, layer = WorldLayer.Middle, frequencyPer100Tiles = 10f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.Shiitake, layer = WorldLayer.Middle, frequencyPer100Tiles = 5f, minClusterSize = 3, maxClusterSize = 6, depthMin = 46, depthMax = 90 },
+            new OreVeinProfile { elementType = WorldTileTypes.IceSteelOre, layer = WorldLayer.Deep, frequencyPer100Tiles = 12f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 },
+            new OreVeinProfile { elementType = WorldTileTypes.FrostEssence, layer = WorldLayer.Deep, frequencyPer100Tiles = 4f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 },
+            new OreVeinProfile { elementType = WorldTileTypes.Seogi, layer = WorldLayer.Deep, frequencyPer100Tiles = 3f, minClusterSize = 3, maxClusterSize = 6, depthMin = 91, depthMax = 135 }
         };
 
         [Header("구조물 — Pass 4 : 반지하 알코브(스폰)")]

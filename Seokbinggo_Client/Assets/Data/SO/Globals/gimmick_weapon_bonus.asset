@@ -15,4 +15,6 @@ MonoBehaviour:
   key: gimmick_weapon_bonus
   value: 1.10
   unit: mult
-  note: "v38/v46 gimmick weapon DPS multiplier"
+  note: "\uAE30\uBBF9 \uBB34\uAE30 = \uADF8 \uC2DC\uC810 \uBB34\uAE30 \uB300\uBE44
+    +10%(\uC624\uB108 \uC2B9\uC778 2026-07-27). \uAC80\uC99D: \uD070 \uBC24 \uC5EC\uC720
+    \uBCC0\uD654 5%p \uBBF8\uB9CC"

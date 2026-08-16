@@ -1,0 +1,71 @@
+terrain_id,terrain_ko,yokai_id,yokai_ko,weight,implemented,note,terrain_resources,resource_count
+surface_line,지표선,club,방망이 도깨비,40,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+surface_line,지표선,bulgasari,불가사리,20,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+surface_line,지표선,yakwang,야광귀,20,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+surface_line,지표선,eoduksini,어둑시니,10,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+surface_line,지표선,gaekgwi,객귀,10,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+surface_line,지표선,gangcheol,강철이,0,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+surface_line,지표선,imugi,이무기,0,1,GDD 9-0b d=0 · 1D 펄린 ±6 · 가중치 합 100,wood|hemp_stalk,2
+ruins,폐허,club,방망이 도깨비,25,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+ruins,폐허,bulgasari,불가사리,10,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+ruins,폐허,yakwang,야광귀,50,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+ruins,폐허,eoduksini,어둑시니,0,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+ruins,폐허,gaekgwi,객귀,15,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+ruins,폐허,gangcheol,강철이,0,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+ruins,폐허,imugi,이무기,0,1,GDD 4-3 철근 획득처 · 상자 4개 · 가중치 합 100,rebar,1
+layer_upper,상층 T1,club,방망이 도깨비,60,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_upper,상층 T1,bulgasari,불가사리,40,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_upper,상층 T1,yakwang,야광귀,0,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_upper,상층 T1,eoduksini,어둑시니,0,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_upper,상층 T1,gaekgwi,객귀,0,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_upper,상층 T1,gangcheol,강철이,0,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_upper,상층 T1,imugi,이무기,0,1,GDD 9-0b d 1~45 · 가중치 합 100,dirt|stone|coal|clay|oyster_mushroom,5
+layer_mid,중층 T2,club,방망이 도깨비,25,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_mid,중층 T2,bulgasari,불가사리,50,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_mid,중층 T2,yakwang,야광귀,0,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_mid,중층 T2,eoduksini,어둑시니,25,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_mid,중층 T2,gaekgwi,객귀,0,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_mid,중층 T2,gangcheol,강철이,0,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_mid,중층 T2,imugi,이무기,0,1,GDD 9-0b d 46~90 · 가중치 합 100,iron_ore|copper_ore|ice_shard|shiitake,4
+layer_deep,심층 T3,club,방망이 도깨비,0,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+layer_deep,심층 T3,bulgasari,불가사리,15,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+layer_deep,심층 T3,yakwang,야광귀,0,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+layer_deep,심층 T3,eoduksini,어둑시니,55,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+layer_deep,심층 T3,gaekgwi,객귀,0,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+layer_deep,심층 T3,gangcheol,강철이,30,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+layer_deep,심층 T3,imugi,이무기,0,1,GDD 9-0b d 91~135 · 가중치 합 100,icesteel_ore|frost_essence|seogi,3
+ice_lake,얼음 호수,club,방망이 도깨비,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+ice_lake,얼음 호수,bulgasari,불가사리,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+ice_lake,얼음 호수,yakwang,야광귀,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+ice_lake,얼음 호수,eoduksini,어둑시니,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+ice_lake,얼음 호수,gaekgwi,객귀,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+ice_lake,얼음 호수,gangcheol,강철이,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+ice_lake,얼음 호수,imugi,이무기,0,0,GDD 6-9 이무기 아레나(v63 지상 이설) · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+woods,나무 지대,club,방망이 도깨비,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+woods,나무 지대,bulgasari,불가사리,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+woods,나무 지대,yakwang,야광귀,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+woods,나무 지대,eoduksini,어둑시니,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+woods,나무 지대,gaekgwi,객귀,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+woods,나무 지대,gangcheol,강철이,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+woods,나무 지대,imugi,이무기,0,0,GDD 4-3 나무 8/100타일 · tree_decay · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),wood,1
+altar,보스 제단,club,방망이 도깨비,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+altar,보스 제단,bulgasari,불가사리,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+altar,보스 제단,yakwang,야광귀,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+altar,보스 제단,eoduksini,어둑시니,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+altar,보스 제단,gaekgwi,객귀,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+altar,보스 제단,gangcheol,강철이,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+altar,보스 제단,imugi,이무기,0,0,zones.csv altar_id 10개 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,club,방망이 도깨비,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,bulgasari,불가사리,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,yakwang,야광귀,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,eoduksini,어둑시니,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,gaekgwi,객귀,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,gangcheol,강철이,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+mineshaft,채굴 갱도,imugi,이무기,0,0,GDD 4-7 밀폐 화이트리스트 '갱도' · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,club,방망이 도깨비,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,bulgasari,불가사리,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,yakwang,야광귀,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,eoduksini,어둑시니,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,gaekgwi,객귀,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,gangcheol,강철이,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0
+base_inside,석빙고 내부,imugi,이무기,0,0,GDD 4-7 flood-fill 밀폐 구역 · 🔜 미구현 — 가중치 0으로 깔아둠(값만 채우면 열린다),,0

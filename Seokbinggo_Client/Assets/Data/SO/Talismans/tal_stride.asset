@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27db6f288038a534aaf3c090fb3f8a77, type: 3}
+  m_Name: tal_stride
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TalismanDefinition
+  id: tal_stride
+  displayName: "\uCD95\uC9C0\uBD80"
+  form: "\uC18C\uBAA8\uD488"
+  stationId: workbench
+  materials:
+  - itemId: hemp_stalk
+    amount: 2
+  - itemId: wood
+    amount: 2
+  effect: "\uC774\uB3D9 \uC18D\uB3C4 +50% \xB7 60\uCD08"
+  rationale: "\uC624\uB108 '\uC774\uB3D9 \uAC70\uB9AC\uB97C \uC904\uC774\uB294' \u2014
+    3.0 \u2192 4.5\uD0C0\uC77C/\uCD08"
+  note: "\u26A0\uFE0F \uC57C\uAD11\uADC0 \uC774\uC18D 3.5\uB97C \uB118\uB294\uB2E4
+    \u2014 \uC9C0\uC18D \uC911\uC5D4 \uC808\uB3C4 \uB3C4\uC8FC\uB97C \uB530\uB77C\uC7A1\uB294\uB2E4(6-7
+    \uCCB4 \uCE74\uC6B4\uD130\uC758 \uC0C1\uC704 \uB300\uCCB4 \uC544\uB2D8, \uC18C\uBAA8\uD488
+    1\uD68C)"

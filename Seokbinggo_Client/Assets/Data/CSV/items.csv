@@ -1,4 +1,4 @@
-id,name_ko,category,max_stack,mvp_scope,note
+﻿id,name_ko,category,max_stack,mvp_scope,note
 wood,나무,resource,99,A,지상(밤) 채집
 hemp_stalk,삼줄기,resource,99,A,지상(밤) 채집
 rebar,철근,resource,99,A,지상 폐허(밤) — 차열 지붕 반복 소비
@@ -39,7 +39,7 @@ ice_anvil,얼음 모루,station,99,A,T3 제작대
 lantern,등불,placeable,99,A,반경 6타일 — 어둑시니 카운터. 연료 석탄
 sieve,체,placeable,99,A,반경 4타일 — 야광귀 카운터
 haetae_statue,해태 석상,placeable,99,A,반경 8타일 화염 -50%
-nest_bed,보금자리,placeable,99,A,리스폰 지점(4-8) — 냥잠은 v31.1 폐지
+nest_bed,보금자리,placeable,99,A,리스폰 지점(4-8) + **침대(밤↔낮 스킵) 겸용**(v72 4-10b) — 온난에서만 잘 수 있다
 magpie_nest,까치 둥지,placeable,99,A,까치 벗 입주 (v6) — 맵당 1개 제한(globals magpie_nest_limit)
 bell_rope,방울 금줄,placeable,99,A,경보 반경 10타일 (v11)
 iron_bell_rope,쇠 방울 금줄,placeable,99,A,방울 금줄 진화 — 원본 소모 (v12)
@@ -50,13 +50,6 @@ door,단열 문,placeable,99,A,모듈 P0 — 통행+밀폐 인정. modules.csv �
 roof,차열 지붕,placeable,99,A,모듈 P0 — 상부 밀폐. modules.csv 기존 id 승계
 jangdok,장독 창고,placeable,99,A,모듈 P1 — 보관함 40슬롯(v29). modules.csv 기존 id 승계
 ice_core,얼음 저장고,placeable,99,A,모듈 P0 — 체온 회복 거점. modules.csv 기존 id 승계. ⚠️ 한파 코어(cold_wave_core)와 다른 물건
-seokbinggo_s1,석빙고 1단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s1. kit 오면 덮어쓰기
-seokbinggo_s2,석빙고 2단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s2. kit 오면 덮어쓰기
-seokbinggo_s3,석빙고 3단계,material,99,A,석빙고 승급 모듈(비설치)·데모 승리선. kit 오면 덮어쓰기
-seokbinggo_s4,석빙고 4단계,material,99,A,석빙고 승급·대장간 해금 — yokai_tear 160(v46). kit 오면 덮어쓰기
-seokbinggo_s5,석빙고 5단계,material,99,A,석빙고 승급 — yokai_tear 320(v46). kit 오면 덮어쓰기
-seokbinggo_s6,석빙고 6단계,material,99,A,석빙고 승급 — yokai_tear 560(v46). kit 오면 덮어쓰기
-smithy,대장간,placeable,99,A,T4~T6 진화 제작대 — globals evolution_bench_t456. 석빙고 4단계 해금
 iron_insul_wall,무쇠 차열벽,placeable,99,A,HP900 — 불가사리 면역
 cold_device,냉기 장치,placeable,99,A,요괴 눈물 주 소비처(x40)
 dokkaebi_fire_tower,도깨비불 등탑,placeable,99,A,터렛 DPS10 유도·반경 8타일(v30 동배율 — 6-9 정본)
@@ -92,3 +85,86 @@ ice_heart_norigae,얼음 심장 노리개,equipment,1,A,낮 체온 상승 -15% �
 bokjumeoni,복주머니,equipment,1,A,채굴 크리티컬 +10%p — 상자 전용
 dokkaebi_gamtu,도깨비 감투,equipment,1,A,야광귀 인벤 절도 무효 — 상자 전용
 wallpaper,벽지,placeable,99,A,플레이어가 바르는 배경 벽지(v26) — 밀폐 구역 빈 칸을 100% 덮으면 그 구역 냉기원 지속시간 +25%. 1회 제작 16장 산출(crafting-tree output_count). 지하 자연 배경벽(t_bg_*)은 이미 덮인 것으로 계수한다
+smithy,대장간,station,99,A,T4~T6 진화 전용 제작대 (v39 신설·오너 승인 2026-07-27) — 석빙고 ④단계 해금. 원본 무기 + 보스 재료 + 티어 광물 → 상위 티어 장비(원본 소모). 작업대T1·화로T2·얼음 모루T3에 이은 네 번째 제작대
+seonge_helm,성에 투구,armor,1,B,T4 갑옷 방어 4 (v40 진화 트리) — 대장간 · 원본 소모 진화
+seonge_armor,성에 갑옷,armor,1,B,T4 갑옷 방어 5 (v40 진화 트리) — 대장간 · 원본 소모 진화
+seonge_boots,성에 신발,armor,1,B,T4 갑옷 방어 4 (v40 진화 트리) — 대장간 · 원본 소모 진화
+ice_root_helm,얼음뿌리 투구,armor,1,B,T5 갑옷 방어 5 (v40 진화 트리) — 대장간 · 원본 소모 진화
+ice_root_armor,얼음뿌리 갑옷,armor,1,B,T5 갑옷 방어 6 (v40 진화 트리) — 대장간 · 원본 소모 진화
+ice_root_boots,얼음뿌리 신발,armor,1,B,T5 갑옷 방어 5 (v40 진화 트리) — 대장간 · 원본 소모 진화
+cold_wave_helm,한파 투구,armor,1,B,T6 갑옷 방어 6 (v40 진화 트리) — 대장간 · 원본 소모 진화
+cold_wave_armor,한파 갑옷,armor,1,B,T6 갑옷 방어 8 (v40 진화 트리) — 대장간 · 원본 소모 진화
+cold_wave_boots,한파 신발,armor,1,B,T6 갑옷 방어 5 (v40 진화 트리) — 대장간 · 원본 소모 진화
+straw_sling,짚 투석기,weapon,1,B,활 계열 T1 원본 — 정지 사격 입문·탄약=돌 (v39)
+gakgung,각궁,weapon,1,B,활 계열 T2 1단 진화 — 정지 사격·탄약 소비 (v35/v39)
+singijeon_sondae,신기전 손대,weapon,1,B,활 계열 T3 2단 진화 — 관통 3체·DPS 28 (v39 오너 승인 2026-07-27)
+seonge_gakgung,성에 각궁,weapon,1,B,활 T4 원본 — 명중 시 서리(감속 태그 재사용)
+ice_root_bow,도관 노,weapon,1,B,활 T5 1단 진화 — 냉기 도관 위 장전 가속
+cold_wave_singijeon,한파 신기전,weapon,1,B,활 T6 2단 진화 — 관통 5체·영노의 탈 필요
+seonge_fan,서리 부채,weapon,1,B,선 T3 2단 진화 — 밀친 대상 착지 지점에 서리
+ice_root_whipfan,얼음뿌리 채찍선,weapon,1,B,선 T5 1단 진화 — 사거리 4·끌어당김(밀치기 반전)
+cold_wave_fan,한파 부채,weapon,1,B,선 T6 2단 진화 — 부채꼴 광역 넉백
+sangun_claw,산군 발톱,weapon,1,B,발톱 T5 1단 진화 — 3연격·마지막 타 넉백
+perfect_claw,완전체 발톱,weapon,1,B,발톱 T6 2단 진화 — 할퀴기 광역화
+seonge_tower,성에 등탑,placeable,99,B,터렛 T4 1단 진화 — 명중 시 감속 누적·지귀의 잉걸 필요
+cold_wave_tower,한파 등탑,placeable,99,B,터렛 T6 2단 진화 — 유도 2발/초·업의 비늘 필요
+ice_root_battery,도관 포대,placeable,99,B,터렛 T5 1단 진화 — 도관 연결 시 연료 무소모
+cold_wave_battery,한파 포대,placeable,99,B,터렛 T6 2단 진화 — 부채꼴 광역
+scarecrow,허수아비,placeable,99,B,유틸 터렛 — 어그로 12초 고정(체 정지 로직 재사용)·DPS 0
+ice_trap,얼음 함정,placeable,99,B,유틸 터렛 — 밟으면 정지(체 정지 로직 재사용)·DPS 0
+arrow_supply,화살 보급대,placeable,99,B,유틸 터렛 — 활 계열 탄약 자동 보급(등불 연료 슬롯 재사용)·DPS 0
+plaster_doll,미장이 인형,placeable,99,B,유틸 터렛 — 벽 자동 수리·DPS 0
+gong_tower,징 울림대,placeable,99,B,유틸 터렛 — 소리로 스폰 유인(방울 금줄 경보 반경 재사용)·DPS 0
+first_frost_claw,첫서리 발톱,weapon,1,B,기믹 무기 — 1일차 밤 피격 0. 그 시점 무기 +10%(오너 승인 2026-07-27)
+baekjung_bundle,백중 보따리,weapon,1,B,기믹 무기 — 백중날 웨이브 12마리 전멸. 그 시점 무기 +10%
+yeouiju_claw,여의주 발톱,weapon,1,B,기믹 무기 — 이무기를 넉백 없이 격퇴. 그 시점 무기 +10%
+jigwi_ash,지귀의 재,weapon,1,B,기믹 무기 — 지귀전 달군 바닥 무접촉 격퇴. 그 시점 무기 +10%
+sangun_whisker,산군의 수염,weapon,1,B,기믹 무기 — 산군에게 도망치지 않고 격퇴. 그 시점 무기 +10%
+yeongno_tooth,영노의 이빨,weapon,1,B,기믹 무기 — 영노에게 삼켜지지 않고 격퇴. 그 시점 무기 +10%
+seonge_ore,성에 광석,resource,99,B,T4 원석 — 심층 벽 치환(서리 확산 1차 봉헌)
+seonge_ingot,성에 주괴,material,99,B,T4 주괴 — 얼음 모루·성에 광석×2
+ice_root,얼음뿌리,resource,99,B,T5 원석 — 중층 하단~심층 치환(2차 봉헌)
+ice_root_bundle,얼음뿌리 다발,material,99,B,T5 가공 — 얼음 모루·얼음뿌리×3
+cold_wave_ore,한파석,resource,99,B,T6 원석 — 경계암 136~140(3차 봉헌)
+cold_wave_ingot,한파석 주괴,material,99,B,T6 주괴 — 얼음 모루·한파석×2+서리정수×1
+jigwi_ember_mat,지귀의 잉걸,material,99,B,보스 재료 — 성에 등탑 유일 재료
+blaze_yeokrin,불볕 역린,material,99,B,보스 재료 — 한파 코어 2호기 유일 재료
+sangun_talon,산군의 발톱,material,99,B,보스 재료 — 산군 발톱(T5) 유일 재료
+three_horn_mat,세 갈래 뿔,material,99,B,보스 재료 — 도관 포대 유일 재료
+eop_scale_mat,업의 비늘,material,99,B,보스 재료 — 한파 등탑·한파 코어 3호기 유일 재료
+yeongno_mask_mat,영노의 탈,material,99,B,보스 재료 — 한파 신기전 유일 재료
+perfect_heart,완전체 심장,material,99,B,보스 재료 — 완전체 발톱(T6) 유일 재료
+ssireum_knot,씨름 샅바 매듭,equipment,1,B,아티팩트(v37) — 보스:도깨비 대장 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+iron_appetite,무쇠 식성,equipment,1,B,아티팩트(v37) — 보스:어미 불가사리 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+yeouiju_shard,여의주 파편,equipment,1,B,아티팩트(v37) — 보스:이무기 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+jigwi_ember,지귀의 잉걸(아티팩트),equipment,1,B,아티팩트(v37) — 보스:지귀 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+drought_heart_shard,가뭄 심장 조각,equipment,1,B,아티팩트(v37) — 보스:불볕 강철이 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+tiger_gait,산군 걸음,equipment,1,B,아티팩트(v37) — 보스:산군 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+three_horn,세 갈래 뿔(아티팩트),equipment,1,B,아티팩트(v37) — 보스:삼두구미 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+eop_scale,업의 비늘(아티팩트),equipment,1,B,아티팩트(v37) — 보스:업구렁이 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+yeongno_mask,영노의 탈(아티팩트),equipment,1,B,아티팩트(v37) — 보스:영노 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+perfect_core,완전체 핵,equipment,1,B,아티팩트(v37) — 보스:강철이 완전체 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+clay_hand,옹기장이 손,equipment,1,B,아티팩트(v37) — 랜드마크:무너진 옹기굴 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+skate_pad,살얼음 발판,equipment,1,B,아티팩트(v37) — 랜드마크:얼음 실개천 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+magpie_bell,까치 방울,equipment,1,B,아티팩트(v37) — 랜드마크:뿌리 굴 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+old_key,옛 열쇠,equipment,1,B,아티팩트(v37) — 랜드마크:낡은 석빙고 기지 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+minhwa_ink,민화 먹,equipment,1,B,아티팩트(v37) — 랜드마크:민화 도깨비 상징석 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+vault_seal,창고 봉인,equipment,1,B,아티팩트(v37) — 랜드마크:얼음 창고 유적 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+gate_mark,빙암 표식,equipment,1,B,아티팩트(v37) — 랜드마크:빙암 문 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+dry_trace,마른 궤적,equipment,1,B,아티팩트(v37) — 랜드마크:강철이 굴 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+altar_echo,제단 메아리,equipment,1,B,아티팩트(v37) — 랜드마크:얼음 호수·제단 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+frost_map,서리 지도,equipment,1,B,아티팩트(v37) — 랜드마크:서리 무늬 벽 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+jigwi_summon,불씨 항아리,summon,99,B,지귀 소환 — 대장간·성에 주괴2+석탄20+눈물20
+samdugumi_summon,세 갈래 매듭,summon,99,B,삼두구미 소환 — 대장간·얼음뿌리 다발3+눈물24
+eop_summon,업단지,summon,99,B,업구렁이 소환 — 대장간·한파석 주괴2+눈물26
+jukbuin,죽부인,placeable,99,A,보금자리 반경 2타일 내 설치 시 자연 재생(HP) ×1.5 — jukbuin_regen_mult (v41 승격)
+daebal,대발,placeable,99,A,반경 4타일 낮 화염 -25% — daebal_flame_cut·daebal_radius. 해태 석상(8타일·-50%)의 저가 약화판 (v41 승격)
+oyster_mushroom,느타리,material,99,A,[가안] 지하 자생 버섯 — 회복 HP+15 · 냉장 보관. 오너 지시 '테라리아 버섯 같은 회복 아이템'
+shiitake,표고,material,99,A,[가안] 지하 자생 버섯 — 회복 HP+30 · 냉장 보관. 오너 지시 '테라리아 버섯 같은 회복 아이템'
+seogi,석이(石茸),material,99,A,[가안] 지하 자생 버섯 — 회복 HP+50 · 냉장 보관 · 최희소. 오너 지시 '테라리아 버섯 같은 회복 아이템'
+seokbinggo_s1,석빙고 1단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s1. kit 오면 덮어쓰기
+seokbinggo_s2,석빙고 2단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s2. kit 오면 덮어쓰기
+seokbinggo_s3,석빙고 3단계,material,99,A,석빙고 승급 모듈(비설치)·데모 승리선. kit 오면 덮어쓰기
+seokbinggo_s4,석빙고 4단계,material,99,A,석빙고 승급·대장간 해금 — yokai_tear 160(v46). kit 오면 덮어쓰기
+seokbinggo_s5,석빙고 5단계,material,99,A,석빙고 승급 — yokai_tear 320(v46). kit 오면 덮어쓰기
+seokbinggo_s6,석빙고 6단계,material,99,A,석빙고 승급 — yokai_tear 560(v46). kit 오면 덮어쓰기

@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: storage_band_frozen
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: storage_band_frozen
+  value: -10
+  unit: "\uB3C4"
+  note: "\U0001F9CA \uBE59\uACB0 \u2014 **\uC5BC\uC74C \uC870\uAC01\xB7\uC0B4\uC5BC\uC74C**.
+    \uC774 \uC704\uBA74 **\uB179\uC544 \uC0AC\uB77C\uC9C4\uB2E4**"

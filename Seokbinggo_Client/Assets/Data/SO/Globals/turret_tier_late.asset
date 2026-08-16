@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: turret_tier_late
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: turret_tier_late
+  value: singijeon_cart|seonge_tower|cold_wave_tower
+  unit: item_id
+  note: "\uADF9\uD6C4\uBC18 \uD130\uB81B 3\uC885 \u2014 \uC804\uBD80 \uB300\uC7A5\uAC04(\uC11D\uBE59\uACE0
+    4\uB2E8 \uD574\uAE08). '\uB9CC\uB4E4\uAE30 \uC5B4\uB824\uC6B4 \uAC78\uB85C'(\uC624\uB108)"

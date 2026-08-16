@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: daebal
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: daebal
+  station: 1
+  ingredients:
+  - item: {fileID: 11400000, guid: d0cbb55eb184479478a337cef0a50eb8, type: 2}
+    amount: 3
+  - item: {fileID: 11400000, guid: d821cf6376d84ed44bb84d57fac7b553, type: 2}
+    amount: 3
+  output:
+    item: {fileID: 11400000, guid: 471892838f9a66f46998aa76484d1b33, type: 2}
+    amount: 1
+  durationSeconds: 10
+  type: 10
+  mvpScope: 1
+  note: "\uBC18\uACBD 4\uD0C0\uC77C \uB0AE \uD654\uC5FC -25% \u2014 \uC7AC\uB8CC\uB294
+    GDD 6-15 \uD655\uC815\uD45C \xB7 \uC81C\uC791\uB300/\uC2DC\uAC04\uC740 \uBCF4\uAE08\uC790\uB9AC
+    \uC900\uC6A9 (v41)"

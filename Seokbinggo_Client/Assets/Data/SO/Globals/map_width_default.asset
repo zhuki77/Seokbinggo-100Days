@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: map_width_default
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: map_width_default
+  value: 600
+  unit: "\uD0C0\uC77C"
+  note: "\u2B06\uFE0F v64: \uC720\uB2C8\uD2F0 \uC2E4\uBB3C\uC774 400\u2192600\uC73C\uB85C
+    \uD655\uC7A5\uB3FC(8/11 \uCEE4\uBC0B e7fef4a) \uC815\uBCF8\uC744 \uC62C\uB838\uB2E4.
+    \uBE44\uC728 \uD0A4\uB294 \uC804\uBD80 \uBD88\uBCC0 \u2014 9-0c \uC2A4\uCF00\uC77C
+    \uC815\uCC45\uC774 \uAC12\uC744 \uD588\uB2E4"

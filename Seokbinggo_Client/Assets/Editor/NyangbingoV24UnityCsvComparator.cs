@@ -86,15 +86,12 @@ public static class NyangbingoV24UnityCsvComparator
         }),
         new CsvMapping("day-curve.csv", "day-curve.csv", new[] { "day" }, new[] { "day" }, new[]
         {
-            Field("heat_stage", "heat_stage", ValueKind.Number),
-            Field("day_fire_dmg_per_sec", "day_fire_dmg_per_sec", ValueKind.Number),
             Field("night_yokai_count", "night_yokai_count", ValueKind.Number),
             Field("yokai_wall_dmg", "yokai_wall_dmg", ValueKind.Number),
             Field("pace_seal_pct", "pace_seal_pct", ValueKind.Number),
             Field("pace_mineral_tier", "pace_mineral_tier", ValueKind.Number),
             Field("max_active", "max_active", ValueKind.Number),
             Field("spawn_composition", "spawn_composition", ValueKind.ItemPairs),
-            Field("spawn_mult", "spawn_mult", ValueKind.Number),
             Field("drop_mult", "drop_mult", ValueKind.Number),
             Field("event_id", "event_id", ValueKind.Text)
         }),
@@ -153,7 +150,12 @@ public static class NyangbingoV24UnityCsvComparator
                 Field("claw_t3_sec", "claw_t3_sec", ValueKind.Number),
                 Field("freq_per_100tiles", "freq_per_100tiles", ValueKind.Number),
                 Field("use_ko", "use_ko", ValueKind.Text),
-                Field("gate_ko", "gate_ko", ValueKind.Text)
+                Field("gate_ko", "gate_ko", ValueKind.Text),
+                Field("hardness", "hardness", ValueKind.Number),
+                Field("breakable_t1", "breakable_t1", ValueKind.Boolean),
+                Field("breakable_t2", "breakable_t2", ValueKind.Boolean),
+                Field("breakable_t3", "breakable_t3", ValueKind.Boolean),
+                Field("hardness_note", "hardness_note", ValueKind.Text)
             }),
         new CsvMapping("seal-whitelist.csv", "seal-whitelist.csv", new[] { "element" },
             new[] { "element" }, new[]

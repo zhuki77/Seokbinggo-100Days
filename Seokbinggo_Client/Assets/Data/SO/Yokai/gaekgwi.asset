@@ -39,4 +39,11 @@ MonoBehaviour:
   signatureCondition: 0
   spawnTracks: 1
   raidFleesAtDawn: 1
+  aggroRadius: 8
+  aggroNote: "\uBC29\uB9DD\uC774\uC640 \uB3D9\uAE09(\uC774\uC18D 2.0)"
+  bodyTiles: 3
+  usesArenaBody: 0
+  bodyNote: "HP 3240 \u2192 \uD1B5\uACFC\uC5D0 \uC138\uB85C 3\uCE78 \uAC1C\uAD6C\uBD80
+    \uD544\uC694. HP \uAD6C\uAC04(<500=1 / <2000=2 / \uADF8 \uC774\uC0C1=3)\uC5D0\uC11C
+    \uC720\uB3C4 \u2014 \uBC1C\uBA85 0"
   drops: []

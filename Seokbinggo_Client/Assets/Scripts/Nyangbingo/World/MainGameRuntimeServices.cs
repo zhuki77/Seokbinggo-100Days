@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Combat;
@@ -49,12 +50,17 @@ namespace Nyangbingo.World
         public SmeltingStation Furnace { get; private set; }
         public SmeltingStation Foundry { get; private set; }
         public PlayerTemperatureState PlayerTemperature { get; private set; }
+        public HeatStageService HeatStage { get; private set; }
+        public InvasionService Invasion { get; private set; }
         public RoomTempService RoomTemperature { get; private set; }
+        public BedService Bed { get; private set; }
         public PlayerHealthRecoveryService PlayerHealthRecovery { get; private set; }
-        public PlayerDayHeatDamageService PlayerDayHeatDamage { get; private set; }
+        public DayHeatDamageService DayHeatDamage { get; private set; }
         public MagpieCompanionRuntime MagpieCompanion { get; private set; }
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
+        public StorageTemperatureService StorageTemperature { get; private set; }
+        public TalismanRuntime Talismans { get; private set; }
         public SeokbinggoUpgradeService Seokbinggo { get; private set; }
         public FrostSpreadService FrostSpread { get; private set; }
         public GimmickWeaponProgress GimmickWeapons { get; private set; }
@@ -118,7 +124,8 @@ namespace Nyangbingo.World
                 inventorySlots,
                 MainGameCraftingUiController.InventoryHotbarSlotCount,
                 itemId => MainGameTilePaletteController.IsHotbarSelectable(
-                    gameDataCatalog.FindItem(itemId), gameDataCatalog.Recipes));
+                    gameDataCatalog.FindItem(itemId), gameDataCatalog.Recipes,
+                    bootstrap.TimeService?.Day ?? 1));
             if (!inventoryRuntime.ConfigureForRuntime(PlayerInventory))
             {
                 Debug.LogError("[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 연결에 실패했습니다.");
@@ -141,12 +148,55 @@ namespace Nyangbingo.World
             PortableLantern = new PortableLanternRuntime(PlayerInventory, ActiveSlot, lanternRadius);
             RecipeBook = new RecipeBook();
             equipmentAcquisitionBinding = new EquipmentAcquisitionBinding(EquipmentCollection);
-            Furnace = new SmeltingStation(PlayerInventory, SmeltingStationKind.Furnace, furnaceCapacity);
-            Foundry = new SmeltingStation(PlayerInventory, SmeltingStationKind.Foundry, foundryCapacity);
-            PlayerTemperature = new PlayerTemperatureState(gameDataCatalog, bootstrap.TimeService,
-                bootstrap.SealSystem, EquipmentSystem, environmentState, bootstrap.Session);
+            if (!HeatStageService.TryCreate(gameDataCatalog, out var heatStage))
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: v72 heat-stage globals are invalid.");
+                return false;
+            }
+            HeatStage = heatStage;
+            try
+            {
+                Invasion = new InvasionService(
+                    gameDataCatalog, bootstrap.TimeService, PlayerInventory);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: v72 invasion globals are invalid: " +
+                               exception.Message);
+                return false;
+            }
             RoomTemperature = new RoomTempService(gameDataCatalog, bootstrap.SealSystem,
-                bootstrap.TimeService, environmentState);
+                HeatStage, environmentState, bootstrap.Session, Invasion);
+            try
+            {
+                Bed = new BedService(gameDataCatalog, bootstrap.TimeService, RoomTemperature, Invasion);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: v72 bed globals are invalid: " +
+                               exception.Message);
+                return false;
+            }
+            var stationTemperatureStrict = ReadBoolGlobal(GlobalKeys.StationTemperatureStrict, true);
+            Furnace = new SmeltingStation(PlayerInventory, SmeltingStationKind.Furnace, furnaceCapacity,
+                position => RoomTemperature.Resolve(position), stationTemperatureStrict,
+                RoomTemperature.FrozenEnterCelsius);
+            Foundry = new SmeltingStation(PlayerInventory, SmeltingStationKind.Foundry, foundryCapacity,
+                position => RoomTemperature.Resolve(position), stationTemperatureStrict,
+                RoomTemperature.FrozenEnterCelsius);
+            try
+            {
+                Talismans = new TalismanRuntime(gameDataCatalog, PlayerInventory, environmentState);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: v72 talisman data is invalid: " +
+                               exception.Message);
+                return false;
+            }
+            PlayerTemperature = new PlayerTemperatureState(gameDataCatalog, bootstrap.TimeService,
+                bootstrap.SealSystem, EquipmentSystem, environmentState, bootstrap.Session,
+                RoomTemperature, HeatStage, () => Talismans?.SuppressesHypothermia == true);
             DeathTearPouches = new DeathTearPouchRuntime(PlayerInventory, bootstrap.TimeService);
             var jangdokDefinition = gameDataCatalog.FindGlobal(GlobalKeys.JangdokStorageSlots);
             if (jangdokDefinition == null || !jangdokDefinition.TryGetInt(out var jangdokSlots) ||
@@ -157,12 +207,24 @@ namespace Nyangbingo.World
                 return false;
             }
             JangdokStorage = new JangdokStorageRuntime(gameDataCatalog.FindItem, jangdokSlots);
+            try
+            {
+                StorageTemperature = new StorageTemperatureService(
+                    gameDataCatalog, bootstrap.TimeService, RoomTemperature,
+                    environmentState, JangdokStorage);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: v72 storage globals are invalid: " +
+                               exception.Message);
+                return false;
+            }
             Seokbinggo = new SeokbinggoUpgradeService(gameDataCatalog, () => PlayerInventory);
-            FrostSpread = new FrostSpreadService();
+            FrostSpread = new FrostSpreadService(gameDataCatalog);
             GimmickWeapons = new GimmickWeaponProgress(gameDataCatalog.FindItem);
             FrostSpread.FirstFrostRevealed += HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd += HandleGimmickBaekjungSurvived;
-            GameEvents.OnBossDefeated += HandleGimmickBossDefeated;
+            GameEvents.OnBossDefeated += HandleBossDefeated;
 
             Register(CraftingProcess);
             Register(UtilityService);
@@ -170,7 +232,8 @@ namespace Nyangbingo.World
             Register(Foundry);
             Register(PlayerTemperature);
             Register(PortableLantern);
-            IsInitialized = registered.Count == 6;
+            Register(Talismans);
+            IsInitialized = registered.Count == 7;
 
             if (IsInitialized)
             {
@@ -182,7 +245,7 @@ namespace Nyangbingo.World
                 }
                 GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled;
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
-                          $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·휴대용 등불 Tick 소비자 6개 등록 완료.");
+                          $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·등불·부적 Tick 소비자 7개 등록 완료.");
             }
             if (IsInitialized)
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 1개가 " +
@@ -193,24 +256,17 @@ namespace Nyangbingo.World
         public bool BindPlayerHealth(Health health)
         {
             if (!IsInitialized || health == null) return false;
+            PlayerTemperature?.BindHealth(health);
             if (PlayerHealthRecovery?.Health == health) return true;
             if (!TryReadPositiveGlobal("hp_regen_delay", out var regenDelay) ||
                 !TryReadPositiveGlobal("hp_regen_rate", out var regenRate) ||
                 !TryReadPositiveGlobal("catnip_heal", out var catnipHeal) ||
-                catnipHeal > int.MaxValue || !Mathf.Approximately(catnipHeal, Mathf.Round(catnipHeal)))
+                catnipHeal > int.MaxValue || !Mathf.Approximately(catnipHeal, Mathf.Round(catnipHeal)) ||
+                !TryReadMushroomHealing(out var mushroomHealing))
             {
                 Debug.LogError("[Nyangbingo] MainGameRuntimeServices: HP recovery globals are invalid.");
                 return false;
             }
-            var penaltyStartDefinition = gameDataCatalog.FindGlobal(GlobalKeys.SealPenaltyStartDay);
-            if (penaltyStartDefinition == null ||
-                !penaltyStartDefinition.TryGetInt(out var penaltyStartDay) ||
-                penaltyStartDay <= 0)
-            {
-                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: seal_penalty_start_day is invalid.");
-                return false;
-            }
-
             if (overridePlayerHealthRecovery)
             {
                 if (!IsFinitePositive(playerHealthRegenDelaySeconds) ||
@@ -228,29 +284,53 @@ namespace Nyangbingo.World
                 Unregister(PlayerHealthRecovery);
                 PlayerHealthRecovery.Dispose();
             }
-            if (PlayerDayHeatDamage != null)
+            if (DayHeatDamage != null)
             {
-                Unregister(PlayerDayHeatDamage);
-                PlayerDayHeatDamage.Dispose();
+                Unregister(DayHeatDamage);
+                DayHeatDamage.Dispose();
             }
             PlayerHealthRecovery = new PlayerHealthRecoveryService(
-                PlayerInventory, health, regenDelay, regenRate, Mathf.RoundToInt(catnipHeal));
-            PlayerDayHeatDamage = new PlayerDayHeatDamageService(
-                health, health.transform, bootstrap.TimeService, bootstrap.Session,
-                bootstrap.SealSystem, penaltyStartDay);
-            if (Register(PlayerHealthRecovery) && Register(PlayerDayHeatDamage)) return true;
+                PlayerInventory, health, regenDelay, regenRate, Mathf.RoundToInt(catnipHeal), mushroomHealing);
+            DayHeatDamage = new DayHeatDamageService(
+                health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage);
+            if (Register(PlayerHealthRecovery) && Register(DayHeatDamage)) return true;
 
             Unregister(PlayerHealthRecovery);
             PlayerHealthRecovery.Dispose();
             PlayerHealthRecovery = null;
-            Unregister(PlayerDayHeatDamage);
-            PlayerDayHeatDamage.Dispose();
-            PlayerDayHeatDamage = null;
+            Unregister(DayHeatDamage);
+            DayHeatDamage.Dispose();
+            DayHeatDamage = null;
             return false;
         }
 
         private static bool IsFinitePositive(float value) =>
             value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
+
+        private bool TryReadMushroomHealing(out IReadOnlyDictionary<string, int> values)
+        {
+            values = null;
+            var raw = gameDataCatalog?.FindGlobal(GlobalKeys.MushroomHeal)?.Value;
+            var parts = raw?.Split('/');
+            if (parts == null || parts.Length != 3 ||
+                !int.TryParse(parts[0], out var oyster) || oyster <= 0 ||
+                !int.TryParse(parts[1], out var shiitake) || shiitake <= oyster ||
+                !int.TryParse(parts[2], out var seogi) || seogi <= shiitake)
+                return false;
+            values = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                [StorageTemperatureService.OysterMushroomId] = oyster,
+                [StorageTemperatureService.ShiitakeId] = shiitake,
+                [StorageTemperatureService.SeogiId] = seogi
+            };
+            return true;
+        }
+
+        private bool ReadBoolGlobal(string key, bool fallback)
+        {
+            var definition = gameDataCatalog?.FindGlobal(key);
+            return definition != null && definition.TryGetBool(out var value) ? value : fallback;
+        }
 
         public bool BindMagpieCompanion(Transform player, MainGameWorldDropRuntime worldDrops,
             CharacterArtCatalog characterArtCatalog = null)
@@ -299,7 +379,7 @@ namespace Nyangbingo.World
             if (FrostSpread != null)
                 FrostSpread.FirstFrostRevealed -= HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd -= HandleGimmickBaekjungSurvived;
-            GameEvents.OnBossDefeated -= HandleGimmickBossDefeated;
+            GameEvents.OnBossDefeated -= HandleBossDefeated;
             GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
             if (bootstrap != null && worldLoadedHooked)
             {
@@ -312,8 +392,8 @@ namespace Nyangbingo.World
             PortableLantern = null;
             PlayerHealthRecovery?.Dispose();
             PlayerHealthRecovery = null;
-            PlayerDayHeatDamage?.Dispose();
-            PlayerDayHeatDamage = null;
+            DayHeatDamage?.Dispose();
+            DayHeatDamage = null;
             if (MagpieCompanion != null)
             {
                 Unregister(MagpieCompanion);
@@ -322,9 +402,16 @@ namespace Nyangbingo.World
             }
             DeathTearPouches?.Dispose();
             DeathTearPouches = null;
+            StorageTemperature?.Dispose();
+            StorageTemperature = null;
             JangdokStorage = null;
+            Talismans = null;
             Seokbinggo = null;
             FrostSpread = null;
+            Invasion?.Dispose();
+            Invasion = null;
+            Bed = null;
+            HeatStage = null;
             GimmickWeapons = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
@@ -350,12 +437,13 @@ namespace Nyangbingo.World
 
         private void HandleGimmickBaekjungSurvived() => GimmickWeapons?.NotifyBaekjungSurvived();
 
-        private void HandleGimmickBossDefeated(BossDefinition definition)
+        private void HandleBossDefeated(BossDefinition definition)
         {
+            HeatStage?.OnNamedKill(definition?.Id);
             GimmickWeapons?.NotifyBossDefeated(definition);
-            if (definition == null || definition.Kind != BossKind.Imugi || FrostSpread == null) return;
-            var nextClear = FrostSpread.AltarClears + 1;
-            FrostSpread.OnAltarClear(nextClear, bootstrap?.TileService);
+            if (definition == null || FrostSpread == null ||
+                !(definition.RequiresDeepAltar || definition.SummonStation == CraftingStation.IceAnvil)) return;
+            FrostSpread.OnAltarBossClear(bootstrap?.TileService);
         }
 
         private void HandleRecipeUnlockYokaiKilled(YokaiDefinition definition)

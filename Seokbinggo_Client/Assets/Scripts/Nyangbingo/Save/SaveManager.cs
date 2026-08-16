@@ -80,7 +80,8 @@ namespace Nyangbingo.Save
             var path = Path.Combine(Application.streamingAssetsPath, "DemoSaves", $"day-{day}.json");
             try
             {
-                if (!File.Exists(path) || !TryDeserialize(File.ReadAllText(path), out data)) return false;
+                if (!File.Exists(path) || !TryDeserialize(File.ReadAllText(path), out data) ||
+                    !data.isOfficialDemo) return false;
                 Save(0, data);
                 return true;
             }
@@ -94,7 +95,8 @@ namespace Nyangbingo.Save
             var path = Path.Combine(Application.streamingAssetsPath, "DemoSaves", $"day-{day}.json");
             try
             {
-                return File.Exists(path) && TryDeserialize(File.ReadAllText(path), out _);
+                return File.Exists(path) && TryDeserialize(File.ReadAllText(path), out var demo) &&
+                       demo.isOfficialDemo;
             }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }

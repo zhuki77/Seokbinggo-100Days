@@ -20,6 +20,7 @@ namespace Nyangbingo.Data
         Insulation,
         Module,
         Placeable,
+        Smelt,
         Station,
         Summon,
         Turret,

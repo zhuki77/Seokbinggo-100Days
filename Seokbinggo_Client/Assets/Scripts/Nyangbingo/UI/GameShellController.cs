@@ -45,6 +45,7 @@ namespace Nyangbingo.UI
         public int ActiveSaveSlot { get; private set; } = AutoSaveSlot;
         public DemoResultState Result { get; private set; }
         public bool CanShowFullscreenToggle => !isMobile;
+        public bool IsOfficialDemo => activeSave != null && activeSave.isOfficialDemo;
 
         public event Action TitleRequested;
 
@@ -200,8 +201,8 @@ namespace Nyangbingo.UI
         /// v34 정본: 데모는 30일차 이무기의 격퇴 여부가 아니라 30일차 밤이 끝난 새벽에 종료한다.
         /// DayNightService.Dawn은 날짜를 먼저 증가시킨 뒤 발행되므로 새 날짜가 MVP 제한일+1인지 검사한다.
         /// </summary>
-        public static bool ShouldEndDemoAtDawn(int newDay, int mvpDayLimit) =>
-            mvpDayLimit > 0 && newDay == mvpDayLimit + 1;
+        public static bool ShouldEndDemoAtDawn(bool isOfficialDemo, int newDay, int mvpDayLimit) =>
+            isOfficialDemo && mvpDayLimit > 0 && newDay == mvpDayLimit + 1;
 
         private void ShowGameplay(bool preserveCurrentMusic)
         {

@@ -19,27 +19,24 @@ namespace Nyangbingo.World
 
         private static readonly float[] DefaultBrightnessByStage =
         {
-            1.00f, 1.05f, 1.10f, 1.15f, 1.20f, 1.25f, 1.30f, 1.35f, 1.40f, 1.45f
+            1.00f, 1.28f, 1.55f
         };
 
         private static bool invariantsChecked;
 
         public static float IntensityFor(
-            int day, bool isDay, bool isSurface, bool isBaekjung, GlobalSettings settings)
+            int heatStage, bool isDay, bool isSurface, bool isBaekjung, GlobalSettings settings)
         {
             if (!isDay)
                 return isBaekjung ? BaekjungIntensity : NightIntensity;
             if (!isSurface)
                 return UndergroundIntensity;
 
-            var period = 10;
-            if (settings != null &&
-                settings.TryGetInt(GlobalKeys.HeatStagePeriod, out var configuredPeriod) &&
-                configuredPeriod > 0)
-                period = configuredPeriod;
-
-            var safeDay = Mathf.Max(1, day);
-            var stage = Mathf.Min(10, (safeDay - 1) / period + 1);
+            var stageCount = 3;
+            if (settings != null && settings.TryGetInt(GlobalKeys.HeatStageCount, out var configuredCount) &&
+                configuredCount > 0)
+                stageCount = configuredCount;
+            var stage = Mathf.Clamp(heatStage, 1, stageCount);
             var curve = ResolveBrightnessCurve(settings);
             var index = Mathf.Clamp(stage - 1, 0, curve.Length - 1);
             return curve[index];
@@ -62,10 +59,10 @@ namespace Nyangbingo.World
             if (!ColorsMatch(DayColor, new Color(1f, 176f / 255f, 128f / 255f, 1f), epsilon))
                 Debug.LogError("DayLight invariants broken: DayColor must be fixed #FFB080.");
 
-            if (DefaultBrightnessByStage.Length != 10)
+            if (DefaultBrightnessByStage.Length != 3)
             {
                 throw new InvalidOperationException(
-                    "DayLight default brightness curve must have exactly 10 stages.");
+                    "DayLight default brightness curve must have exactly 3 stages.");
             }
         }
 
@@ -78,6 +75,10 @@ namespace Nyangbingo.World
             var separators = new[] { '/', ',' };
             var parts = raw.Split(separators, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
+                return DefaultBrightnessByStage;
+
+            if (settings.TryGetInt(GlobalKeys.HeatStageCount, out var stageCount) &&
+                stageCount > 0 && parts.Length != stageCount)
                 return DefaultBrightnessByStage;
 
             var curve = new float[parts.Length];

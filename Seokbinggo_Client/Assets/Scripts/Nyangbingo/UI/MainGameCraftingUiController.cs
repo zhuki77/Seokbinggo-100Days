@@ -132,6 +132,7 @@ namespace Nyangbingo.UI
         public const float InventorySlotPixelSize = 27f;
         public const bool UsesIconOnlyCraftingList = true;
         public const KeyCode DebugGrantRequirementsKey = KeyCode.F5;
+        private int CurrentDay => FindAnyObjectByType<DayNightService>()?.Day ?? 1;
 
         public static bool SupportsDebugInstantCompletion
         {
@@ -192,12 +193,7 @@ namespace Nyangbingo.UI
                 return;
             }
 
-            var hideScopeB = string.Equals(gameDataCatalog.FindGlobal("crafting_b_ui")?.Value,
-                "hidden", StringComparison.OrdinalIgnoreCase);
-            visibleRecipes.AddRange(gameDataCatalog.Recipes
-                .Where(recipe => ShouldShowRecipe(recipe, hideScopeB))
-                .OrderBy(recipe => recipe.Station)
-                .ThenBy(recipe => recipe.Id, StringComparer.Ordinal));
+            var hideScopeB = RebuildVisibleRecipes();
             smeltingRecipes.AddRange(gameDataCatalog.Smelting
                 .Where(definition => definition != null)
                 .OrderBy(definition => definition.StationKind)
@@ -226,6 +222,7 @@ namespace Nyangbingo.UI
             runtimeServices.PortableLantern.Changed += Refresh;
             runtimeServices.JangdokStorage.Changed += Refresh;
             runtimeServices.RecipeBook.Changed += Refresh;
+            GameEvents.OnDayStart += HandleDayStart;
             if (turretRuntime != null) turretRuntime.BuildStateChanged += Refresh;
             initialized = true;
             SetOpen(false);
@@ -301,6 +298,30 @@ namespace Nyangbingo.UI
 
         public static bool ShouldShowRecipe(RecipeDefinition recipe, bool hideScopeB) =>
             recipe != null && (!hideScopeB || recipe.MvpScope != ItemMvpScope.B);
+
+        public static bool ShouldShowRecipe(RecipeDefinition recipe, bool hideScopeB, int currentDay) =>
+            recipe != null && (!hideScopeB || ExpansionProgressionRules.IsScopeAvailable(recipe.MvpScope,
+                currentDay));
+
+        private bool RebuildVisibleRecipes()
+        {
+            visibleRecipes.Clear();
+            var hideScopeB = ExpansionProgressionRules.ShouldHideScopeB(
+                gameDataCatalog.FindGlobal("crafting_b_ui")?.Value, CurrentDay);
+            visibleRecipes.AddRange(gameDataCatalog.Recipes
+                .Where(recipe => ShouldShowRecipe(recipe, hideScopeB, CurrentDay))
+                .OrderBy(recipe => recipe.Station)
+                .ThenBy(recipe => recipe.Id, StringComparer.Ordinal));
+            return hideScopeB;
+        }
+
+        private void HandleDayStart()
+        {
+            if (!initialized || gameDataCatalog == null) return;
+            RebuildVisibleRecipes();
+            RebuildFilteredRecipes();
+            Refresh();
+        }
 
         public static bool IsRecipeVisibleAtStation(CraftingStation requiredStation,
             CraftingStation nearbyStation) =>
@@ -911,15 +932,30 @@ namespace Nyangbingo.UI
         {
             var item = CurrentInventoryItem();
             if (item == null) return;
-            if (item.Id == PlayerHealthRecoveryService.CatnipItemId)
+            if (PlayerHealthRecoveryService.IsSupportedHealingItemId(item.Id))
             {
                 var recovery = runtimeServices?.PlayerHealthRecovery;
-                if (recovery != null && recovery.TryUseCatnip(out var restoredHealth))
+                if (recovery != null && recovery.TryUseHealingItem(item.Id, out var restoredHealth))
                 {
-                    ShowMessage($"캣닢 사용 · HP +{restoredHealth}");
+                    ShowMessage($"{item.DisplayName} 사용 · HP +{restoredHealth}");
                     Refresh();
                 }
-                else ShowMessage("HP가 가득 찼거나 캣닢을 사용할 수 없습니다.");
+                else ShowMessage("HP가 가득 찼거나 회복 아이템을 사용할 수 없습니다.");
+                return;
+            }
+            var talisman = gameDataCatalog?.FindTalisman(item.Id);
+            if (talisman != null && TalismanRuntime.IsConsumableId(item.Id))
+            {
+                var talismanMessage = string.Empty;
+                if (runtimeServices?.Talismans != null &&
+                    runtimeServices.Talismans.TryUse(item.Id, out talismanMessage))
+                {
+                    ShowMessage(talismanMessage);
+                    Refresh();
+                }
+                else ShowMessage(string.IsNullOrEmpty(talismanMessage)
+                    ? "현재 이 부적을 사용할 수 없습니다."
+                    : talismanMessage);
                 return;
             }
             var summonBoss = stationSource?.FindBossForSummonItem(item.Id);
@@ -1004,7 +1040,7 @@ namespace Nyangbingo.UI
         private void TryPlaceSelectedCraftingOutput()
         {
             var recipe = CurrentRecipe();
-            if (recipe == null || turretRuntime == null || !IsProductPlaceableRecipe(recipe) ||
+            if (recipe == null || turretRuntime == null || !IsProductPlaceableRecipe(recipe, CurrentDay) ||
                 turretRuntime.GetInventoryCount(recipe.Output.item.Id) <= 0) return;
             if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             var beganPlacement = tilePalette != null && tilePalette.TryBeginPlacement(recipe.Output.item.Id);
@@ -1025,6 +1061,14 @@ namespace Nyangbingo.UI
             var station = definition.StationKind == SmeltingStationKind.Foundry
                 ? runtimeServices.Foundry
                 : runtimeServices.Furnace;
+            if (stationSource != null &&
+                stationSource.TryGetNearbyCraftingStationPosition(requiredStation, out var stationPosition))
+                station.SetWorldPosition(stationPosition);
+            if (!station.IsTemperatureSuitable)
+            {
+                ShowMessage("빙결 구간에서는 제련 설비가 작동하지 않습니다.");
+                return;
+            }
             if (station.TryStart(definition))
             {
                 ShowMessage($"제련 대기열 추가: {definition.Output.item.DisplayName}");
@@ -1245,7 +1289,7 @@ namespace Nyangbingo.UI
                 primaryButton.interactable = false;
                 return;
             }
-            var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe) &&
+            var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe, CurrentDay) &&
                                turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
             primaryButton.GetComponentInChildren<Text>().text = "E · 제작";
             var primaryRect = primaryButton.GetComponent<RectTransform>();
@@ -1278,7 +1322,7 @@ namespace Nyangbingo.UI
                 var owned = runtimeServices.PlayerInventory.Count(ingredient.item.Id);
                 builder.AppendLine($"  · {ingredient.item.DisplayName} {owned}/{ingredient.amount}");
             }
-            if (turretRuntime != null && IsProductPlaceableRecipe(recipe))
+            if (turretRuntime != null && IsProductPlaceableRecipe(recipe, CurrentDay))
                 builder.AppendLine($"\n완성품 보유: {turretRuntime.GetInventoryCount(recipe.Output.item.Id)} · " +
                                    (readyToPlace ? "설치 버튼으로 배치 가능" : "제작 완료 후 설치 가능"));
             if (runtimeServices.CraftingProcess.IsCrafting)
@@ -1309,6 +1353,26 @@ namespace Nyangbingo.UI
             else
             {
                 titleText.text = "장독 창고 · 클릭한 묶음 전체 이동";
+                var storageTemperature = runtimeServices.StorageTemperature;
+                if (storageTemperature != null &&
+                    storageTemperature.TryGetStatus(storageObjectId, out var temperature, out var band))
+                {
+                    if (storageLabelText != null)
+                        storageLabelText.text = $"장독 창고 · {temperature:0.#}℃ · " +
+                                                StorageTemperatureService.BandIcon(band);
+                    var riskCount = storage.Slots.Count(slot =>
+                        !string.IsNullOrEmpty(slot.itemId) &&
+                        storageTemperature.IsAtRisk(slot.itemId, temperature));
+                    if (storageHintText != null)
+                        storageHintText.text = riskCount > 0
+                            ? $"⚠ {riskCount}슬롯 보관 등급 미달 · 음식 하루 {storageTemperature.SpoilPerDay * 100f:0}% 상함 / 얼음 하루 {storageTemperature.MeltPerDay * 100f:0}% 녹음"
+                            : "보관 등급 충족 · 슬롯 클릭: 묶음 이동 · E 또는 ESC: 닫기";
+                    RefreshTransferSlots(storageLabels, storageIcons, storage.Slots,
+                        itemId => storageTemperature.IsAtRisk(itemId, temperature));
+                    RefreshTransferSlots(storagePlayerLabels, storagePlayerIcons,
+                        runtimeServices.PlayerInventory.Slots);
+                    return;
+                }
                 if (storageLabelText != null)
                     storageLabelText.text = $"장독 창고 · {JangdokStorageRuntime.SlotCount}슬롯";
             }
@@ -1317,7 +1381,8 @@ namespace Nyangbingo.UI
                 runtimeServices.PlayerInventory.Slots);
         }
 
-        private void RefreshTransferSlots(Text[] labels, Image[] icons, IReadOnlyList<InventorySlot> slots)
+        private void RefreshTransferSlots(Text[] labels, Image[] icons, IReadOnlyList<InventorySlot> slots,
+            Func<string, bool> showWarning = null)
         {
             for (var index = 0; index < labels.Length; index++)
             {
@@ -1331,7 +1396,12 @@ namespace Nyangbingo.UI
                     icon.sprite = item != null ? itemArtCatalog?.FindSprite(item.Id) : null;
                     icon.enabled = icon.sprite != null;
                 }
-                label.text = item != null && slot.amount > 1 ? slot.amount.ToString() : string.Empty;
+                var count = item != null && slot.amount > 1 ? slot.amount.ToString() : string.Empty;
+                var warning = item != null && showWarning?.Invoke(slot.itemId) == true ? "⚠" : string.Empty;
+                var condition = item != null && slot.hasStorageCondition
+                    ? $" {Mathf.RoundToInt(slot.EffectiveStorageCondition * 100f)}%"
+                    : string.Empty;
+                label.text = count + warning + condition;
             }
         }
 
@@ -1446,9 +1516,10 @@ namespace Nyangbingo.UI
             ? null
             : filteredRecipes[Mathf.Clamp(selectedIndex, 0, filteredRecipes.Count - 1)];
 
-        public static bool IsProductPlaceableRecipe(RecipeDefinition recipe)
+        public static bool IsProductPlaceableRecipe(RecipeDefinition recipe, int currentDay = 1)
         {
-            if (recipe?.Output.item == null || recipe.MvpScope == ItemMvpScope.B) return false;
+            if (recipe?.Output.item == null ||
+                !ExpansionProgressionRules.IsScopeAvailable(recipe.MvpScope, currentDay)) return false;
             return recipe.Output.item.Category == ItemCategory.Placeable ||
                    recipe.Output.item.Category == ItemCategory.Station ||
                    recipe.Type == RecipeType.ColdSource || recipe.Type == RecipeType.Cooling ||
@@ -1459,14 +1530,14 @@ namespace Nyangbingo.UI
         }
 
         public static bool IsInventoryItemPlaceable(ItemDefinition item,
-            IEnumerable<RecipeDefinition> recipes)
+            IEnumerable<RecipeDefinition> recipes, int currentDay = 1)
         {
-            if (item == null || item.MvpScope == ItemMvpScope.B) return false;
+            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, currentDay)) return false;
             if (MainGameTilePaletteController.SupportsPalettePlacement(item.Id)) return true;
             if (recipes == null) return false;
             return recipes.Any(recipe => recipe?.Output.item != null &&
                                          recipe.Output.item.Id == item.Id &&
-                                         IsProductPlaceableRecipe(recipe));
+                                         IsProductPlaceableRecipe(recipe, currentDay));
         }
 
         private SmeltingDefinition CurrentSmelting() => smeltingRecipes.Count == 0
@@ -1563,7 +1634,7 @@ namespace Nyangbingo.UI
 
         private bool IsInventoryPlaceable(ItemDefinition item)
         {
-            return IsInventoryItemPlaceable(item, visibleRecipes);
+            return IsInventoryItemPlaceable(item, visibleRecipes, CurrentDay);
         }
 
         private void RefreshEquipment()
@@ -2216,6 +2287,7 @@ namespace Nyangbingo.UI
                 runtimeServices.JangdokStorage.Changed -= Refresh;
             if (runtimeServices?.RecipeBook != null)
                 runtimeServices.RecipeBook.Changed -= Refresh;
+            GameEvents.OnDayStart -= HandleDayStart;
             if (turretRuntime != null) turretRuntime.BuildStateChanged -= Refresh;
         }
     }

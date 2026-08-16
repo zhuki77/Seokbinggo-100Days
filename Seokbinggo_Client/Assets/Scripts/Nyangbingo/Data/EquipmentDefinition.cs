@@ -24,6 +24,9 @@ namespace Nyangbingo.Data
         [SerializeField] private string verbId;
         [SerializeField] private int usageLimitPerDay;
         [SerializeField] private string activationCondition = "None";
+        [SerializeField] private bool hasColdTolerance;
+        [SerializeField] private int coldToleranceC;
+        [TextArea][SerializeField] private string coldNote;
 
         public string Id => id;
         public EquipmentSlot Slot => slot;
@@ -42,6 +45,9 @@ namespace Nyangbingo.Data
         public float SetFireDamageModifier => setFireDamageModifier;
         public string VerbIdRaw => verbId ?? string.Empty;
         public int UsageLimitPerDay => usageLimitPerDay;
+        public bool HasColdTolerance => hasColdTolerance;
+        public int ColdToleranceC => coldToleranceC;
+        public string ColdNote => coldNote ?? string.Empty;
         public string ActivationConditionRaw =>
             string.IsNullOrWhiteSpace(activationCondition) ? "None" : activationCondition;
 
@@ -50,12 +56,16 @@ namespace Nyangbingo.Data
         public ArtifactActivationCondition ActivationCondition =>
             ArtifactVerbParsing.ParseActivation(activationCondition);
 
+        /// <summary>v72 A-3: 내한 하한 미달은 장착을 막지 않고 효율 상태만 false로 보고한다.</summary>
+        public bool ColdOk(int roomTemperatureC) => !hasColdTolerance || roomTemperatureC >= coldToleranceC;
+
         public static EquipmentDefinition CreateRuntime(string itemId, EquipmentSlot equipmentSlot, bool isAccessory,
             int itemDefense = 0, float moveBonus = 0f, float miningCritical = 0f,
             float temperatureModifier = 0f, float fireModifier = 0f, bool doubleJump = false,
             float visionBonus = 0f, bool theftBlocked = false, float doubleJumpRatio = 0f,
             string equipmentSetId = null, float setTemperatureModifier = 0f, float setFireModifier = 0f,
-            string artifactVerbId = null, int usageLimit = 0, string activation = "None")
+            string artifactVerbId = null, int usageLimit = 0, string activation = "None",
+            bool usesColdTolerance = false, int coldTolerance = 0, string coldDescription = null)
         {
             var definition = CreateInstance<EquipmentDefinition>();
             definition.id = itemId;
@@ -76,6 +86,9 @@ namespace Nyangbingo.Data
             definition.verbId = artifactVerbId ?? string.Empty;
             definition.usageLimitPerDay = System.Math.Max(0, usageLimit);
             definition.activationCondition = string.IsNullOrWhiteSpace(activation) ? "None" : activation;
+            definition.hasColdTolerance = usesColdTolerance;
+            definition.coldToleranceC = coldTolerance;
+            definition.coldNote = coldDescription ?? string.Empty;
             return definition;
         }
     }

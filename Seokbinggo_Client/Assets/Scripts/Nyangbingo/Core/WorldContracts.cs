@@ -15,10 +15,6 @@ namespace Nyangbingo.Core
     public interface ISealSource { float SealPercent { get; } bool IsInsideSealedArea(Vector2 position); }
     public interface ITileDiffSource { int Seed { get; } IReadOnlyList<string> ExportTileDiff(); }
 
-    // 아래 두 계약은 방향이 반대다 — Development B(설치물/온도 시스템)가 구현하고,
-    // Development A의 SealSystem이 소비한다. B파트 시스템이 아직 프로젝트에 없어도
-    // SealSystem은 이 계약 없이(둘 다 null) 기존 동작(자연 지형만 인정, 냉기원 게이트 없음)을 그대로 유지한다.
-
     /// <summary>
     /// 결재 브리프 v2(밀폐도 사태) 화이트리스트 확장 지점. SealSystem은 TileData 그리드(<c>isNaturalTerrain</c>)
     /// 만으로는 차열벽·차열 지붕·단열 문(기획 v15 QA-F 화이트리스트) 같은 B파트 설치물을 알 수 없으므로,
@@ -28,28 +24,8 @@ namespace Nyangbingo.Core
     public interface ISealBarrierRegistry { bool IsRecognizedBarrier(Vector3Int cell); }
 
     /// <summary>
-    /// "4 시스템"(v17 최종) 온도% 산식의 <c>냉기원 가동</c> 조건을 SealSystem 외부(B파트 온도 시스템)에서
-    /// 주입받기 위한 계약. 아이스박스 등 냉기원이 실제로 가동 중인지는 SealSystem이 알 수 없는 정보다.
-    ///
-    /// A-12(v26 냉기원 상한 연동 계약): 활성 냉기원 중 최고 온도 상한(%)을 제공해야 한다 — 확정값은
-    /// 물단지 25 / 얼음 항아리 50 / 얼음 저장고 100 / 빙정 냉각로 100, 여러 개가 가동 중이면 최고값,
-    /// 냉기원이 하나도 없으면 0이다. <see cref="CoolingCapPercent"/>는 C# 8 기본 인터페이스 구현으로
-    /// 0을 반환하므로, 이 구현체를 이미 이 계약대로 채워 둔 <c>MainGameEnvironmentState</c>(개발 B) 등
-    /// 기존 구현체는 이 멤버를 추가해도 컴파일이 깨지지 않는다. SealSystem은 <see cref="IsColdSourceActive"/>
-    /// 단일 boolean 대신 이 값을 직접 온도 산식(min(cap, 밀폐율 기반 %))에 사용한다.
-    /// </summary>
-    public interface ICoolingSourceProvider
-    {
-        bool IsColdSourceActive { get; }
-
-        /// <summary>0~100 스케일. Provider가 이 멤버를 구현하지 않았다면(레거시) 0으로 간주 — "연결 안 됨=100%"로
-        /// 잘못 해석되는 사고를 막기 위해 기본값을 100이 아니라 0으로 둔다(A-12 요구사항 그대로).</summary>
-        float CoolingCapPercent => 0f;
-    }
-
-    /// <summary>
-    /// A-16/A-19: 밀폐된 석빙고 코어 구역의 배경 도포율. SealPercent/TemperaturePercent와 별개이며,
-    /// 개발 B는 물단지·얼음 항아리 지속시간 +25%에만 사용한다(얼음 저장고·빙정 냉각로·온도 상한은 변경 금지).
+    /// A-16/A-19: 밀폐된 석빙고 코어 구역의 배경 도포율. SealPercent와 별개이며,
+    /// 물단지·얼음 항아리 지속시간 +25%에만 사용한다.
     /// </summary>
     public interface IWallpaperCoverageSource
     {

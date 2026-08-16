@@ -381,10 +381,50 @@ namespace Nyangbingo.World
             foregroundTilemap.RefreshAllTiles();
             backgroundTilemap.RefreshAllTiles();
             NotifyForegroundCollisionDirty();
+            EnsureWorldBoundaries(width, height);
 
             // A-14: 월드 전체 먹선 오버레이 최초 1회 계산. 이후에는 TileService가 변경된 셀 +
             // 그 4방향 이웃만 RefreshEdgeOverlay로 갱신하므로, 이 전체 순회는 월드 생성/로드당 딱 한 번뿐이다.
             RebuildEdgeOverlayForWorld(tiles);
+        }
+
+        private void EnsureWorldBoundaries(int width, int height)
+        {
+            if (foregroundTilemap == null || width <= 0 || height <= 0) return;
+            var root = foregroundTilemap.transform.Find("RuntimeWorldBoundaries");
+            if (root == null)
+            {
+                var rootObject = new GameObject("RuntimeWorldBoundaries");
+                rootObject.transform.SetParent(foregroundTilemap.transform, false);
+                root = rootObject.transform;
+            }
+
+            var worldLeft = foregroundTilemap.CellToWorld(Vector3Int.zero).x;
+            var worldRight = foregroundTilemap.CellToWorld(new Vector3Int(width, 0, 0)).x;
+            var worldBottom = foregroundTilemap.CellToWorld(Vector3Int.zero).y;
+            var worldTop = foregroundTilemap.CellToWorld(new Vector3Int(0, height, 0)).y;
+            var worldHeight = Mathf.Max(1f, worldTop - worldBottom);
+            ConfigureBoundary(root, "WorldBoundaryLeft", worldLeft - .5f,
+                worldBottom + worldHeight * .5f, worldHeight * 3f);
+            ConfigureBoundary(root, "WorldBoundaryRight", worldRight + .5f,
+                worldBottom + worldHeight * .5f, worldHeight * 3f);
+        }
+
+        private static void ConfigureBoundary(Transform root, string name, float centerX, float centerY,
+            float height)
+        {
+            var child = root.Find(name);
+            if (child == null)
+            {
+                var childObject = new GameObject(name);
+                childObject.transform.SetParent(root, false);
+                child = childObject.transform;
+            }
+            child.position = new Vector3(centerX, centerY, 0f);
+            var collider = child.GetComponent<BoxCollider2D>();
+            if (collider == null) collider = child.gameObject.AddComponent<BoxCollider2D>();
+            collider.isTrigger = false;
+            collider.size = new Vector2(1f, height);
         }
 
         private TileBase ResolveForegroundTile(TileData[,] tiles, int x, int y, string elementType,
@@ -640,6 +680,11 @@ namespace Nyangbingo.World
                 _lookup.TryGetValue(canonical, out tile) && tile != null)
                 return true;
 
+            var visualFallback = ResourceVisualFallbackId(canonical);
+            if (!string.IsNullOrEmpty(visualFallback) &&
+                _lookup.TryGetValue(visualFallback, out tile) && tile != null)
+                return true;
+
             tile = null;
             return false;
         }
@@ -775,11 +820,27 @@ namespace Nyangbingo.World
                 wallpaperFallback != null)
                 return wallpaperFallback;
 
+            // v72 버섯 3종은 전용 아트 납품 전에도 채굴 노드가 투명해지지 않도록
+            // 같은 지층의 기존 자원 타일을 임시 시각 폴백으로 사용한다. 데이터/채굴 ID는 원본을 유지한다.
+            var visualFallback = ResourceVisualFallbackId(elementType);
+            if (!string.IsNullOrEmpty(visualFallback) &&
+                _lookup.TryGetValue(visualFallback, out var fallbackResourceTile) &&
+                fallbackResourceTile != null)
+                return fallbackResourceTile;
+
             // 2순위: 최종 폴백 타일(설정돼 있으면 화면에서 바로 눈에 띔), 없으면 투명 빈 칸.
             missing ??= new HashSet<string>();
             missing.Add(elementType);
             return fallbackTile;
         }
+
+        public static string ResourceVisualFallbackId(string elementType) => elementType switch
+        {
+            WorldTileTypes.OysterMushroom => WorldTileTypes.Clay,
+            WorldTileTypes.Shiitake => WorldTileTypes.IceShard,
+            WorldTileTypes.Seogi => WorldTileTypes.FrostEssence,
+            _ => null
+        };
 
         /// <summary>
         /// 인스펙터에서 우클릭 → 실행하면 WorldTileTypes에 정의된 모든 elementType 슬롯을
@@ -805,8 +866,11 @@ namespace Nyangbingo.World
             var knownTypes = new[]
             {
                 WorldTileTypes.Dirt, WorldTileTypes.Stone, WorldTileTypes.Coal, WorldTileTypes.Clay,
+                WorldTileTypes.OysterMushroom,
                 WorldTileTypes.StoneMid, WorldTileTypes.IronOre, WorldTileTypes.CopperOre, WorldTileTypes.IceShard,
+                WorldTileTypes.Shiitake,
                 WorldTileTypes.StoneDeep, WorldTileTypes.IceSteelOre, WorldTileTypes.FrostEssence,
+                WorldTileTypes.Seogi,
                 WorldTileTypes.Bedrock, WorldTileTypes.RuinWall, WorldTileTypes.IceLake, WorldTileTypes.IceAltar,
                 WorldTileTypes.BackgroundDirt, WorldTileTypes.BackgroundStone, WorldTileTypes.BackgroundDeep,
                 WorldTileTypes.Wallpaper

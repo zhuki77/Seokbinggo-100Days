@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: seonge_tower
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: seonge_tower
+  displayName: "\uC131\uC5D0 \uB4F1\uD0D1"
+  maxStack: 99
+  category: 7
+  mvpScope: 2
+  note: "\uD130\uB81B T4 1\uB2E8 \uC9C4\uD654 \u2014 \uBA85\uC911 \uC2DC \uAC10\uC18D
+    \uB204\uC801\xB7\uC9C0\uADC0\uC758 \uC789\uAC78 \uD544\uC694"

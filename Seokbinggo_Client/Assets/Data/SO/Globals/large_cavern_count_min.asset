@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: large_cavern_count_min
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: large_cavern_count_min
+  value: 5
+  unit: "\uAC1C"
+  note: "\u2B05\uFE0F \uAC1C\uBC1C \uD655\uC815 \uB4F1\uC7AC(v64) \u2014 \uC911\uAC04\uCE35
+    \uB300\uACF5\uB3D9. \uC720\uB2C8\uD2F0 WorldGenerationConfig.asset \uC2E4\uCE21(8/11
+    \uCEE4\uBC0B e7fef4a)"

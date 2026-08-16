@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63bdae2859c3c1c40b0594aad5a62289, type: 3}
+  m_Name: gangcheol
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CodexEntryDefinition
+  id: gangcheol
+  kind: "\uC694\uAD34"
+  displayName: "\uAC15\uCCA0\uC774"
+  source: "\u300A\uC131\uD638\uC0AC\uC124\u300B \uAC15\uCCA0"
+  sourceVerification: "GDD-2\uC7A5"
+  cardFrontAssetId: card_gangcheol
+  cardBackText: "\uC9C0\uB098\uAC04 \uC790\uB9AC\uB9C8\uB2E4 \uAC00\uC744\uAC77\uC774\uAC00
+    \uBD04 \uBCF4\uB9BF\uACE0\uAC1C\uAC00 \uB41C\uB2E4\uB294 \uBC40\uB8E1. \uC694\uAD34\uB294
+    \uB0C9\uAE30\uB97C \uD0D0\uD558\uB2E4 \uC5BC\uC5B4\uBD99\uC740 \uAC83\uC744 \uB5A8\uAD70\uB2E4
+    \u2014 \uADF8 \uBC29\uC6B8\uC774 \uC11D\uBE59\uACE0\uC758 \uB0C9\uAC01 \uC7AC\uB8CC\uAC00
+    \uB41C\uB2E4."
+  portraitAssetId: 
+  note: "GDD 5\uC7A5 4\uBC88 \uB3C4\uAC10 \u2014 \uCE74\uB4DC \uD074\uB9AD \uD655\uB300(192x256)
+    \u2192 \uD55C \uBC88 \uB354 \uD074\uB9AD \uC2DC \uB4A4\uC9D1\uD600 \uC804\uC2B9
+    \uCD9C\uCC98 1\uC904. \uACB0\uACFC \uD654\uBA74\xB7\uB3C4\uAC10\uC740 HUD\uAC00
+    \uC544\uB2C8\uB77C **\uD14D\uC2A4\uD2B8 \uD5C8\uC6A9 \uAD6C\uC5ED**(5-\uBA54\uD0C0
+    \u2463) \u2014 2\uC7A5 \uBB34\uC2A4\uD1A0\uB9AC \uC6D0\uCE59 \uC704\uBC18 \uC544\uB2D8."

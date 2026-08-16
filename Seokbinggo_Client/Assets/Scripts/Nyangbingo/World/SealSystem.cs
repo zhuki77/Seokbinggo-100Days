@@ -90,9 +90,6 @@ namespace Nyangbingo.World
         /// <summary>B파트 설치물(차열벽/차열 지붕/단열 문) 화이트리스트 조회 — 없으면 자연 지형만 인정(기존 동작).</summary>
         private ISealBarrierRegistry barrierRegistry;
 
-        /// <summary>B파트 온도 시스템의 냉기원 상한 조회자 — 없으면 냉기원 없음과 동일하게 0%로 간주(A-12).</summary>
-        private ICoolingSourceProvider coolingSourceProvider;
-
         /// <summary>셀 → 그 셀이 속한 리전. 같은 방(room)의 모든 칸이 같은 SealRegion 인스턴스를 가리키므로,
         /// 리전 내부의 다른 칸을 조회해도 캐시 히트로 처리된다(플레이어가 방 안에서 움직여도 재계산 없음).</summary>
         private readonly Dictionary<Vector3Int, SealRegion> regionByCell = new Dictionary<Vector3Int, SealRegion>();
@@ -102,8 +99,8 @@ namespace Nyangbingo.World
         private readonly Dictionary<Vector3Int, bool> watchPoints = new Dictionary<Vector3Int, bool>();
 
         /// <summary>
-        /// A-11: "석빙고 코어 셀" — <see cref="SealPercent"/>/<see cref="LeakFaceCount"/>/
-        /// <see cref="TemperaturePercent"/>가 실제로 읽는 유일한 기준점. 플레이어 위치가 아니라 개발 B가
+        /// A-11: "석빙고 코어 셀" — <see cref="SealPercent"/>/<see cref="LeakFaceCount"/>가
+        /// 실제로 읽는 유일한 기준점. 플레이어 위치가 아니라 설치 코어가
         /// <see cref="SetSealCoreCell"/>로 명시적으로 전달한 좌표다. 설정되지 않으면 세 값 모두 안전하게 0을
         /// 반환한다(요구사항 4). <see cref="watchPoints"/>(범용 관찰 지점)와는 별개의 캐시·창 규칙을 쓴다.
         /// </summary>
@@ -112,6 +109,10 @@ namespace Nyangbingo.World
         /// <summary>코어 리전 캐시 — 창(<see cref="windowRx"/>/<see cref="windowRy"/>) 안에서만 계산되고,
         /// 코어와 무관한 타일 변경으로는 무효화되지 않는다(<see cref="AffectsCoreWindow"/> 참고).</summary>
         private SealRegion coreRegionCache;
+
+        /// <summary>v72 A-1: 여러 코어의 57×25 밀폐 창을 독립적으로 판정하기 위한 캐시.</summary>
+        private readonly Dictionary<Vector3Int, SealRegion> coreRegionByCell =
+            new Dictionary<Vector3Int, SealRegion>();
 
         /// <summary>코어 창의 마지막으로 통보한 밀폐 상태 — 변경 시에만 이벤트를 1회 발행하기 위한 비교 기준.</summary>
         private bool lastNotifiedCoreSealed;
@@ -124,10 +125,10 @@ namespace Nyangbingo.World
         public event Action<Vector3Int, bool> WatchPointSealChanged;
 
         public SealSystem(TileService tileService, int maxFillCells = DefaultMaxFillCells,
-            ISealBarrierRegistry barrierRegistry = null, ICoolingSourceProvider coolingSourceProvider = null,
+            ISealBarrierRegistry barrierRegistry = null,
             int sealWindowRadiusX = DefaultSealWindowRadiusX, int sealWindowRadiusY = DefaultSealWindowRadiusY,
             float sealTargetCells = DefaultSealTargetCells)
-            : this(tileService, null, maxFillCells, barrierRegistry, coolingSourceProvider,
+            : this(tileService, null, maxFillCells, barrierRegistry,
                 sealWindowRadiusX, sealWindowRadiusY, sealTargetCells)
         {
         }
@@ -140,7 +141,7 @@ namespace Nyangbingo.World
         /// </summary>
         public SealSystem(TileService tileService, IReadOnlyList<SealWhitelistDefinition> sealWhitelist,
             int maxFillCells = DefaultMaxFillCells,
-            ISealBarrierRegistry barrierRegistry = null, ICoolingSourceProvider coolingSourceProvider = null,
+            ISealBarrierRegistry barrierRegistry = null,
             int sealWindowRadiusX = DefaultSealWindowRadiusX, int sealWindowRadiusY = DefaultSealWindowRadiusY,
             float sealTargetCells = DefaultSealTargetCells)
         {
@@ -148,7 +149,6 @@ namespace Nyangbingo.World
             boundaryPolicy = new SealBoundaryPolicy(sealWhitelist);
             this.maxFillCells = Mathf.Max(16, maxFillCells);
             this.barrierRegistry = barrierRegistry;
-            this.coolingSourceProvider = coolingSourceProvider;
 
             windowRx = Mathf.Max(1, sealWindowRadiusX);
             windowRy = Mathf.Max(1, sealWindowRadiusY);
@@ -176,9 +176,6 @@ namespace Nyangbingo.World
         /// <summary>차열벽/차열 지붕/단열 문 등 B파트 설치물을 밀폐 벽으로 인정할지 조회할 레지스트리를 연결한다.</summary>
         public void SetBarrierRegistry(ISealBarrierRegistry registry) => barrierRegistry = registry;
 
-        /// <summary>B파트 온도 시스템의 냉기원 가동 상태 조회자를 연결한다(<see cref="TemperaturePercent"/>가 사용).</summary>
-        public void SetCoolingSourceProvider(ICoolingSourceProvider provider) => coolingSourceProvider = provider;
-
         /// <summary>
         /// A-07: 월드 로드 등으로 살아있는 TileData[,]가 통째로 새 TileService로 바뀌었을 때, 이 SealSystem
         /// 인스턴스 자체는 Dispose하지 않고 내부 참조만 교체한다. 이렇게 하면 주 관찰 지점/고정 관찰 지점
@@ -200,39 +197,31 @@ namespace Nyangbingo.World
         /// <summary>
         /// A-11: "석빙고 코어 셀" 중심 57×25 창(<see cref="WindowCellCap"/>) 안에서만 계산된 밀폐율(0~1,
         /// 확정 산식 <c>leak_faces==0 ? min(1, region_cells/seal_target_cells) : 0</c>). 코어가 설정되지
-        /// 않았으면 요구사항 4에 따라 0을 반환한다. ×100이 기획 문서가 말하는 "sealPct(%)"다. 냉기원 상한과는
-        /// 무관하게 순수 밀폐 상태만 반영한다 — 냉기원까지 반영한 값이 필요하면 <see cref="TemperaturePercent"/>를 쓴다.
+        /// 않았으면 요구사항 4에 따라 0을 반환한다. ×100이 기획 문서가 말하는 "sealPct(%)"다.
+        /// 절대 방온은 이 값을 퍼센트로 환산하지 않고 코어 창의 완전 밀폐 여부만 사용한다.
         /// </summary>
         public float SealPercent => GetOrComputeCoreRegion().sealPercent;
 
         /// <summary>코어 창 경계에서 발견된 누출면(leak face) 개수 — 창 밖으로 이어지는 공기 면도 포함한다(요구사항 5).</summary>
         public int LeakFaceCount => sealCoreCell.HasValue ? GetOrComputeCoreRegion().leakFaceCount : 0;
 
-        /// <summary>
-        /// A-12 확정 산식: <c>leak_faces==0 ? min(activeColdSourceCap, 100×min(1, region_cells/seal_target_cells)) : 0</c>.
-        /// <see cref="SealPercent"/>(밀폐율 자체)와는 별개의 값이므로 혼용하지 말 것 — SealPercent는 항상 냉기원
-        /// 상한과 무관한 순수 밀폐 상태이고, 이 값은 B파트 온도 시스템이 온도 게이지에 바로 쓸 수 있게 냉기원
-        /// 상한까지 얹은 최종 값이다(0~100 스케일, SealPercent와 스케일이 다르니 주의). coolingSourceProvider가
-        /// 연결돼 있지 않거나 활성 냉기원이 없으면 0%다(연결 안 됨=100%로 잘못 해석되는 사고 방지, 요구사항 그대로).
-        /// 코어가 설정되지 않았으면 요구사항 4에 따라 항상 0%다.
-        /// </summary>
-        public float TemperaturePercent
-        {
-            get
-            {
-                if (!sealCoreCell.HasValue) return 0f;
-                var region = GetOrComputeCoreRegion();
-                if (region.leakFaceCount != 0) return 0f;
-                var activeColdSourceCap = Mathf.Clamp(coolingSourceProvider?.CoolingCapPercent ?? 0f, 0f, 100f);
-                return Mathf.Min(activeColdSourceCap, region.sealPercent * 100f);
-            }
-        }
-
         /// <summary>임의의 월드 좌표가 완전히 밀폐된 실내 안에 있는지. 등록되지 않은 좌표도 즉석으로 계산(캐시됨)한다.</summary>
         public bool IsInsideSealedArea(Vector2 position)
         {
             var cell = tileService.WorldToCell(position);
             return GetOrComputeRegion(cell).isSealed;
+        }
+
+        /// <summary>
+        /// v72 A-1: 지정 코어를 중심으로 기존 57×25 코어 창 규칙을 적용한 순수 밀폐 여부.
+        /// 냉기원 상한이나 주 코어 선택과 무관하며, 여러 얼음 저장고가 각각 호출할 수 있다.
+        /// </summary>
+        public bool IsCoreWindowSealed(Vector3Int core)
+        {
+            if (coreRegionByCell.TryGetValue(core, out var cached)) return cached.isSealed;
+            var region = ComputeCoreWindowRegion(core);
+            coreRegionByCell[core] = region;
+            return region.isSealed;
         }
 
         /// <summary>해당 셀이 맵 경계 안에 있는지. 맵 밖은 방(room) 개념이 성립하지 않는 확정 실패 상태라,
@@ -251,7 +240,7 @@ namespace Nyangbingo.World
 
         /// <summary>
         /// 석빙고 코어(보통 얼음 저장고 설치 좌표)를 설정한다. <see cref="SealPercent"/>/<see cref="LeakFaceCount"/>/
-        /// <see cref="TemperaturePercent"/>가 이 좌표를 중심으로 한 57×25 창(<see cref="WindowCellCap"/>) 안에서만
+        /// <see cref="SealPercent"/>가 이 좌표를 중심으로 한 57×25 창(<see cref="WindowCellCap"/>) 안에서만
         /// 계산된다. 새 코어를 등록하는 시점에는(<see cref="RegisterWatchPoint"/>와 동일하게) 이벤트를 발행하지
         /// 않는다 — 기준선(baseline)만 세워 두고, 이후 실제 상태 변화(타일 변경/밤 시작)부터 이벤트가 발행된다.
         /// </summary>
@@ -263,7 +252,7 @@ namespace Nyangbingo.World
             lastNotifiedCoreSealed = GetOrComputeCoreRegion().isSealed;
         }
 
-        /// <summary>코어를 해제한다 — 이후 SealPercent/LeakFaceCount/TemperaturePercent는 코어가 다시 설정될
+        /// <summary>코어를 해제한다 — 이후 SealPercent/LeakFaceCount는 코어가 다시 설정될
         /// 때까지 안전하게 0을 반환한다(요구사항 4). 직전까지 밀폐 상태였다면 해제 사실을 한 번 통보한다.</summary>
         public void ClearSealCoreCell()
         {
@@ -308,6 +297,7 @@ namespace Nyangbingo.World
         {
             regionByCell.Clear();
             coreRegionCache = null;
+            coreRegionByCell.Clear();
             RefreshWatchPoints();
             RefreshCore();
         }
@@ -375,6 +365,8 @@ namespace Nyangbingo.World
 
         private void HandleTileChanged(Vector3Int changedCell)
         {
+            // 임의 코어 창은 현재 배치된 코어 수만큼만 존재한다. 변경 뒤 다음 조회에서 정확히 다시 계산한다.
+            coreRegionByCell.Clear();
             if (regionByCell.Count != 0) // 캐시된 범용 리전이 없으면 재계산할 것도 없다(전체 스캔 방지).
             {
                 var affected = new HashSet<SealRegion>();

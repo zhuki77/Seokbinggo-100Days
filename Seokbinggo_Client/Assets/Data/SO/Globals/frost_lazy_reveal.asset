@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: frost_lazy_reveal
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: frost_lazy_reveal
+  value: 1
+  unit: bool
+  note: "\uD575\uC2EC \uAD6C\uD604 \u2014 \uB2E8\uACC4\uAC00 \uC62C\uB77C\uB3C4 \uD0C0\uC77C\uC744
+    \uC989\uC2DC \uC548 \uBC14\uAFBC\uB2E4. '\uC5BC \uC608\uC815'\uC73C\uB85C \uCC0D\uC5B4\uB9CC
+    \uB450\uACE0 **\uD50C\uB808\uC774\uC5B4\uAC00 \uACF5\uAE30\uC640 \uB9DE\uB2FF\uC740
+    \uD759\xB7\uB3CC\xB7\uC810\uD1A0\xB7\uC11D\uD0C4\uC744 \uCC98\uC74C \uAC74\uB4DC\uB9B4
+    \uB54C** \uC11C\uB9AC \uAD11\uBB3C\uB85C \uD655\uC815\uD55C\uB2E4. **\uC6D4\uB4DC\uC820
+    \uC7AC\uC2E4\uD589 0**"

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: recool_cost
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: recool_cost
+  value: ice_shard:1
+  unit: "\uAC1C/\uB3C4"
+  note: "[\uAC00\uC548] \uB2E4\uC74C \uB0AE\uC5D0 \uC2E4\uC628 1\uB3C4\uB97C \uB418\uB3CC\uB9AC\uB294
+    \uBE44\uC6A9 = \uC5BC\uC74C \uC870\uAC01 1. \uC815\uBCF8\uC758 \uB0C9\uAC01 \uC790\uC6D0\uC744
+    \uADF8\uB300\uB85C \uC4F4\uB2E4(4-3 '\uC5BC\uC74C \uC870\uAC01 = \uCCB4\uC628
+    \uD68C\uBCF5\xB7\uB2E8\uC5F4 \uBB38'). \uAC80\uC0B0: +8\uB3C4 \uBCF5\uAD6C =
+    \uC5BC\uC74C \uC870\uAC01 8. \uC911\uCE35 \uBC00\uB3C4 10/100\uD0C0\uC77C\uC774\uB77C
+    \uBC24 1\uD68C \uC6D0\uC815\uBD84. 6-11 \uC5BC\uC74C \uACBD\uC81C(\uC800\uC7A5\uACE020\xB7\uB2E8\uC5F4\uBB384\xB7\uB0C9\uAE30\uC7A5\uCE5810\xB7\uC774\uBB34\uAE30\uC18C\uD65810)\uC5D0
+    \uBC18\uBCF5 \uC218\uC694\uB97C \uB354\uD558\uB418 \uC7A0\uADF8\uC9C0 \uC54A\uB294\uB2E4"

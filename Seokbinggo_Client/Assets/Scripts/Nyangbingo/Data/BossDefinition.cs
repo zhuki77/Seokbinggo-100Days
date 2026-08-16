@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Nyangbingo.Data
 {
-    public enum BossSpecialShape { Box, Cone }
+    public enum BossSpecialShape { Box, Cone, Fan }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Boss")]
     public sealed class BossDefinition : ScriptableObject
@@ -37,6 +37,9 @@ namespace Nyangbingo.Data
         [SerializeField] private bool specialHasFireTag;
         [SerializeField] private bool specialAimLocks;
         [SerializeField] private ItemMvpScope mvpScope;
+        [SerializeField] private string arenaLayer;
+        [SerializeField] private int heatStage;
+        [TextArea][SerializeField] private string arenaNote;
         public string Id => id;
         public string DisplayName => displayName;
         public BossKind Kind => kind;
@@ -66,6 +69,9 @@ namespace Nyangbingo.Data
         public bool SpecialHasFireTag => specialHasFireTag;
         public bool SpecialAimLocks => specialAimLocks;
         public ItemMvpScope MvpScope => mvpScope;
+        public string ArenaLayer => arenaLayer ?? string.Empty;
+        public int HeatStage => heatStage;
+        public string ArenaNote => arenaNote ?? string.Empty;
 
         public static BossDefinition CreateRuntime(string bossId, YokaiKind kind, ItemDefinition summon, ItemAmount[] rewards)
         {

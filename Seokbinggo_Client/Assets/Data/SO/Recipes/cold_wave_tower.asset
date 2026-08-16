@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: cold_wave_tower
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: cold_wave_tower
+  station: 5
+  ingredients:
+  - item: {fileID: 11400000, guid: c7fb0e698a8f0764fa09268ae3428bea, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 5f95fcae15934f4409c6facd803876e5, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: ba9ad3c5b01b1954b826b99ba756ba21, type: 2}
+    amount: 3
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 50
+  output:
+    item: {fileID: 11400000, guid: af6e1b336f8ab564ea83b9e89a90f952, type: 2}
+    amount: 1
+  durationSeconds: 90
+  type: 14
+  mvpScope: 2
+  note: "\uD130\uB81B T6 \uC9C4\uD654 \u2014 \uC6D0\uBCF8 \uC18C\uBAA8(\uC815\uBCF8
+    6-14)"

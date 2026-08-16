@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Nyangbingo.Core;
+using Nyangbingo.Crafting;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using Nyangbingo.Save;
@@ -25,6 +26,23 @@ using TileData = Nyangbingo.World.TileData;
 /// </summary>
 public static class NyangbingoDevARegressionTests
 {
+    private const string OfficialCatalogPath = "Assets/Data/SO/GameDataCatalog.asset";
+    private static GameDataCatalog officialCatalog;
+
+    private static GameDataCatalog OfficialCatalog
+    {
+        get
+        {
+            officialCatalog ??= AssetDatabase.LoadAssetAtPath<GameDataCatalog>(OfficialCatalogPath);
+            return officialCatalog != null
+                ? officialCatalog
+                : throw new InvalidOperationException($"공식 GameDataCatalog를 찾을 수 없음: {OfficialCatalogPath}");
+        }
+    }
+
+    private static MapGenerator CreateGenerator(WorldGenerationConfig config) =>
+        new MapGenerator(config, OfficialCatalog);
+
     [MenuItem("Nyangbingo/Run Dev A Regression Tests")]
     public static void RunAll()
     {
@@ -37,9 +55,11 @@ public static class NyangbingoDevARegressionTests
             ("밀폐 시스템", TestSealSystem),
             ("낮/밤 전환", TestDayNightTransitions),
             ("월드 세션 라운드트립", () => TestWorldSessionRoundTrip(config)),
+            ("광물 경도 CSV 단일 출처", TestMineralHardnessCsvSource),
+            ("v72 절대 실온·저체온·장비/설비 온도", TestV72TemperatureRules),
             // A-10: 지층 깊이 45/45/45/5 교정 + mineral-tiers.csv depth_min/depth_max 정합성.
             ("지층 깊이·광물 깊이 정합성", () => TestLayerDepthAndMineralRanges(config)),
-            // A-11/A-12/A-13: SealSystem 57×25 코어 창, SetSealCoreCell API, 냉기원 상한 연동 회귀 13종.
+            // v72: SealSystem 57×25 코어 창의 완전 밀폐 판정(코어 효율 x2).
             ("SealSystem 코어 창(57x25)", TestSealSystemCoreWindow),
             // A-14: 타일 노출면 먹선 오버레이 — 마스크→모양 테이블 완전성 + 변경 셀 국소 갱신 통합 검증.
             ("타일 노출면 먹선 오버레이", TestTileEdgeOverlay),
@@ -93,6 +113,151 @@ public static class NyangbingoDevARegressionTests
             Debug.LogError($"[Nyangbingo] Dev A 회귀 테스트 실패 {failed.Count}건 — {string.Join(", ", failed)} ({passed}/{tests.Length} 통과).");
     }
 
+    [MenuItem("Nyangbingo/Run Mineral Hardness CSV Regression")]
+    public static void RunMineralHardnessCsvRegression()
+    {
+        TestMineralHardnessCsvSource();
+        Debug.Log("[Nyangbingo] Mineral hardness CSV regression passed.");
+    }
+
+    [MenuItem("Nyangbingo/Run v72 Temperature Regression")]
+    public static void RunV72TemperatureRegression()
+    {
+        TestV72TemperatureRules();
+        Debug.Log("[Nyangbingo] v72 temperature regression passed.");
+    }
+
+    [MenuItem("Nyangbingo/Run v72 Dev A Repair Regression")]
+    public static void RunV72RepairRegression()
+    {
+        var config = WorldGenerationConfig.CreateDefault();
+        try
+        {
+            TestTileRestoreAtomicity(config);
+            TestLayerDepthAndMineralRanges(config);
+            TestBackgroundAndWallpaper(config);
+            TestForegroundCollisionAndRender(config);
+            TestCaveSurfaceProtection(config);
+            Debug.Log("[Nyangbingo] v72 Dev A repair regression passed: ordered tile/background diffs, " +
+                      "surface mineral ban, world boundaries, and cave post-process reflection.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(config);
+        }
+    }
+
+    private static void TestV72TemperatureRules()
+    {
+        Assert(RoomTempService.Natural(.10f, 1) == 0 &&
+               RoomTempService.Natural(.40f, 1) == -5 &&
+               RoomTempService.Natural(.80f, 1) == -10,
+            "폭염 1단계 자연 실온 0/-5/-10 밴드가 v72와 다름");
+        Assert(RoomTempService.Natural(.30f, 2) == -5 &&
+               RoomTempService.Natural(.55f, 3) == -10,
+            "폭염 단계당 깊이 밴드 이동이 v72와 다름");
+
+        var core = new Vector3Int(10, 20, 0);
+        Assert(RoomTempService.IsInsideCoreRange(new Vector3Int(6, 15, 0), core, 8, 10) &&
+               RoomTempService.IsInsideCoreRange(new Vector3Int(13, 24, 0), core, 8, 10) &&
+               !RoomTempService.IsInsideCoreRange(new Vector3Int(14, 20, 0), core, 8, 10) &&
+               !RoomTempService.IsInsideCoreRange(new Vector3Int(10, 25, 0), core, 8, 10),
+            "코어 8x10 절대 타일 범위 경계가 다름");
+
+        Assert(Mathf.Approximately(PlayerTemperatureState.CalculateHypothermiaTemperatureDelta(
+                   10f, -10f, -10f, .10f), -1f) &&
+               Mathf.Approximately(PlayerTemperatureState.CalculateHypothermiaTemperatureDelta(
+                   10f, -9f, -10f, .10f), 0f),
+            "저체온 체온 하강 임계/속도가 globals 정본과 다름");
+        var remainder = 0f;
+        Assert(PlayerTemperatureState.AccumulateHypothermiaDamage(0f, 0f, 2f, .25f,
+                   ref remainder) == 0 && Mathf.Approximately(remainder, .5f) &&
+               PlayerTemperatureState.AccumulateHypothermiaDamage(0f, 0f, 2f, .25f,
+                   ref remainder) == 1 && Mathf.Approximately(remainder, 0f),
+            "저체온 HP 피해의 소수 누적이 2 HP/초와 다름");
+
+        Assert(StationTemperatureRules.TempOk(SmeltingStationKind.Furnace, -9) &&
+               !StationTemperatureRules.TempOk(SmeltingStationKind.Furnace, -10) &&
+               !StationTemperatureRules.TempOk(SmeltingStationKind.Foundry, -10),
+            "제련 설비가 빙결(-10도 이하)에서 정지하지 않음");
+
+        AssertEquipmentColdTolerance("straw_helm", 0);
+        AssertEquipmentColdTolerance("straw_armor", 0);
+        AssertEquipmentColdTolerance("straw_boots", 0);
+        AssertEquipmentColdTolerance("iron_helm", -5);
+        AssertEquipmentColdTolerance("iron_armor", -5);
+        AssertEquipmentColdTolerance("iron_boots", -5);
+        AssertEquipmentColdTolerance("icesteel_helm", -10);
+        AssertEquipmentColdTolerance("icesteel_armor", -10);
+        AssertEquipmentColdTolerance("icesteel_boots", -10);
+
+        var requiredGlobals = new Dictionary<string, string>
+        {
+            [GlobalKeys.TempSystem] = "absolute_room_c",
+            [GlobalKeys.CoreStackMode] = "additive",
+            [GlobalKeys.SealRole] = "core_efficiency_x2"
+        };
+        foreach (var pair in requiredGlobals)
+            Assert(OfficialCatalog.FindGlobal(pair.Key)?.Value == pair.Value,
+                $"global {pair.Key}가 v72 값 {pair.Value}와 다름");
+    }
+
+    private static void AssertEquipmentColdTolerance(string id, int expected)
+    {
+        var equipment = OfficialCatalog.FindEquipment(id);
+        Assert(equipment != null && equipment.HasColdTolerance &&
+               equipment.ColdToleranceC == expected && equipment.ColdOk(expected) &&
+               !equipment.ColdOk(expected - 1) && !string.IsNullOrWhiteSpace(equipment.ColdNote),
+            $"장비 {id}의 coldToleranceC={expected} 데이터/판정이 올바르지 않음");
+    }
+
+    private static void TestMineralHardnessCsvSource()
+    {
+        Assert(typeof(OreVeinProfile).GetField("hardness") == null,
+            "OreVeinProfile에 경도 직렬화 필드가 남아 있음 — mineral-tiers.csv 단일 출처 위반");
+
+        var catalog = OfficialCatalog;
+        var iron = catalog.FindMineralTier(WorldTileTypes.IronOre);
+        var copper = catalog.FindMineralTier(WorldTileTypes.CopperOre);
+        Assert(iron != null && iron.Hardness == 1 && iron.CanBreakWithClawTier(1) &&
+               Mathf.Approximately(iron.MiningSecondsForClawTier(1), 3f),
+            "철 광석이 T1 경도 1·3초 소프트 채굴 정본과 다름");
+        Assert(copper != null && copper.Hardness == 1 && copper.CanBreakWithClawTier(1) &&
+               Mathf.Approximately(copper.MiningSecondsForClawTier(1), 3f),
+            "구리 광석이 T1 경도 1·3초 소프트 채굴 정본과 다름");
+
+        var config = WorldGenerationConfig.CreateDefault();
+        try
+        {
+            var result = CreateGenerator(config).GenerateDetailed(987654);
+            var ironTiles = 0;
+            var copperTiles = 0;
+            for (var x = 0; x < result.width; x++)
+            for (var y = 0; y < result.height; y++)
+            {
+                var tile = result.tiles[x, y];
+                if (tile.elementType == WorldTileTypes.IronOre)
+                {
+                    ironTiles++;
+                    Assert(tile.hardness == iron.Hardness,
+                        $"철 광석 타일 경도 {tile.hardness}가 CSV {iron.Hardness}와 다름");
+                }
+                else if (tile.elementType == WorldTileTypes.CopperOre)
+                {
+                    copperTiles++;
+                    Assert(tile.hardness == copper.Hardness,
+                        $"구리 광석 타일 경도 {tile.hardness}가 CSV {copper.Hardness}와 다름");
+                }
+            }
+            Assert(ironTiles > 0 && copperTiles > 0,
+                $"회귀 시드에 철·구리 광석이 부족함(iron={ironTiles}, copper={copperTiles})");
+        }
+        finally
+        {
+            Object.DestroyImmediate(config);
+        }
+    }
+
     private static void Assert(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
@@ -138,14 +303,14 @@ public static class NyangbingoDevARegressionTests
     {
         const int seed = 424242;
 
-        var a = new MapGenerator(config).GenerateDetailed(seed);
-        var b = new MapGenerator(config).GenerateDetailed(seed);
+        var a = CreateGenerator(config).GenerateDetailed(seed);
+        var b = CreateGenerator(config).GenerateDetailed(seed);
         Assert(a.acceptedSeed == b.acceptedSeed, "같은 seed인데 acceptedSeed가 다름");
         Assert(a.spawnPoint == b.spawnPoint, "같은 seed인데 스폰 위치가 다름");
         Assert(a.altarPosition == b.altarPosition, "같은 seed인데 제단 위치가 다름");
         Assert(TilesEqual(a.tiles, b.tiles, a.width, a.height), "같은 seed인데 타일 배열이 다름");
 
-        var c = new MapGenerator(config).GenerateDetailed(seed + 999);
+        var c = CreateGenerator(config).GenerateDetailed(seed + 999);
         Assert(!TilesEqual(a.tiles, c.tiles, a.width, a.height), "다른 seed인데 완전히 같은 타일 배열이 생성됨");
 
         Debug.Log("[Nyangbingo] Dev A deterministic generation test completed.");
@@ -168,7 +333,7 @@ public static class NyangbingoDevARegressionTests
     {
         const int seed = 13579;
 
-        var result = new MapGenerator(config).GenerateDetailed(seed);
+        var result = CreateGenerator(config).GenerateDetailed(seed);
         Assert(result.chests != null, "상자 리스트가 null");
         Assert(result.chests.Count <= config.TotalChestCount,
             $"상자 개수 상한 초과: {result.chests.Count} > {config.TotalChestCount}");
@@ -187,7 +352,7 @@ public static class NyangbingoDevARegressionTests
         }
 
         // 같은 시드는 동일 배치.
-        var repeat = new MapGenerator(config).GenerateDetailed(seed);
+        var repeat = CreateGenerator(config).GenerateDetailed(seed);
         Assert(repeat.chests.Count == result.chests.Count, "같은 seed인데 상자 개수가 다름");
         for (var i = 0; i < result.chests.Count; i++)
         {
@@ -198,7 +363,7 @@ public static class NyangbingoDevARegressionTests
         // 여러 시드에서 동굴당 0~2 상한을 지킨다(동굴이 없으면 0).
         for (var s = seed; s < seed + 5; s++)
         {
-            var sample = new MapGenerator(config).GenerateDetailed(s);
+            var sample = CreateGenerator(config).GenerateDetailed(s);
             Assert(sample.chests.Count <= config.LargeCavernCountMax * config.ChestPerCavernMax,
                 $"seed {s}: 상자 {sample.chests.Count}가 동굴당 상한 합을 초과");
         }
@@ -274,12 +439,16 @@ public static class NyangbingoDevARegressionTests
         // CSV가 정본이므로 두 값이 갈리면 WorldGenerationConfig 쪽을 CSV에 맞춰야 한다).
         var csvRows = NyangbingoCsvUtility.ReadRows("Assets/Data/CSV/mineral-tiers.csv");
         var depthByResourceId = new Dictionary<string, (int min, int max)>(StringComparer.Ordinal);
+        var hardnessByResourceId = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var row in csvRows)
         {
             if (!row.TryGetValue("resource_id", out var id) || !row.TryGetValue("depth_min", out var minText) ||
                 !row.TryGetValue("depth_max", out var maxText)) continue;
-            if (!int.TryParse(minText, out var depthMin) || !int.TryParse(maxText, out var depthMax)) continue;
+            if (!int.TryParse(minText, out var depthMin) || !int.TryParse(maxText, out var depthMax) ||
+                !row.TryGetValue("hardness", out var hardnessText) ||
+                !int.TryParse(hardnessText, out var hardness)) continue;
             depthByResourceId[id] = (depthMin, depthMax);
+            hardnessByResourceId[id] = hardness;
         }
 
         var profiles = config.OreVeins;
@@ -297,7 +466,7 @@ public static class NyangbingoDevARegressionTests
 
         // 완료 조건 3: 실제로 생성된 월드에서 각 광물 타일이 자신의 depth_min~depth_max 밖에 배치되지 않았는지.
         const int seed = 987654;
-        var result = new MapGenerator(config).GenerateDetailed(seed);
+        var result = CreateGenerator(config).GenerateDetailed(seed);
         Assert(result.surfaceHeights != null && result.surfaceHeights.Length == result.width,
             "GenerateDetailed 결과에 surfaceHeights가 채워지지 않음(A-10 테스트 지원용 필드)");
 
@@ -311,6 +480,7 @@ public static class NyangbingoDevARegressionTests
 
         var checkedTiles = 0;
         var violations = 0;
+        var hardnessViolations = 0;
         var surfaceBanViolations = 0;
         for (var x = 0; x < result.width; x++)
         {
@@ -330,10 +500,15 @@ public static class NyangbingoDevARegressionTests
                 checkedTiles++;
                 var oreDepth = surfaceY - y + 1;
                 if (oreDepth < range.min || oreDepth > range.max) violations++;
+                if (!hardnessByResourceId.TryGetValue(elementType, out var expectedHardness) ||
+                    result.tiles[x, y].hardness != expectedHardness)
+                    hardnessViolations++;
             }
         }
         Assert(checkedTiles > 0, "테스트 시드에서 depth 제약이 걸린 광물 타일을 하나도 찾지 못함 — 픽스처 시드 교체 필요");
         Assert(violations == 0, $"depth_min~depth_max 범위를 벗어난 광물 타일 {violations}/{checkedTiles}개 발견");
+        Assert(hardnessViolations == 0,
+            $"mineral-tiers.csv 경도와 다른 광물 타일 {hardnessViolations}/{checkedTiles}개 발견");
         Assert(surfaceBanViolations == 0,
             $"지표 {config.SurfaceMineralBanDepth}칸 안에 돌/석탄/점토 {surfaceBanViolations}개 발견");
 
@@ -354,7 +529,7 @@ public static class NyangbingoDevARegressionTests
     {
         const int seed = 555;
 
-        var original = new MapGenerator(config).GenerateDetailed(seed);
+        var original = CreateGenerator(config).GenerateDetailed(seed);
         var liveService = new TileService(original.tiles, null, null, seed);
 
         var breakable = FindCellWithHardness(original.tiles, original.width, original.height);
@@ -363,13 +538,13 @@ public static class NyangbingoDevARegressionTests
         Assert(records.Count == 1, "파괴 후 변경 이력이 정확히 1건 기록되지 않음");
 
         // 정상 재생: 같은 seed로 다시 생성한 새 배열 위에 replay하면 성공하고, 파괴된 칸이 그대로 반영돼야 한다.
-        var replay = new MapGenerator(config).GenerateDetailed(seed);
+        var replay = CreateGenerator(config).GenerateDetailed(seed);
         var replayService = new TileService(replay.tiles, null, null, seed);
         Assert(replayService.RestoreTileChanges(records), "정상 타일 변경 이력 재생이 실패함");
         Assert(replay.tiles[breakable.x, breakable.y].IsAir, "재생 후에도 파괴된 칸이 원래 상태로 남아 있음");
 
         // 같은 셀의 설치 -> 제거는 마지막 제거 하나로 덮어쓰지 않고 순서대로 보존해야 한다.
-        var roundTripWorld = new MapGenerator(config).GenerateDetailed(seed);
+        var roundTripWorld = CreateGenerator(config).GenerateDetailed(seed);
         var roundTripService = new TileService(roundTripWorld.tiles, null, null, seed);
         var roundTripCell = FindAirCellNearSpawn(roundTripService, roundTripWorld);
         Assert(roundTripService.TryPlaceForeground(roundTripCell, WorldTileTypes.Dirt),
@@ -379,7 +554,7 @@ public static class NyangbingoDevARegressionTests
         var roundTripRecords = roundTripService.GetTileChangeRecords();
         Assert(roundTripRecords.Count == 2 && roundTripRecords[0].placed && !roundTripRecords[1].placed,
             "동일 셀 설치-제거 이력이 실행 순서대로 보존되지 않음");
-        var roundTripReplay = new MapGenerator(config).GenerateDetailed(seed);
+        var roundTripReplay = CreateGenerator(config).GenerateDetailed(seed);
         var roundTripReplayService = new TileService(roundTripReplay.tiles, null, null, seed);
         Assert(roundTripReplayService.RestoreTileChanges(roundTripRecords) &&
                roundTripReplay.tiles[roundTripCell.x, roundTripCell.y].IsAir,
@@ -397,9 +572,10 @@ public static class NyangbingoDevARegressionTests
                 placed = false
             }
         };
-        var legacyRoundTripWorld = new MapGenerator(config).GenerateDetailed(seed);
+        var legacyRoundTripWorld = CreateGenerator(config).GenerateDetailed(seed);
         var legacyRoundTripService = new TileService(legacyRoundTripWorld.tiles, null, null, seed);
-        Assert(legacyRoundTripService.RestoreTileChanges(legacyCollapsedRoundTrip) &&
+        Assert(legacyRoundTripService.RestoreTileChanges(legacyCollapsedRoundTrip, null,
+                   allowLegacyCollapsedPlacementRemovals: true) &&
                legacyRoundTripService.GetTileChangeRecords().Count == 0,
             "구버전의 상쇄된 설치-제거 기록을 공기 상태로 이관하지 못함");
 
@@ -417,11 +593,11 @@ public static class NyangbingoDevARegressionTests
                 placed = false
             }
         };
-        var strictChestAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        var strictChestAttempt = CreateGenerator(config).GenerateDetailed(seed);
         Assert(!new TileService(strictChestAttempt.tiles, null, null, seed)
                 .RestoreTileChanges(legacyChestRemoval),
             "일반 복원은 이미 공기인 셀의 제거 기록을 허용하면 안 됨");
-        var migratedChestAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        var migratedChestAttempt = CreateGenerator(config).GenerateDetailed(seed);
         var migratedChestService = new TileService(migratedChestAttempt.tiles, null, null, seed);
         var allowedChestCells = new HashSet<Vector3Int>
         {
@@ -439,19 +615,19 @@ public static class NyangbingoDevARegressionTests
         {
             new TileChangeRecord { x = bedrockCell.x, y = bedrockCell.y, z = 0, tileId = WorldTileTypes.Bedrock, placed = true }
         };
-        var corruptedAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        var corruptedAttempt = CreateGenerator(config).GenerateDetailed(seed);
         var corruptedService = new TileService(corruptedAttempt.tiles, null, null, seed);
         Assert(!corruptedService.RestoreTileChanges(corrupted), "보호 타일(빙암) 위에 설치하는 손상된 레코드가 거부되지 않음");
 
         // 범위 밖 좌표 레코드도 거부돼야 한다.
         var outOfBounds = new List<TileChangeRecord> { new TileChangeRecord { x = -1, y = -1, z = 0, tileId = WorldTileTypes.Dirt, placed = true } };
-        var outOfBoundsAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        var outOfBoundsAttempt = CreateGenerator(config).GenerateDetailed(seed);
         var outOfBoundsService = new TileService(outOfBoundsAttempt.tiles, null, null, seed);
         Assert(!outOfBoundsService.RestoreTileChanges(outOfBounds), "범위 밖 좌표 레코드가 거부되지 않음");
 
         // 알 수 없는 tileId도 거부돼야 한다.
         var unknownType = new List<TileChangeRecord> { new TileChangeRecord { x = breakable.x, y = breakable.y, z = 0, tileId = "definitely_not_a_real_tile", placed = false } };
-        var unknownAttempt = new MapGenerator(config).GenerateDetailed(seed);
+        var unknownAttempt = CreateGenerator(config).GenerateDetailed(seed);
         var unknownService = new TileService(unknownAttempt.tiles, null, null, seed);
         Assert(!unknownService.RestoreTileChanges(unknownType), "알 수 없는 tileId 레코드가 거부되지 않음");
 
@@ -499,14 +675,13 @@ public static class NyangbingoDevARegressionTests
         tiles[roomCell.x, roomCell.y] = TileData.CreateCaveAir(WorldTileTypes.BackgroundStone);
 
         var tileService = new TileService(tiles, null, null, 1);
-        var coolingProvider = new FakeCoolingSourceProvider { IsColdSourceActive = false };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: coolingProvider);
+        var sealSystem = new SealSystem(tileService);
         try
         {
             var roomWorldPos = new Vector2(roomCell.x + 0.5f, roomCell.y + 0.5f);
             Assert(sealSystem.IsInsideSealedArea(roomWorldPos), "완전히 자연석으로 둘러싸인 방이 밀폐로 판정되지 않음");
 
-            // LeakFaceCount/TemperaturePercent는 "주 관찰 지점"(primaryWatchPoint) 기준으로 계산되므로,
+            // LeakFaceCount는 "주 관찰 지점"(primaryWatchPoint) 기준으로 계산되므로,
             // 단순 RegisterWatchPoint만으로는 두 값이 항상 0을 반환한다 — SetPrimaryWatchPoint로 등록해야 한다.
             sealSystem.SetPrimaryWatchPoint(roomCell);
             var lastSealed = true;
@@ -534,8 +709,6 @@ public static class NyangbingoDevARegressionTests
             GameEvents.RaiseNightStart();
             Assert(!sealSystem.IsWatchPointSealed(roomCell), "밤 시작 재계산 후에도 인공 벽이 밀폐로 인정됨");
 
-            // 냉기원 비활성 상태에서는 완전 밀폐라도 TemperaturePercent가 0이어야 한다(방어 효과 없음).
-            Assert(sealSystem.TemperaturePercent == 0f, "냉기원이 꺼져 있는데 TemperaturePercent > 0");
         }
         finally
         {
@@ -546,22 +719,17 @@ public static class NyangbingoDevARegressionTests
     }
 
     // ------------------------------------------------------------------
-    // A-11/A-12/A-13) SealSystem 57×25 코어 창, SetSealCoreCell API, 냉기원 상한 연동 — 회귀 13종.
+    // v72 A-1) SealSystem 57×25 코어 창 완전 밀폐 판정 — RoomTempService의 -5/-10 효율 기준.
     // ------------------------------------------------------------------
     private static void TestSealSystemCoreWindow()
     {
-        TestSealedRoomAreaProportionalTemperature();       // 항목 1
-        TestSealedRoomAtOrAboveTargetCellsIsFullTemperature(); // 항목 2
-        TestSingleLeakFaceZeroesTemperature();              // 항목 3
+        TestSealedRoomAreaProportionalTemperature();
+        TestSealedRoomAtOrAboveTargetCellsIsFullTemperature();
+        TestSingleLeakFaceZeroesTemperature();
         TestLeakOutsideWindowIsDetected();                  // 항목 4
         TestNaturalTerrainAtWindowBoundarySealsNormally();  // 항목 5
-        TestNoCoreCellYieldsZero();                         // 항목 6
-        TestNoColdSourceYieldsZero();                       // 항목 7
-        TestColdSourceCaps();                                // 항목 8/9/10
-        TestHighestCapAmongMultipleSourcesApplies();        // 항목 11
-        TestCacheRecalculatesOnTileChangeAndNightStart();   // 항목 12
-        // 항목 13(저장/로드 후 인스턴스·관찰 지점·코어 위치 유지)은 실제 세션 경로가 필요해
-        // "월드 세션 라운드트립" 테스트(TestWorldSessionRoundTrip) 안에서 함께 검증한다.
+        TestNoCoreCellYieldsZero();
+        TestCacheRecalculatesOnTileChangeAndNightStart();
 
         Debug.Log("[Nyangbingo] Dev A seal system core window (57x25) test completed.");
     }
@@ -591,16 +759,14 @@ public static class NyangbingoDevARegressionTests
         CarveRoom(tiles, room);
 
         var tileService = new TileService(tiles, null, null, 1);
-        var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 100f };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
+        var sealSystem = new SealSystem(tileService);
         try
         {
             sealSystem.SetSealCoreCell(new Vector3Int(room.x + room.width / 2, room.y + room.height / 2, 0));
             Assert(sealSystem.LeakFaceCount == 0, "완전히 밀폐된 방인데 LeakFaceCount가 0이 아님");
 
-            var expected = 100f * (room.width * room.height) / 240f; // seal_target_cells 기본값 240.
-            Assert(Mathf.Approximately(sealSystem.TemperaturePercent, expected),
-                $"면적 비례 온도가 예상과 다름(실제 {sealSystem.TemperaturePercent}, 예상 {expected})");
+            Assert(sealSystem.IsCoreWindowSealed(sealSystem.SealCoreCell.Value),
+                "작은 방이 완전히 밀폐됐는데 코어 효율 x2 판정이 꺼짐");
         }
         finally { sealSystem.Dispose(); }
     }
@@ -615,14 +781,14 @@ public static class NyangbingoDevARegressionTests
         CarveRoom(tiles, room);
 
         var tileService = new TileService(tiles, null, null, 1);
-        var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 100f };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
+        var sealSystem = new SealSystem(tileService);
         try
         {
             sealSystem.SetSealCoreCell(new Vector3Int(room.x + roomWidth / 2, room.y + roomHeight / 2, 0));
             Assert(sealSystem.LeakFaceCount == 0, "260칸 방인데 누출이 발생함 — 테스트 픽스처 오류");
             Assert(Mathf.Approximately(sealSystem.SealPercent, 1f), $"260칸(≥240) 밀폐인데 SealPercent가 1이 아님(실제 {sealSystem.SealPercent})");
-            Assert(Mathf.Approximately(sealSystem.TemperaturePercent, 100f), $"260칸 밀폐 + 냉기원 100% 상한인데 TemperaturePercent가 100이 아님(실제 {sealSystem.TemperaturePercent})");
+            Assert(sealSystem.IsCoreWindowSealed(sealSystem.SealCoreCell.Value),
+                "260칸 밀폐 방이 코어 완전 밀폐로 판정되지 않음");
         }
         finally { sealSystem.Dispose(); }
     }
@@ -636,13 +802,12 @@ public static class NyangbingoDevARegressionTests
         CarveRoom(tiles, room);
 
         var tileService = new TileService(tiles, null, null, 1);
-        var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 100f };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
+        var sealSystem = new SealSystem(tileService);
         try
         {
             var core = new Vector3Int(room.x + room.width / 2, room.y + room.height / 2, 0);
             sealSystem.SetSealCoreCell(core);
-            Assert(sealSystem.TemperaturePercent > 0f, "누출 전인데 온도가 0임 — 테스트 픽스처 오류");
+            Assert(sealSystem.IsCoreWindowSealed(core), "누출 전인데 코어가 미밀폐로 판정됨");
 
             // 경계 벽 하나를 인공(비자연) 벽으로 교체해 누출 1개를 만든다(v15 QA 꼼수 방지와 동일한 방식).
             var wallCell = new Vector3Int(room.xMin - 1, core.y, 0);
@@ -650,7 +815,7 @@ public static class NyangbingoDevARegressionTests
             Assert(tileService.TryPlaceForeground(wallCell, WorldTileTypes.Stone), "테스트 픽스처: 인공 벽 설치 실패");
 
             Assert(sealSystem.LeakFaceCount > 0, "인공 벽으로 막았는데 LeakFaceCount가 0임");
-            Assert(sealSystem.TemperaturePercent == 0f, "누출면 1개 발생 후에도 TemperaturePercent > 0");
+            Assert(!sealSystem.IsCoreWindowSealed(core), "누출면 1개 발생 후에도 코어가 밀폐로 판정됨");
             Assert(sealSystem.SealPercent == 0f, "누출면 1개 발생 후에도 SealPercent > 0");
         }
         finally { sealSystem.Dispose(); }
@@ -710,93 +875,18 @@ public static class NyangbingoDevARegressionTests
         finally { sealSystem.Dispose(); }
     }
 
-    // 항목 6: 코어 위치가 없으면 SealPercent/LeakFaceCount/TemperaturePercent 모두 안전하게 0.
+    // 주 코어 위치가 없으면 SealPercent/LeakFaceCount는 안전하게 0.
     private static void TestNoCoreCellYieldsZero()
     {
         var tiles = BuildStoneField(5, 5);
         CarveRoom(tiles, new RectInt(1, 1, 3, 3));
         var tileService = new TileService(tiles, null, null, 1);
-        var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 100f };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
+        var sealSystem = new SealSystem(tileService);
         try
         {
             Assert(!sealSystem.HasSealCoreCell, "코어를 설정하지 않았는데 HasSealCoreCell이 true임");
             Assert(sealSystem.SealPercent == 0f, "코어가 없는데 SealPercent > 0");
             Assert(sealSystem.LeakFaceCount == 0, "코어가 없는데 LeakFaceCount가 0이 아님(기본값이어야 함)");
-            Assert(sealSystem.TemperaturePercent == 0f, "코어가 없는데 TemperaturePercent > 0");
-        }
-        finally { sealSystem.Dispose(); }
-    }
-
-    // 항목 7: 냉기원(Provider)이 연결되지 않았으면 완전 밀폐라도 0%(연결 안 됨=100%로 착각하면 안 됨).
-    private static void TestNoColdSourceYieldsZero()
-    {
-        const int roomWidth = 20, roomHeight = 13;
-        const int width = roomWidth + 4, height = roomHeight + 4;
-        var room = new RectInt(2, 2, roomWidth, roomHeight);
-        var tiles = BuildStoneField(width, height);
-        CarveRoom(tiles, room);
-
-        var tileService = new TileService(tiles, null, null, 1);
-        var sealSystem = new SealSystem(tileService); // coolingSourceProvider 없음.
-        try
-        {
-            sealSystem.SetSealCoreCell(new Vector3Int(room.x + roomWidth / 2, room.y + roomHeight / 2, 0));
-            Assert(sealSystem.SealPercent > 0f, "밀폐는 됐는데 SealPercent가 0임 — 테스트 픽스처 오류");
-            Assert(sealSystem.TemperaturePercent == 0f,
-                "냉기원 Provider가 연결되지 않았는데 TemperaturePercent > 0 — 연결 안 됨을 100%로 착각");
-        }
-        finally { sealSystem.Dispose(); }
-    }
-
-    // 항목 8/9/10: 물단지 25% · 얼음 항아리 50% · 얼음 저장고/빙정 냉각로 100% 상한이 그대로 반영되는지.
-    private static void TestColdSourceCaps()
-    {
-        AssertCap(25f, "물단지");
-        AssertCap(50f, "얼음 항아리");
-        AssertCap(100f, "얼음 저장고/빙정 냉각로");
-
-        static void AssertCap(float cap, string label)
-        {
-            const int roomWidth = 20, roomHeight = 13;
-            const int width = roomWidth + 4, height = roomHeight + 4;
-            var room = new RectInt(2, 2, roomWidth, roomHeight);
-            var tiles = BuildStoneField(width, height);
-            CarveRoom(tiles, room);
-
-            var tileService = new TileService(tiles, null, null, 1);
-            var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = cap };
-            var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
-            try
-            {
-                sealSystem.SetSealCoreCell(new Vector3Int(room.x + roomWidth / 2, room.y + roomHeight / 2, 0));
-                Assert(Mathf.Approximately(sealSystem.SealPercent, 1f), $"{label} 테스트: 260칸 밀폐인데 SealPercent가 1이 아님");
-                Assert(Mathf.Approximately(sealSystem.TemperaturePercent, cap),
-                    $"{label} 상한({cap}%)이 그대로 반영되지 않음(실제 {sealSystem.TemperaturePercent})");
-            }
-            finally { sealSystem.Dispose(); }
-        }
-    }
-
-    // 항목 11: 여러 냉기원이 가동 중이면 그중 최고 상한이 적용된다(Provider가 최고값을 공급).
-    private static void TestHighestCapAmongMultipleSourcesApplies()
-    {
-        const int roomWidth = 20, roomHeight = 13;
-        const int width = roomWidth + 4, height = roomHeight + 4;
-        var room = new RectInt(2, 2, roomWidth, roomHeight);
-        var tiles = BuildStoneField(width, height);
-        CarveRoom(tiles, room);
-
-        var tileService = new TileService(tiles, null, null, 1);
-        var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 50f };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
-        try
-        {
-            sealSystem.SetSealCoreCell(new Vector3Int(room.x + roomWidth / 2, room.y + roomHeight / 2, 0));
-            Assert(Mathf.Approximately(sealSystem.TemperaturePercent, 50f), "낮은 상한 하나만 있을 때 그 값이 반영되지 않음");
-
-            cooling.CoolingCapPercent = 100f; // 더 강한 냉기원(얼음 저장고)이 추가로 가동됐다고 가정.
-            Assert(Mathf.Approximately(sealSystem.TemperaturePercent, 100f), "더 높은 상한으로 바뀌었는데 즉시 반영되지 않음");
         }
         finally { sealSystem.Dispose(); }
     }
@@ -811,30 +901,21 @@ public static class NyangbingoDevARegressionTests
         var wallCell = new Vector3Int(0, 1, 0);
 
         var tileService = new TileService(tiles, null, null, 1);
-        var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 100f };
-        var sealSystem = new SealSystem(tileService, coolingSourceProvider: cooling);
+        var sealSystem = new SealSystem(tileService);
         try
         {
             sealSystem.SetSealCoreCell(core);
-            Assert(sealSystem.TemperaturePercent > 0f, "밀폐된 방인데 온도가 0임 — 픽스처 오류");
+            Assert(sealSystem.IsCoreWindowSealed(core), "밀폐된 방인데 코어가 미밀폐로 판정됨");
 
             // TileService를 거치지 않고 배열을 직접 바꿔(OnTileBroken 미발행) 캐시가 즉시 무효화되지 않는지 확인한다.
             tiles[wallCell.x, wallCell.y] = TileData.CreateAir();
-            Assert(sealSystem.TemperaturePercent > 0f,
+            Assert(sealSystem.IsCoreWindowSealed(core),
                 "이벤트 없이 배열만 바꿨는데 캐시가 즉시 재계산됨(캐시 무효화 조건이 타일 배치/파괴 이벤트여야 함)");
 
             GameEvents.RaiseNightStart(); // 요구사항 10: 밤 시작 시 캐시 전체 재계산.
-            Assert(sealSystem.TemperaturePercent == 0f, "밤 시작 후에도 캐시가 재계산되지 않아 무너진 벽이 반영되지 않음");
+            Assert(!sealSystem.IsCoreWindowSealed(core), "밤 시작 후에도 캐시가 재계산되지 않아 무너진 벽이 반영되지 않음");
         }
         finally { sealSystem.Dispose(); }
-    }
-
-    private sealed class FakeCoolingSourceProvider : ICoolingSourceProvider
-    {
-        public bool IsColdSourceActive { get; set; }
-
-        /// <summary>A-12: 0~100 상한. 기본값 0 — "Provider가 있지만 아무 냉기원도 안 켜짐"과 동일한 안전한 기본.</summary>
-        public float CoolingCapPercent { get; set; }
     }
 
     /// <summary>§5 항목 2 회귀용 최소 더블 — WorldSessionController.BindTickDriver가 참조를 그대로 보관/노출하는지만 확인한다.</summary>
@@ -935,7 +1016,7 @@ public static class NyangbingoDevARegressionTests
         try
         {
             var renderer = BuildMinimalRenderer(rendererGo);
-            session = new WorldSessionController(config, renderer, null);
+            session = new WorldSessionController(config, renderer, OfficialCatalog);
 
             // §5(개발 B와의 연결 계약) 항목 1/2/7 회귀: TimeService/TickDriver 바인딩과 WorldLoaded 발행.
             var timeService = timeServiceGo.AddComponent<DayNightService>();
@@ -1135,7 +1216,7 @@ public static class NyangbingoDevARegressionTests
     private static void TestBackgroundAndWallpaper(WorldGenerationConfig config)
     {
         const int seed = 424242;
-        var result = new MapGenerator(config).GenerateDetailed(seed);
+        var result = CreateGenerator(config).GenerateDetailed(seed);
         Assert(result.passedValidation, "배경 테스트용 시드가 검증을 통과하지 못함");
 
         // 1) 지하 자연 지형은 전경+자연 배경을 함께 가진다.
@@ -1213,9 +1294,6 @@ public static class NyangbingoDevARegressionTests
             var coverage = new WallpaperCoverageService(roomService, seal);
             var core = new Vector3Int(roomW / 2, roomH / 2, 0);
             seal.SetSealCoreCell(core);
-            var cooling = new FakeCoolingSourceProvider { CoolingCapPercent = 100f };
-            seal.SetCoolingSourceProvider(cooling);
-
             Assert(seal.LeakFaceCount == 0 && seal.SealPercent > 0f, "벽지 테스트용 방이 밀폐되지 않음");
             Assert(!coverage.IsCoverageComplete(core), "빈 배경 방에서 도포 완료면 안 됨");
             Assert(coverage.GetCoveragePercent(core) < 100f, "빈 배경 방에서 도포율 100%면 안 됨");
@@ -1285,7 +1363,7 @@ public static class NyangbingoDevARegressionTests
             try
             {
                 var sessionRenderer = BuildMinimalRenderer(sessionGo);
-                session = new WorldSessionController(config, sessionRenderer, null);
+                session = new WorldSessionController(config, sessionRenderer, OfficialCatalog);
                 var world = session.StartNewWorld(seed);
                 Assert(world.passedValidation, "배경 세이브 라운드트립용 월드 생성 실패");
                 Assert(session.WallpaperCoverage != null, "StartNewWorld 후 WallpaperCoverage가 null");
@@ -1355,7 +1433,7 @@ public static class NyangbingoDevARegressionTests
             Assert(renderer.Background.GetComponent<CompositeCollider2D>() == null, "배경에 CompositeCollider2D가 붙어 있음");
 
             const int seed = 515151;
-            var result = new MapGenerator(config).GenerateDetailed(seed);
+            var result = CreateGenerator(config).GenerateDetailed(seed);
             Assert(result.passedValidation, "충돌 테스트용 월드 생성 실패");
             renderer.RenderWorld(result.tiles);
 
@@ -1453,7 +1531,7 @@ public static class NyangbingoDevARegressionTests
         var fixedSeeds = new[] { 1, 42, 100, 20260716, 987654 };
         foreach (var seed in fixedSeeds)
         {
-            var result = new MapGenerator(config).GenerateDetailed(seed);
+            var result = CreateGenerator(config).GenerateDetailed(seed);
             Assert(result.passedValidation, $"고정 seed {seed}: 월드 검증 실패");
             AssertSafeSpawnResult(config, result);
         }
@@ -1462,7 +1540,7 @@ public static class NyangbingoDevARegressionTests
         var checkedCount = 0;
         for (var seed = 1000; checkedCount < 100 && seed < 1000 + 400; seed++)
         {
-            var result = new MapGenerator(config).GenerateDetailed(seed);
+            var result = CreateGenerator(config).GenerateDetailed(seed);
             if (!result.passedValidation) continue;
             AssertSafeSpawnResult(config, result);
             checkedCount++;
@@ -1470,8 +1548,8 @@ public static class NyangbingoDevARegressionTests
         Assert(checkedCount >= 100, $"안전 스폰을 검증한 seed가 100개 미만(실제 {checkedCount})");
 
         // 결정론
-        var a = new MapGenerator(config).GenerateDetailed(777);
-        var b = new MapGenerator(config).GenerateDetailed(777);
+        var a = CreateGenerator(config).GenerateDetailed(777);
+        var b = CreateGenerator(config).GenerateDetailed(777);
         Assert(a.spawnPoint == b.spawnPoint, "같은 seed인데 spawnPoint가 다름");
         Assert(a.passedValidation && b.passedValidation, "결정론 스폰 테스트 시드 검증 실패");
 
@@ -1484,7 +1562,7 @@ public static class NyangbingoDevARegressionTests
     private static void TestWorldSafeSpawnResolver(WorldGenerationConfig config)
     {
         const float halfExtent = 0.38f;
-        var result = new MapGenerator(config).GenerateDetailed(20260716);
+        var result = CreateGenerator(config).GenerateDetailed(20260716);
         Assert(result.passedValidation, "안전 스폰 계약 테스트용 월드 검증 실패");
 
         var tileService = new TileService(result.tiles, null, null, result.acceptedSeed);
@@ -1531,10 +1609,10 @@ public static class NyangbingoDevARegressionTests
         {
             var renderer = BuildMinimalRenderer(hostGo);
             WireDummyTileVisuals(renderer, dummyTiles, CollectRenderableElementTypes());
-            var result = new MapGenerator(config).GenerateDetailed(42);
+            var result = CreateGenerator(config).GenerateDetailed(42);
             Assert(result.passedValidation, "배치 계약 테스트용 월드 검증 실패");
 
-            session = new WorldSessionController(config, renderer, null);
+            session = new WorldSessionController(config, renderer, OfficialCatalog);
             session.StartNewWorld(42);
             var tiles = session.TileService;
 
@@ -1689,11 +1767,11 @@ public static class NyangbingoDevARegressionTests
             var rngFieldSeed = seed;
             var grid = new TileData[config.MapWidth, config.MapHeight];
             var terrainRng = new System.Random(rngFieldSeed);
-            var surfaceHeights = (int[])terrainMethod.Invoke(null, new object[] { grid, terrainRng, config });
+            var surfaceHeights = (int[])terrainMethod.Invoke(null, new object[] { grid, terrainRng, config, 2 });
             carveMethod.Invoke(null, new object[] { grid, surfaceHeights, new System.Random(rngFieldSeed ^ 0xC0FFEE), config });
 
             var protectedAir = new bool[config.MapWidth, config.MapHeight];
-            postMethod.Invoke(null, new object[] { grid, surfaceHeights, config, protectedAir });
+            postMethod.Invoke(null, new object[] { grid, surfaceHeights, config, protectedAir, 2 });
 
             AssertNoSurfaceBreakthrough(grid, surfaceHeights, config, seed);
             AssertNoOversizedCaveChamber(grid, surfaceHeights, config, seed);
@@ -1709,7 +1787,7 @@ public static class NyangbingoDevARegressionTests
         // 전체 파이프라인: 연결 통로가 맵 중앙에 거대 수직 우물(+자 3열·전깊이)을 만들지 않는지.
         foreach (var seed in new[] { 1, 42, 49, 100, 777 })
         {
-            var result = new MapGenerator(config).GenerateDetailed(seed);
+            var result = CreateGenerator(config).GenerateDetailed(seed);
             Assert(result.passedValidation, $"seed {seed}: 연결 통로 변경 후 월드 검증 실패");
             AssertNoGiantConnectivityShaft(result, config);
             AssertNoConnectivityShaftInSurfaceBand(result, config);

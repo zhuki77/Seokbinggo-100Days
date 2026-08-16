@@ -1,4 +1,4 @@
-id,type,item_ko,station_id,materials,output_count,craft_time_sec,mvp_scope,note
+﻿id,type,item_ko,station_id,materials,output_count,craft_time_sec,mvp_scope,note
 workbench,station,작업대,none,"dirt:8,stone:12",1,0,A,1일차 밤 20초 온보딩
 furnace,station,화로,workbench,"stone:22,dirt:8,iron_ore:6,copper_ore:4",1,30,A,원석 그대로 — 주괴 순환 잠금 방지
 blast_furnace,station,용광로,furnace,"stone:20,clay:12,iron_ore:6",1,45,A,점토 내화벽돌 — T2 직후 8~9일차. v23: 철 주괴3→광석6(2:1 동일 환산) — 4-7 ② '화로·용광로 레시피 주괴 요구 금지' 준수(구 행이 규칙 위반이었다)
@@ -8,7 +8,7 @@ icesteel_claw,claw,얼음강철 발톱 T3,ice_anvil,"icesteel_ingot:5,frost_esse
 lantern,placeable,등불,workbench,"wood:4,hemp_stalk:2,coal:2",1,10,A,반경 6타일·석탄 1=270초·어둑시니 카운터
 sieve,placeable,체,workbench,"hemp_stalk:6,wood:2",1,10,A,야광귀 12초 정지+피해 1.5배·쿨 30초
 haetae_statue,placeable,해태 석상,furnace,"stone:20,copper_ingot:3,yokai_tear:20",1,60,A,반경 8타일 화염 -50%
-nest_bed,placeable,보금자리,workbench,"wood:6,hemp_stalk:4",1,10,A,리스폰 지점(4-8) — 냥잠 v31.1 폐지
+nest_bed,placeable,보금자리,workbench,"wood:6,hemp_stalk:4",1,10,A,리스폰 지점(4-8) + 침대(밤↔낮 스킵) 겸용 — v72 4-10b
 magpie_nest,placeable,까치 둥지,workbench,"wood:8,hemp_stalk:6",1,10,A,까치 벗 입주(v6)
 dokkaebi_club,weapon,도깨비 방망이,workbench,"club_shard:3,wood:4",1,30,A,넉백 2.0타일 특화
 frostclaw_gauntlet,weapon,서리발톱 장갑,ice_anvil,"gangcheol_scale:1,frost_essence:6,icesteel_ingot:4,yokai_tear:25,shadow_shard:5",1,120,A,엔드 무기 DPS 42
@@ -16,14 +16,14 @@ iron_insul_wall,wall,무쇠 차열벽,furnace,"iron_scale:2,iron_ingot:2,stone:2
 cold_device,device,냉기 장치,ice_anvil,"yokai_tear:40,frost_essence:2,ice_shard:10,copper_ingot:2",1,60,A,눈물 주 소비처
 insul_wall,module,차열벽,workbench,"stone:2,dirt:1",1,5,A,HP600 기본 방벽
 door,module,단열 문,workbench,"wood:6,hemp_stalk:4,ice_shard:4",1,30,A,통행 가능+flood-fill 밀폐 인정
-roof,module,차열 지붕,furnace,"stone:6,rebar:3,hemp_stalk:2",1,20,A,상부 밀폐·철근 반복 소비처
+roof,module,차열 지붕,workbench,"stone:6,rebar:3,hemp_stalk:2",1,20,A,[v68] 제작대 재배치 — 돌·철근·삼줄기 전부 초반 자원이고 차열 지붕은 P0 기본 밀폐 — 1일차부터 지어야 한다. 상부 밀폐·철근 반복 소비처
 jangdok,module,장독 창고,workbench,"dirt:10,stone:8,wood:6",1,45,A,보관함 40슬롯(v29)
 ice_core,module,얼음 저장고,furnace,"ice_shard:20,stone:10,iron_ingot:2",1,60,A,체온 회복 거점 — 모듈 5종 화로 티어 이하
 ssireum_satba,summon,씨름 샅바,workbench,"club_shard:1,hemp_stalk:10,wood:5",1,30,A,도깨비 대장 소환
 iron_bait_pile,summon,무쇠 미끼 더미,furnace,"iron_ingot:10,iron_scale:3,coal:5",1,30,B,어미 불가사리 소환
 ice_altar_offering,summon,얼음 제단 봉헌,ice_anvil,"icesteel_ingot:2,frost_essence:2,ice_shard:10,yokai_tear:30",1,30,A,이무기 최종보스 재소환(30일 고정등장+심층 제단 재소환·v34 강철이↔이무기 교체) — 눈물30 소비처
 dokkaebi_fire_tower,turret,도깨비불 등탑,workbench,"dokkaebi_fire_essence:1,wood:10,stone:10,coal:5",1,60,A,DPS10 유도·반경 8타일(v30 동배율)
-singijeon_cart,turret,신기전 화차,furnace,"iron_forge_core:1,iron_ingot:7,wood:20,coal:5",1,60,B,DPS12 직선 관통·10타일(v30 동배율)
+singijeon_cart,turret,신기전 화차,smithy,"iron_forge_core:1,iron_ingot:7,wood:20,coal:5",1,60,B,[v64] 제작대 furnace→smithy. 재료(무쇠 용광심=어미 불가사리)는 그대로 두고 제작대만 올려 중반 터렛 공백을 만든다 — 재료 소유권을 안 건드리는 최소 변경. DPS12 직선 관통·10타일(v30 동배율)
 ice_crystal_cooler,cooling,빙정 냉각로,ice_anvil,"yeouiju:1,icesteel_ingot:5,copper_ingot:3",1,60,A,내부 체온 회복x2+얼음 용해 방지 — v34 이무기 최종보스 보상(여의주)으로 A 승격
 cold_wave_core,cooling,한파 코어,ice_anvil,"drought_heart:1,icesteel_ingot:6,frost_essence:4",1,60,A,더위 단계 -1 상쇄(전역 1기)
 straw_insul,insulation,짚 단열재,workbench,"hemp_stalk:3,wood:1",1,5,A,벽 1장당 체온 하강 +5%·상한 6장
@@ -34,7 +34,7 @@ cheolseon,evo,철선,furnace,"hapjukseon:1,iron_ingot:2,iron_scale:1",1,30,A,물
 iron_bell_rope,evo,쇠 방울 금줄,furnace,"bell_rope:1,iron_ingot:1",1,20,A,경보(반경10 유지)+진입 요괴 감속 1회 — 원석 철2
 iron_sieve,evo,무쇠 체,furnace,"sieve:1,iron_ingot:1,iron_scale:1",1,20,A,야광귀 정지·피해배수·쿨 강화 — 원석 철2+무쇠 비늘1
 frost_lantern,evo,서리 등불,ice_anvil,"lantern:1,icesteel_ingot:1,frost_essence:1",1,30,A,연료 석탄→서리정수·장시간 점등·반경6 불변 — 후반 잉여 서리정수 소비처
-bell_rope,util,방울 금줄,workbench,"copper_ingot:1,wood:4",1,10,A,경보 반경 10타일·쿨4초
+bell_rope,util,방울 금줄,furnace,"copper_ingot:1,wood:4",1,10,A,[v68] 제작대 재배치 — 구리 주괴를 쓴다 — 제련물 사용이라 화로. 경보 반경 10타일·쿨4초
 minhwa_scroll,deco,민화 족자,workbench,"hemp_stalk:2,dirt:1",1,0,A,효과 0
 saekdong_lantern,deco,색동 등롱,workbench,"hemp_stalk:2,coal:1",1,0,A,효과 0 — 광원 태그 아님
 onggi_pot,deco,옹기 화분,workbench,clay:3,1,0,A,효과 0
@@ -52,3 +52,40 @@ icesteel_boots,armor,얼음강철 신발,ice_anvil,icesteel_ingot:2,1,60,A,방�
 water_jar,coldsource,물단지,workbench,"clay:2,stone:2",1,5,A,소모형 냉기원 180초·온도 상한 25% — 1일차 밤(작업대 직후)·전부 상층 T1. 젖은 옹기가 마르며 시원해지고 다 마르면 사라진다
 ice_jar,coldsource,얼음 항아리,workbench,"clay:3,ice_shard:2",1,10,A,연료형 냉기원 얼음1=300초·온도 상한 50% — 2일차 낮(중층 왕복 필요)
 wallpaper,placeable,벽지,workbench,"clay:3,wood:5",16,5,A,v26 신설 — 1회 16장 산출. 240칸 방 완전 도포 = 15회(점토45·나무75). 회의의 '점토2+나무3→8장' 감축안은 30회 필요(점토60·나무90)로 자원을 33% 더 먹어 기각
+seonge_ingot,smelt,성에 주괴,furnace,seonge_ore:2,1,30,B,[v68] 제작대 재배치 — 성에 원석 제련 산출물 — 주괴는 화로. T4 주괴
+ice_root_bundle,smelt,얼음뿌리 다발,workbench,ice_root:3,1,30,B,[v68] 제작대 재배치 — 얼음뿌리를 묶는 단순 번들 — 게이트는 재료가 건다. T5 가공
+cold_wave_ingot,smelt,한파석 주괴,furnace,"cold_wave_ore:2,frost_essence:1",1,45,B,[v68] 제작대 재배치 — 한파석 원석 제련 산출물 — 주괴는 화로. T6 주괴
+seonge_helm,armor,성에 투구,smithy,seonge_ingot:2,1,60,B,T4 갑옷 원본(신규 제작)
+seonge_armor,armor,성에 갑옷,smithy,seonge_ingot:4,1,90,B,T4 갑옷 원본(신규 제작)
+seonge_boots,armor,성에 신발,smithy,seonge_ingot:2,1,60,B,T4 갑옷 원본(신규 제작)
+ice_root_helm,armor,얼음뿌리 투구,smithy,"seonge_helm:1,ice_root_bundle:2,yokai_tear:45",1,60,B,T5 갑옷 진화 — 원본 소모(정본 6-14)
+ice_root_armor,armor,얼음뿌리 갑옷,smithy,"seonge_armor:1,ice_root_bundle:4,yokai_tear:45",1,90,B,T5 갑옷 진화 — 원본 소모(정본 6-14)
+ice_root_boots,armor,얼음뿌리 신발,smithy,"seonge_boots:1,ice_root_bundle:2,yokai_tear:45",1,60,B,T5 갑옷 진화 — 원본 소모(정본 6-14)
+cold_wave_helm,armor,한파석 투구,smithy,"ice_root_helm:1,cold_wave_ingot:2,yokai_tear:50",1,60,B,T6 갑옷 진화 — 원본 소모(정본 6-14)
+cold_wave_armor,armor,한파석 갑옷,smithy,"ice_root_armor:1,cold_wave_ingot:4,yokai_tear:50",1,90,B,T6 갑옷 진화 — 원본 소모(정본 6-14)
+cold_wave_boots,armor,한파석 신발,smithy,"ice_root_boots:1,cold_wave_ingot:2,yokai_tear:50",1,60,B,T6 갑옷 진화 — 원본 소모(정본 6-14)
+straw_sling,weapon,짚 투석기,workbench,"stone:6,hemp_stalk:4",1,15,B,활 T1 원본
+gakgung,weapon,각궁,furnace,"straw_sling:1,iron_ingot:2,hemp_stalk:6",1,30,B,활 T2 진화 — 원본 소모(정본 6-14)
+singijeon_sondae,weapon,신기전 손대,ice_anvil,"gakgung:1,icesteel_ingot:2",1,45,B,활 T3 진화 — 원본 소모(정본 6-14)·DPS28
+seonge_gakgung,weapon,성에 각궁,smithy,seonge_ingot:3,1,60,B,활 T4 원본(신규 제작)
+ice_root_bow,weapon,도관 노,smithy,"seonge_gakgung:1,ice_root_bundle:3,yokai_tear:45",1,75,B,활 T5 진화 — 원본 소모(정본 6-14)
+cold_wave_singijeon,weapon,한파 신기전,smithy,"ice_root_bow:1,cold_wave_ingot:3,yeongno_mask_mat:1,yokai_tear:50",1,90,B,활 T6 진화 — 원본 소모(정본 6-14)
+seonge_fan,weapon,서리 부채,ice_anvil,"cheolseon:1,icesteel_ingot:2",1,45,B,선 T3 진화 — 원본 소모(정본 6-14)
+ice_root_whipfan,weapon,얼음뿌리 채찍선,smithy,"dokkaebi_club:1,ice_root_bundle:3,yokai_tear:45",1,75,B,선 T5 진화 — 원본 소모(정본 6-14)·티어 건너뛰기(오너 승인)
+cold_wave_fan,weapon,한파 부채,smithy,"ice_root_whipfan:1,cold_wave_ingot:3,yokai_tear:50",1,90,B,선 T6 진화 — 원본 소모(정본 6-14)
+sangun_claw,weapon,산군 발톱,smithy,"frostclaw_gauntlet:1,sangun_talon:1,ice_root_bundle:4,yokai_tear:45",1,90,B,발톱 T5 진화 — 원본 소모(정본 6-14)
+perfect_claw,weapon,완전체 발톱,smithy,"sangun_claw:1,perfect_heart:1,cold_wave_ingot:4,yokai_tear:50",1,120,B,발톱 T6 진화 — 원본 소모(정본 6-14)
+seonge_tower,turret,성에 등탑,smithy,"dokkaebi_fire_tower:1,jigwi_ember_mat:1,seonge_ingot:3",1,60,B,터렛 T4 진화 — 원본 소모(정본 6-14)
+cold_wave_tower,turret,한파 등탑,smithy,"seonge_tower:1,eop_scale_mat:1,cold_wave_ingot:3,yokai_tear:50",1,90,B,터렛 T6 진화 — 원본 소모(정본 6-14)
+ice_root_battery,turret,도관 포대,smithy,"singijeon_cart:1,three_horn_mat:1,ice_root_bundle:3,yokai_tear:45",1,75,B,터렛 T5 진화 — 원본 소모(정본 6-14)
+cold_wave_battery,turret,한파 포대,smithy,"ice_root_battery:1,cold_wave_ingot:3,yokai_tear:50",1,90,B,터렛 T6 진화 — 원본 소모(정본 6-14)
+scarecrow,turret,허수아비,workbench,"hemp_stalk:8,wood:6",1,20,B,유틸 터렛 — 어그로 고정·DPS0
+ice_trap,turret,얼음 함정,ice_anvil,"ice_shard:6,icesteel_ingot:1",1,30,B,유틸 터렛 — 정지·DPS0
+arrow_supply,turret,화살 보급대,furnace,"iron_ingot:3,wood:10",1,40,B,유틸 터렛 — 탄약 자동 보급·DPS0
+plaster_doll,turret,미장이 인형,smithy,"clay:20,seonge_ingot:2",1,60,B,유틸 터렛 — 벽 자동 수리·DPS0
+gong_tower,turret,징 울림대,furnace,"iron_ingot:4,copper_ingot:2",1,40,B,유틸 터렛 — 스폰 유인·DPS0
+jigwi_summon,summon,불씨 항아리,smithy,"seonge_ingot:2,coal:20,yokai_tear:20",1,30,B,지귀 소환
+samdugumi_summon,summon,세 갈래 매듭,smithy,"ice_root_bundle:3,yokai_tear:24",1,30,B,삼두구미 소환
+eop_summon,summon,업단지,smithy,"cold_wave_ingot:2,yokai_tear:26",1,30,B,업구렁이 소환
+jukbuin,placeable,죽부인,workbench,"hemp_stalk:4,wood:2",1,10,A,보금자리 반경 2타일 내 자연 재생 ×1.5 — 재료는 GDD 6-15 확정표 · 제작대/시간은 보금자리 준용 (v41)
+daebal,placeable,대발,workbench,"hemp_stalk:3,wood:3",1,10,A,반경 4타일 낮 화염 -25% — 재료는 GDD 6-15 확정표 · 제작대/시간은 보금자리 준용 (v41)

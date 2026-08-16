@@ -60,17 +60,12 @@ namespace Nyangbingo.UI
             Title.LatestSlot = Title.CanContinue ? slot : -1;
             if (Title.CanContinue && latest != null)
             {
-                Title.DisplayedHeatStage = latest.heatStage > 0
-                    ? Mathf.Clamp(latest.heatStage, 1, HeatStagePresentation.StageCount)
-                    : HeatStagePresentation.ResolveForDay(latest.day);
+                Title.DisplayedHeatStage = Mathf.Clamp(
+                    latest.heatStage, 1, HeatStagePresentation.StageCount);
             }
             else
                 Title.DisplayedHeatStage = 1;
         }
-
-        public static string FormatTitleCountdown(int daysUntilBaegilHeat) =>
-            HeatStagePresentation.FormatBadge(HeatStagePresentation.ResolveForDay(
-                DayNightService.DefaultSurvivalDayLimit - Mathf.Max(0, daysUntilBaegilHeat) + 1));
 
         public static string FormatTitleHeatStage(int heatStage) =>
             HeatStagePresentation.FormatBadge(heatStage);

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: daebal
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: daebal
+  displayName: "\uB300\uBC1C"
+  maxStack: 99
+  category: 7
+  mvpScope: 1
+  note: "\uBC18\uACBD 4\uD0C0\uC77C \uB0AE \uD654\uC5FC -25% \u2014 daebal_flame_cut\xB7daebal_radius.
+    \uD574\uD0DC \uC11D\uC0C1(8\uD0C0\uC77C\xB7-50%)\uC758 \uC800\uAC00 \uC57D\uD654\uD310
+    (v41 \uC2B9\uACA9)"

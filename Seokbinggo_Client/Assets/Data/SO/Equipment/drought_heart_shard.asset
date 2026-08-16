@@ -30,3 +30,6 @@ MonoBehaviour:
   verbId: ReduceFlameAndHasten
   usageLimitPerDay: 0
   activationCondition: DaySurface
+  hasColdTolerance: 0
+  coldToleranceC: 0
+  coldNote:

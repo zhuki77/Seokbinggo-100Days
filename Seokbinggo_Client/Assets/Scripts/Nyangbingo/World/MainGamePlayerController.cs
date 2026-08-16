@@ -161,7 +161,7 @@ namespace Nyangbingo.World
         public bool IsInitialized => initialized;
         public string ActiveCombatProfileId => activeProfile != null ? activeProfile.Id : string.Empty;
         public bool IsUsingActiveSlotItem => runtimeServices?.ActiveSlot?.IsUsingEquippedItem == true;
-        public float CurrentMoveSpeed => currentMoveSpeed;
+        public float CurrentMoveSpeed => currentMoveSpeed * (runtimeServices?.Talismans?.MovementMultiplier ?? 1f);
         public Vector2 FacingDirection => facing;
         public Vector2 HorizontalFacingDirection => horizontalFacing;
         public bool IsGrounded => grounded;
@@ -241,6 +241,7 @@ namespace Nyangbingo.World
                 Debug.LogError("[Nyangbingo] MainGamePlayerController: 플레이어 이동·전투 필수 데이터가 준비되지 않았습니다.");
                 return false;
             }
+            runtimeServices.Talismans?.BindPlayer(transform);
 
             var physics = PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var legacyPhysics)
                 ? legacyPhysics
@@ -460,7 +461,8 @@ namespace Nyangbingo.World
             if (Input.GetKeyDown(KeyCode.E))
             {
                 var handled = TryUseSelectedIceShard() ||
-                      TryUseSelectedCatnip() ||
+                      TryUseSelectedTalisman() ||
+                      TryUseSelectedHealingItem() ||
                       TryInteractClosestWorldTarget(includePlacedObjects: false);
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
@@ -535,7 +537,7 @@ namespace Nyangbingo.World
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
             if (fallDamageBounceAscending && verticalVelocity <= 0f)
                 fallDamageBounceAscending = false;
-            var horizontalVelocity = CalculateHorizontalVelocity(movementInput.x, currentMoveSpeed);
+            var horizontalVelocity = CalculateHorizontalVelocity(movementInput.x, CurrentMoveSpeed);
             if (bossKnockbackRemainingSeconds > 0f)
             {
                 horizontalVelocity = bossKnockbackHorizontalVelocity;
@@ -2035,21 +2037,40 @@ namespace Nyangbingo.World
             return true;
         }
 
-        private bool TryUseSelectedCatnip()
+        private bool TryUseSelectedHealingItem()
         {
             tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
-            if (tilePalette == null ||
-                tilePalette.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId)
+            var itemId = tilePalette?.SelectedItemId;
+            if (!PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId))
                 return false;
 
             var recovery = runtimeServices.PlayerHealthRecovery;
-            if (recovery != null && recovery.TryUseCatnip(out var restoredHealth))
+            if (recovery != null && recovery.TryUseHealingItem(itemId, out var restoredHealth))
             {
-                interactionMessages?.ShowExternalMessage($"캣닢 사용 · HP +{restoredHealth}");
+                var name = catalog?.FindItem(itemId)?.DisplayName ?? itemId;
+                interactionMessages?.ShowExternalMessage($"{name} 사용 · HP +{restoredHealth}");
                 return true;
             }
 
-            interactionMessages?.ShowExternalMessage("HP가 가득 찼거나 캣닢을 사용할 수 없습니다.");
+            interactionMessages?.ShowExternalMessage("HP가 가득 찼거나 회복 아이템을 사용할 수 없습니다.");
+            return true;
+        }
+
+        private bool TryUseSelectedTalisman()
+        {
+            tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
+            var itemId = tilePalette?.SelectedItemId;
+            if (!TalismanRuntime.IsConsumableId(itemId)) return false;
+            var talismans = runtimeServices?.Talismans;
+            var message = string.Empty;
+            if (talismans != null && talismans.TryUse(itemId, out message))
+            {
+                interactionMessages?.ShowExternalMessage(message);
+                return true;
+            }
+            interactionMessages?.ShowExternalMessage(string.IsNullOrEmpty(message)
+                ? "현재 이 부적을 사용할 수 없습니다."
+                : message);
             return true;
         }
 

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: opening_illust_pages
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: opening_illust_pages
+  value: 3
+  unit: count
+  note: "\uC624\uB108 \uC2B9\uC778 2026-08-06 \u2014 \uC624\uD504\uB2DD **\uC815\uC801
+    \uC77C\uB7EC \uD398\uC774\uC9C0 3\uC7A5**. \u26A0\uFE0F **\uCEF7\uC2E0 \uC2DC\uC2A4\uD15C\uC774
+    \uC544\uB2C8\uB2E4** \u2014 \uC804\uD658\xB7\uC5F0\uCD9C \uCF54\uB4DC \uC5C6\uC774
+    \uB118\uAE30\uB294 \uC815\uC9C0 \uD654\uBA74\uC774\uB77C GDD 2\uC7A5 \u300C\uCEF7\uC2E0\xB7\uB300\uC0AC\xB7NPC
+    \uB300\uD654 \uC5C6\uC74C\u300D\uACFC \uC591\uB9BD\uD55C\uB2E4. \uC778\uAC8C\uC784
+    HUD\uB294 \uC5EC\uC804\uD788 \uBB34\uD14D\uC2A4\uD2B8 \u2014 \uC624\uD504\uB2DD\xB7\uB3C4\uAC10\xB7\uACB0\uACFC
+    \uD654\uBA74\uB9CC \uD14D\uC2A4\uD2B8 \uD5C8\uC6A9 \uAD6C\uC5ED"

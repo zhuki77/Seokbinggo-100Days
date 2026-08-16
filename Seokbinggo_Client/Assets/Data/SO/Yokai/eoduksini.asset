@@ -37,4 +37,12 @@ MonoBehaviour:
   signatureCondition: 0
   spawnTracks: 3
   raidFleesAtDawn: 1
+  aggroRadius: 7
+  aggroNote: "\uB4F1\uBD88 \uC124\uCE58 \uBC18\uACBD 6 \uBC14\uAE65\uC5D0\uC11C \uC778\uC2DD
+    \u2192 \uC2A4\uC2A4\uB85C \uB4F1\uBD88 \uD568\uC815\uC5D0 \uB4E4\uC5B4\uC628\uB2E4"
+  bodyTiles: 2
+  usesArenaBody: 0
+  bodyNote: "HP 1600 \u2192 \uD1B5\uACFC\uC5D0 \uC138\uB85C 2\uCE78 \uAC1C\uAD6C\uBD80
+    \uD544\uC694. HP \uAD6C\uAC04(<500=1 / <2000=2 / \uADF8 \uC774\uC0C1=3)\uC5D0\uC11C
+    \uC720\uB3C4 \u2014 \uBC1C\uBA85 0"
   drops: []

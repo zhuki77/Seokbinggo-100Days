@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: deadline_removed
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: deadline_removed
+  value: 1
+  unit: bool
+  note: "\uBB34\uD55C \uC0DD\uC874 = \uB370\uB4DC\uB77C\uC778 \uC0AD\uC81C(\uC624\uB108
+    \uD655\uC815). \uCF58\uD150\uCE20\uB294 \uC720\uD55C \u2014 D-100 \uCE74\uC6B4\uD130
+    \uD3D0\uC9C0"

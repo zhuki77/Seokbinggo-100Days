@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 
 public static class NyangbingoV24DataValidator
 {
@@ -49,7 +50,14 @@ public static class NyangbingoV24DataValidator
         {
             "king_dokkaebi",
             "mother_bulgasari",
-            "imugi_boss"
+            "imugi_boss",
+            "jigwi",
+            "gangcheol_blaze",
+            "sangun",
+            "samdugumi",
+            "eop_guryeongi",
+            "yeongno",
+            "gangcheol_perfect"
         };
         var officialYokaiIds = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -63,7 +71,7 @@ public static class NyangbingoV24DataValidator
         };
         if (!bossIds.SetEquals(officialBossIds))
             throw new InvalidDataException(
-                "bosses.csv must contain the three v34 bosses, including 'imugi_boss'.");
+                "bosses.csv must contain the ten v72 bosses from King Dokkaebi through Gangcheol Perfect.");
         if (!yokaiIds.SetEquals(officialYokaiIds))
             throw new InvalidDataException(
                 "yokai-stats.csv must contain the seven v34 yokai.");
@@ -115,11 +123,19 @@ public static class NyangbingoV24DataValidator
                 if (row.ContainsKey("drops"))
                     throw new InvalidDataException("bosses.csv uses the obsolete machine-readable 'drops' column.");
             }
-            var summonItemId = Value(row, "summon_item_id", "bosses.csv");
-            var stationId = Value(row, "station_id", "bosses.csv");
+            var summonItemId = OptionalValue(row, "summon_item_id");
+            var stationId = OptionalValue(row, "station_id");
+            var materialText = OptionalValue(row, "summon_materials");
+            if (string.IsNullOrWhiteSpace(summonItemId))
+            {
+                if (!string.IsNullOrWhiteSpace(stationId) || !string.IsNullOrWhiteSpace(materialText))
+                    throw new InvalidDataException(
+                        "A boss without a summon item cannot declare a station or summon materials.");
+                continue;
+            }
             RequireItem(itemIds, summonItemId, "bosses.csv", "summon_item_id");
             RequireOptionalItem(itemIds, stationId, "bosses.csv", "station_id");
-            var bossMaterials = ValidateItemPairs(itemIds, Value(row, "summon_materials", "bosses.csv"),
+            var bossMaterials = ValidateItemPairs(itemIds, materialText,
                 "bosses.csv", "summon_materials");
             referenceCount += 2 + bossMaterials.Count;
             if (!craftingById.TryGetValue(summonItemId, out var recipe) ||
@@ -149,8 +165,19 @@ public static class NyangbingoV24DataValidator
             referenceCount += ValidateItemPairs(itemIds, Value(row, "bonus_items", "chests.csv"),
                 "chests.csv", "bonus_items").Count;
         }
-        if (!chestAccessoryIds.SetEquals(accessoryIds))
-            throw new InvalidDataException("Chest accessory pools do not exactly cover accessories.csv IDs.");
+        var chestEligibleAccessoryIds = new HashSet<string>(
+            accessories
+                .Where(row =>
+                {
+                    var pools = Value(row, "pools", "accessories.csv");
+                    return !pools.StartsWith("보스:", StringComparison.Ordinal) &&
+                           !pools.StartsWith("랜드마크:", StringComparison.Ordinal);
+                })
+                .Select(row => Value(row, "id", "accessories.csv")),
+            StringComparer.Ordinal);
+        if (!chestAccessoryIds.SetEquals(chestEligibleAccessoryIds))
+            throw new InvalidDataException(
+                "Chest accessory pools must exactly cover the non-boss, non-landmark accessory IDs.");
 
         var stationBatchCaps = new Dictionary<string, int>(StringComparer.Ordinal);
         var smeltingIds = isV241
@@ -185,6 +212,18 @@ public static class NyangbingoV24DataValidator
         {
             RequireItem(itemIds, Value(row, "resource_id", "mineral-tiers.csv"),
                 "mineral-tiers.csv", "resource_id");
+            var hardness = PositiveInt(Value(row, "hardness", "mineral-tiers.csv"),
+                "mineral-tiers.csv", "hardness");
+            if (hardness > 3)
+                throw new InvalidDataException("mineral-tiers.csv hardness must be between 1 and 3.");
+            for (var tier = 1; tier <= 3; tier++)
+            {
+                var actual = Value(row, $"breakable_t{tier}", "mineral-tiers.csv");
+                var expected = tier >= hardness ? "1" : "0";
+                if (actual != expected)
+                    throw new InvalidDataException(
+                        $"mineral-tiers.csv breakable_t{tier} must match claw_tier >= hardness.");
+            }
             referenceCount++;
         }
 
@@ -251,7 +290,7 @@ public static class NyangbingoV24DataValidator
             }
             var expected = NonNegativeInt(Value(row, "night_yokai_count", "day-curve.csv"),
                 "day-curve.csv", "night_yokai_count") *
-                FiniteNonNegative(Value(row, "spawn_mult", "day-curve.csv"), "day-curve.csv", "spawn_mult");
+                FiniteNonNegative(Value(row, "drop_mult", "day-curve.csv"), "day-curve.csv", "drop_mult");
             if (Math.Abs(total - expected) > .0001d)
                 throw new InvalidDataException($"day-curve.csv day {Value(row, "day", "day-curve.csv")} " +
                                                $"composition total {total} does not match {expected}.");
@@ -312,17 +351,17 @@ public static class NyangbingoV24DataValidator
         foreach (var row in rows)
         {
             var id = Value(row, "id", "accessories.csv");
-            var absoluteTotal = 0d;
+            Value(row, "effect_ko", "accessories.csv");
             for (var i = 0; i < numericColumns.Length; i++)
-                absoluteTotal += Math.Abs(Finite(Value(row, numericColumns[i], "accessories.csv"),
-                    "accessories.csv", numericColumns[i]));
+                _ = Finite(Value(row, numericColumns[i], "accessories.csv"),
+                    "accessories.csv", numericColumns[i]);
             var theftImmune = BinaryInt(Value(row, "inventory_theft_immune", "accessories.csv"),
                 "accessories.csv", "inventory_theft_immune");
             var doubleJump = BinaryInt(Value(row, "double_jump", "accessories.csv"),
                 "accessories.csv", "double_jump");
             var jumpRatio = FiniteNonNegative(Value(row, "double_jump_height_ratio", "accessories.csv"),
                 "accessories.csv", "double_jump_height_ratio");
-            if (absoluteTotal <= 0d || (doubleJump == 0 && jumpRatio != 0d) || (doubleJump == 1 && jumpRatio <= 0d))
+            if ((doubleJump == 0 && jumpRatio != 0d) || (doubleJump == 1 && jumpRatio <= 0d))
                 throw new InvalidDataException($"accessories.csv accessory '{id}' has inconsistent numeric effects.");
             if (theftImmune == 1 && doubleJump == 1)
                 throw new InvalidDataException($"accessories.csv accessory '{id}' enables unrelated binary effects.");
@@ -450,6 +489,7 @@ public static class NyangbingoV24DataValidator
             case "insulation":
             case "module":
             case "placeable":
+            case "smelt":
             case "station":
             case "summon":
             case "turret":

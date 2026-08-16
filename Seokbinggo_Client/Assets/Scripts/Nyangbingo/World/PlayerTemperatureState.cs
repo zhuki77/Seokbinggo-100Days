@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
+using Nyangbingo.Combat;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
 using UnityEngine;
@@ -31,6 +32,9 @@ namespace Nyangbingo.World
         private readonly EquipmentSystem equipmentSystem;
         private readonly MainGameEnvironmentState environmentState;
         private readonly WorldSessionController worldSession;
+        private readonly RoomTempService roomTemperature;
+        private readonly HeatStageService heatStage;
+        private readonly Func<bool> suppressHypothermiaFall;
         private readonly StatSheet statSheet = new StatSheet();
         private readonly float minimum;
         private readonly float maximum;
@@ -38,25 +42,42 @@ namespace Nyangbingo.World
         private readonly float fallSafe;
         private readonly float heatstrokeThreshold;
         private readonly float startingTemperature;
+        private readonly float hypothermiaRoomTemp;
+        private readonly float hypothermiaFallPerSecond;
+        private readonly float hypothermiaDamageAtTemperature;
+        private readonly float hypothermiaDamagePerSecond;
         private Transform trackedTransform;
+        private Health trackedHealth;
         private bool heatstrokeRaised;
         private float recoveryMultiplier = 1f;
+        private float fractionalHypothermiaDamage;
 
         public PlayerTemperatureState(GameDataCatalog catalog, DayNightService clock, SealSystem seals,
             EquipmentSystem equipment, MainGameEnvironmentState environment = null,
-            WorldSessionController session = null)
+            WorldSessionController session = null, RoomTempService roomTemp = null,
+            HeatStageService stages = null, Func<bool> hypothermiaFallSuppressed = null)
         {
             timeService = clock ?? throw new ArgumentNullException(nameof(clock));
             sealSystem = seals ?? throw new ArgumentNullException(nameof(seals));
             equipmentSystem = equipment;
             environmentState = environment;
             worldSession = session;
+            roomTemperature = roomTemp;
+            heatStage = stages;
+            suppressHypothermiaFall = hypothermiaFallSuppressed;
             minimum = Read(catalog, "temp_min", 0f);
             maximum = Mathf.Max(minimum, Read(catalog, "temp_max", 100f));
             risePerStage = Mathf.Max(0f, Read(catalog, "temp_rise_per_stage", .1f));
             fallSafe = Mathf.Max(0f, Read(catalog, "temp_fall_safe", .15f));
             heatstrokeThreshold = Mathf.Clamp(Read(catalog, "heatstroke_threshold", 80f), minimum, maximum);
             startingTemperature = Mathf.Clamp(Read(catalog, "temp_start", 40f), minimum, maximum);
+            hypothermiaRoomTemp = Read(catalog, GlobalKeys.HypothermiaRoomTemp, -10f);
+            hypothermiaFallPerSecond = Mathf.Max(0f,
+                Read(catalog, GlobalKeys.HypothermiaFallPerSecond, .10f));
+            hypothermiaDamageAtTemperature = Mathf.Clamp(
+                Read(catalog, GlobalKeys.HypothermiaDamageAtTemperature, minimum), minimum, maximum);
+            hypothermiaDamagePerSecond = Mathf.Max(0f,
+                Read(catalog, GlobalKeys.HypothermiaDamagePerSecond, 2f));
             Current = startingTemperature;
         }
 
@@ -67,13 +88,20 @@ namespace Nyangbingo.World
         public float Normalized => maximum <= minimum ? 0f : Mathf.InverseLerp(minimum, maximum, Current);
         public bool IsHeatstroke => Current > heatstrokeThreshold;
         public float RecoveryMultiplier => recoveryMultiplier;
-        public float EffectiveCoolingPercent => Mathf.Min(
-            sealSystem.TemperaturePercent,
-            environmentState != null ? environmentState.CoolingCapPercent : 100f);
         public event Action<float> Changed;
         public event Action ReachedMaximum;
 
+        public int CurrentRoomTemperature { get; private set; }
+        public bool IsHypothermia => trackedTransform != null && roomTemperature != null &&
+                                     CurrentRoomTemperature <= hypothermiaRoomTemp;
+
         public void SetTrackedTransform(Transform value) => trackedTransform = value;
+
+        public void BindHealth(Health value)
+        {
+            trackedHealth = value;
+            fractionalHypothermiaDamage = 0f;
+        }
 
         public bool SetRecoveryMultiplier(float value)
         {
@@ -85,20 +113,79 @@ namespace Nyangbingo.World
         public void Tick(float deltaGameSeconds)
         {
             if (deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) || float.IsInfinity(deltaGameSeconds)) return;
+            var hypothermia = trackedTransform != null && roomTemperature != null;
+            if (hypothermia)
+            {
+                CurrentRoomTemperature = roomTemperature.Resolve(trackedTransform.position);
+                hypothermia = CurrentRoomTemperature <= hypothermiaRoomTemp;
+            }
             var safe = timeService.IsNight || IsUnderground() ||
-                       trackedTransform != null && EffectiveCoolingPercent > 0f &&
-                       sealSystem.IsInsideSealedArea(trackedTransform.position);
+                       trackedTransform != null && roomTemperature != null &&
+                       CurrentRoomTemperature < 0;
             var insulationMultiplier = trackedTransform != null && environmentState != null
                 ? environmentState.ResolveTemperatureRecoveryMultiplier(
                     trackedTransform.position, sealSystem)
                 : 1f;
-            var delta = safe
-                ? -fallSafe * recoveryMultiplier * insulationMultiplier * deltaGameSeconds
-                : risePerStage * CalculateEffectiveHeatStage(
-                    timeService.CurrentDayCurve?.HeatStage ?? 1,
-                    environmentState?.HeatStageReduction ?? 0) *
-                  DayRiseMultiplier() * deltaGameSeconds;
+            var delta = hypothermia
+                ? suppressHypothermiaFall?.Invoke() == true
+                    ? 0f
+                    : CalculateHypothermiaTemperatureDelta(
+                        deltaGameSeconds, CurrentRoomTemperature, hypothermiaRoomTemp,
+                        hypothermiaFallPerSecond)
+                : safe
+                    ? -fallSafe * recoveryMultiplier * insulationMultiplier * deltaGameSeconds
+                    : risePerStage * CalculateEffectiveHeatStage(
+                        heatStage?.Current ?? 1,
+                        environmentState?.HeatStageReduction ?? 0) *
+                      DayRiseMultiplier() * deltaGameSeconds;
             Set(Current + delta);
+            HypothermiaDamage(deltaGameSeconds, hypothermia);
+        }
+
+        private void HypothermiaDamage(float deltaGameSeconds, bool hypothermia)
+        {
+            if (!hypothermia || Current > hypothermiaDamageAtTemperature || trackedHealth == null ||
+                trackedHealth.IsDead || hypothermiaDamagePerSecond <= 0f)
+            {
+                fractionalHypothermiaDamage = 0f;
+                return;
+            }
+
+            var wholeDamage = AccumulateHypothermiaDamage(
+                Current, hypothermiaDamageAtTemperature, hypothermiaDamagePerSecond,
+                deltaGameSeconds, ref fractionalHypothermiaDamage);
+            if (wholeDamage <= 0) return;
+            trackedHealth.ApplyResolvedDamage(wholeDamage, DamageTag.Ice);
+        }
+
+        public static float CalculateHypothermiaTemperatureDelta(float deltaGameSeconds,
+            float roomTemperatureC, float triggerTemperatureC, float fallPerSecond)
+        {
+            if (deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) || float.IsInfinity(deltaGameSeconds) ||
+                fallPerSecond <= 0f || float.IsNaN(fallPerSecond) || float.IsInfinity(fallPerSecond) ||
+                roomTemperatureC > triggerTemperatureC) return 0f;
+            return -fallPerSecond * deltaGameSeconds;
+        }
+
+        public static int AccumulateHypothermiaDamage(float currentTemperature,
+            float damageThreshold, float damagePerSecond, float deltaGameSeconds, ref float remainder)
+        {
+            if (currentTemperature > damageThreshold || damagePerSecond <= 0f || deltaGameSeconds <= 0f ||
+                float.IsNaN(damagePerSecond) || float.IsInfinity(damagePerSecond) ||
+                float.IsNaN(deltaGameSeconds) || float.IsInfinity(deltaGameSeconds))
+            {
+                remainder = 0f;
+                return 0;
+            }
+            remainder += damagePerSecond * deltaGameSeconds;
+            if (float.IsInfinity(remainder) || remainder >= int.MaxValue)
+            {
+                remainder = 0f;
+                return int.MaxValue;
+            }
+            var wholeDamage = Mathf.FloorToInt(remainder);
+            remainder -= wholeDamage;
+            return wholeDamage;
         }
 
         public static int CalculateEffectiveHeatStage(int heatStage, int reduction)

@@ -36,6 +36,11 @@ namespace Nyangbingo.Data
         [SerializeField] private YokaiSignatureCondition signatureCondition;
         [SerializeField] private YokaiSpawnTrack spawnTracks = YokaiSpawnTrack.Raid;
         [SerializeField] private bool raidFleesAtDawn = true;
+        [Min(0f)][SerializeField] private float aggroRadius;
+        [TextArea][SerializeField] private string aggroNote;
+        [Min(0)][SerializeField] private int bodyTiles;
+        [SerializeField] private bool usesArenaBody;
+        [TextArea][SerializeField] private string bodyNote;
         [SerializeField] private ItemAmount[] drops;
         public string Id => id;
         public string DisplayName => displayName;
@@ -61,6 +66,11 @@ namespace Nyangbingo.Data
         public YokaiSignatureCondition SignatureCondition => signatureCondition;
         public YokaiSpawnTrack SpawnTracks => spawnTracks;
         public bool RaidFleesAtDawn => raidFleesAtDawn;
+        public float AggroRadius => aggroRadius;
+        public string AggroNote => aggroNote ?? string.Empty;
+        public int BodyTiles => bodyTiles;
+        public bool UsesArenaBody => usesArenaBody;
+        public string BodyNote => bodyNote ?? string.Empty;
         public ItemAmount[] Drops => drops ?? System.Array.Empty<ItemAmount>();
 
         public bool SupportsSpawnTrack(YokaiSpawnTrack track)
@@ -91,7 +101,8 @@ namespace Nyangbingo.Data
             int inventoryStealSlots = 0, int inventoryStealMaxItems = 0,
             YokaiSpawnTrack allowedSpawnTracks = YokaiSpawnTrack.Raid, bool fleeAtDawn = true,
             int successfulTheftTearBonus = 0,
-            YokaiSignatureCondition signatureDropCondition = YokaiSignatureCondition.None)
+            YokaiSignatureCondition signatureDropCondition = YokaiSignatureCondition.None,
+            float detectionRadius = 0f, int bodyHeightTiles = 1, bool arenaBody = false)
         {
             var definition = CreateInstance<YokaiDefinition>();
             definition.id = value.ToString();
@@ -109,6 +120,9 @@ namespace Nyangbingo.Data
             definition.signatureCondition = signatureDropCondition;
             definition.spawnTracks = allowedSpawnTracks;
             definition.raidFleesAtDawn = fleeAtDawn;
+            definition.aggroRadius = Mathf.Max(0f, detectionRadius);
+            definition.bodyTiles = Mathf.Max(0, bodyHeightTiles);
+            definition.usesArenaBody = arenaBody;
             definition.drops = loot;
             return definition;
         }
