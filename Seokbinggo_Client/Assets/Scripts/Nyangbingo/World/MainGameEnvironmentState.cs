@@ -10,12 +10,12 @@ using UnityEngine;
 namespace Nyangbingo.World
 {
     /// <summary>
-    /// 메인 플레이 세션의 실제 설치물·냉기원 상태. 공식 seal-whitelist 정책을 적용한 O(1) 셀 조회와
-    /// 냉기원 가동 여부를 <see cref="WorldSessionController.ConfigureSealExtensions"/>에 공급한다.
+    /// 메인 플레이 세션의 실제 설치물·연료 상태. 공식 seal-whitelist 정책을 적용한 O(1) 셀 조회와
+    /// 얼음 코어 위치를 절대 방온 시스템에 공급한다.
     /// </summary>
     [DefaultExecutionOrder(-80)]
     [RequireComponent(typeof(MainGameBootstrap))]
-    public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry, ICoolingSourceProvider,
+    public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry,
         IGameSecondsTickable
     {
         public const string MagpieNestDefinitionId = "magpie_nest";
@@ -49,8 +49,6 @@ namespace Nyangbingo.World
         private bool suppressTileDoorSync;
         private float strawInsulationBonusPerPiece = .05f;
 
-        public bool IsColdSourceActive { get; private set; }
-        public float CoolingCapPercent { get; private set; }
         public int PlacedObjectCount => byObjectId.Count;
         public int ActiveCoolingSourceCount { get; private set; }
         public int HeatStageReduction => byObjectId.Values.Any(entry =>
@@ -95,7 +93,7 @@ namespace Nyangbingo.World
 
             RegisterBoundaryTileArt();
 
-            bootstrap.Session.ConfigureSealExtensions(this, this);
+            bootstrap.Session.ConfigureSealExtensions(this);
             coolingSources = new CoolingSourceRuntime(gameDataCatalog);
             var wallpaperBonus = gameDataCatalog.FindGlobal("wallpaper_coldsource_bonus");
             if (wallpaperBonus != null && wallpaperBonus.TryGetFloat(out var bonusPercent) &&
@@ -399,14 +397,12 @@ namespace Nyangbingo.World
                    coolingSources.TryGetRemaining(objectId, out remainingGameSeconds);
         }
 
-        public bool TryGetCoolingStatus(string objectId, out float remainingGameSeconds,
-            out float capPercent, out bool active)
+        public bool TryGetCoolingStatus(string objectId, out float remainingGameSeconds, out bool active)
         {
             remainingGameSeconds = 0f;
-            capPercent = 0f;
             active = false;
             return coolingSources != null &&
-                   coolingSources.TryGetStatus(objectId, out remainingGameSeconds, out capPercent, out active);
+                   coolingSources.TryGetStatus(objectId, out remainingGameSeconds, out active);
         }
 
         public bool TryGetNearestPlacedObject(Vector2 origin, float radius, out PlacedObjectRecord record) =>
@@ -568,6 +564,19 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(definitionId)) return;
             foreach (var entry in byObjectId.Values)
                 if (entry.Record.definitionId == definitionId) results.Add(entry.Record.position);
+        }
+
+        /// <summary>
+        /// v72 A-1: 현재 배치된 모든 얼음 저장고 코어 셀을 복사한다. 방 온도는 과거 냉기원 상한이 아니라
+        /// 이 목록의 각 코어가 대상 셀을 덮는지 검사해 냉각량을 가산한다.
+        /// </summary>
+        public void CopyIceCoreCells(List<Vector3Int> results)
+        {
+            if (results == null) return;
+            results.Clear();
+            foreach (var entry in byObjectId.Values)
+                if (entry.Record.definitionId == CoolingSourceRuntime.IceStorageId)
+                    results.Add(entry.Cell);
         }
 
         public List<CoolingSourceStateRecord> ExportCoolingSources() => coolingSources?.ExportSnapshots()
@@ -771,10 +780,6 @@ namespace Nyangbingo.World
         {
             ActiveCoolingSourceCount = byObjectId.Values.Count(entry => entry.CoolingActive) +
                                        (coolingSources?.ActiveCount ?? 0);
-            IsColdSourceActive = ActiveCoolingSourceCount > 0;
-            CoolingCapPercent = Mathf.Max(
-                byObjectId.Values.Any(entry => entry.CoolingActive) ? 100f : 0f,
-                coolingSources?.CoolingCapPercent ?? 0f);
             var iceStorage = byObjectId.Values
                 .Where(entry => entry.Record.definitionId == CoolingSourceRuntime.IceStorageId)
                 .OrderBy(entry => entry.Record.objectId, StringComparer.Ordinal)
@@ -791,10 +796,8 @@ namespace Nyangbingo.World
         {
             if (coolingSources == null) return;
             var beforeCount = coolingSources.ActiveCount;
-            var beforeCap = coolingSources.CoolingCapPercent;
             coolingSources.Tick(deltaGameSeconds, ResolveCoolingDurationMultiplier());
-            if (beforeCount != coolingSources.ActiveCount ||
-                !Mathf.Approximately(beforeCap, coolingSources.CoolingCapPercent))
+            if (beforeCount != coolingSources.ActiveCount)
                 RecomputeCoolingAndInvalidate();
         }
 

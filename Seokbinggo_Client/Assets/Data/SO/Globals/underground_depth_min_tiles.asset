@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: underground_depth_min_tiles
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: underground_depth_min_tiles
+  value: 135
+  unit: "\uD0C0\uC77C"
+  note: "\U0001F534 \uB9F5 \uCD95\uC18C \uD558\uD55C(\uC720\uB3C4\uAC12) \u2014 \uBE59\uACB0
+    \uCD5C\uC18C \uB450\uAED8 25(\uBC00\uD3D0 \uCC3D \uB192\uC774) \xF7 0.185 = 135.
+    \uD604 \uB9F5\uC774 \uC774\uBBF8 \uD558\uD55C\uC774\uB77C **\uCD95\uC18C \uBD88\uAC00\xB7\uD655\uB300\uB9CC
+    \uAC00\uB2A5**"

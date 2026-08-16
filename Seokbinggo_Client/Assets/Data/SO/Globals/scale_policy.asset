@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: scale_policy
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: scale_policy
+  value: world=norm|screen=abs
+  unit: '-'
+  note: "\uC138\uACC4 \uC2A4\uCF00\uC77C(\uB808\uC774\uC5B4\xB7\uC628\uB3C4 \uBC34\uB4DC\xB7X\uBC34\uB4DC\xB7\uC790\uC6D0
+    \uBC00\uB3C4) = \uBE44\uC728 / \uD654\uBA74\xB7\uD50C\uB808\uC774\uC5B4 \uC2A4\uCF00\uC77C(\uBC00\uD3D0
+    \uCC3D\xB7\uCF54\uC5B4 \uBC94\uC704\xB7\uC778\uC2DD \uBC94\uC704\xB7\uC124\uCE58\uBB3C
+    \uBC18\uACBD) = \uC808\uB300 \uD0C0\uC77C. \uC11E\uC73C\uBA74 \uB9F5 \uCD95\uC18C
+    \uC2DC \uAE68\uC9C4\uB2E4"

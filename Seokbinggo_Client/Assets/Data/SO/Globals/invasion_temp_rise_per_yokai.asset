@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: invasion_temp_rise_per_yokai
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: invasion_temp_rise_per_yokai
+  value: 0.5
+  unit: "\uB3C4/\uB208\uBB3C"
+  note: "[\uAC00\uC548] \uCE68\uD22C \uC694\uAD34 1\uB9C8\uB9AC\uB2F9 \uC2E4\uC628
+    \uC0C1\uC2B9 = **\uADF8 \uC885\uC758 \uC694\uAD34 \uB208\uBB3C \uC218 \xD7 0.5\uB3C4**.
+    \uB4F1\uAE09 \uC9C0\uD45C\uB97C \uC0C8\uB85C \uB9CC\uB4E4\uC9C0 \uC54A\uACE0
+    \uC815\uBCF8\uC758 tears(\uBC29\uB9DD\uC7741\xB7\uBD88\uAC00\uC0AC\uB9AC2\xB7\uC57C\uAD11\uADC02\xB7\uAC1D\uADC02\xB7\uC5B4\uB451\uC2DC\uB2C84\xB7\uAC15\uCCA0\uC7744)\uB97C
+    \uC7AC\uC0AC\uC6A9\uD55C\uB2E4. \uAC80\uC0B0: \uBC29\uB9DD\uC774 8\uB9C8\uB9AC
+    \uCE68\uD22C = +4\uB3C4(\uBC34\uB4DC 1\uB2E8\uACC4 \uBBF8\uB9CC) / \uC5B4\uB451\uC2DC\uB2C8
+    4\uB9C8\uB9AC = +8\uB3C4(\uC57D 1\uBC34\uB4DC). \uD558\uB8FB\uBC24 \uC190\uC2E4\uB85C
+    \uC801\uC815"

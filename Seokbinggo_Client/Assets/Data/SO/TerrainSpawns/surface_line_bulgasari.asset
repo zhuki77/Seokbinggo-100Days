@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfc1aec2c585ddc4f8117cdf8f2a425f, type: 3}
+  m_Name: surface_line_bulgasari
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TerrainSpawnDefinition
+  id: surface_line:bulgasari
+  terrainId: surface_line
+  terrainDisplayName: "\uC9C0\uD45C\uC120"
+  yokaiId: bulgasari
+  yokaiDisplayName: "\uBD88\uAC00\uC0AC\uB9AC"
+  weight: 20
+  implemented: 1
+  note: "GDD 9-0b d=0 \xB7 1D \uD384\uB9B0 \xB16 \xB7 \uAC00\uC911\uCE58 \uD569 100"
+  terrainResourceIds:
+  - wood
+  - hemp_stalk

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 696453ddd95456840ad0de4f62b1c9e3, type: 3}
+  m_Name: trait_labor
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
+  id: trait_labor
+  displayName: "\uD30C\uB294 \uB188"
+  shortName: "\uB178\uB3D9"
+  hookField: globals claw_t2_mine_crit
+  hookSource: "\uBB34\uC1E0 \uBC1C\uD1B1 \uCC44\uAD74 \uD06C\uB9AC\uD2F0\uCEEC 0.15
+    (\uC774\uBBF8 \uC815\uBCF8)"
+  startItemId: 
+  effect: "\uCC44\uAD74 \uD06C\uB9AC\uD2F0\uCEEC +0.05 (T1\uBD80\uD130 \uC120\uC801\uC6A9)"
+  artAssetId: p_trait_labor
+  note: "\uCC44\uAD74 \uBC30\uC728 \uD544\uB4DC\uAC00 \uC774\uBBF8 \uC788\uB2E4 \u2014
+    \uC0C8 \uD544\uB4DC 0. \uD06C\uB9AC\uD2F0\uCEEC = \uB4DC\uB78D 2\uBC30(\uCC44\uAD74
+    \uC804\uC6A9)\uB77C \uC804\uD22C \uBC38\uB7F0\uC2A4\uC5D0 \uBB34\uAC04\uC12D.
+    \uBB34\uC1E0 \uBC1C\uD1B1 T2\uC758 \uCC44\uAD74 \uD06C\uB9AC\uD2F0\uCEEC 0.15\uC640
+    **\uAC19\uC740 \uD544\uB4DC**. \uD06C\uB9AC\uD2F0\uCEEC = \uB4DC\uB78D 2\uBC30(\uCC44\uAD74
+    \uC804\uC6A9)\uB77C **\uCD08/\uD0C0\uC77C\uC774 \uC548 \uBC14\uB010\uB2E4 \u2192
+    6-4 \uCC44\uAD74 \uB9E4\uD2B8\uB9AD\uC2A4 \uBD88\uBCC0 \xB7 \uC804\uD22C \uBB34\uAC04\uC12D**.
+    \uC790\uC6D0 \uC0B0\uCD9C\uB9CC +5%p"

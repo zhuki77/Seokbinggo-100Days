@@ -14,7 +14,8 @@ namespace Nyangbingo.UI
     {
         private static readonly string[] BossIds =
         {
-            "king_dokkaebi", "mother_bulgasari", "imugi_boss"
+            "king_dokkaebi", "mother_bulgasari", "imugi_boss", "jigwi", "gangcheol_blaze",
+            "sangun", "samdugumi", "eop_guryeongi", "yeongno", "gangcheol_perfect"
         };
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private static readonly string[] DeliveredInventoryArtTestItemIds =
@@ -98,6 +99,18 @@ namespace Nyangbingo.UI
         public CraftingStation NearbyCraftingStation => initialized
             ? ResolveNearbyCraftingStation()
             : CraftingStation.None;
+
+        public bool TryGetNearbyCraftingStationPosition(CraftingStation station, out Vector2 position)
+        {
+            position = default;
+            if (!initialized || environmentState == null || playerTarget == null || station == CraftingStation.None)
+                return false;
+            var definitionId = DefinitionIdForStation(station);
+            if (!environmentState.TryGetNearestPlacedObjectPosition(
+                    definitionId, playerTarget.transform.position, out position)) return false;
+            return (position - (Vector2)playerTarget.transform.position).sqrMagnitude <=
+                   craftingStationInteractionRange * craftingStationInteractionRange;
+        }
         public bool IsNight => bootstrap?.TimeService?.IsNight == true;
         public bool HasSceneBindings => gameDataCatalog != null && bootstrap != null && runtimeServices != null &&
                                         environmentState != null && encounterCoordinator != null &&
@@ -229,6 +242,12 @@ namespace Nyangbingo.UI
             if (definition == null)
             {
                 reason = "소환 아이템이 아닙니다.";
+                return false;
+            }
+            if (!ExpansionProgressionRules.IsScopeAvailable(
+                    definition.MvpScope, bootstrap?.TimeService?.Day ?? 1))
+            {
+                reason = "31일 이후 확장에서 해금됩니다.";
                 return false;
             }
             if (encounterCoordinator?.BossManager?.IsBossActive == true)

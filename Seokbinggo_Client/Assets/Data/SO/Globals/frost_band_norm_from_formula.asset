@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: frost_band_norm_from_formula
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: frost_band_norm_from_formula
+  value: 1 - clears/frost_step_count
+  unit: "\uBE44\uC728"
+  note: "\uACA9\uD30C n\uD68C \u2192 \uC11C\uB9AC \uBC94\uC704 = \uAE4A\uC774 \uBE44\uC728
+    [1-n/10 \u2026 1.000]. **\uC544\uB798\uC5D0\uC11C \uC704\uB85C \uCC28\uC624\uB978\uB2E4.**
+    n=1 \u2192 0.900~1.000(\uAC00\uC7A5 \uAE4A\uC740 10%) / n=5 \u2192 0.500~1.000(\uC544\uB798
+    \uC808\uBC18) / n=10 \u2192 0.000~1.000(\uC9C0\uD558 \uC804\uC5ED)"

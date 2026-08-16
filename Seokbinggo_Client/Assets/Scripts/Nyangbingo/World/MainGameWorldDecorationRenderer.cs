@@ -18,6 +18,7 @@ namespace Nyangbingo.World
         public const string WoodItemId = "wood";
         public const string RebarItemId = "rebar";
         [SerializeField] private MainGameBootstrap bootstrap;
+        [SerializeField] private MainGameRuntimeServices runtimeServices;
         [SerializeField] private WorldDecorationArtCatalog artCatalog;
         [SerializeField] private ItemArtCatalog itemArtCatalog;
         private Transform decorationRoot;
@@ -83,19 +84,24 @@ namespace Nyangbingo.World
             public bool Harvested;
         }
 
-        public void ConfigureForScene(MainGameBootstrap mainBootstrap, WorldDecorationArtCatalog catalog)
+        public void ConfigureForScene(MainGameBootstrap mainBootstrap, WorldDecorationArtCatalog catalog,
+            MainGameRuntimeServices services = null)
         {
             bootstrap = mainBootstrap;
             artCatalog = catalog;
+            runtimeServices = services;
         }
 
         private void Start()
         {
             bootstrap ??= GetComponent<MainGameBootstrap>();
+            runtimeServices ??= GetComponent<MainGameRuntimeServices>();
             if (bootstrap == null || artCatalog == null) return;
             bootstrap.WorldReady += Rebuild;
             GameEvents.OnTileBroken += HandleTileBroken;
             GameEvents.OnDayStart += RefreshCatnipAvailability;
+            if (runtimeServices?.HeatStage != null)
+                runtimeServices.HeatStage.Changed += HandleHeatStageChanged;
             bootstrap.TileService?.SetForegroundPlacementBlocker(IsForegroundPlacementBlocked);
             if (bootstrap.IsWorldReady) Rebuild();
         }
@@ -365,7 +371,9 @@ namespace Nyangbingo.World
             var tiles = result.tiles;
             var width = tiles.GetLength(0);
             var height = tiles.GetLength(1);
-            var targetCount = Mathf.Max(1, Mathf.RoundToInt(width * density / 100f));
+            var stageMultiplier = runtimeServices?.HeatStage?.TreeDensityMultiplier ?? 1f;
+            var targetCount = Mathf.Max(0,
+                Mathf.RoundToInt(width * density / 100f * Mathf.Max(0f, stageMultiplier)));
             var occupiedColumns = new HashSet<int>();
             var attempts = Mathf.Max(width * 4, targetCount * 12);
             for (var attempt = 0; attempt < attempts && hempPatches.Count < targetCount; attempt++)
@@ -1323,10 +1331,28 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            if (runtimeServices?.HeatStage != null)
+                runtimeServices.HeatStage.Changed -= HandleHeatStageChanged;
             if (bootstrap != null) bootstrap.WorldReady -= Rebuild;
             bootstrap?.TileService?.ClearForegroundPlacementBlocker(IsForegroundPlacementBlocked);
             GameEvents.OnTileBroken -= HandleTileBroken;
             GameEvents.OnDayStart -= RefreshCatnipAvailability;
+        }
+
+        private void HandleHeatStageChanged(int ignoredStage) => RefreshForHeatStage();
+
+        public void RefreshForHeatStage()
+        {
+            if (bootstrap?.Session?.HasWorld != true) return;
+            var catnip = ExportCatnipPatches();
+            var hemp = ExportHempPatches();
+            var trees = ExportHarvestedTrees();
+            var rebar = ExportHarvestedRebar();
+            Rebuild();
+            RestoreCatnipPatches(catnip);
+            RestoreHempPatches(hemp);
+            RestoreHarvestedTrees(trees);
+            RestoreHarvestedRebar(rebar);
         }
     }
 }

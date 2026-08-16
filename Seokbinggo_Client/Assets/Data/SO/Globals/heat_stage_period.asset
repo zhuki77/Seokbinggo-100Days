@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: heat_stage_period
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
   key: heat_stage_period
-  value: 10
-  unit: day
-  note: "10\uC77C\uB9C8\uB2E4 \uB354\uC704\uB2E8\uACC4+1(\uC815\uBCF8)"
+  value: 0
+  unit: "\uC77C"
+  note: "\uD3D0\uC9C0\uAC12 \u2014 \uB0A0\uC9DC \uC8FC\uAE30 \uC0C1\uC2B9 \uC5C6\uC74C(\uAD6C
+    10). 0 = \uBBF8\uC0AC\uC6A9"

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: day_brightness_by_stage
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
   key: day_brightness_by_stage
-  value: 1.00/1.05/1.10/1.15/1.20/1.25/1.30/1.35/1.40/1.45
-  unit: curve
-  note: "v41 \uB0AE \uBC1D\uAE30 \uCEE4\uBE0C(v46 \uD558\uB4DC\uCF54\uB529 \uAE08\uC9C0) \u2014 stage 1~10"
+  value: 1.00/1.28/1.55
+  unit: "\uBC30"
+  note: "\uAD6C 10\uAC12\uC744 3\uAC12\uC73C\uB85C \uC555\uCD95 \u2014 \uC591\uB05D
+    \uACE0\uC815, \uB4F1\uAC04\uACA9"

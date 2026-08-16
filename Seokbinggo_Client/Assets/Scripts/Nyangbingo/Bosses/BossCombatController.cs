@@ -611,7 +611,8 @@ namespace Nyangbingo.Bosses
         {
             if (!IsFinite(offset)) return false;
             var range = Mathf.Max(0f, definition.SpecialRangeTiles) + RangeTolerance;
-            if (definition.SpecialShape == BossSpecialShape.Cone)
+            if (definition.SpecialShape == BossSpecialShape.Cone ||
+                definition.SpecialShape == BossSpecialShape.Fan)
             {
                 if (offset.magnitude > range) return false;
                 if (offset.sqrMagnitude <= Mathf.Epsilon) return true;
@@ -730,7 +731,8 @@ namespace Nyangbingo.Bosses
             var forward = aim.sqrMagnitude > Mathf.Epsilon ? aim.normalized : Vector2.right;
             var side = new Vector2(-forward.y, forward.x);
 
-            if (definition.SpecialShape == BossSpecialShape.Cone)
+            if (definition.SpecialShape == BossSpecialShape.Cone ||
+                definition.SpecialShape == BossSpecialShape.Fan)
             {
                 var vertices = new Vector2[arcSegments + 2];
                 vertices[0] = origin;
@@ -815,7 +817,8 @@ namespace Nyangbingo.Bosses
             else
             {
                 var range = Mathf.Max(.1f, definition.SpecialRangeTiles);
-                if (definition.SpecialShape == BossSpecialShape.Cone)
+                if (definition.SpecialShape == BossSpecialShape.Cone ||
+                    definition.SpecialShape == BossSpecialShape.Fan)
                     BuildConeMesh(range, definition.SpecialArcDegrees);
                 else
                     BuildBoxMesh(range, range * .5f);

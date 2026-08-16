@@ -30,3 +30,6 @@ MonoBehaviour:
   verbId: EscapeOnSwallow
   usageLimitPerDay: 1
   activationCondition: None
+  hasColdTolerance: 0
+  coldToleranceC: 0
+  coldNote:

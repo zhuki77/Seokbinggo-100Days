@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: shiitake
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: shiitake
+  displayName: "\uD45C\uACE0"
+  maxStack: 99
+  category: 2
+  mvpScope: 1
+  note: "[\uAC00\uC548] \uC9C0\uD558 \uC790\uC0DD \uBC84\uC12F \u2014 \uD68C\uBCF5
+    HP+30 \xB7 \uB0C9\uC7A5 \uBCF4\uAD00. \uC624\uB108 \uC9C0\uC2DC '\uD14C\uB77C\uB9AC\uC544
+    \uBC84\uC12F \uAC19\uC740 \uD68C\uBCF5 \uC544\uC774\uD15C'"

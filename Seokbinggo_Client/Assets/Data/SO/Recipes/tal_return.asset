@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: tal_return
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: tal_return
+  station: 1
+  ingredients:
+  - item: {fileID: 11400000, guid: d0cbb55eb184479478a337cef0a50eb8, type: 2}
+    amount: 3
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 2
+  output:
+    item: {fileID: 11400000, guid: 203e2bd3603e6de40b8cd1ddb1e04d7b, type: 2}
+    amount: 1
+  durationSeconds: 0
+  type: 15
+  mvpScope: 1
+  note: "\uC0AC\uC6A9 \uC2DC \uC11D\uBE59\uACE0 \uCF54\uC5B4\uB85C \uC989\uC2DC \uADC0\uD658"

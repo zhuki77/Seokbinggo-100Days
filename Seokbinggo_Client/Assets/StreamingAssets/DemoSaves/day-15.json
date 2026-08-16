@@ -1,16 +1,23 @@
 {
-    "schemaVersion": 16,
-    "seed": 12347,
+    "schemaVersion": 25,
+    "isOfficialDemo": true,
+    "seed": 12345,
     "day": 15,
     "timeOfDaySec": 900.0,
     "inventory": [
         {
             "itemId": "dokkaebi_club",
-            "amount": 1
+            "amount": 1,
+            "hasStorageCondition": false,
+            "storageCondition01": 0.0,
+            "storageMeltRemainder": 0.0
         },
         {
             "itemId": "hapjukseon",
-            "amount": 1
+            "amount": 1,
+            "hasStorageCondition": false,
+            "storageCondition01": 0.0,
+            "storageMeltRemainder": 0.0
         }
     ],
     "unlockedRecipes": [],
@@ -21,7 +28,7 @@
             "objectId": "demo_15_ice_core",
             "definitionId": "ice_core",
             "position": {
-                "x": 22.5,
+                "x": 64.5,
                 "y": 13.5
             },
             "rotationDegrees": 0.0
@@ -30,7 +37,7 @@
             "objectId": "demo_15_insul_wall",
             "definitionId": "insul_wall",
             "position": {
-                "x": 20.5,
+                "x": 62.5,
                 "y": 13.5
             },
             "rotationDegrees": 0.0
@@ -39,7 +46,7 @@
             "objectId": "demo_15_door",
             "definitionId": "door",
             "position": {
-                "x": 21.5,
+                "x": 63.5,
                 "y": 13.5
             },
             "rotationDegrees": 0.0
@@ -48,8 +55,8 @@
             "objectId": "demo_15_sieve",
             "definitionId": "sieve",
             "position": {
-                "x": 204.5,
-                "y": 133.5
+                "x": 304.5,
+                "y": 141.5
             },
             "rotationDegrees": 0.0
         }
@@ -63,859 +70,878 @@
         }
     ],
     "deathTearPouches": [],
+    "worldDrops": [],
+    "doorStates": [],
+    "wallDamage": [],
+    "catnipPatches": [],
+    "hempPatches": [],
+    "harvestedTrees": [],
+    "harvestedRebar": [],
     "tileChanges": [
         {
-            "x": 16,
+            "x": 58,
             "y": 8,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 9,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 10,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 11,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 12,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 13,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 14,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 16,
+            "x": 58,
             "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 16,
-            "y": 16,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 16,
-            "y": 17,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 8,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 9,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 10,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 11,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 12,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 13,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 14,
-            "z": 0,
-            "tileId": "icesteel_ore",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 16,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 17,
-            "y": 17,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 8,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 9,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 10,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 11,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 12,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 13,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 14,
-            "z": 0,
-            "tileId": "icesteel_ore",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 16,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 18,
-            "y": 17,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 8,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 9,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 10,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 11,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 12,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 13,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 14,
             "z": 0,
             "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 19,
-            "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
+            "x": 58,
             "y": 16,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 19,
-            "y": 17,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 8,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 9,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 10,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 11,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 12,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 13,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 14,
             "z": 0,
             "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 20,
-            "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
-            "y": 16,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 20,
+            "x": 58,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 8,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 9,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 10,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 11,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 12,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 13,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 14,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 59,
+            "y": 15,
             "z": 0,
             "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 21,
-            "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 21,
+            "x": 59,
             "y": 16,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 21,
+            "x": 59,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 8,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 9,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 10,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 11,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 12,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 13,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 14,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 15,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 16,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 22,
+            "x": 60,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 8,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 9,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "icesteel_ore",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 10,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 11,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 12,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 13,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 14,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 15,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 16,
             "z": 0,
-            "tileId": "icesteel_ore",
+            "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 23,
+            "x": 61,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
             "y": 8,
-            "z": 0,
-            "tileId": "icesteel_ore",
-            "placed": false
-        },
-        {
-            "x": 24,
-            "y": 9,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
+            "y": 9,
+            "z": 0,
+            "tileId": "icesteel_ore",
+            "placed": false
+        },
+        {
+            "x": 62,
             "y": 10,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
             "y": 11,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
             "y": 12,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
             "y": 13,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
             "y": 14,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 24,
+            "x": 62,
             "y": 15,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 24,
-            "y": 16,
-            "z": 0,
-            "tileId": "icesteel_ore",
-            "placed": false
-        },
-        {
-            "x": 24,
-            "y": 17,
-            "z": 0,
-            "tileId": "icesteel_ore",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 8,
-            "z": 0,
-            "tileId": "icesteel_ore",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 9,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 10,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 11,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 12,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 13,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 14,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
-            "y": 15,
-            "z": 0,
-            "tileId": "stone_deep",
-            "placed": false
-        },
-        {
-            "x": 25,
+            "x": 62,
             "y": 16,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 25,
+            "x": 62,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 8,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 9,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "icesteel_ore",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 10,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "icesteel_ore",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 11,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 12,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 13,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 14,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 15,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 16,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 26,
+            "x": 63,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 8,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 9,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 10,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 11,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 12,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 13,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 14,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 15,
             "z": 0,
-            "tileId": "stone_deep",
+            "tileId": "frost_essence",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
             "y": 16,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         },
         {
-            "x": 27,
+            "x": 64,
+            "y": 17,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 8,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 9,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 10,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 11,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 12,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 13,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 14,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 15,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 16,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 65,
+            "y": 17,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 8,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 9,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 10,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 11,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 12,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 13,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 14,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 15,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 16,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 66,
+            "y": 17,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 8,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 9,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 10,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 11,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 12,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 13,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 14,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 15,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 16,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 67,
+            "y": 17,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 8,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 9,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 10,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 11,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 12,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 13,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 14,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 15,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 16,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 68,
+            "y": 17,
+            "z": 0,
+            "tileId": "icesteel_ore",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 8,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 9,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 10,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 11,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 12,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 13,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 14,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 15,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
+            "y": 16,
+            "z": 0,
+            "tileId": "stone_deep",
+            "placed": false
+        },
+        {
+            "x": 69,
             "y": 17,
             "z": 0,
             "tileId": "stone_deep",
             "placed": false
         }
     ],
+    "backgroundChanges": [],
     "modulesDone": [
         "door",
         "ice_core",
         "insul_wall"
     ],
+    "seokbinggoStage": 0,
+    "altarClears": 0,
+    "heatStage": 1,
+    "invasionTemperatureRise": 0.0,
+    "invasionRecoolAvailableDay": 0,
+    "invasionLastInfiltrationDay": 0,
+    "talismanStrideRemaining": 0.0,
+    "talismanHideRemaining": 0.0,
+    "talismanFrostRemaining": 0.0,
+    "gimmickWeaponsGranted": [],
+    "frostPendingCells": [],
     "sealPct": 50.0,
     "yokaiTears": 0,
     "bossRecords": [],
     "forcedBossEncounters": [
         {
-            "bossId": "gangcheol_boss",
+            "bossId": "imugi_boss",
             "triggered": false
         }
     ],
@@ -925,6 +951,9 @@
         "x": 0.0,
         "y": 0.0
     },
+    "magpieKillCount": 0,
+    "magpieBaekjungSurvived": false,
+    "magpieStorage": [],
     "turretFuel": [],
     "equipment": [
         {
@@ -972,169 +1001,45 @@
         {
             "chestId": "chest_00",
             "position": {
-                "x": 378.0,
-                "y": 137.0
+                "x": 243.0,
+                "y": 57.0
             },
-            "opened": false
+            "opened": false,
+            "contents": []
         },
         {
             "chestId": "chest_01",
             "position": {
-                "x": 326.0,
-                "y": 139.0
+                "x": 248.0,
+                "y": 57.0
             },
-            "opened": false
+            "opened": false,
+            "contents": []
         },
         {
             "chestId": "chest_02",
             "position": {
-                "x": 379.0,
-                "y": 137.0
+                "x": 514.0,
+                "y": 63.0
             },
-            "opened": false
+            "opened": false,
+            "contents": []
         },
         {
             "chestId": "chest_03",
             "position": {
-                "x": 380.0,
-                "y": 137.0
+                "x": 511.0,
+                "y": 63.0
             },
-            "opened": false
-        },
-        {
-            "chestId": "chest_04",
-            "position": {
-                "x": 0.0,
-                "y": 110.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_05",
-            "position": {
-                "x": 321.0,
-                "y": 102.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_06",
-            "position": {
-                "x": 191.0,
-                "y": 130.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_07",
-            "position": {
-                "x": 186.0,
-                "y": 92.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_08",
-            "position": {
-                "x": 30.0,
-                "y": 134.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_09",
-            "position": {
-                "x": 316.0,
-                "y": 136.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_10",
-            "position": {
-                "x": 254.0,
-                "y": 65.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_11",
-            "position": {
-                "x": 12.0,
-                "y": 92.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_12",
-            "position": {
-                "x": 229.0,
-                "y": 70.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_13",
-            "position": {
-                "x": 357.0,
-                "y": 64.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_14",
-            "position": {
-                "x": 47.0,
-                "y": 81.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_15",
-            "position": {
-                "x": 384.0,
-                "y": 82.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_16",
-            "position": {
-                "x": 231.0,
-                "y": 23.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_17",
-            "position": {
-                "x": 378.0,
-                "y": 37.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_18",
-            "position": {
-                "x": 258.0,
-                "y": 20.0
-            },
-            "opened": false
-        },
-        {
-            "chestId": "chest_19",
-            "position": {
-                "x": 128.0,
-                "y": 41.0
-            },
-            "opened": false
+            "opened": false,
+            "contents": []
         }
     ],
     "playerState": {
         "hasValue": true,
         "position": {
-            "x": 202.5,
-            "y": 132.38099670410157,
+            "x": 300.5,
+            "y": 141.3800048828125,
             "z": 0.0
         },
         "currentHealth": 100,
@@ -1153,7 +1058,12 @@
         "day": 15,
         "isNight": true,
         "discardRegularForCurrentNight": false,
-        "remainingRegularYokaiIds": []
+        "remainingRegularYokaiIds": [],
+        "usesDetailedYokaiState": false,
+        "activeYokai": [],
+        "pendingRegularYokaiIds": [],
+        "pendingRaidYokaiIds": [],
+        "residentLastKilledDays": []
     },
     "baekjungProgress": {
         "startedEventIds": [],

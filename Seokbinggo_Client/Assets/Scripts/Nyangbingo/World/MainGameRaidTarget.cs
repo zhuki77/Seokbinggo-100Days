@@ -15,7 +15,7 @@ namespace Nyangbingo.World
     [RequireComponent(typeof(Health))]
     public sealed class MainGameRaidTarget : MonoBehaviour, IYokaiTarget, IWallMaterialTarget, IYokaiCombatTarget,
         IYokaiLootTarget, IYokaiTheftReceiptSource, IYokaiCounterSource,
-        IYokaiBarrierTarget, Nyangbingo.Bosses.IBossCombatTarget
+        IYokaiBarrierTarget, IYokaiStealthTarget, Nyangbingo.Bosses.IBossCombatTarget
     {
         [SerializeField] private YokaiWallMaterial wallMaterial = YokaiWallMaterial.Ice;
         private Inventory.Inventory playerInventory;
@@ -23,6 +23,7 @@ namespace Nyangbingo.World
         private MainGameWorldDropRuntime worldDrops;
         private MainGameBootstrap bootstrap;
         private int sealPenaltyStartDay = 4;
+        private Func<bool> hiddenFromAggro;
         private readonly List<ItemAmount> pendingStolenItems = new List<ItemAmount>();
         private readonly StatSheet statSheet = new StatSheet();
         public const float PaceWallDamageDeficitPercent = 40f;
@@ -47,6 +48,7 @@ namespace Nyangbingo.World
         public float EoduksiniLanternPauseSeconds => 0f;
         public float EoduksiniBloomCooldownSeconds => 0f;
         public float EoduksiniLanternDamageMultiplier => 0f;
+        public bool IsHiddenFromAggro => hiddenFromAggro?.Invoke() == true;
         public float AccumulatedWallDamage { get; private set; }
         public event Action<float> WallDamaged;
 
@@ -57,6 +59,8 @@ namespace Nyangbingo.World
             equipmentSystem = equipment;
             worldDrops = drops;
         }
+
+        public void ConfigureStealthRuntime(Func<bool> isHidden) => hiddenFromAggro = isHidden;
 
         public bool ConfigureWallPaceRuntime(
             MainGameBootstrap mainBootstrap, int firstPenaltyDay)

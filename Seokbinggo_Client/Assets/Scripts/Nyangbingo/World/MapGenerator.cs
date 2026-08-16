@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -28,17 +29,20 @@ namespace Nyangbingo.World
         public const string Stone = "stone";
         public const string Coal = "coal";
         public const string Clay = "clay";
+        public const string OysterMushroom = "oyster_mushroom";
 
         // 중층 (T2)
         public const string StoneMid = "stone_mid";
         public const string IronOre = "iron_ore";
         public const string CopperOre = "copper_ore";
         public const string IceShard = "ice_shard";
+        public const string Shiitake = "shiitake";
 
         // 심층 (T3)
         public const string StoneDeep = "stone_deep";
         public const string IceSteelOre = "icesteel_ore";
         public const string FrostEssence = "frost_essence";
+        public const string Seogi = "seogi";
 
         // 구조물 / 최하단
         public const string Bedrock = "bedrock";
@@ -66,9 +70,9 @@ namespace Nyangbingo.World
         /// </summary>
         public static readonly HashSet<string> AllElementTypes = new HashSet<string>(StringComparer.Ordinal)
         {
-            Dirt, Stone, Coal, Clay,
-            StoneMid, IronOre, CopperOre, IceShard,
-            StoneDeep, IceSteelOre, FrostEssence,
+            Dirt, Stone, Coal, Clay, OysterMushroom,
+            StoneMid, IronOre, CopperOre, IceShard, Shiitake,
+            StoneDeep, IceSteelOre, FrostEssence, Seogi,
             Bedrock, RuinWall, IceLake, IceAltar,
             BackgroundDirt, BackgroundStone, BackgroundDeep,
             OfficialBackgroundDirt, OfficialBackgroundStone, OfficialBackgroundDeep,
@@ -114,7 +118,7 @@ namespace Nyangbingo.World
     [Serializable]
     public struct TileData
     {
-        /// <summary>경도 1~3. 발톱 티어 ≥ 경도일 때만 파괴 가능(TileService 판정). 빙암은 3 고정.</summary>
+        /// <summary>경도 1~3. 발톱 티어 ≥ 경도일 때만 파괴 가능(TileService 판정).</summary>
         public int hardness;
 
         /// <summary>
@@ -241,7 +245,6 @@ namespace Nyangbingo.World
         /// <summary>배경벽 색상 선택 등 보조 분류용(레거시). 실제 배치 범위는 depthMin/depthMax를 우선한다.</summary>
         public WorldLayer layer;
 
-        [Range(1, 3)] public int hardness;
         [Min(0f)] public float frequencyPer100Tiles;
         [Min(1)] public int minClusterSize;
         [Min(1)] public int maxClusterSize;
@@ -317,20 +320,80 @@ namespace Nyangbingo.World
         };
 
         private readonly WorldGenerationConfig config;
+        private readonly IReadOnlyDictionary<string, int> mineralHardnessById;
+        private readonly IReadOnlyList<OreVeinProfile> mineralProfiles;
+        private readonly int boundaryIceRockHardness;
 
         private WorldGenerationResult lastResult;
         private Dictionary<string, ChestSpawnPoint> chestsById = new Dictionary<string, ChestSpawnPoint>(StringComparer.Ordinal);
         private List<string> chestIdsCache = new List<string>();
 
-        public MapGenerator(WorldGenerationConfig generationConfig)
+        public MapGenerator(WorldGenerationConfig generationConfig, GameDataCatalog catalog)
         {
             config = generationConfig != null ? generationConfig : WorldGenerationConfig.CreateDefault();
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog),
+                "mineral-tiers.csv 경도 정본을 제공하는 GameDataCatalog가 필요합니다.");
+
+            var hardnessById = new Dictionary<string, int>(StringComparer.Ordinal);
+            var profiles = new List<OreVeinProfile>();
+            var clusterMin = ReadPositiveInt(catalog, GlobalKeys.OreVeinClusterMin, 3);
+            var clusterMax = ReadPositiveInt(catalog, GlobalKeys.OreVeinClusterMax, 6);
+            var boundaryHardnessDefinition = catalog.FindGlobal(GlobalKeys.BoundaryIceRockHardness);
+            if (boundaryHardnessDefinition == null ||
+                !boundaryHardnessDefinition.TryGetInt(out boundaryIceRockHardness) ||
+                boundaryIceRockHardness < 1 || boundaryIceRockHardness > 3)
+                throw new InvalidOperationException(
+                    "globals.boundary_ice_rock_hardness가 없거나 경도 1~3 범위를 벗어났습니다.");
+            if (clusterMin > clusterMax)
+                throw new InvalidOperationException("ore_vein_cluster_min/max 순서가 잘못되었습니다.");
+            foreach (var profile in config.OreVeins)
+            {
+                var definition = catalog.FindMineralTier(profile.elementType);
+                if (definition == null || definition.Hardness < 1 || definition.Hardness > 3 ||
+                    definition.FrequencyPerHundredTiles < 0f ||
+                    definition.MinimumDepth < 0 || definition.MaximumDepth < definition.MinimumDepth)
+                    throw new InvalidOperationException(
+                        $"mineral-tiers.csv 광물 정의가 없거나 잘못되었습니다: '{profile.elementType}'.");
+                hardnessById.Add(profile.elementType, definition.Hardness);
+                profiles.Add(new OreVeinProfile
+                {
+                    elementType = definition.Id,
+                    layer = ToWorldLayer(definition.Layer),
+                    frequencyPer100Tiles = definition.FrequencyPerHundredTiles,
+                    minClusterSize = clusterMin,
+                    maxClusterSize = clusterMax,
+                    depthMin = definition.MinimumDepth,
+                    depthMax = definition.MaximumDepth
+                });
+            }
+            mineralHardnessById = hardnessById;
+            mineralProfiles = profiles;
+        }
+
+        private static int ReadPositiveInt(GameDataCatalog catalog, string key, int fallback)
+        {
+            var value = catalog?.FindGlobal(key);
+            return value != null && value.TryGetInt(out var parsed) && parsed > 0 ? parsed : fallback;
+        }
+
+        private static WorldLayer ToWorldLayer(MineralLayer layer)
+        {
+            switch (layer)
+            {
+                case MineralLayer.UndergroundUpper: return WorldLayer.Upper;
+                case MineralLayer.UndergroundMiddle: return WorldLayer.Middle;
+                case MineralLayer.UndergroundDeep: return WorldLayer.Deep;
+                default:
+                    throw new InvalidOperationException(
+                        $"월드 광맥 프로파일에 지하가 아닌 mineral layer가 연결되었습니다: {layer}.");
+            }
         }
 
         public WorldGenerationResult LastResult => lastResult;
         public Vector2Int SpawnPoint => lastResult.spawnPoint;
         public Vector2Int AltarPosition => lastResult.altarPosition;
         public int AcceptedSeed => lastResult.acceptedSeed;
+        public IReadOnlyList<OreVeinProfile> MineralProfiles => mineralProfiles;
 
         // ------------------------------------------------------------
         // 단일 진입점 (요구된 시그니처): 부작용 없는 순수 함수형 진입점.
@@ -348,7 +411,8 @@ namespace Nyangbingo.World
             while (true)
             {
                 var candidateSeed = seed + attempt;
-                result = GenerateSingleAttempt(candidateSeed, config);
+                result = GenerateSingleAttempt(
+                    candidateSeed, config, mineralHardnessById, mineralProfiles, boundaryIceRockHardness);
                 result.requestedSeed = seed;
                 result.rerollAttempts = attempt;
 
@@ -424,7 +488,9 @@ namespace Nyangbingo.World
         // ==============================================================
         // 한 번의 생성 시도 (4패스, 검증은 별도)
         // ==============================================================
-        private static WorldGenerationResult GenerateSingleAttempt(int seed, WorldGenerationConfig config)
+        private static WorldGenerationResult GenerateSingleAttempt(int seed, WorldGenerationConfig config,
+            IReadOnlyDictionary<string, int> hardnessById,
+            IReadOnlyList<OreVeinProfile> profiles, int boundaryHardness)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
@@ -441,18 +507,18 @@ namespace Nyangbingo.World
             var cavernChestRng = new System.Random(seed + 6);
 
             // Pass 1 — 지형
-            var surfaceHeights = GenerateTerrain(grid, terrainRng, config);
+            var surfaceHeights = GenerateTerrain(grid, terrainRng, config, boundaryHardness);
             // Pass 2 — 펄린 동굴(후처리 없음)
             CarveCaves(grid, surfaceHeights, caveRng, config);
             // Pass 3 — 광맥(돌·석탄 포함, 지표 ban depth 아래)
-            PlaceOreVeins(grid, surfaceHeights, resourceRng, config);
+            PlaceOreVeins(grid, surfaceHeights, resourceRng, config, hardnessById, profiles);
             // Pass 4 — 구조물·스폰·얕은 입구 (상자는 대형 동굴 개척 이후)
             var structures = PlaceStructures(grid, surfaceHeights, structureRng, config, protectedAir);
             // Pass 4b — 심층 제단 접근(지표·crust 절대 미개척). 스폰 연결은 PostProcess 이후 4c에서 보장.
             CarveConnectivityShafts(grid, surfaceHeights, caveRng, config,
                 structures.spawnPoint, structures.altarPosition);
             // Pass 최종 — Hard Fill/Hard Cut
-            PostProcessCaveCavities(grid, surfaceHeights, config, protectedAir);
+            PostProcessCaveCavities(grid, surfaceHeights, config, protectedAir, boundaryHardness);
             // Hard Fill 후 공식 얕은 입구만 재개방
             ReopenSpawnEntrance(grid, surfaceHeights, structures.spawnPoint, config);
             // Pass 4b2 — 시드 기반 중간층 공동 + 동굴당 상자 0~2
@@ -485,7 +551,8 @@ namespace Nyangbingo.World
         // ==============================================================
         // Pass 1 — 지형 (1D 펄린 높이라인 + 레이어 경계 + 최하단 경계암)
         // ==============================================================
-        private static int[] GenerateTerrain(TileData[,] grid, System.Random rng, WorldGenerationConfig config)
+        private static int[] GenerateTerrain(TileData[,] grid, System.Random rng, WorldGenerationConfig config,
+            int boundaryHardness)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
@@ -514,7 +581,8 @@ namespace Nyangbingo.World
                         WorldLayer.Upper => TileData.CreateNaturalWithBackground(
                             WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt),
                         WorldLayer.Middle => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
-                        _ => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneDeep, 3, WorldTileTypes.BackgroundDeep)
+                        _ => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneDeep, boundaryHardness,
+                            WorldTileTypes.BackgroundDeep)
                     };
                 }
             }
@@ -798,7 +866,7 @@ namespace Nyangbingo.World
         /// protectedAir: 스폰 발밑 3×3·제단 최소만. Hard Cut은 span&gt;cave_max_height 시 protectedAir 무시.
         /// </summary>
         private static void PostProcessCaveCavities(TileData[,] grid, int[] surfaceHeights,
-            WorldGenerationConfig config, bool[,] protectedAir)
+            WorldGenerationConfig config, bool[,] protectedAir, int boundaryHardness)
         {
             var width = config.MapWidth;
             var maxChamberHeight = Mathf.Max(1, config.CaveMaxHeight);
@@ -810,8 +878,9 @@ namespace Nyangbingo.World
             var compX = new int[width * config.MapHeight];
             var compY = new int[width * config.MapHeight];
 
-            HardFillTopSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
-            HardFillPreferredSpawnSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
+            HardFillTopSafetyZone(grid, surfaceHeights, config, crust, protectedAir, boundaryHardness);
+            HardFillPreferredSpawnSafetyZone(grid, surfaceHeights, config, crust, protectedAir,
+                boundaryHardness);
 
             const int maxCutPasses = 128;
             for (var pass = 0; pass < maxCutPasses; pass++)
@@ -874,22 +943,24 @@ namespace Nyangbingo.World
                         if (span <= maxChamberHeight) continue;
 
                         cutAny |= SealOversizedCavityComponent(grid, surfaceHeights, config, protectedAir,
-                            minX, maxX, minY, maxY, maxChamberHeight, compCount, compX, compY);
+                            minX, maxX, minY, maxY, maxChamberHeight, compCount, compX, compY,
+                            boundaryHardness);
                     }
                 }
 
                 if (!cutAny) break;
             }
 
-            HardFillTopSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
-            HardFillPreferredSpawnSafetyZone(grid, surfaceHeights, config, crust, protectedAir);
+            HardFillTopSafetyZone(grid, surfaceHeights, config, crust, protectedAir, boundaryHardness);
+            HardFillPreferredSpawnSafetyZone(grid, surfaceHeights, config, crust, protectedAir,
+                boundaryHardness);
         }
 
         /// <summary>span &gt; cave_max_height 공동 — Y_mid 허리 밴드+3×3 봉인 후 하부 12칸만 유지.</summary>
         private static bool SealOversizedCavityComponent(TileData[,] grid, int[] surfaceHeights,
             WorldGenerationConfig config, bool[,] protectedAir,
             int minX, int maxX, int minY, int maxY, int maxChamberHeight,
-            int compCount, int[] compX, int[] compY)
+            int compCount, int[] compX, int[] compY, int boundaryHardness)
         {
             var cutAny = false;
             var yMid = (minY + maxY) / 2;
@@ -899,18 +970,20 @@ namespace Nyangbingo.World
             {
                 if (!InBounds(bx, yMid, config.MapWidth, config.MapHeight)) continue;
                 if (yMid > surfaceHeights[bx]) continue;
-                if (ForceSealCavityAirCell(grid, surfaceHeights, bx, yMid, config))
+                if (ForceSealCavityAirCell(grid, surfaceHeights, bx, yMid, config, boundaryHardness))
                     cutAny = true;
-                ForceSealNeighborhood3x3(grid, surfaceHeights, bx, yMid, config);
+                ForceSealNeighborhood3x3(grid, surfaceHeights, bx, yMid, config, boundaryHardness);
             }
 
             // 2) 공동 성분 칸 중 yMid 행 — 밴드 밖 x에 남은 허리도 메움.
             for (var i = 0; i < compCount; i++)
             {
                 if (compY[i] != yMid) continue;
-                if (ForceSealCavityAirCell(grid, surfaceHeights, compX[i], yMid, config))
+                if (ForceSealCavityAirCell(grid, surfaceHeights, compX[i], yMid, config,
+                        boundaryHardness))
                     cutAny = true;
-                ForceSealNeighborhood3x3(grid, surfaceHeights, compX[i], yMid, config);
+                ForceSealNeighborhood3x3(grid, surfaceHeights, compX[i], yMid, config,
+                    boundaryHardness);
             }
 
             // 3) 하부 maxChamberHeight 유지 — 그 위 잔여 공기 제거(protectedAir·구역 보호 무시).
@@ -920,9 +993,9 @@ namespace Nyangbingo.World
                 var cx = compX[i];
                 var cy = compY[i];
                 if (cy <= keepMaxY) continue;
-                if (ForceSealCavityAirCell(grid, surfaceHeights, cx, cy, config))
+                if (ForceSealCavityAirCell(grid, surfaceHeights, cx, cy, config, boundaryHardness))
                     cutAny = true;
-                ForceSealNeighborhood3x3(grid, surfaceHeights, cx, cy, config);
+                ForceSealNeighborhood3x3(grid, surfaceHeights, cx, cy, config, boundaryHardness);
             }
 
             return cutAny;
@@ -942,52 +1015,54 @@ namespace Nyangbingo.World
 
         /// <summary>Hard Cut 전용 — 얼음 호수/제단만 제외, protectedAir는 span 위반 시 무시.</summary>
         private static bool ForceSealCavityAirCell(TileData[,] grid, int[] surfaceHeights, int x, int y,
-            WorldGenerationConfig config)
+            WorldGenerationConfig config, int boundaryHardness)
         {
             if (!InBounds(x, y, config.MapWidth, config.MapHeight)) return false;
             if (!grid[x, y].IsAir) return false;
             if (ShouldPreserveSpecialAir(grid[x, y])) return false;
 
-            SealCaveCellWithRock(grid, x, y, surfaceHeights[x], config);
+            SealCaveCellWithRock(grid, x, y, surfaceHeights[x], config, boundaryHardness);
             return true;
         }
 
         private static void ForceSealNeighborhood3x3(TileData[,] grid, int[] surfaceHeights, int centerX, int centerY,
-            WorldGenerationConfig config)
+            WorldGenerationConfig config, int boundaryHardness)
         {
             for (var dx = -1; dx <= 1; dx++)
             for (var dy = -1; dy <= 1; dy++)
             {
                 if (dx == 0 && dy == 0) continue;
-                ForceSealCavityAirCell(grid, surfaceHeights, centerX + dx, centerY + dy, config);
+                ForceSealCavityAirCell(grid, surfaceHeights, centerX + dx, centerY + dy, config,
+                    boundaryHardness);
             }
         }
 
         private static bool TrySealCavityAirCell(TileData[,] grid, int[] surfaceHeights, int x, int y,
-            WorldGenerationConfig config, bool[,] protectedAir)
+            WorldGenerationConfig config, bool[,] protectedAir, int boundaryHardness)
         {
             if (!InBounds(x, y, config.MapWidth, config.MapHeight)) return false;
             if (!grid[x, y].IsAir) return false;
             if (ShouldPreserveSpecialAir(grid[x, y])) return false;
             if (IsProtectedAirCell(x, y, protectedAir)) return false;
 
-            SealCaveCellWithRock(grid, x, y, surfaceHeights[x], config);
+            SealCaveCellWithRock(grid, x, y, surfaceHeights[x], config, boundaryHardness);
             return true;
         }
 
         private static void SealNeighborhood3x3(TileData[,] grid, int[] surfaceHeights, int centerX, int centerY,
-            WorldGenerationConfig config, bool[,] protectedAir)
+            WorldGenerationConfig config, bool[,] protectedAir, int boundaryHardness)
         {
             for (var dx = -1; dx <= 1; dx++)
             for (var dy = -1; dy <= 1; dy++)
             {
                 if (dx == 0 && dy == 0) continue;
-                TrySealCavityAirCell(grid, surfaceHeights, centerX + dx, centerY + dy, config, protectedAir);
+                TrySealCavityAirCell(grid, surfaceHeights, centerX + dx, centerY + dy, config, protectedAir,
+                    boundaryHardness);
             }
         }
 
         private static void HardFillTopSafetyZone(TileData[,] grid, int[] surfaceHeights,
-            WorldGenerationConfig config, int crust, bool[,] protectedAir)
+            WorldGenerationConfig config, int crust, bool[,] protectedAir, int boundaryHardness)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
@@ -1006,14 +1081,14 @@ namespace Nyangbingo.World
                     if (IsProtectedAirCell(x, y, protectedAir)) continue;
                     if (ShouldPreserveSpecialAir(grid[x, y])) continue;
                     if (!grid[x, y].IsAir) continue;
-                    SealCaveCellWithRock(grid, x, y, surfaceY, config);
+                    SealCaveCellWithRock(grid, x, y, surfaceY, config, boundaryHardness);
                 }
             }
         }
 
         /// <summary>스폰 근처는 지표 crust만 메움. 보호 칸(발밑 3×3)만 예외.</summary>
         private static void HardFillPreferredSpawnSafetyZone(TileData[,] grid, int[] surfaceHeights,
-            WorldGenerationConfig config, int crust, bool[,] protectedAir)
+            WorldGenerationConfig config, int crust, bool[,] protectedAir, int boundaryHardness)
         {
             var width = config.MapWidth;
             var preferredX = Mathf.Clamp(Mathf.RoundToInt(width * config.SpawnColumnRatio), 3, width - 4);
@@ -1028,7 +1103,7 @@ namespace Nyangbingo.World
                     if (IsProtectedAirCell(x, y, protectedAir)) continue;
                     if (ShouldPreserveSpecialAir(grid[x, y])) continue;
                     if (!grid[x, y].IsAir) continue;
-                    SealCaveCellWithRock(grid, x, y, surfaceY, config);
+                    SealCaveCellWithRock(grid, x, y, surfaceY, config, boundaryHardness);
                 }
             }
         }
@@ -1042,7 +1117,7 @@ namespace Nyangbingo.World
 
         /// <summary>공동 단절용 — 해당 칸을 지층에 맞는 자연 전경+배경으로 복구.</summary>
         private static void SealCaveCellWithRock(TileData[,] grid, int x, int y, int surfaceY,
-            WorldGenerationConfig config)
+            WorldGenerationConfig config, int boundaryHardness)
         {
             var layer = ClassifyLayer(y, surfaceY, config);
             grid[x, y] = layer switch
@@ -1052,7 +1127,7 @@ namespace Nyangbingo.World
                 WorldLayer.Middle => TileData.CreateNaturalWithBackground(
                     WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
                 WorldLayer.Deep => TileData.CreateNaturalWithBackground(
-                    WorldTileTypes.StoneDeep, 3, WorldTileTypes.BackgroundDeep),
+                    WorldTileTypes.StoneDeep, boundaryHardness, WorldTileTypes.BackgroundDeep),
                 WorldLayer.Bedrock => TileData.CreateNaturalWithBackground(
                     WorldTileTypes.Bedrock, 3, WorldTileTypes.BackgroundDeep),
                 _ => TileData.CreateNaturalWithBackground(
@@ -1646,7 +1721,7 @@ namespace Nyangbingo.World
             var width = config.MapWidth;
             var height = config.MapHeight;
             var radius = config.OnboardingSearchRadius;
-            var reachable = FloodFillTraversable(grid, spawn, width, height);
+            var reachable = FloodFillOnboardingMineable(grid, spawn, width, height, radius);
 
             var dirt = 0;
             var stone = 0;
@@ -1654,7 +1729,6 @@ namespace Nyangbingo.World
             if (dirt >= config.OnboardingRequiredDirt && stone >= config.OnboardingRequiredStone)
                 return;
 
-            var surfaceY = surfaceHeights[Mathf.Clamp(spawn.x, 0, width - 1)];
             for (var ring = 1; ring <= radius && (dirt < config.OnboardingRequiredDirt || stone < config.OnboardingRequiredStone); ring++)
             {
                 for (var dx = -ring; dx <= ring; dx++)
@@ -1663,12 +1737,14 @@ namespace Nyangbingo.World
                     {
                         if (Mathf.Abs(dx) != ring && Mathf.Abs(dy) != ring) continue;
                         var x = spawn.x + dx;
-                        var y = surfaceY + dy;
+                        if (x < 0 || x >= width) continue;
+                        var localSurfaceY = surfaceHeights[x];
+                        var y = localSurfaceY + dy;
                         if (!InBounds(x, y, width, height)) continue;
-                        if (y > surfaceY) continue;
+                        if (y > localSurfaceY) continue;
                         var tile = grid[x, y];
                         if (tile.IsAir || !tile.isNaturalTerrain) continue;
-                        if (!IsAdjacentToReachable(new Vector2Int(x, y), reachable, width, height)) continue;
+                        if (!reachable.Contains(new Vector2Int(x, y))) continue;
 
                         if (dirt < config.OnboardingRequiredDirt)
                         {
@@ -1679,7 +1755,7 @@ namespace Nyangbingo.World
                         else if (stone < config.OnboardingRequiredStone)
                         {
                             // 지상 노출 금지 — ban depth 아래에서만 온보딩 돌 보정.
-                            if (IsInSurfaceMineralBan(y, surfaceY, config)) continue;
+                            if (IsInSurfaceMineralBan(y, localSurfaceY, config)) continue;
                             grid[x, y] = TileData.CreateNaturalWithBackground(
                                 WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
                             stone++;
@@ -1697,7 +1773,7 @@ namespace Nyangbingo.World
             {
                 var point = new Vector2Int(x, y);
                 if (!InBounds(point, width, height)) continue;
-                if (!IsAdjacentToReachable(point, reachable, width, height)) continue;
+                if (!reachable.Contains(point)) continue;
                 var tile = grid[x, y];
                 if (string.Equals(tile.elementType, WorldTileTypes.Dirt, StringComparison.Ordinal)) dirt++;
                 else if (string.Equals(tile.elementType, WorldTileTypes.Stone, StringComparison.Ordinal)) stone++;
@@ -1836,13 +1912,17 @@ namespace Nyangbingo.World
         // ==============================================================
         // Pass 3 — 자원 (mineral-tiers.csv 빈도 → 클러스터 광맥, 3~6타일)
         // ==============================================================
-        private static void PlaceOreVeins(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config)
+        private static void PlaceOreVeins(TileData[,] grid, int[] surfaceHeights, System.Random rng,
+            WorldGenerationConfig config, IReadOnlyDictionary<string, int> hardnessById,
+            IReadOnlyList<OreVeinProfile> profiles)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
 
-            foreach (var profile in config.OreVeins)
+            foreach (var profile in profiles)
             {
+                if (!hardnessById.TryGetValue(profile.elementType, out var hardness))
+                    throw new InvalidOperationException($"광물 경도 정의 누락: '{profile.elementType}'.");
                 var hasExplicitDepth = profile.depthMax > 0;
                 var averageClusterSize = Mathf.Max(1f, (profile.minClusterSize + profile.maxClusterSize) * 0.5f);
                 var layerAreaTiles = EstimateArea(profile, surfaceHeights, config);
@@ -1865,7 +1945,8 @@ namespace Nyangbingo.World
                     if (grid[x, seedY].IsAir) continue;
                     if (IsInSurfaceMineralBan(seedY, surfaceHeights[x], config)) continue;
 
-                    GrowVeinCluster(grid, new Vector2Int(x, seedY), width, height, profile, surfaceHeights, config, rng);
+                    GrowVeinCluster(grid, new Vector2Int(x, seedY), width, height, profile, hardness,
+                        surfaceHeights, config, rng);
                 }
             }
         }
@@ -1893,7 +1974,8 @@ namespace Nyangbingo.World
         /// 즉시 clamp한 뒤에만 배치한다 — 통일 규칙(요구사항 5: 각 열의 지표로부터 내려간 깊이)을 그대로 지킨다.
         /// </summary>
         private static void GrowVeinCluster(TileData[,] grid, Vector2Int seed, int width, int height,
-            OreVeinProfile profile, int[] surfaceHeights, WorldGenerationConfig config, System.Random rng)
+            OreVeinProfile profile, int hardness, int[] surfaceHeights, WorldGenerationConfig config,
+            System.Random rng)
         {
             var hasExplicitDepth = profile.depthMax > 0;
             var size = rng.Next(profile.minClusterSize, profile.maxClusterSize + 1);
@@ -1923,7 +2005,7 @@ namespace Nyangbingo.World
                             ? existing.naturalBackgroundElementType
                             : BackgroundElementFor(profile.layer);
                         grid[current.x, current.y] = TileData.CreateNaturalWithBackground(
-                            profile.elementType, profile.hardness, naturalBg);
+                            profile.elementType, hardness, naturalBg);
                     }
                 }
 
@@ -2455,16 +2537,15 @@ namespace Nyangbingo.World
 
         /// <summary>
         /// 1) 스폰 반경 안에서 "실제로 걸어가 채굴할 수 있는" 온보딩 재료(recipes.csv workbench: 흙8+돌12)가
-        /// 충분한가. A-08: 예전에는 반경 안의 총 개수만 셌기 때문에, 반경 안이라도 벽 너머(도달 불가능한
-        /// 고립 포켓)에 있는 흙/돌까지 "확보 가능"으로 잘못 인정하는 결함이 있었다. 지금은 각 자원 후보 칸이
-        /// <paramref name="reachable"/>(스폰에서 공기 칸만 타고 갈 수 있는 네트워크)에 실제로 인접해 있어야만
-        /// 센다 — "채굴 소요 시간(초)"까지 시뮬레이션하지는 않지만, 최소한 "실제로 접근해서 채굴 가능한
-        /// 위치인가"는 정직하게 검증한다(인수인계 문서 A-08/A-11에 이 정책을 그대로 기록할 것).
+        /// 충분한가. A-08: 반경 안의 총 개수가 아니라 스폰 공기에서 T1 발톱으로 순차 채굴 가능한
+        /// 공기/흙/돌 연결 성분만 센다. 지표 광물 금지 3칸 때문에 돌은 공식 입구 공기에 바로 12개를
+        /// 노출할 수 없으므로, 먼저 흙을 캐고 이어서 닿는 돌도 실제 온보딩 획득 가능 자원으로 인정한다.
         /// </summary>
         private static bool CheckOnboardingResources(TileData[,] grid, int width, int height, Vector2Int spawn,
             WorldGenerationConfig config, HashSet<Vector2Int> reachable)
         {
             var radius = config.OnboardingSearchRadius;
+            var mineable = FloodFillOnboardingMineable(grid, spawn, width, height, radius);
             var dirtCount = 0;
             var stoneCount = 0;
 
@@ -2474,7 +2555,7 @@ namespace Nyangbingo.World
                 {
                     var point = new Vector2Int(x, y);
                     if (!InBounds(point, width, height)) continue;
-                    if (!IsAdjacentToReachable(point, reachable, width, height)) continue; // 걸어서 인접할 수 없으면 "확보 가능"이 아니다.
+                    if (!mineable.Contains(point)) continue;
 
                     var tile = grid[x, y];
                     if (string.Equals(tile.elementType, WorldTileTypes.Dirt, StringComparison.Ordinal)) dirtCount++;
@@ -2483,6 +2564,40 @@ namespace Nyangbingo.World
             }
 
             return dirtCount >= config.OnboardingRequiredDirt && stoneCount >= config.OnboardingRequiredStone;
+        }
+
+        /// <summary>
+        /// 스폰 반경 안에서 공기와 T1 채굴 가능한 온보딩 재료(흙/돌)를 순차적으로 통과하는 연결 성분.
+        /// 광석·특수 구조물은 통과하지 않아 벽 너머 고립 자원을 세지 않는다.
+        /// </summary>
+        private static HashSet<Vector2Int> FloodFillOnboardingMineable(TileData[,] grid, Vector2Int spawn,
+            int width, int height, int radius)
+        {
+            var visited = new HashSet<Vector2Int>();
+            if (!InBounds(spawn, width, height) || !grid[spawn.x, spawn.y].IsAir) return visited;
+
+            var queue = new Queue<Vector2Int>();
+            queue.Enqueue(spawn);
+            visited.Add(spawn);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                foreach (var offset in FourNeighbors)
+                {
+                    var next = current + offset;
+                    if (!InBounds(next, width, height) || visited.Contains(next)) continue;
+                    if (Mathf.Abs(next.x - spawn.x) > radius || Mathf.Abs(next.y - spawn.y) > radius) continue;
+                    var tile = grid[next.x, next.y];
+                    if (!tile.IsAir &&
+                        !string.Equals(tile.elementType, WorldTileTypes.Dirt, StringComparison.Ordinal) &&
+                        !string.Equals(tile.elementType, WorldTileTypes.Stone, StringComparison.Ordinal))
+                        continue;
+                    visited.Add(next);
+                    queue.Enqueue(next);
+                }
+            }
+
+            return visited;
         }
 
         /// <summary>해당 칸의 4방향 인접 칸 중 하나라도 스폰에서 걸어갈 수 있는 공기 네트워크(reachable)에 속하면

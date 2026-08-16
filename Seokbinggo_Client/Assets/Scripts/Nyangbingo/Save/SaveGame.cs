@@ -8,6 +8,7 @@ using Nyangbingo.Bosses;
 using Nyangbingo.Crafting;
 using Nyangbingo.Data;
 using Nyangbingo.Combat;
+using Nyangbingo.World;
 
 namespace Nyangbingo.Save
 {
@@ -116,6 +117,10 @@ namespace Nyangbingo.Save
         public float gaekgwiTelegraphRemaining;
         public float gaekgwiDashRemaining;
         public Vector2 gaekgwiDashDirection;
+        public bool hasAggroState;
+        public bool usesAggroRadius;
+        public bool isAggroed;
+        public bool infiltrationRecorded;
         public List<InventorySlot> stolenItems = new List<InventorySlot>();
     }
 
@@ -259,12 +264,13 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 22;
-        /// <summary>v71: heatStage·승리조건 개편으로 구 세이브는 이어하기 불가(새 게임 유도).</summary>
-        public const int MinimumCompatibleSchemaVersion = 22;
+        public const int CurrentSchemaVersion = 25;
+        /// <summary>v72: schema 24는 스택별 보관 상태, schema 25는 부적 지속 시간을 추가하며 schema 23부터 순차 이관한다.</summary>
+        public const int MinimumCompatibleSchemaVersion = 23;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
         public int schemaVersion = CurrentSchemaVersion;
+        public bool isOfficialDemo;
         public int seed; public int day = 1; public float timeOfDaySec;
         public List<InventorySlot> inventory = new List<InventorySlot>();
         public List<string> unlockedRecipes = new List<string>();
@@ -289,6 +295,12 @@ namespace Nyangbingo.Save
         public int altarClears;
         /// <summary>폭염 단계(1~3). 날짜만으로 역산하지 말고 반드시 저장한다(B-UI-v71 B-9-1).</summary>
         public int heatStage = 1;
+        public float invasionTemperatureRise;
+        public int invasionRecoolAvailableDay;
+        public int invasionLastInfiltrationDay;
+        public float talismanStrideRemaining;
+        public float talismanHideRemaining;
+        public float talismanFrostRemaining;
         public List<string> gimmickWeaponsGranted = new List<string>();
         public List<string> frostPendingCells = new List<string>();
         /// <summary>진단·표시용 잔존. 승리 판정에는 쓰지 않는다(win_condition=final_boss_kill).</summary>
@@ -417,12 +429,29 @@ namespace Nyangbingo.Save
             if (loadedSchemaVersion < 7) MigrateHapjukseonIds();
             if (loadedSchemaVersion < 8) MigrateV24Ids();
             seokbinggoStage = Math.Clamp(seokbinggoStage, 0, 6);
-            altarClears = Math.Max(0, altarClears);
+            altarClears = Math.Clamp(altarClears, 0, 10);
             heatStage = Math.Clamp(heatStage <= 0 ? 1 : heatStage, 1, 3);
+            if (float.IsNaN(invasionTemperatureRise) || float.IsInfinity(invasionTemperatureRise) ||
+                invasionTemperatureRise < 0f)
+                invasionTemperatureRise = 0f;
+            invasionRecoolAvailableDay = Math.Max(0, invasionRecoolAvailableDay);
+            invasionLastInfiltrationDay = Math.Max(0, invasionLastInfiltrationDay);
+            if (invasionTemperatureRise <= .0001f) invasionRecoolAvailableDay = 0;
+            talismanStrideRemaining = NormalizeDuration(
+                talismanStrideRemaining, TalismanRuntime.StrideDurationSeconds);
+            talismanHideRemaining = NormalizeDuration(
+                talismanHideRemaining, TalismanRuntime.HideDurationSeconds);
+            talismanFrostRemaining = NormalizeDuration(
+                talismanFrostRemaining, TalismanRuntime.FrostDurationSeconds);
             gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
             frostPendingCells.RemoveAll(string.IsNullOrWhiteSpace);
             if (schemaVersion < CurrentSchemaVersion) schemaVersion = CurrentSchemaVersion;
         }
+
+        private static float NormalizeDuration(float value, float maximum) =>
+            float.IsNaN(value) || float.IsInfinity(value) || value < 0f
+                ? 0f
+                : Mathf.Clamp(value, 0f, maximum);
 
         private void MigrateHapjukseonIds()
         {

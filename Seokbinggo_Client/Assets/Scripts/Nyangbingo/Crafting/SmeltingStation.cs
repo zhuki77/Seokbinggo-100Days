@@ -3,6 +3,7 @@ using Nyangbingo.Inventory;
 using Nyangbingo.Core;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Nyangbingo.Crafting
 {
@@ -15,6 +16,11 @@ namespace Nyangbingo.Crafting
         private SmeltingDefinition active;
         private float remaining;
         private readonly List<ItemAmount> completed = new List<ItemAmount>();
+        private readonly Func<Vector2, int> roomTemperatureProvider;
+        private readonly bool strictTemperature;
+        private readonly int frozenEnterCelsius;
+        private Vector2 worldPosition;
+        private bool hasWorldPosition;
         public bool IsSmelting => active != null;
         public SmeltingDefinition Active => active;
         public float RemainingSeconds => remaining;
@@ -22,19 +28,37 @@ namespace Nyangbingo.Crafting
         public int QueueCapacity => queueCapacity;
         public IReadOnlyList<ItemAmount> Completed => completed;
         public IReadOnlyList<SmeltingDefinition> Queue => queued;
+        public bool IsTemperatureSuitable => !strictTemperature || !hasWorldPosition ||
+            roomTemperatureProvider == null ||
+            StationTemperatureRules.TempOk(stationKind,
+                roomTemperatureProvider(worldPosition), frozenEnterCelsius);
         public SmeltingStation(Nyangbingo.Inventory.Inventory inventory,
-            SmeltingStationKind stationKind, int batchCapacity)
+            SmeltingStationKind stationKind, int batchCapacity,
+            Func<Vector2, int> temperatureProvider = null, bool temperatureStrict = false,
+            int frozenTemperature = -10)
         {
             if (inventory == null) throw new ArgumentNullException(nameof(inventory));
             if (batchCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(batchCapacity));
             this.inventory = inventory;
             this.stationKind = stationKind;
             queueCapacity = batchCapacity;
+            roomTemperatureProvider = temperatureProvider;
+            strictTemperature = temperatureStrict;
+            frozenEnterCelsius = frozenTemperature;
+        }
+
+        public bool SetWorldPosition(Vector2 position)
+        {
+            if (float.IsNaN(position.x) || float.IsInfinity(position.x) ||
+                float.IsNaN(position.y) || float.IsInfinity(position.y)) return false;
+            worldPosition = position;
+            hasWorldPosition = true;
+            return true;
         }
 
         public bool TryStart(SmeltingDefinition definition)
         {
-            if (!IsValidDefinition(definition) ||
+            if (!IsTemperatureSuitable || !IsValidDefinition(definition) ||
                 queued.Count + (active == null ? 0 : 1) >= queueCapacity) return false;
             var inputId = definition.Input.item.Id;
             var fuelId = definition.Fuel.item.Id;
@@ -62,6 +86,7 @@ namespace Nyangbingo.Crafting
         public bool Tick(float gameSeconds)
         {
             if (gameSeconds <= 0f || float.IsNaN(gameSeconds) || float.IsInfinity(gameSeconds)) return false;
+            if (!IsTemperatureSuitable) return false;
             StartNextIfIdle();
             if (!IsSmelting) return false;
 
@@ -140,5 +165,13 @@ namespace Nyangbingo.Crafting
             if (active != null || queued.Count == 0) return;
             active = queued[0]; queued.RemoveAt(0); remaining = active.DurationSeconds;
         }
+    }
+
+
+    public static class StationTemperatureRules
+    {
+        /// <summary>v72 A-3: 제련 설치 설비는 빙결 구간에서 시작·진행을 멈춘다.</summary>
+        public static bool TempOk(SmeltingStationKind stationKind, int roomTemperatureC,
+            int frozenEnterCelsius = -10) => roomTemperatureC > frozenEnterCelsius;
     }
 }

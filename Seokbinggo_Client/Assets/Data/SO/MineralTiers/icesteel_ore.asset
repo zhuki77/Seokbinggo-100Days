@@ -20,6 +20,10 @@ MonoBehaviour:
   maximumDepth: 135
   minimumClawTier: 2
   gateType: 2
+  hardness: 2
+  breakableByClawTierOne: 0
+  breakableByClawTierTwo: 1
+  breakableByClawTierThree: 1
   clawTierOneSeconds: -1
   clawTierTwoSeconds: 4
   clawTierThreeSeconds: 2
@@ -27,3 +31,5 @@ MonoBehaviour:
   usageDescription: "\uC6A9\uAD11\uB85C \uC81C\uB828\u2192\uC5BC\uC74C\uAC15\uCCA0
     \uC8FC\uAD34(\uBC1C\uD1B1 T3\xB7\uBAA8\uB8E8\xB7\uC7A5\uAC11)"
   gateDescription: "\uBB34\uC1E0 \uBC1C\uD1B1(\uD558\uB4DC)"
+  hardnessDescription: "\uACBD\uB3C4 2 = \uC815\uBCF8 min_claw_tier \uC2B9\uACA9.
+    \uADDC\uCE59 `\uBC1C\uD1B1 \uD2F0\uC5B4 >= \uACBD\uB3C4`(GDD 4-4). gate=hard"

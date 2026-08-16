@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27db6f288038a534aaf3c090fb3f8a77, type: 3}
+  m_Name: tal_frost
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TalismanDefinition
+  id: tal_frost
+  displayName: "\uD55C\uAE30\uBD80"
+  form: "\uC18C\uBAA8\uD488"
+  stationId: ice_anvil
+  materials:
+  - itemId: ice_shard
+    amount: 4
+  - itemId: frost_essence
+    amount: 1
+  effect: "\uC800\uCCB4\uC628 \uCCB4\uC628 \uD558\uAC15 \uC815\uC9C0 \xB7 120\uCD08"
+  rationale: "\uBE59\uACB0 \uAD6C\uAC04 \uC6D0\uC815\uC6A9 \u2014 \uC5BC\uC74C\uAC15\uCCA0
+    \uC138\uD2B8 \uC5C6\uC774\uB3C4 \uC7A0\uC2DC \uBC84\uD2F4\uB2E4"
+  note: "\uC21C\uD658 \uC7A0\uAE08 \uBC29\uC9C0\uC758 \uBCF4\uC870 \uC7A5\uCE58 \u2014
+    \uC2EC\uCE35 \uCCAB \uC9C4\uC785\uC744 \uBD80\uB4DC\uB7FD\uAC8C(4-7 \uC6D0\uCE59)"

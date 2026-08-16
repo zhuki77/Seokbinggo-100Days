@@ -27,6 +27,6 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: ec12767decdbf464c9ba2d98fab9a07a, type: 2}
     amount: 1
   durationSeconds: 60
-  type: 13
+  type: 14
   mvpScope: 1
   note: "DPS10 \uC720\uB3C4\xB7\uBC18\uACBD 8\uD0C0\uC77C(v30 \uB3D9\uBC30\uC728)"

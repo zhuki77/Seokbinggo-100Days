@@ -303,7 +303,7 @@ public static class NyangbingoMainGameSceneCreator
         inventoryRuntime.ConfigureForScene(catalog);
         runtimeServices.ConfigureForScene(catalog, bootstrap, inventoryRuntime);
         environmentState.ConfigureForScene(catalog, bootstrap, buildingArtCatalog);
-        decorationRenderer.ConfigureForScene(bootstrap, decorationArtCatalog);
+        decorationRenderer.ConfigureForScene(bootstrap, decorationArtCatalog, runtimeServices);
         effectPresenter.ConfigureForScene(gameplayArtCatalog, raidTarget.transform);
         turretRuntime.ConfigureForScene(catalog, runtimeServices, environmentState, gameplayArtCatalog,
             buildingArtCatalog, playerController);

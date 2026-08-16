@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: invasion_offset_days
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: invasion_offset_days
+  value: 6
+  unit: "\uC77C"
+  note: "\uCE68\uACF5 \uC2DC\uC791 \uC624\uD504\uC14B \u2014 \uAD6C wave_night_offset
+    5\uB294 **\uBC31\uC911\uB0A0 \uBC24(15\uC77C\uCC28)\uACFC \uACB9\uCCD0** verify\uAC00
+    \uC7A1\uC558\uB2E4(2026-08-11). 6\uC73C\uB85C \uC62E\uAE30\uBA74 \uBC31\uC911\xB7\uD14C\uB9C8
+    \uBC24 3\uC77C(18\xB723\xB727)\xB7\uC774\uBB34\uAE30 \uB0B4\uC2B5(30)\xB7\uBCF4\uC2A4
+    \uAD8C\uC7A5\uC77C(8,20,30\u2026) \uC804\uBD80\uC640 \uCDA9\uB3CC 0. \uCCAB \uCE68\uACF5
+    d6 = 1~4\uC77C\uCC28 \uAD6C\uC870\uC801 \uBA74\uC5ED(6-6) \uC9C1\uD6C4\uC774\uC790
+    \uBD88\uAC00\uC0AC\uB9AC \uD574\uAE08\uC77C(6\uC77C~) \u2014 \uC0C8 \uC801\uC774
+    \uB5BC\uB85C \uB4F1\uC7A5\uD558\uB294 \uC11C\uC0AC \uBE44\uD2B8\uAC00 \uACF5\uC9DC\uB85C
+    \uBD99\uB294\uB2E4"

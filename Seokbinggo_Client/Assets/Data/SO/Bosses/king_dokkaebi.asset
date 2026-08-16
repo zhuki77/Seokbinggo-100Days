@@ -54,3 +54,7 @@ MonoBehaviour:
   specialHasFireTag: 0
   specialAimLocks: 1
   mvpScope: 1
+  arenaLayer: surface
+  heatStage: 1
+  arenaNote: "\uC9C0\uC0C1 \uC81C\uB2E8 \uC544\uB808\uB098(v63 \uC624\uB108 \uC9C0\uC2DC
+    \u2014 \uC544\uB808\uB098 \uC804\uBD80 \uC9C0\uC0C1)"

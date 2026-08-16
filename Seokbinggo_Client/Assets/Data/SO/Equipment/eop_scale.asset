@@ -30,3 +30,6 @@ MonoBehaviour:
   verbId: MaintainAfterShutdown
   usageLimitPerDay: 0
   activationCondition: None
+  hasColdTolerance: 0
+  coldToleranceC: 0
+  coldNote:

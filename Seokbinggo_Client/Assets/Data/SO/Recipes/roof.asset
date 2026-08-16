@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: roof
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
   id: roof
-  station: 2
+  station: 1
   ingredients:
   - item: {fileID: 11400000, guid: 2fb77bca93d4e9a42874825576ffcd9d, type: 2}
     amount: 6
@@ -27,4 +27,7 @@ MonoBehaviour:
   durationSeconds: 20
   type: 9
   mvpScope: 1
-  note: "\uC0C1\uBD80 \uBC00\uD3D0\xB7\uCCA0\uADFC \uBC18\uBCF5 \uC18C\uBE44\uCC98"
+  note: "[v68] \uC81C\uC791\uB300 \uC7AC\uBC30\uCE58 \u2014 \uB3CC\xB7\uCCA0\uADFC\xB7\uC0BC\uC904\uAE30
+    \uC804\uBD80 \uCD08\uBC18 \uC790\uC6D0\uC774\uACE0 \uCC28\uC5F4 \uC9C0\uBD95\uC740
+    P0 \uAE30\uBCF8 \uBC00\uD3D0 \u2014 1\uC77C\uCC28\uBD80\uD130 \uC9C0\uC5B4\uC57C
+    \uD55C\uB2E4. \uC0C1\uBD80 \uBC00\uD3D0\xB7\uCCA0\uADFC \uBC18\uBCF5 \uC18C\uBE44\uCC98"

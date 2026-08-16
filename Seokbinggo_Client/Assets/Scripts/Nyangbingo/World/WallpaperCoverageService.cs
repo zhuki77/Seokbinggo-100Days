@@ -7,7 +7,7 @@ namespace Nyangbingo.World
     /// <summary>
     /// A-16/A-19: 밀폐된 코어 구역의 배경 도포율.
     /// SealSystem 코어 창 리전을 재사용하며, 전경·배경 타일 변경/코어 변경/로드 시에만 재계산한다.
-    /// 도포율은 SealPercent·TemperaturePercent를 변경하지 않는다.
+    /// 도포율은 SealPercent·절대 방온을 직접 변경하지 않는다.
     /// </summary>
     public sealed class WallpaperCoverageService : IWallpaperCoverageSource, IDisposable
     {

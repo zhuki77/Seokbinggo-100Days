@@ -59,6 +59,8 @@ namespace Nyangbingo.World
 
         /// <summary>새벽(밤→낮) 전환이 확정된 순간 정확히 한 번 호출된다. ITimeSource 계약.</summary>
         public event Action Dawn;
+        /// <summary>새벽 세이브보다 먼저 실행되어야 하는 하루 1회 시뮬레이션 판정.</summary>
+        public event Action DailyTick;
 
         public float GameSeconds => gameSeconds;
         public int Day => day;
@@ -84,6 +86,21 @@ namespace Nyangbingo.World
         public float SecondsUntilNextTransition =>
             isNight ? CycleLengthSeconds - timeOfDayGameSeconds : dayDurationSeconds - timeOfDayGameSeconds;
 
+        /// <summary>
+        /// v72 침대가 현재 낮/밤의 다음 경계까지 중앙 게임 시간을 실제로 흘린다.
+        /// Tick 경로를 그대로 사용하므로 밤 스킵의 Dawn/OnDayStart와 낮 스킵의 OnNightStart가
+        /// 일반 시간 진행과 같은 순서로 한 번씩 발행된다.
+        /// </summary>
+        public bool AdvanceToNextPhase()
+        {
+            var previousDay = day;
+            var previousNight = isNight;
+            var seconds = SecondsUntilNextTransition;
+            if (seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds)) return false;
+            Tick(seconds);
+            return day != previousDay || isNight != previousNight;
+        }
+
         /// <summary>테스트/디버그 하네스가 배속을 즉시 조절할 수 있게 공개 접근자를 둔다. 음수는 0으로 클램프.</summary>
         public float TimeScale
         {
@@ -96,7 +113,7 @@ namespace Nyangbingo.World
         public bool ConfigureOfficialData(GameDataCatalog catalog)
         {
             gameDataCatalog = catalog;
-            // day-curve는 1~30일 MVP 정본. 31일 이후는 night-waves(WaveNight)가 담당하므로
+            // day-curve는 1~30일 데모 정본. 파도 폐지 후에도 시간 축은 무한히 진행하므로
             // 현재 일차 곡선이 없어도 globals만 유효하면 시간 서비스는 기동한다.
             if (!ApplyOfficialGlobals() || gameDataCatalog.FindDayCurve(1) == null) return false;
             if (gameSeconds <= 0f && day <= 1)
@@ -215,6 +232,7 @@ namespace Nyangbingo.World
                 timeOfDayGameSeconds = 0f;
                 isNight = false;
                 day++;
+                DailyTick?.Invoke();
                 Dawn?.Invoke();
                 GameEvents.RaiseDayStart();
             }

@@ -11,7 +11,20 @@ namespace Nyangbingo.Core
         Gaekgwi,
         Imugi
     }
-    public enum BossKind { GoblinChief, MotherBulgasari, Imugi, Gangcheori }
+    public enum BossKind
+    {
+        GoblinChief,
+        MotherBulgasari,
+        Imugi,
+        Gangcheori,
+        Jigwi,
+        GangcheolBlaze,
+        Sangun,
+        Samdugumi,
+        EopGuryeongi,
+        Yeongno,
+        GangcheolPerfect
+    }
     public enum DamageTag { Melee, Fire, Ice, Fall }
     public enum DamageDelivery { Direct, DamageOverTime, Structure, Environmental }
     public enum EquipmentSlot { Head, Body, Feet, AccessoryOne, AccessoryTwo }

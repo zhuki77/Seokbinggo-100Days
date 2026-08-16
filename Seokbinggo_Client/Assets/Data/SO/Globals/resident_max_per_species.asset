@@ -15,5 +15,6 @@ MonoBehaviour:
   key: resident_max_per_species
   value: 1
   unit: count
-  note: "v34.1 \uC0C1\uC8FC \uC5D8\uB9AC\uD2B8 \uC885\uBCC4 \uB3D9\uC2DC \uC0DD\uC874
-    \uC0C1\uD55C"
+  note: "\uC2EC\uCE35 \uC0C1\uC8FC \uC815\uC608 \uB3D9\uC2DC \uAC1C\uCCB4 \uC218
+    \u2014 \uC885\uB2F9 1(\uAC15\uCCA0\uC774\xB7\uC5B4\uB451\uC2DC\uB2C8 \uAC01\uAC01).
+    v34.1 \uAC1C\uBC1C \uC9C8\uC758 \uD655\uC815 2026-07-25"

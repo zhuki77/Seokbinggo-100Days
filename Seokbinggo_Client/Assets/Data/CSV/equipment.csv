@@ -1,45 +1,45 @@
-id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,doubleJumpHeightRatio,visionRadiusBonus,blocksInventoryTheft,setId,setTemperatureRiseModifier,setFireDamageModifier,verb_id,usage_limit_per_day,activation_condition,note
-straw_helm,Head,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,吏??ш뎄 - 諛⑹뼱 1
-straw_armor,Body,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,吏?媛묒샆 - 諛⑹뼱 1
-straw_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,吏??좊컻 - 諛⑹뼱 1
-iron_helm,Head,false,2,0,0,0,0,false,0,0,false,none,0,0,,0,None,臾댁뇿 ?ш뎄 - 諛⑹뼱 2
-iron_armor,Body,false,3,0,0,0,0,false,0,0,false,none,0,0,,0,None,臾댁뇿 媛묒샆 - 諛⑹뼱 3
-iron_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,臾댁뇿 ?좊컻 - 諛⑹뼱 1
-icesteel_helm,Head,false,3,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,,0,None,?쇱쓬媛뺤쿋 ?ш뎄 - ?ㅽ븳???쒕쾶??
-icesteel_armor,Body,false,4,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,,0,None,?쇱쓬媛뺤쿋 媛묒샆 - ?ㅽ븳???쒕쾶??
-icesteel_boots,Feet,false,3,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,,0,None,?쇱쓬媛뺤쿋 ?좊컻 - ?ㅽ븳???쒕쾶??
-bell_norigae,AccessoryOne,true,0,0,0,0,0,true,0.8,0,false,none,0,0,,0,None,諛⑹슱 ?몃━媛?- ?댁쨷 ?먰봽 ?믪씠 80%
-ice_heart_norigae,AccessoryOne,true,0,0,0,-0.15,0,false,0,0,false,none,0,0,,0,None,?쇱쓬 ?ъ옣 ?몃━媛?- 泥댁삩 ?곸듅 15% 媛먯냼
-bokjumeoni,AccessoryOne,true,0,0,0.10,0,0,false,0,0,false,none,0,0,,0,None,蹂듭＜癒몃땲 - 梨꾧뎬 ?щ━?곗뺄 10%p
-wind_daenggi,AccessoryOne,true,0,0.15,0,0,0,false,0,0,false,none,0,0,,0,None,諛붾엺 ?뺢린 - ?대룞 ?띾룄 15% 利앷?
-tiger_eye_bead,AccessoryOne,true,0,0,0,0,0,false,0,3,false,none,0,0,,0,None,?몃옉????援ъ뒳 - ?쒖빞 諛섍꼍 3???利앷?
-dokkaebi_gamtu,AccessoryOne,true,0,0,0,0,0,false,0,0,true,none,0,0,,0,None,?꾧묠鍮?媛먰닾 - ?쇨킅洹 ?몃깽?좊━ ?덈룄 臾댄슚
-seonge_helm,Head,false,4,0,0,0,0,false,0,0,false,none,0,0,,0,None,?깆뿉 ?ш뎄 - 諛⑹뼱 4 (T4쨌?명듃 ?놁쓬)
-seonge_armor,Body,false,5,0,0,0,0,false,0,0,false,none,0,0,,0,None,?깆뿉 媛묒샆 - 諛⑹뼱 5 (T4쨌?명듃 ?놁쓬)
-seonge_boots,Feet,false,4,0,0,0,0,false,0,0,false,none,0,0,,0,None,?깆뿉 ?좊컻 - 諛⑹뼱 4 (T4쨌?명듃 ?놁쓬)
-ice_root_helm,Head,false,5,0,0,0,0,false,0,0,false,none,0,0,,0,None,?쇱쓬肉뚮━ ?ш뎄 - 諛⑹뼱 5 (T5쨌?명듃 ?놁쓬)
-ice_root_armor,Body,false,6,0,0,0,0,false,0,0,false,none,0,0,,0,None,?쇱쓬肉뚮━ 媛묒샆 - 諛⑹뼱 6 (T5쨌?명듃 ?놁쓬)
-ice_root_boots,Feet,false,5,0,0,0,0,false,0,0,false,none,0,0,,0,None,?쇱쓬肉뚮━ ?좊컻 - 諛⑹뼱 5 (T5쨌?명듃 ?놁쓬)
-cold_wave_helm,Head,false,6,0,0,0,0,false,0,0,false,hanpa,-0.40,-0.45,,0,None,?쒗뙆 ?ш뎄 - ?쒗뙆 ?쒕쾶??(T6)
-cold_wave_armor,Body,false,7,0,0,0,0,false,0,0,false,hanpa,-0.40,-0.45,,0,None,?쒗뙆 媛묒샆 - ?쒗뙆 ?쒕쾶??(T6)
-cold_wave_boots,Feet,false,6,0,0,0,0,false,0,0,false,hanpa,-0.40,-0.45,,0,None,?쒗뙆 ?좊컻 - ?쒗뙆 ?쒕쾶??(T6)
-ssireum_knot,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,GrabKnockedTarget,0,None,?⑤쫫 ?낅컮 留ㅻ벊 - ?꾪떚?⑺듃
-iron_appetite,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,HearIronVein,0,None,臾댁뇿 ?앹꽦 - ?꾪떚?⑺듃
-yeouiju_shard,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ExtendCoolerRadius,0,None,?ъ쓽二??뚰렪 - ?꾪떚?⑺듃
-jigwi_ember,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,NoHeatInShade,0,DaySurface,吏洹???됯구 - ?꾪떚?⑺듃
-drought_heart_shard,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ReduceFlameAndHasten,0,DaySurface,媛萸??ъ옣 議곌컖 - ?꾪떚?⑺듃
-tiger_gait,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,NoFirstStrike,0,Surface,?곌뎔 嫄몄쓬 - ?꾪떚?⑺듃
-three_horn,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,WalkWhileCharging,0,None,??媛덈옒 肉?- ?꾪떚?⑺듃
-eop_scale,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,MaintainAfterShutdown,0,None,?낆쓽 鍮꾨뒛 - ?꾪떚?⑺듃
-yeongno_mask,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,EscapeOnSwallow,1,None,?곷끂????- ?꾪떚?⑺듃(?섎（ 1??
-perfect_core,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,RelocateColdCore,0,None,?꾩쟾泥???- ?꾪떚?⑺듃
-clay_hand,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,HalveClayCraftTime,0,None,?밴린?μ씠 ??- ?꾪떚?⑺듃
-skate_pad,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,TurnWhileSliding,0,None,?댁뼹??諛쒗뙋 - ?꾪떚?⑺듃
-magpie_bell,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ExtendMagpieRadius,0,None,源뚯튂 諛⑹슱 - ?꾪떚?⑺듃
-old_key,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,OpenStorageAnywhere,3,None,???댁뇿 - ?꾪떚?⑺듃(?섎（ 3??
-minhwa_ink,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,BonusTearOnCodex,0,None,誘쇳솕 癒?- ?꾪떚?⑺듃
-vault_seal,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,FullDemolitionRecovery,0,None,李쎄퀬 遊됱씤 - ?꾪떚?⑺듃
-gate_mark,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,IncreaseVisionDeep,0,Deep,鍮숈븫 ?쒖떇 - ?꾪떚?⑺듃
-dry_trace,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ReduceFlameTag,0,None,留덈Ⅸ 沅ㅼ쟻 - ?꾪떚?⑺듃
-altar_echo,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ReduceOfferTears,0,None,?쒕떒 硫붿븘由?- ?꾪떚?⑺듃
-frost_map,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ShowDugPaths,0,None,?쒕━ 吏??- ?꾪떚?⑺듃
+﻿id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,doubleJumpHeightRatio,visionRadiusBonus,blocksInventoryTheft,setId,setTemperatureRiseModifier,setFireDamageModifier,verb_id,usage_limit_per_day,activation_condition,note,coldToleranceC,coldNote
+straw_helm,Head,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,짚 투구 - 방어 1,0,"straw — 실온 0도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+straw_armor,Body,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,짚 갑옷 - 방어 1,0,"straw — 실온 0도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+straw_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,짚 신발 - 방어 1,0,"straw — 실온 0도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+iron_helm,Head,false,2,0,0,0,0,false,0,0,false,none,0,0,,0,None,무쇠 투구 - 방어 2,-5,"iron — 실온 -5도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+iron_armor,Body,false,3,0,0,0,0,false,0,0,false,none,0,0,,0,None,무쇠 갑옷 - 방어 3,-5,"iron — 실온 -5도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+iron_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,무쇠 신발 - 방어 1,-5,"iron — 실온 -5도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+icesteel_helm,Head,false,3,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,,0,None,얼음강철 투구 - 설한풍 한벌옷,-10,"icesteel — 실온 -10도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+icesteel_armor,Body,false,4,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,,0,None,얼음강철 갑옷 - 설한풍 한벌옷,-10,"icesteel — 실온 -10도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+icesteel_boots,Feet,false,3,0,0,0,0,false,0,0,false,seolhanpung,-0.20,-0.25,,0,None,얼음강철 신발 - 설한풍 한벌옷,-10,"icesteel — 실온 -10도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
+bell_norigae,AccessoryOne,true,0,0,0,0,0,true,0.8,0,false,none,0,0,,0,None,방울 노리개 - 이중 점프 높이 80%,,악세사리·기타 — 실온 무관
+ice_heart_norigae,AccessoryOne,true,0,0,0,-0.15,0,false,0,0,false,none,0,0,,0,None,얼음 심장 노리개 - 체온 상승 15% 감소,,악세사리·기타 — 실온 무관
+bokjumeoni,AccessoryOne,true,0,0,0.10,0,0,false,0,0,false,none,0,0,,0,None,복주머니 - 채굴 크리티컬 10%p,,악세사리·기타 — 실온 무관
+wind_daenggi,AccessoryOne,true,0,0.15,0,0,0,false,0,0,false,none,0,0,,0,None,바람 댕기 - 이동 속도 15% 증가,,악세사리·기타 — 실온 무관
+tiger_eye_bead,AccessoryOne,true,0,0,0,0,0,false,0,3,false,none,0,0,,0,None,호랑이 눈 구슬 - 시야 반경 3타일 증가,,악세사리·기타 — 실온 무관
+dokkaebi_gamtu,AccessoryOne,true,0,0,0,0,0,false,0,0,true,none,0,0,,0,None,도깨비 감투 - 야광귀 인벤토리 절도 무효,,악세사리·기타 — 실온 무관
+seonge_helm,Head,false,4,0,0,0,0,false,0,0,false,none,0,0,,0,None,성에 투구 - 방어 4 (T4·v40 진화 트리 · 세트 효과 미정 [가안]),,악세사리·기타 — 실온 무관
+seonge_armor,Body,false,5,0,0,0,0,false,0,0,false,none,0,0,,0,None,성에 갑옷 - 방어 5 (T4·v40 진화 트리 · 세트 효과 미정 [가안]),,악세사리·기타 — 실온 무관
+seonge_boots,Feet,false,4,0,0,0,0,false,0,0,false,none,0,0,,0,None,성에 신발 - 방어 4 (T4·v40 진화 트리 · 세트 효과 미정 [가안]),,악세사리·기타 — 실온 무관
+ice_root_helm,Head,false,5,0,0,0,0,false,0,0,false,none,0,0,,0,None,얼음뿌리 투구 - 방어 5 (T5·v40 진화 트리 · 세트 효과 미정 [가안]),,악세사리·기타 — 실온 무관
+ice_root_armor,Body,false,6,0,0,0,0,false,0,0,false,none,0,0,,0,None,얼음뿌리 갑옷 - 방어 6 (T5·v40 진화 트리 · 세트 효과 미정 [가안]),,악세사리·기타 — 실온 무관
+ice_root_boots,Feet,false,5,0,0,0,0,false,0,0,false,none,0,0,,0,None,얼음뿌리 신발 - 방어 5 (T5·v40 진화 트리 · 세트 효과 미정 [가안]),,악세사리·기타 — 실온 무관
+cold_wave_helm,Head,false,6,0,0,0,0,false,0,0,false,hanpa,-0.40,-0.45,,0,None,한파 투구 - 방어 6 (T6·v40 진화 트리 · 한파 한벌옷 세트 — 체온 -40% · 화염 -45% (오너 승인 2026-07-28)),,악세사리·기타 — 실온 무관
+cold_wave_armor,Body,false,8,0,0,0,0,false,0,0,false,hanpa,-0.40,-0.45,,0,None,한파 갑옷 - 방어 8 (T6·v40 진화 트리 · 한파 한벌옷 세트 — 체온 -40% · 화염 -45% (오너 승인 2026-07-28)),,악세사리·기타 — 실온 무관
+cold_wave_boots,Feet,false,5,0,0,0,0,false,0,0,false,hanpa,-0.40,-0.45,,0,None,한파 신발 - 방어 5 (T6·v40 진화 트리 · 한파 한벌옷 세트 — 체온 -40% · 화염 -45% (오너 승인 2026-07-28)),,악세사리·기타 — 실온 무관
+ssireum_knot,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,GrabKnockedTarget,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+iron_appetite,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,HearIronVein,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+yeouiju_shard,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ExtendCoolerRadius,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+jigwi_ember,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,NoHeatInShade,0,DaySurface,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+drought_heart_shard,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ReduceFlameAndHasten,0,DaySurface,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+tiger_gait,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,NoFirstStrike,0,Surface,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+three_horn,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,WalkWhileCharging,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+eop_scale,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,MaintainAfterShutdown,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+yeongno_mask,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,EscapeOnSwallow,1,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+perfect_core,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,RelocateColdCore,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+clay_hand,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,HalveClayCraftTime,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+skate_pad,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,TurnWhileSliding,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+magpie_bell,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ExtendMagpieRadius,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+old_key,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,OpenStorageAnywhere,3,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+minhwa_ink,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,BonusTearOnCodex,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+vault_seal,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,FullDemolitionRecovery,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+gate_mark,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,IncreaseVisionDeep,0,Deep,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+dry_trace,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ReduceFlameTag,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+altar_echo,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ReduceOfferTears,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,
+frost_map,AccessoryOne,true,0,0,0,0,0,false,0,0,false,none,0,0,ShowDugPaths,0,None,아티팩트(v37) — 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유,0,

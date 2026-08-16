@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfc1aec2c585ddc4f8117cdf8f2a425f, type: 3}
+  m_Name: woods_bulgasari
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TerrainSpawnDefinition
+  id: woods:bulgasari
+  terrainId: woods
+  terrainDisplayName: "\uB098\uBB34 \uC9C0\uB300"
+  yokaiId: bulgasari
+  yokaiDisplayName: "\uBD88\uAC00\uC0AC\uB9AC"
+  weight: 0
+  implemented: 0
+  note: "GDD 4-3 \uB098\uBB34 8/100\uD0C0\uC77C \xB7 tree_decay \xB7 \U0001F51C \uBBF8\uAD6C\uD604
+    \u2014 \uAC00\uC911\uCE58 0\uC73C\uB85C \uAE54\uC544\uB460(\uAC12\uB9CC \uCC44\uC6B0\uBA74
+    \uC5F4\uB9B0\uB2E4)"
+  terrainResourceIds:
+  - wood

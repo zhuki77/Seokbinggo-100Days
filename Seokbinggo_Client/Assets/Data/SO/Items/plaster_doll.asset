@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: plaster_doll
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: plaster_doll
+  displayName: "\uBBF8\uC7A5\uC774 \uC778\uD615"
+  maxStack: 99
+  category: 7
+  mvpScope: 2
+  note: "\uC720\uD2F8 \uD130\uB81B \u2014 \uBCBD \uC790\uB3D9 \uC218\uB9AC\xB7DPS
+    0"

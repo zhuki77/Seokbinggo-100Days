@@ -481,6 +481,7 @@ namespace Nyangbingo.World
             WriteForegroundCell(cell, elementType, hardnessOverride);
             RecordChange(cell, elementType, placed: true);
             GameEvents.RaiseTilePlaced(cell);
+            GameEvents.RaisePlacedObjectBuilt(elementType);
             return true;
         }
 
@@ -769,7 +770,8 @@ namespace Nyangbingo.World
         public IReadOnlyList<TileChangeRecord> GetBackgroundChangeRecords() => backgroundChangeLog;
 
         public bool RestoreTileChanges(IEnumerable<TileChangeRecord> records,
-            ISet<Vector3Int> allowedAlreadyClearedCells = null)
+            ISet<Vector3Int> allowedAlreadyClearedCells = null,
+            bool allowLegacyCollapsedPlacementRemovals = false)
         {
             if (records == null) return false;
 
@@ -815,7 +817,10 @@ namespace Nyangbingo.World
                             continue;
                         }
 
-                        if (PlacementHardness.ContainsKey(tileId))
+                        // 구버전은 플레이어 설치->제거를 마지막 제거 1건으로 압축했다.
+                        // 현재 형식과 손상 레코드에는 이 추측을 적용하지 않고, 호출자가 실제
+                        // 구 스키마임을 확인한 경우에만 상쇄된 무효 이력으로 버린다.
+                        if (allowLegacyCollapsedPlacementRemovals && PlacementHardness.ContainsKey(tileId))
                             continue;
 
                         Debug.LogError($"[Nyangbingo] Tile restore removal expected '{tileId}' " +
@@ -1110,29 +1115,17 @@ namespace Nyangbingo.World
         private void RecordChange(Vector3Int cell, string tileId, bool placed)
         {
             var record = new TileChangeRecord { x = cell.x, y = cell.y, z = cell.z, tileId = tileId, placed = placed };
-            if (changeIndexByCell.TryGetValue(cell, out var index))
-            {
-                changeLog[index] = record;
-            }
-            else
-            {
-                changeIndexByCell[cell] = changeLog.Count;
-                changeLog.Add(record);
-            }
+            // 같은 셀의 설치→제거도 순서대로 재생해야 한다. 마지막 상태로 압축하면
+            // 원본 공기 셀에 "제거"만 남아 복원 시 무효 기록이 된다.
+            changeIndexByCell[cell] = changeLog.Count;
+            changeLog.Add(record);
         }
 
         private void RecordBackgroundChange(Vector3Int cell, string tileId, bool placed)
         {
             var record = new TileChangeRecord { x = cell.x, y = cell.y, z = cell.z, tileId = tileId, placed = placed };
-            if (backgroundChangeIndexByCell.TryGetValue(cell, out var index))
-            {
-                backgroundChangeLog[index] = record;
-            }
-            else
-            {
-                backgroundChangeIndexByCell[cell] = backgroundChangeLog.Count;
-                backgroundChangeLog.Add(record);
-            }
+            backgroundChangeIndexByCell[cell] = backgroundChangeLog.Count;
+            backgroundChangeLog.Add(record);
         }
         private Vector3Int ResolveDoorBaseForOpenState(Vector3Int cell)
         {

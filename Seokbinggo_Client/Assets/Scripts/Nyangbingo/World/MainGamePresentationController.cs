@@ -26,6 +26,7 @@ namespace Nyangbingo.World
         [SerializeField] private DayNightService timeService;
         [SerializeField] private MainGameParallaxBackground background;
         [SerializeField] private Light2D globalLight;
+        private HeatStageService heatStage;
 
         private bool initialized;
         private bool dayLightAsserted;
@@ -33,10 +34,12 @@ namespace Nyangbingo.World
         public bool IsInitialized => initialized;
         public Light2D GlobalLight => globalLight;
 
-        public void ConfigureForRuntime(DayNightService clock, MainGameParallaxBackground parallax)
+        public void ConfigureForRuntime(DayNightService clock, MainGameParallaxBackground parallax,
+            HeatStageService stages = null)
         {
             timeService = clock;
             background = parallax;
+            heatStage = stages;
             Initialize();
         }
 
@@ -55,6 +58,7 @@ namespace Nyangbingo.World
             if (initialized) return true;
             timeService ??= FindAnyObjectByType<DayNightService>();
             background ??= GetComponent<MainGameParallaxBackground>();
+            heatStage ??= FindAnyObjectByType<MainGameRuntimeServices>()?.HeatStage;
             ConfigurePixelPerfectCamera();
             EnsureGlobalLight();
             if (timeService == null || globalLight == null) return false;
@@ -113,22 +117,26 @@ namespace Nyangbingo.World
 
         private void ApplyLighting()
         {
-            var state = EvaluateLighting(timeService, background != null && background.IsUnderground);
+            var state = EvaluateLighting(
+                timeService, background != null && background.IsUnderground, heatStage?.Current ?? 1);
             globalLight.color = state.color;
             globalLight.intensity = state.intensity;
         }
 
-        public static (Color color, float intensity) EvaluateLighting(DayNightService clock, bool underground)
+        public static (Color color, float intensity) EvaluateLighting(
+            DayNightService clock, bool underground, int heatStage = 1)
         {
             var settings = clock?.OfficialGlobals;
             var baekjung = IsBaekjungNight(clock);
             if (underground)
                 return (UndergroundColor, DayLight.IntensityFor(
-                    clock?.Day ?? 1, clock != null && !clock.IsNight, false, baekjung, settings));
+                    heatStage,
+                    clock != null && !clock.IsNight, false, baekjung, settings));
             if (clock == null)
                 return (NightColor, DayLight.NightIntensity);
 
-            var dayIntensity = DayLight.IntensityFor(clock.Day, true, true, false, settings);
+            var dayIntensity = DayLight.IntensityFor(
+                heatStage, true, true, false, settings);
             var dayState = (DayLight.DayColor, dayIntensity);
             var nightState = baekjung
                 ? (BaekjungNightColor, DayLight.BaekjungIntensity)

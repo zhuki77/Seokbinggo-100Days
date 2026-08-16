@@ -12,6 +12,10 @@ namespace Nyangbingo.World
         public const int MaxStage = 6;
         public const int SmithyUnlockStage = 4;
         public const int DefaultDamageSlotCap = 3;
+        public const string EarlyTurretId = "dokkaebi_fire_tower";
+        public const string SingijeonTurretId = "singijeon_cart";
+        public const string SeongeTurretId = "seonge_tower";
+        public const string ColdWaveTurretId = "cold_wave_tower";
         public const string ModuleIdPrefix = "seokbinggo_s";
         public const string IceCoreDefinitionId = "ice_core";
 
@@ -50,8 +54,15 @@ namespace Nyangbingo.World
         }
 
         public static bool IsDamageTurret(string definitionId) =>
-            string.Equals(definitionId, "dokkaebi_fire_tower", StringComparison.Ordinal) ||
-            string.Equals(definitionId, "singijeon_cart", StringComparison.Ordinal);
+            string.Equals(definitionId, EarlyTurretId, StringComparison.Ordinal) ||
+            string.Equals(definitionId, SingijeonTurretId, StringComparison.Ordinal) ||
+            string.Equals(definitionId, ColdWaveTurretId, StringComparison.Ordinal);
+
+        public static bool IsUtilityTurret(string definitionId) =>
+            string.Equals(definitionId, SeongeTurretId, StringComparison.Ordinal);
+
+        public static bool IsKnownTurret(string definitionId) =>
+            IsDamageTurret(definitionId) || IsUtilityTurret(definitionId);
 
         public static bool TryGetBuiltinMaterials(int nextStage, out IReadOnlyList<(string itemId, int amount)> materials)
         {

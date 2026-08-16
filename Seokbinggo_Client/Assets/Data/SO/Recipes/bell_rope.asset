@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: bell_rope
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
   id: bell_rope
-  station: 1
+  station: 2
   ingredients:
   - item: {fileID: 11400000, guid: bfbf06795069d8b4cb038e7953262af7, type: 2}
     amount: 1
@@ -23,6 +23,8 @@ MonoBehaviour:
     item: {fileID: 11400000, guid: a18f1a42fbec2664c9e10bad9487e162, type: 2}
     amount: 1
   durationSeconds: 10
-  type: 14
+  type: 15
   mvpScope: 1
-  note: "\uACBD\uBCF4 \uBC18\uACBD 10\uD0C0\uC77C\xB7\uCFE84\uCD08"
+  note: "[v68] \uC81C\uC791\uB300 \uC7AC\uBC30\uCE58 \u2014 \uAD6C\uB9AC \uC8FC\uAD34\uB97C
+    \uC4F4\uB2E4 \u2014 \uC81C\uB828\uBB3C \uC0AC\uC6A9\uC774\uB77C \uD654\uB85C.
+    \uACBD\uBCF4 \uBC18\uACBD 10\uD0C0\uC77C\xB7\uCFE84\uCD08"

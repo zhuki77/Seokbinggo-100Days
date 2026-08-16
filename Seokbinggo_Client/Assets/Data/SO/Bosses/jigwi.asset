@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7969a96a27bcbc544bfe560c299623db, type: 3}
+  m_Name: jigwi
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BossDefinition
+  id: jigwi
+  displayName: "\uC9C0\uADC0"
+  kind: 4
+  hitPoints: 21500
+  expectedCombatSeconds: 192
+  summonItem: {fileID: 11400000, guid: 97fe69a5b7849cd46b5af2cd1d45d413, type: 2}
+  summonMaterials:
+  - item: {fileID: 11400000, guid: 6c2f0c29ab8fcbc47ad799634db43c1c, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: aed8994ecde330142b2c13ec869bc0cc, type: 2}
+    amount: 20
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 20
+  summonStation: 5
+  recommendedDay: 40
+  requiresDeepAltar: 0
+  forcedDay: 0
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
+    amount: 6
+  - item: {fileID: 11400000, guid: 7fc3fd8a2d79c06418cb4c866a3bada8, type: 2}
+    amount: 1
+  wallDamageDefault: 30
+  wallDamageIce: 45
+  wallDamageIronWall: 30
+  contactDamage: 20
+  specialDescription: "\uC11C \uC788\uB358 \uC790\uB9AC\uAC00 \uC21C\uCC28 \uBC1C\uD654
+    \u2014 \uC774\uB3D9\uC774 \uACE7 \uD68C\uD53C. \uD68C\uD53C \uAD6C\uAC04 60\uCD08"
+  telegraphSeconds: 1.5
+  specialShape: 0
+  specialRangeTiles: 3
+  specialArcDegrees: 0
+  specialDamagePerHit: 12
+  specialDurationSeconds: 0
+  specialTickSeconds: 0
+  specialKnockbackTiles: 1
+  specialCooldownSeconds: 10
+  specialHasFireTag: 1
+  specialAimLocks: 0
+  mvpScope: 2
+  arenaLayer: surface
+  heatStage: 3
+  arenaNote: "\uC9C0\uC0C1 \uC81C\uB2E8 \uC544\uB808\uB098(v63 \uC624\uB108 \uC9C0\uC2DC
+    \u2014 \uC544\uB808\uB098 \uC804\uBD80 \uC9C0\uC0C1)"

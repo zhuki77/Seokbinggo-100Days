@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: dokkaebi_club
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
   id: dokkaebi_club
-  tier: W1
+  tier: 2
   hasBasicAttack: 1
   attackDamage: 20
   attacksPerSecond: 1.5
@@ -21,7 +21,7 @@ MonoBehaviour:
   knockbackTiles: 2
   rangeTiles: 2
   arcDegrees: 90
-  multiTarget: 1
+  maxTargets: 1
   hitsWalls: 1
   note: "\uC870\uAC01\xD73 \uC81C\uC791 \u2014 8~17\uC77C\uCC28 \uC720\uD6A8 \uB109\uBC31
-    \uD2B9\uD654"
+    \uD2B9\uD654 [v39 \uD2F0\uC5B4 \uC815\uADDC\uD654]"

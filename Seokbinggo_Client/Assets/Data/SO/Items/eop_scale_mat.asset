@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: eop_scale_mat
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: eop_scale_mat
+  displayName: "\uC5C5\uC758 \uBE44\uB298"
+  maxStack: 99
+  category: 2
+  mvpScope: 2
+  note: "\uBCF4\uC2A4 \uC7AC\uB8CC \u2014 \uD55C\uD30C \uB4F1\uD0D1\xB7\uD55C\uD30C
+    \uCF54\uC5B4 3\uD638\uAE30 \uC720\uC77C \uC7AC\uB8CC"

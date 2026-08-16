@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: day_15
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.DayCurveDefinition
   day: 15
-  heatStage: 2
-  dayFireDamagePerSecond: 3
+  heatStage: 1
+  dayFireDamagePerSecond: 0
   nightYokaiCount: 4
   yokaiWallDamage: 12
   paceSealPercent: 50
@@ -30,5 +30,5 @@ MonoBehaviour:
   - kind: 5
     amount: 1
   spawnMultiplier: 3
-  dropMultiplier: 1
+  dropMultiplier: 3
   eventId: baekjung

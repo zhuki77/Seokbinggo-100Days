@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: heat_stage_count
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: heat_stage_count
+  value: 3
+  unit: "\uB2E8\uACC4"
+  note: "\uD3ED\uC5FC 3\uB2E8\uACC4(\uB354\uC6C0/\uAC1C\uB354\uC6C0/\uAC1C\uC539\uB354\uC6C0)
+    \u2014 v63. \uAD6C 10\uB2E8\uACC4(\uC77C\uCC28 \uAE30\uBC18) \uD3D0\uC9C0"

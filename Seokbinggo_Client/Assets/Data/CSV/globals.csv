@@ -1,11 +1,10 @@
-key,value,unit,note
+﻿key,value,unit,note
 day_length_sec,900,sec,낮 15분 (테라리아 기준·오너확정)
 night_length_sec,540,sec,밤 9분 (테라리아 기준·오너확정)
 day_total_sec,1440,sec,1일 24분 (테라리아 동일)
 mvp_days,30,day,MVP 확대(오너지시 — 20→30 + 콘텐츠 폭)
 total_days,100,day,백일폭염 도래(정본)
-heat_stage_period,10,day,10일마다 더위단계+1(정본)
-day_brightness_by_stage,1.00/1.05/1.10/1.15/1.20/1.25/1.30/1.35/1.40/1.45,curve,v41 day brightness curve (v46 no hardcode) — stage 1~10
+heat_stage_period,0,일,폐지값 — 날짜 주기 상승 없음(구 10). 0 = 미사용
 temp_min,0,gauge,체온 시원
 temp_max,100,gauge,체온 열사병
 temp_start,40,gauge,시작 체온
@@ -19,13 +18,12 @@ catnip_respawn_days,2,day,캣닢 채집 후 재생 일수 (v31)
 heatstroke_threshold,80,gauge,이상 시 열사병
 safe_threshold,40,gauge,이하 안전
 yokai_cap,8,count,밤 도깨비 상한(정본 가안)
-win_seal_pct,100,pct,승리 밀폐도
 win_modules,5,count,핵심 모듈 수
 tile_px,16,px,타일 16x16(아트 정합)
 team_dev,2,person,개발 2명(오너확정)
 team_art,2,person,아트 2명(오너확정)
 team_design,1,person,기획 1명=오너(확정)
-baekjung_day,15,day,백중날 밤 이벤트(v6 — 요괴 급증·드랍 강화, 데모 세이브 15일차와 일치)
+baekjung_day,15,day,백중날 밤 이벤트(v6 — 요괴 급증·드랍 강화
 ice_shard_temp_relief,10,gauge,얼음 조각 1개 즉시 체온 -10(v6 신규 정의)
 baekjung_spawn_cap,12,count,백중날 밤 한정 스폰 상한(공식값x3)
 baekjung_spawn_mult,3,mult,백중날 스폰 배율
@@ -54,24 +52,14 @@ seal_window_ry,12,tile,밀폐 창 세로 반경 — 창 높이 25=화면 세로 
 seal_cap,1425,count,폭주 캡 — (2*rx+1)*(2*ry+1)=57*25 유도값. 직접 정하지 말 것. 구조적으로 도달 불가하므로 무한 루프 안전망으로만
 seal_target_cells,240,count,밀폐도 100% 기준 영역 칸 수(처방 C) — 기지 실수요 168칸의 1.43배. 여유 공간의 자리가 곧 완공 요건이 되게(1-5 건설 자유도 정합)
 seal_penalty_start_day,4,day,6-3/6-6 판정 개시 일차 — 코어 실제 하한 3일차(철 주괴=화로 필요)+배지 HUD 소멸 3일차 밤이라 배지→게이지 인수인계가 4일차에 정확히 접합(공백 0일)
-cold_source_required,1,bool,온도 상승 조건 — 냉기원(4-1 4종) 최소 1개 가동 중일 것(v17 오너 지시). 0이면 게이트 무효(구 동작). 코드 1줄
 muldanji_duration,180,sec,물단지 지속 [가안] — 소모형 냉기원. 1일차 온도계 공백 메움(초반 쉬움). 등불 석탄 타이머 1벌 재사용
 icejar_fuel_sec,300,sec,얼음 항아리 얼음 조각 1개당 지속 [가안] — 연료형 냉기원. 등불 연료 슬롯·잔량 아이콘 재사용
-jukbuin_regen_mult,1.5,mult,죽부인 — 보금자리 반경 2타일 내 설치 시 자연 재생(HP) 배수 [가안·B]. v31.1 냥잠 폐지로 수정자 이관
-daebal_flame_cut,0.25,pct,대발 — 반경 4타일 낮 화염 경감 [가안]. 해태 석상(8타일·0.50)의 저가 약화판. 4-7 화염 태그 재사용
-daebal_radius,4,tile,대발 반경 [가안]
+jukbuin_regen_mult,1.5,mult,죽부인 — 보금자리 반경 2타일 내 설치 시 자연 재생(HP) 배수. v31.1 냥잠 폐지로 수정자 이관 · v41 [가안·B] 해제·확정(오너 승인 2026-07-27)
+daebal_flame_cut,0.25,pct,대발 — 반경 4타일 낮 화염 경감. 해태 석상(8타일·0.50)의 저가 약화판. 4-7 화염 태그 재사용 · v41 [가안] 해제·확정(오너 승인 2026-07-27)
+daebal_radius,4,tile,대발 반경 · v41 [가안] 해제·확정(오너 승인 2026-07-27)
 muldanji_mat,점토2+돌2,recipe,물단지 재료(v20 balance 확정) — 전부 상층 T1·맨발톱·채굴 4.4초. 구 '얼음 조각1+흙2'는 항아리와 게이트가 같아 캡슐이 사장됐다. 점토2+흙2는 점토 미장과 레시피 충돌이라 돌2
 start_at_night,1,bool,게임 시작 = 1일차 밤(v21 오너 확정) — 1일차 낮은 없다. 2일차부터 낮→밤 정상 사이클. 하드코딩 금지
-cold_cap_muldanji,25,pct,물단지 온도 상한(v21 오너 승인) — day8 권장 27% 미만이라 8일차 갈아타기 압력 자동 발생
-cold_cap_icejar,50,pct,얼음 항아리 온도 상한 — day15 백중 권장 50%와 일치
-cold_cap_icestorage,100,pct,얼음 저장고(코어) 온도 상한 — 완공 모듈이자 온도 축 종착
-cold_cap_frostcooler,100,pct,빙정 냉각로 온도 상한 — 보스 보상. 차별점은 기존 체온 회복 x2
 player_move_speed,3.0,tile_per_sec,플레이어 이동 속도(v22 정본화) — 6-7 요괴 이속이 강제: 야광귀3.5보다 느려야 체가 카운터로 성립·어둑시니2.5보다 빨라야 심층 탈출 가능. balance 추정 4.0은 야광귀를 따라잡아 체를 무의미하게 만들어 기각
-player_mining_reach_tiles,4.0,tile,채굴 사거리(가안) — 전투 rangeTiles(1.5)와 분리. 테라리아식 건설·굴착 자유도. 플레이어 중심↔타일 중심 거리
-player_jump_height_tiles,3.5,tile,플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·지상형 요괴/보스의 1칸 추격 점프는 별도 WorldMobPhysicsBody 계약 적용
-player_gravity,32,tile_per_sec2,플레이어 중력(가안 v7) — jump_height와 조합해 v0=sqrt(2gh)
-player_max_fall_speed,12,tile_per_sec,최대 낙하 속도(가안 v7) — 테라리아 체감 낙하 상한
-player_jump_cut,0.5,ratio,점프 키 뗄 때 상승 속도 배율(가안 v7) — 테라리아식 가변 점프(매 틱 적용)
 surface_y,20,tile,지표 평균선(맵 상단 기준) — 1D 펄린 진폭 +-6. 위 20타일은 하늘·지상 건설 여유(밀폐 창 RY12 상단 d=-7 수용)
 layer_t1_depth,45,tile,상층 T1 하단 깊이(지표 기준) — balance 검증치 강제: 중층 왕복 145초=계단굴착 90타일=수직45. 변경 금지
 layer_t2_depth,90,tile,중층 T2 하단 깊이 — 얼음 조각·철·구리
@@ -85,32 +73,169 @@ magpie_nest_limit,1,count,까치 둥지 맵당 1개 제한(v23) — 까치 1마�
 crafting_b_ui,hidden,rule,MVP 범위 B 레시피(crafting-tree.mvp_scope=B)는 제작 UI 미노출 — 데이터 로드만 한다. 오너 확정(v23 2026-07-16): MVP 보스 = 도깨비 대장·이무기 2종. B 사슬(무쇠 미끼 더미·신기전 화차)은 31일~ 확장에서 승격 (얼음 제단 봉헌·빙정 냉각로는 v34 이무기 최종보스 소환·보상으로 A 승격)
 baekjung_wave_size,4,count,백중 웨이브 1회 스폰 수 — 4마리 x 3웨이브(GDD 6-10)
 baekjung_wave_times_sec,0/150/300,sec,백중 웨이브 시작 시각(일몰 기준) — 총 12마리·조합은 day-curve d15 spawn_composition이 정본
-invasion_boss_in_cap,1,rule,내습 보스(30일차 이무기 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 이무기 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 금지 — 내습은 일반 요괴와 공존하고, 소환은 일반 스폰을 정지시킨다
+invasion_boss_in_cap,1,rule,내습 보스(30일차 이무기 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 이무기 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 금지 — 내습은 일반 요괴와 공존하고
 crafting_material_format,item_id:count,rule,crafting-tree/bosses/chests의 재료 표기 규칙(v24) — 콤마 구분. id는 items.csv가 유일 정본
 item_id_rule,snake_case,rule,아이템 id 명명(v24) — 일반 명사는 의미 영어(iron_ore·stone·lantern) 한국 고유 문화어는 로마자 음차(hapjukseon·haetae_statue·yeouiju). 전부 snake_case. 한번 정한 id는 세이브 호환 때문에 변경 금지
 wallpaper_coverage,100,pct,벽지 효과 발동에 필요한 밀폐 구역 도포율(v26) — 100% = '전부 아니면 0'. 회의의 95% 안은 기각: 플레이어가 남은 칸을 세게 만들고 밀폐 판정(100% 폐쇄 요구)과도 어긋난다. 지하 자연 배경벽(t_bg_*)이 이미 있는 칸은 덮인 것으로 계수한다
 wallpaper_coldsource_bonus,25,pct,벽지 100% 도포 시 그 구역 냉기원 지속시간 증가(v26) — 물단지 180→225초·얼음 항아리 얼음1당 300→375초. 온도 상한(cold_cap_*)은 불변이라 냉기원 계단 25/50/100 유지. ⚠️ 얼음 저장고·빙정 냉각로는 연료 없는 영구 설치물이라 지속시간 개념이 없다 — 적용 대상 아님(회의의 '얼음 저장고 480초' 는 정본에 없는 창작 수치라 기각)
 wallpaper_remove_rule,restore_original,rule,벽지 제거 시 그 칸은 '원래 있던 것'으로 돌아간다(v26) — 지하(원래 자연 배경벽 자리)=자연 배경벽 복원 / 지상(원래 하늘)=빈 칸. 회의에서 '자연벽 복원'과 '빈 칸' 두 안이 충돌했으나 각각 다른 상황을 본 것이라 통합 규칙 하나로 해소
-boss_field_yokai,freeze_resume,rule,소환 보스 등장 시 이미 필드에 있던 일반 요괴 처리(v27) — 행동 정지+반투명 표시 후 보스전 종료 시 이동 방향·속도 유지한 채 재개. 새 스폰은 그 밤 없음(boss_night_spawn=discard 유지). 내습 보스(30일차 강철이)는 invasion_boss_in_cap=1로 공존이라 이 규칙 대상이 아니다
-cave_max_height,12,tile,동굴 공동 하나의 최대 세로 길이 [가안] — 지표(surface_y=20) 관통 금지용. 개발 A가 실측으로 튜닝한 뒤 확정값을 globals에 반영한다
-furniture_mvp_scope,B,scope,기능 가구 2종(죽부인·대발)의 MVP 범위(v27 확정) — B는 제작 UI 미노출·데이터만 유지. 확장 승격 시 id·레시피·아트를 함께 신설한다
-inventory_slots,50,count,플레이어 인벤토리 10×5 그리드(v29 확정) — 테라리아 본체 인벤 동일 규격이며 최상단 행 핫바는 도입하지 않는다. 기존 12슬롯 세이브는 뒤를 빈 칸으로 패딩한다
-active_slot_rule,weapon_or_tool_1,rule,활성 슬롯(v28 확정) = 장비 탭 무기·도구 1칸. 방망이·합죽선·철선·서리발톱 장갑·휴대 등불 중 1개를 장착하며 빈 슬롯은 맨 발톱이다. PC Q키로 발톱과 장착물을 토글하고 휴대 등불은 활성 중에만 연료를 소모한다
-jangdok_storage_slots,40,count,장독 창고 보관 슬롯 수(v29 확정) — 구 12슬롯에서 40슬롯으로 확장하며 아이템·레시피·아트는 유지한다
-wave_night_period,10,day,큰 밤 주기(v45) — day % period == offset 이면 큰 밤
-wave_night_offset,5,day,큰 밤 오프셋(v45) — 35·45·55·65·75·85·95. 보스 내습(50·60·90·100)과 겹치면 안 됨
-night_wave_table,night-waves.csv,file,31~100일 밤 조합 정본(v45) — day-curve는 1~30일만
-wave_mult_target,hp_only,rule,파도 배율은 HP에만 곱한다(v36 B-5) — 접촉·벽 DPS 고정
-wave_advance_sec,108,sec,파도 시간 임계(v46 하드코딩 금지) — 540÷5. currentWave = max(점수파도, ceil(t/이값))
-turret_slot_cap,0,count,터렛 동시 가동 상한(v46 하드코딩 금지) — 런타임 소스는 석빙고 Stage. CSV는 문서·초기값
-turret_damage_slot_cap,3,count,화력형 터렛 상한(v46) — 유틸 터렛에 자리를 남긴다
-evolution_bench_t456,smithy,rule,T4~T6 진화 제작대 id — Smithy.isUnlocked = seokbinggo_stage>=4
-gimmick_weapon_bonus,1.10,mult,기믹 무기 DPS 배율(v38/v46) — 동시 티어 무기 × 이 값
+boss_field_yokai,freeze_resume,rule,소환 보스 등장 시 이미 필드에 있던 일반 요괴 처리(v27) — 행동 정지+반투명 표시 후 보스전 종료 시 이동 방향·속도 유지한 채 재개. 새 스폰은 그 밤 없음(boss_night_spawn=discard 유지). ⚠️ 내습 보스(30일차 이무기)는 invasion_boss_in_cap=1로 공존이라 이 규칙 대상이 아니다
+cave_max_height,12,tile,동굴 공동 하나의 최대 세로 길이 [가안] — 지표(surface_y=20) 관통 금지용. 2D 펄린 공동이 세로 연결돼 맵 중앙에 거대 수직 구멍이 생기는 것을 막는다(v27·개발 실측). 개발 A가 튜닝 후 확정값 확정
+furniture_mvp_scope,A,scope,기능 가구 2종(죽부인·대발) MVP 범위 — v27 'B(데이터만)' → **A 승격**(오너 승인 2026-07-27 · 100일 정식판). v27이 건 승격 조건 'id·레시피·도트 2장을 함께 신설'을 v41에서 전부 이행: items.csv jukbuin·daebal 2행 · crafting-tree.csv 2행 · 아트 타일 m_jukbuin·m_daebal 2장(발주서 ⑧). 아이콘 i_jukbuin·i_daebal은 발주서 ④에 v17부터 이미 존재 — 신규 아님·우선순위 P2 유지. 신규는 타일 m_jukbuin·m_daebal 2장뿐이며 이것도 P2 — GDD 6-15가 '밀리면 기능 가구 2종이 P2 컷 1순위'라고 못박았다
+inventory_slots,50,count,플레이어 인벤토리 10×5 그리드(GDD 5장 ③ v29 — 테라리아 본체 인벤 동일 규격·핫바 미도입. 구 12슬롯에서 7/20 오너 확정 확장). 장독 창고와 별개
+jangdok_storage_slots,40,count,장독 창고(보관 상자) 슬롯 수(GDD 6-5 v29 — 7/20 오너 확정
+active_slot_rule,weapon_or_tool_1,rule,활성 슬롯(v28) = 장비 탭 무기·도구 칸 1개 — 방망이/합죽선/철선/장갑/휴대 등불 중 1개 장착. 빈 슬롯 = 맨 발톱(신체 기본). PC Q키 토글·모바일 팔레트 좌측 끝 인라인 아이콘. 휴대 등불 연료는 이 슬롯에 든 동안만 소모(3-5)
 fall_damage_threshold_tiles,7,tile,낙하 피해 발동 최소 높이 — 6타일 이하 무피해·7타일부터 적용(v34 오너 지시 2026-07-24)
 fall_damage_per_tile,0.5,hp,낙하 피해 = 낙하 타일수 × 0.5 [가안] — 높이 비례(발동 시 전체 낙하 높이에 곱). 7타일=3.5·10=5·20=10 (HP100 기준). 점프 높이·중력은 개발 A 물리 소관(GDD 4-10·물리 노트)
-resident_max_per_species,1,count,v34.1 상주 엘리트 종별 동시 생존 상한
-resident_spawn_at,day_dawn,rule,v34.1 플레이어의 심층 진입 여부와 무관하게 해당 일차 새벽에 최초 생성
-resident_respawn_rule,next_day_dawn,rule,v34.1 처치한 상주 엘리트는 다음 날 새벽부터 재생성 가능
-resident_min_player_distance,24,tile,v34.1 상주 엘리트 생성 지점과 플레이어의 최소 거리
-resident_min_between_distance,12,tile,v34.1 어둑시니와 강철이 생성 지점 사이의 최소 거리
-resident_save_policy,last_killed_day,rule,v34.1 개체 위치 HP 상태를 저장하지 않고 종별 마지막 처치 일차만 저장
+resident_max_per_species,1,count,심층 상주 정예 동시 개체 수 — 종당 1(강철이·어둑시니 각각). v34.1 개발 질의 확정 2026-07-25
+resident_spawn_at,day_dawn,rule,resident 최초 생성 = 등장 일차 새벽(day 시작) 즉시·플레이어 위치 무관(일차는 yokai-stats appear_from이 정본). 깊이 = 심층 T3(layer_t2_depth+1 ~ layer_t3_depth) 공동 무작위 — 경계암(136~140) 불가·얼음 호수/제단 ±10타일 회피(보스 무대 보호). v34.1
+resident_respawn_rule,next_day_dawn,rule,처치 후 재생성 = 다음 날 새벽(1일 1마리 상한) — 역린·가뭄 심장 소비처 각 1개(장갑·한파 코어)라 잉여 무해·눈물4/도감/재도전 가치 보존. v34.1
+resident_min_player_distance,24,tile,resident 생성 시 플레이어 최소 거리 — 화면 밖 보장(밤 스폰 최대 거리 24 재사용). v34.1
+resident_min_between_distance,12,tile,정예 resident 2종(강철이·어둑시니) 상호 최소 거리 — 심층 협공 방지. v34.1
+resident_save_policy,last_killed_day,rule,resident 개체 미직렬화(위치·HP 저장 없음) — 종별 last_killed_day 1값만 저장·로드 시 규칙 재생성(처치→저장→로드 당일 재파밍 어뷰징 차단·boss_save_policy=no_serialize 취지 준용). v34.1
+armor_def_by_tier,3/6/10/13/16/19,sum,티어별 갑옷 방어 합(v40) — 상한 19: 최강 접촉 24 대비 실피해 5 유지. 28이면 최소1 보장 발동 = 무적
+boss_contact_by_tier,18/20/22/24,hp,T3~T6 보스 접촉 피해(오너 승인 2026-07-27) — 이무기 18 앵커에서 연장
+boss_dodge_sec_curve,20/30/40/60/70/80/90/100/110/120,sec,보스 10종 회피 구간(오너 지시) — 딜 불가 시간. 보스 HP = 화력 x (250 - 회피초)
+evolution_bench_t456,smithy,rule,T4~T6 진화 전용 제작대 = 대장간(v39 오너 승인). 작업대T1/화로T2/얼음모루T3에 이은 5단계
+gimmick_weapon_bonus,1.10,mult,기믹 무기 = 그 시점 무기 대비 +10%(오너 승인 2026-07-27). 검증: 큰 밤 여유 변화 5%p 미만
+turret_slot_cap,0,개,0 = CSV는 문서·초기값이고 런타임 상한은 석빙고 Stage가 준다(유니티 v46 규약 그대로 채택). 구 정본 6 폐기
+turret_damage_slot_cap,3,count,그중 화력형 최대 3기 — 나머지 3칸은 유틸(DPS 0)이라 선택이 생긴다
+day_brightness_by_stage,1.00/1.28/1.55,배,"구 10값을 3값으로 압축 — 양끝 고정, 등간격"
+magpie_guide_mode,fly_to_goal,rule,"까치 길잡이(v53 오너 승인 2026-07-28) — 까치가 **다음 목표 방향으로 날아가** 위치를 알린다. ⚠️ **대사·말풍선·텍스트 0** — NPC가 아니라 동행 개체다. GDD 3장 미채용 표가 「NPC·상점·낚시·마법 = 미채용(무스토리 원칙)」이라 NPC로 목표를 주면 무스토리·무텍스트·미채용 3중 충돌이 나는데, 까치는 정본 개체라 충돌 0. 목표는 온보딩 목표 배지(첫 3일 작업대→차열벽→화로)와 **같은 목록을 쓴다** — 새 목표 정의 0"
+magpie_guide_return_sec,6,sec,까치가 목표 쪽으로 날아갔다 플레이어에게 돌아오는 주기 — 줍기 주기(magpie_magnet_interval 4초)보다 길게 잡아 **줍기 기능을 방해하지 않는다**. 길잡이 중에도 줍기는 그대로 동작
+world_half_width,300,타일,스폰(x=300) 기준 좌우 반폭. 맵 폭의 절반 — 유도값
+spawn_x,300,타일,스폰 x = 맵 중앙
+zone_count,10,count,가로축 밴드 수 = 보스 10종(zones.csv). 밴드 폭 20타일. **발명 아님** — 순서는 bosses.csv recommended_day 그대로
+zone_table,zones.csv,file,가로축 밴드·제단 배치 정본 표 (v55 신설)
+altar_surface,position_only,rule,"[가안 — 판단⑤] **위치만 가로축.** 보스 등장 일차는 그대로 두고, 그 보스가 '자기 밴드의 지상 제단'에서 나온다. → 6-8 눈물 원장·31~100일 밤 조합표 **불변**(내습 4종의 고정 일차가 유지되므로). 대안(10종 전부 소환식)은 원장·조합표 전면 재검산이 필요해 채택하지 않았다"
+altar_summon_daytime,night_only,rule,"[가안 — 판단⑤] **낮 소환 불가 유지.** GDD 5장 9번(소환템은 밤에만 활성)을 안 고친다. 낮에는 제단까지 **가는 것**이 콘텐츠고, 싸우는 것은 밤이다 — 제단이 전진 야영지가 된다. 정본 수정 0"
+crop_table,crops.csv,file,[가안 — 판단④] 밴드별 채집물 밀도·등급 표 (v56 신설)
+crop_plantable,1,bool,[가안 — 판단④] 채집한 작물을 **심을 수 있다**. 성장은 기존 `catnip_respawn_days`(2일) 재사용 — 신규 종 0 · 밭 타일 0 · 성장 타이머 0. '진짜 농사'(씨앗·밭·성장단계·수확 = 신규 4)는 채택하지 않았다
+trait_select_at_start,1,bool,오너 승인 2026-08-06 — 1일차 밤 시작 **직전** 특성 선택 화면 1회. 되돌리기 없음(슬롯 UI 신설 금지 원칙 준용). 세이브엔 선택 id 1개만. GDD 4-2 개정 반영 — 특성은 **성장이 아니라 시작 1회 분기**다
+trait_table,traits.csv,file,시작 특성 4종 정본 표
+shell_screen_count,5,count,게임 셸 화면 = 타이틀·일시정지·설정·결과 4종 + **특성 선택 1종**(v57 오너 승인). 5-메타 갱신
+opening_illust_pages,3,count,오너 승인 2026-08-06 — 오프닝 **정적 일러 페이지 3장**. ⚠️ **컷신 시스템이 아니다** — 전환·연출 코드 없이 넘기는 정지 화면이라 GDD 2장 「컷신·대사·NPC 대화 없음」과 양립한다. 인게임 HUD는 여전히 무텍스트 — 오프닝·도감·결과 화면만 텍스트 허용 구역
+trait_melee_boss_exempt,1,bool,근접 특성은 **보스에 적용하지 않는다.** 법칙①(보스 HP = 발톱 DPS × 회피 구간) 보호 — 켜두지 않으면 6-9 회피 구간 10종이 어긋난다
+sky_gangcheol_trail,1,bool,🔗 **개연성 ①** — 백일폭염의 원인(강철이)을 하늘에 보인다. 배경 4층(9장 v17.5)의 하늘 레이어에 **강철이 실루엣이 주기적으로 지나간다**. ⚠️ 구 정본은 강철이가 **18일차~ 심층 상주**(지하)이고 지상 궤적은 **이무기 격퇴(30일) 이후**뿐이라 **1~29일 동안 원인이 화면에 0회 등장**했다 — 데모 시연 구간(1·15·30일 세이브) 전체가 그 구간이다. 신규 아트 0(강철이 스프라이트 1벌+LUT 스왑이 이미 있다·8장 v34) · 코드 = 태양 궤적 로직 재사용(2장 v21 '태양이 독립 스프라이트라 궤적·크기 전부 코드')
+sky_gangcheol_trail_period_sec,90,sec,"강철이 실루엣이 하늘을 가로지르는 주기. 낮 900초에 **10회** — 자주 보여 원인으로 각인되되, 매번 보이면 배경 소음이 된다. ⚠️ **낮에만**(밤 하늘엔 안 나온다 — 2장 v21 '밤에 태양이 보인다'는 자체 모순을 고쳤던 것과 같은 이유)"
+yokai_path_target,ice_core,rule,🔗 **개연성 ②** — 요괴 경로 목표를 **얼음 저장고(코어)**로 고정한다. 벽은 *가는 길에 있어서* 부순다. ⚠️ 구 정본은 요괴가 **벽 공격형**이라 화면상 '집을 부순다'로만 읽혔다 — GDD 2장이 '가장 귀한 보물은 냉기가 되었다. 그래서 밤마다 석빙고로 몰려든다'고 적어놨는데 **화면에 그 동기가 0**이었다. 코어를 향해 직진하면 '저것들이 냉기를 노린다'가 **규칙만으로** 전달된다. **밸런스 불변** — 벽 DPS(6-9)·벽 HP는 그대로고 경로만 바뀐다. 코어 미건설 시엔 기존대로 최근접 벽
+heat_stage_count,3,단계,폭염 3단계(더움/개더움/개씹더움) — v63. 구 10단계(일차 기반) 폐지
+heat_stage_trigger,named_boss_kill,-,단계 상승 조건 = 관문 네임드 처치. 날짜 무관(데드라인 삭제)
+heat_stage_gate_1to2,king_dokkaebi,boss_id,단계1→2 관문 = 도깨비 대장
+heat_stage_gate_2to3,imugi_boss,boss_id,단계2→3 관문 = 이무기. 단계3엔 관문 없음(전환 2회)
+day_fire_dmg_by_stage,1.5/4.5/15.0,HP/초,"단계별 낮 지상 화상. s1=구 1일차·s2=구 30일차와 동일(데모 재검증 0), s3=구 100일차 상한"
+tree_decay_by_stage,1.00/0.50/0.00,배,단계별 나무 밀도(오너 지시 '가까워질수록 나무 없어지고'). 3단계에서 0
+map_size_user_adjustable,1,bool,맵 크기는 유저 조절 대상 — 세계 스케일 값은 전부 비율로 둔다(오너 지시)
+map_width_default,600,타일,⬆️ v64: 유니티 실물이 400→600으로 확장돼(8/11 커밋 e7fef4a) 정본을 올렸다. 비율 키는 전부 불변 — 9-0c 스케일 정책이 값을 했다
+map_height_default,160,타일,기본값(GDD 9장 400x160)
+scale_policy,world=norm|screen=abs,-,세계 스케일(레이어·온도 밴드·X밴드·자원 밀도) = 비율 / 화면·플레이어 스케일(밀폐 창·코어 범위·인식 범위·설치물 반경) = 절대 타일. 섞으면 맵 축소 시 깨진다
+underground_depth_tiles,135,타일,현 맵의 지하 깊이(지표 d=0 ~ 경계암 상단). 비율 키의 분모 — 맵이 바뀌면 이 값만 바뀐다
+underground_depth_min_tiles,135,타일,🔴 맵 축소 하한(유도값) — 빙결 최소 두께 25(밀폐 창 높이) ÷ 0.185 = 135. 현 맵이 이미 하한이라 **축소 불가·확대만 가능**
+depth_norm_warm_end_s1,0.333,비율,단계1 온난↔냉장 경계 = 상층 하단 45/135. 실온 -5도 지점
+depth_norm_cold_end_s1,0.667,비율,단계1 냉장↔빙결 경계 = 중층 하단 90/135. 실온 -10도 지점
+depth_norm_shift_per_stage,0.074,비율,폭염 단계당 밴드 하강폭 = 10타일/135(오너 승인 Δ=10). 맵이 커져도 비율 유지
+depth_norm_frozen_min,0.185,비율,빙결 최소 두께 = 밀폐 창 높이 25/135. shift 상한과 맵 하한을 동시에 강제한다
+layer_norm_upper_end,0.333,비율,상층 T1 하단 (구 d=45)
+layer_norm_mid_end,0.667,비율,중층 T2 하단 (구 d=90)
+layer_norm_deep_end,1.000,비율,심층 T3 하단 (구 d=135) — 그 아래 경계암
+temp_system,absolute_room_c,-,실온 = 공간의 절대 도수. 구 '석빙고 온도 %'(밀폐도 비례) 폐지 — v63 오너 지시
+room_temp_cold_enter,-5,도,냉장 진입 실온 — 코어 1개(차열벽 없음)와 일치
+room_temp_frozen_enter,-10,도,빙결 진입 실온 = 저체온 페널티 시작(오너 확정 '-10도부터 페널티')
+core_range_w,8,타일,얼음 저장고(코어) 냉각 범위 가로 — 오너 지시 8x10
+core_range_h,10,타일,얼음 저장고(코어) 냉각 범위 세로
+core_delta_plain,-5,도,코어 단독 냉각량
+core_delta_insulated,-10,도,차열벽으로 밀폐된 코어 냉각량 — 밀폐도의 새 역할(효율 x2)
+core_stack_mode,additive,-,코어 범위가 겹치면 가산(오너 '겹치면 더 차가워지고'). 상한 규칙 없음 — 저체온이 자연 상한
+seal_role,core_efficiency_x2,-,밀폐도 = 코어 효율 배수. 구 '밀폐 안 되면 온도 0' 절벽 폐지
+hypothermia_room_temp,-10,도,이 실온 이하에서 체온이 하강 시작
+hypothermia_fall_per_sec,0.10,/초,[가안] 체온 하강률 — temp_rise_per_stage 0.10과 대칭
+hypothermia_dmg_at_temp,0,체온,체온 0 도달 시 피해 시작(temp_min 재사용 — 신규 스탯 0)
+hypothermia_dmg_per_sec,2.0,HP/초,[가안] 저체온 피해
+gear_temp_rule,wear_lower_bound|station_band,-,착용=견디는 하한 / 설치=적정 구간. 두 규칙이 다르다
+gear_cold_tolerance,straw:0/iron:-5/icesteel:-10,도,착용 세트가 견디는 실온 하한. 얼음강철은 전 구간 정상
+gear_mismatch_penalty,efficiency,-,착용 미대응 = 효율 감소만(오너 확정). 하드 차단 아님 — 4-7 순환 잠금 방지 준수
+station_temp_strict,1,bool,설치 설비는 적정 구간 밖에서 작동 정지
+night_budget_model,roundtrip_distance,-,밤 기준선 = 왕복 거리 예산(구 법칙② 파도 피크 대체)
+band_roundtrip_formula,2*(map_width/2/zone_count)/player_speed,초/밴드,밴드 1칸 왕복 시간 — **고정값이 아니라 공식이다**(맵 가변). 현 400x160·10밴드·이속 3.0 → 13.3초
+band_roundtrip_sec_per_order_default,20.0,초,현 맵 600x160·10밴드·이속 3.0 계산 결과. 밴드10 왕복 200초 = 밤 540초의 37.0%
+wave_mode,off,-,파도(밤 내부 1~5파 분할) 폐지 — 오너 지시. night-waves.csv 삭제
+invasion_period_days,10,일,침공 주기(구 wave_night_period 재사용) — 특정 일차마다 발생
+invasion_offset_days,6,일,"침공 시작 오프셋 — 구 wave_night_offset 5는 **백중날 밤(15일차)과 겹쳐** verify가 잡았다(2026-08-11). 6으로 옮기면 백중·테마 밤 3일(18·23·27)·이무기 내습(30)·보스 권장일(8,20,30…) 전부와 충돌 0. 첫 침공 d6 = 1~4일차 구조적 면역(6-6) 직후이자 불가사리 해금일(6일~) — 새 적이 떼로 등장하는 서사 비트가 공짜로 붙는다"
+invasion_announce,1,bool,침공은 미리 예고(오너 §8). 예고 플래그가 침대 잠금 게이트를 겸한다
+bed_locked_on_invasion,1,bool,예고된 침공 밤에는 침대 스킵 불가 — 신규 시스템 0
+terrain_spawn_table,terrain-spawn.csv,-,지형별 스폰 가중치 — 지형 10 x 요괴 7 = 70행
+terrain_count,10,종,정본 지형 10종(전부 GDD 근거 있음 — 발명 0)
+terrain_implemented,5,종,현 빌드 실재 지형 5종만 가중치 부여. 나머지 5는 0으로 깔아둔다
+base_vicinity_radius,28,타일,이 반경 안에서 스폰한 요괴만 코어를 향한다(seal_window_rx 재사용)
+yokai_aggro_default,8,타일,인식 범위 기본값. 종별 값은 yokai-stats.csv aggro_radius
+yokai_aggro_max,9,타일,상한 — 방울 금줄 반경 10 미만이어야 경보가 인식보다 먼저 울린다
+talisman_table,talismans.csv,-,부적 5종 — 판타지 조선 소품으로 이동·거리·인식을 다룬다
+talisman_count,5,종,귀환부·축지부·이정표 부적·은신부·한기부
+boss_arena_layer,surface,-,보스 아레나 전부 지상. 구 이무기 심층 얼음 호수 -> 지상 얼음 호수
+altar_count,10,개,제단 10개 유지 — 중간보스 삭제 취소(오너 정정 2026-08-11)
+win_condition,final_boss_kill,-,최종보스 처치 = 엔딩. 구 win_seal_pct=100 폐지 — 밀폐도는 생존 유지 조건으로 격하
+deadline_removed,1,bool,무한 생존 = 데드라인 삭제(오너 확정). 콘텐츠는 유한 — D-100 카운터 폐지
+sun_scale_ties_heat_stage,1,bool,태양 크기를 폭염 단계에 묶는다 — 구 sun_scale_ties_dcounter 대체(D-100 소멸)
+turret_slot_cap_source,seokbinggo_stage,-,터렛 동시 가동 상한의 런타임 출처
+turret_tier_early,dokkaebi_fire_tower,item_id,극초반 터렛 — 작업대·단계1(도깨비 대장 확정 드랍). 싸고 약하다
+turret_tier_late,singijeon_cart|seonge_tower|cold_wave_tower,item_id,극후반 터렛 3종 — 전부 대장간(석빙고 4단 해금). '만들기 어려운 걸로'(오너)
+turret_midgame_gap,1,bool,중반 터렛 공백은 의도다 — 6-9가 'd8→d30 보스 공백은 공백이 아니라 의도'라고 쓴 것과 같은 패턴
+turret_automation_seed,singijeon_cart,item_id,자동화의 초석(오너) — 신기전 화차의 다연장 발사가 '스스로 여러 발이 나간다'의 원형. 후속 자동화 확장의 시작점
+player_jump_height_tiles,3.5,tile,⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·지상형 요괴/보스의 1칸 추격 점프는 별도
+player_gravity,32,tile_per_sec2,⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 플레이어 중력(가안 v7) — jump_height와 조합해 v0=sqrt(2gh)
+player_max_fall_speed,12,tile_per_sec,⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 최대 낙하 속도(가안 v7) — 테라리아 체감 낙하 상한
+player_jump_cut,0.5,ratio,⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 점프 키 뗄 때 상승 속도 배율(가안 v7) — 테라리아식 가변 점프(매 틱 적용)
+player_mining_reach_tiles,4.0,tile,⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 채굴 사거리(가안) — 전투 rangeTiles(1.5)와 분리. 테라리아식 건설·굴착 자유도. 플레이어 중심↔타일 중심 거리
+large_cavern_count_min,5,개,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_count_max,8,개,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_w,30,타일,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_h,20,타일,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_min_edge_gap,40,타일,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_min_depth_below_crust,8,타일,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_margin_from_spawn,32,타일,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_margin_from_altar,28,타일,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_enabled,1,bool,중간층 대공동 생성 — 정본에 개념 자체가 없던 신규 지형(개발 신설)
+difficulty_option,planned,-,난이도 옵션 = 추가 예정(오너 2026-08-11 '나중에 할 것으로 넣어놓고'). GDD 12장 등재
+difficulty_knobs,day_fire_dmg_by_stage|terrain_spawn_weight|hypothermia_fall_per_sec,-,구현 시 쓸 손잡이 3개 — 전부 기존 값이라 **신규 시스템 0**. 배율만 곱한다
+frost_spread_enabled,1,bool,"서리 확산 — 유니티 FrostSpreadService.cs 실물(183행) 등재. v46 개발 신설, 정본 승인 이력이 없었다"
+frost_spread_trigger,altar_boss_clear,-,제단에서 보스를 격파할 때마다 서리가 한 칸씩 위로 올라온다(오너 확정). v65에서 폭염 단계로 remap했던 것을 **되돌린다** — 제단 수에 맞춘다
+frost_lazy_reveal,1,bool,핵심 구현 — 단계가 올라도 타일을 즉시 안 바꾼다. '얼 예정'으로 찍어만 두고 **플레이어가 공기와 맞닿은 흙·돌·점토·석탄을 처음 건드릴 때** 서리 광물로 확정한다. **월드젠 재실행 0**
+frost_first_reveal_reward,first_frost_claw,item_id,첫 서리 광물 확정 시 1회 지급(기믹 무기 훅) — 개발 실물 그대로
+frost_spread_vfx,0,bool,⚠️ 번지는 연출은 없다. 화면에 보이는 것은 '보스 깨고 내려갔더니 광물이 달라져 있다'뿐 — '확산'이라는 이름이 애니메이션을 연상시켜 오해를 부른다(오너 2026-08-11 '이해가 안 되네')
+yokai_body_size_table,yokai-stats.csv:body_tiles,-,요괴 몸집 = 통과에 필요한 개구부 세로 칸수. HP 구간에서 유도(<500=1 / <2000=2 / 그이상=3) — 발명 0
+yokai_body_size_rule,hp<500:1|hp<2000:2|else:3,-,유도 규칙 자체를 정본화 — 신규 요괴 추가 시 자동 결정
+wall_breach_rule,path_first,-,진입 가능한 경로가 있으면 그 길을 쓴다. 없을 때만 벽을 친다(오너 §8)
+wall_breach_stop_on_path,1,bool,🔑 진입로가 뚫리는 순간 추가 파괴 중단 — **오너의 '한 번의 침공에서 소수 블록만 파손'이 여기서 자동으로 나온다.** 수치 상한을 따로 두지 않는다: 부서지는 블록 수 = 필요 개구부 수(몸집 1~3칸)
+wall_repair_not_penalty,1,bool,침공 후 복구가 주 페널티가 되지 않게 한다(오너 §8) — 위 규칙으로 파손이 1~3블록에 머문다
+invasion_temp_rise_per_yokai,0.5,도/눈물,[가안] 침투 요괴 1마리당 실온 상승 = **그 종의 요괴 눈물 수 × 0.5도**. 등급 지표를 새로 만들지 않고 정본의 tears(방망이1·불가사리2·야광귀2·객귀2·어둑시니4·강철이4)를 재사용한다. 검산: 방망이 8마리 침투 = +4도(밴드 1단계 미만) / 어둑시니 4마리 = +8도(약 1밴드). 하룻밤 손실로 적정
+invasion_temp_rise_source,yokai-stats.csv:tears,-,등급 = 눈물 드랍량. 신규 스탯 0
+recool_cost,ice_shard:1,개/도,[가안] 다음 낮에 실온 1도를 되돌리는 비용 = 얼음 조각 1. 정본의 냉각 자원을 그대로 쓴다(4-3 '얼음 조각 = 체온 회복·단열 문'). 검산: +8도 복구 = 얼음 조각 8. 중층 밀도 10/100타일이라 밤 1회 원정분. 6-11 얼음 경제(저장고20·단열문4·냉기장치10·이무기소환10)에 반복 수요를 더하되 잠그지 않는다
+recool_when,next_day,-,재냉각은 다음 낮에만(오너 §8) — 밤에 즉시 복구 불가
+recool_station,ice_core,item_id,재냉각 수행 위치 = 얼음 저장고(코어). 신규 설비 0
+bedrock_permanent,1,bool,🔒 경계암(맵 최하단 봉인층)은 **영구히 파괴 불가**. 오너 확정 — 구 FrostSpreadService의 UnsealBedrockLayer는 폐기한다
+frost_bedrock_unseal,0,bool,서리 확산으로도 경계암은 열리지 않는다
+frost_step_count,10,단,서리 단계 수 = 제단 수 10개와 1:1
+frost_band_norm_from_formula,1 - clears/frost_step_count,비율,격파 n회 → 서리 범위 = 깊이 비율 [1-n/10 … 1.000]. **아래에서 위로 차오른다.** n=1 → 0.900~1.000(가장 깊은 10%) / n=5 → 0.500~1.000(아래 절반) / n=10 → 0.000~1.000(지하 전역)
+frost_band_norm_to,1.000,비율,서리 하단은 항상 지하 최하단(경계암 위)까지 — 경계암 자체는 제외
+ore_vein_mode,cluster,-,⬅️ 개발 확정 등재(v68) — 광석은 낱개가 아니라 **광맥(클러스터) 단위**로 생성된다(오너 '뒤죽박죽해서 광맥단위로 수정'). 빈도·깊이·층은 mineral-tiers.csv를 그대로 읽는다 — 정본이 이미 소스다
+ore_vein_cluster_min,3,타일,광맥 하나의 최소 크기 — 유니티 WorldGenerationConfig.cs OreVeinProfile 실측
+ore_vein_cluster_max,6,타일,광맥 하나의 최대 크기
+tile_hardness_rule,claw_tier >= hardness,-,"타일 파괴 판정(GDD 4-4). 경도는 mineral-tiers.csv hardness, 티어별 가부는 breakable_t1/t2/t3 컬럼이 명시한다"
+tile_hardness_table,mineral-tiers.csv:hardness,-,경도 단일 출처 — 코드에 하드코딩 금지
+storage_temp_system,1,bool,아이템마다 **보관 요구 실온**이 있다(오너 확정). 구 '살얼음 보관 불가' 폐기 — 못 들고 오는 게 아니라 **맞는 방에 둬야** 한다
+storage_band_ambient,none,-,상온 — 광물·주괴·목재·부적. 온도 무관
+storage_band_chilled,-5,도,❄️ 냉장 — **작물·버섯**. 이 위면 서서히 상해 회복량이 준다
+storage_band_frozen,-10,도,🧊 빙결 — **얼음 조각·살얼음**. 이 위면 **녹아 사라진다**
+storage_spoil_per_day,0.10,비율/일,[가안] 냉장 미달 시 작물 회복량 하루 10% 감소(0까지). 상해도 사라지진 않는다
+storage_melt_per_day,0.25,비율/일,[가안] 빙결 미달 시 얼음류 개수 하루 25% 소멸
+storage_jangdok_band,chilled,-,"🔑 **장독 창고 = 냉장 저장고**. 지금까지 둘 다 그냥 상자였던 장독·얼음 저장고의 역할이 여기서 갈린다 — 조선 고증 그대로(장독=식품, 석빙고=얼음)"
+storage_ice_core_band,frozen,-,얼음 저장고(코어) = 빙결 보관. 코어 8x10 범위 안이 곧 저장 구역
+storage_gear_band,none,-,✅ 오너 확정 2026-08-11 '붙이지 말자' — 옷·장비는 보관 온도 무관. 착용 시 '견디는 하한'(coldToleranceC)이 이미 걸려 있어 보관 온도까지 붙이면 같은 아이템에 방향이 반대인 온도 규칙이 둘이 된다(착용=버틴다 / 보관=이래야 한다). 판단 종료
+mushroom_heal,15/30/50,HP,[가안] 느타리·표고·석이 회복량 — 캣닢 25(지상)와 겹치지 않게 상층은 낮고 심층은 높다
+mushroom_table,mineral-tiers.csv,-,"버섯은 채집 자원 표에 있다 — 별도 표 신설 0, 지형↔자원 연결도 자동"
+boundary_ice_rock_hardness,2,경도,🔧 v71 정정(오너 승인) — 경계 빙암 경도 3→2. 구 정본이 「경도 3」이라 적으면서 「T2가 채굴 가능」이라고도 적어 스스로 모순이었다. claw_tier >= hardness 규칙상 T2(2)<3이면 아무도 심층에 못 들어간다(발톱은 T3가 끝인데 T3 재료가 심층에 있다 = 순환 잠금). 2면 의도대로 T1 차단·T2 해금. 벽이라 mineral-tiers.csv(채집 자원 표)가 아니라 여기가 단일 출처
+bed_enabled,1,bool,"침대(시간 스킵) 신설 — v72 오너 지시. 구 정본 시간 스킵 없음(의도)""은 폐기. 신규 아이템 0: 기존 보금자리 nest_bed가 겸한다"""
+bed_item_id,nest_bed,item_id,침대 = 보금자리. 레시피·타일(m_nest)·유니티 구현 전부 이미 있다 — 붙는 건 기능 하나뿐
+bed_sleep_room_temp_max,-4,도,이 실온보다 추우면 잘 수 없다 = 온난 밴드(0~-4)에서만(오너 지시). 기지를 전부 빙결로 만들면 잘 데가 없어진다
+bed_skip_mode,next_phase,-,"밤에 자면 새벽, 낮에 자면 해질녘 — 양방향(오너 밤, 낮 스킵 가능"")"""
+bed_skip_applies_daily_tick,1,bool,"🔑 스킵해도 하루 판정은 그대로 적용(보관 상함·녹음·재냉각·서리 확정). 데드라인이 없어 스킵의 시간 비용이 0이라, 판정까지 건너뛰면 6-19가 침공 밤을 막아둔 이유가 일반 밤에서 재현된다 — 메인 헤드 판단"

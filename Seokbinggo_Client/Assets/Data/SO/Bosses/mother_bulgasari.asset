@@ -15,8 +15,8 @@ MonoBehaviour:
   id: mother_bulgasari
   displayName: "\uC5B4\uBBF8 \uBD88\uAC00\uC0AC\uB9AC"
   kind: 1
-  hitPoints: 6500
-  expectedCombatSeconds: 180.6
+  hitPoints: 10000
+  expectedCombatSeconds: 217
   summonItem: {fileID: 11400000, guid: ef2da80e2e710484b9cf6a333fd185ef, type: 2}
   summonMaterials:
   - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
@@ -26,7 +26,7 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: aed8994ecde330142b2c13ec869bc0cc, type: 2}
     amount: 5
   summonStation: 2
-  recommendedDay: "~22\uC77C\uCC28(v33 \uB4F1\uC7A5 \uB4A4\uB85C)"
+  recommendedDay: 20
   requiresDeepAltar: 0
   forcedDay: 0
   guaranteedDrops:
@@ -41,7 +41,7 @@ MonoBehaviour:
   wallDamageIronWall: 0
   contactDamage: 14
   specialDescription: "\uB2EC\uAD70 \uCF67\uAE40: \uD654\uC5FC\uD0DC\uADF8 \uBD80\uCC44\uAF344\uD0C0\uC77C
-    10/\uCD08x2\uCD08\xB7\uC5D0\uC5B4\uBCF84\uD0C0\uC77C\xB7\uCFE86\uCD08"
+    10/\uCD08x2\uCD08\xB7\uCFE86\uCD08"
   telegraphSeconds: 1
   specialShape: 1
   specialRangeTiles: 4
@@ -49,8 +49,12 @@ MonoBehaviour:
   specialDamagePerHit: 10
   specialDurationSeconds: 2
   specialTickSeconds: 1
-  specialKnockbackTiles: 4
+  specialKnockbackTiles: 0
   specialCooldownSeconds: 6
   specialHasFireTag: 1
   specialAimLocks: 1
   mvpScope: 2
+  arenaLayer: surface
+  heatStage: 2
+  arenaNote: "\uC9C0\uC0C1 \uC81C\uB2E8 \uC544\uB808\uB098(v63 \uC624\uB108 \uC9C0\uC2DC
+    \u2014 \uC544\uB808\uB098 \uC804\uBD80 \uC9C0\uC0C1)"

@@ -30,3 +30,8 @@ MonoBehaviour:
   verbId: 
   usageLimitPerDay: 0
   activationCondition: None
+  hasColdTolerance: 1
+  coldToleranceC: 0
+  coldNote: "straw \u2014 \uC2E4\uC628 0\uB3C4\uAE4C\uC9C0 \uC815\uC0C1. \uADF8 \uC544\uB798\uB294
+    \uD6A8\uC728 \uAC10\uC18C(\uD558\uB4DC \uCC28\uB2E8 \uC544\uB2D8, \uC624\uB108
+    \uD655\uC815)"

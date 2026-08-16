@@ -54,7 +54,7 @@ namespace Nyangbingo.Editor
             Directory.CreateDirectory(OutputPath);
             foreach (var profile in profiles)
             {
-                var generator = new MapGenerator(config);
+                var generator = new MapGenerator(config, catalog);
                 var world = generator.GenerateDetailed(RequestedSeed);
                 if (!world.passedValidation)
                     throw new InvalidOperationException($"Demo day {profile.Day}: fixed world seed failed validation.");
@@ -69,7 +69,7 @@ namespace Nyangbingo.Editor
 
             AssetDatabase.Refresh();
             Debug.Log("[Nyangbingo] Official demo saves generated: day 1/15/30, " +
-                      $"requestedSeed={RequestedSeed}, acceptedSeed={new MapGenerator(config).GenerateDetailed(RequestedSeed).acceptedSeed}.");
+                      $"requestedSeed={RequestedSeed}, acceptedSeed={new MapGenerator(config, catalog).GenerateDetailed(RequestedSeed).acceptedSeed}.");
         }
 
         private static SaveGame BuildSave(GameDataCatalog catalog, WorldGenerationResult world,
@@ -84,6 +84,7 @@ namespace Nyangbingo.Editor
                 : new Vector2(generatedSpawn.x + .5f, generatedSpawn.y + .5f);
             var save = new SaveGame
             {
+                isOfficialDemo = true,
                 seed = world.acceptedSeed,
                 day = profile.Day,
                 timeOfDaySec = NightStartGameSeconds,
@@ -279,10 +280,11 @@ namespace Nyangbingo.Editor
             DemoProfile profile, SaveGame save, Vector2Int roomCenter)
         {
             var json = JsonUtility.ToJson(save, true);
-            if (!SaveManager.TryDeserialize(json, out var parsed) || parsed.seed != save.seed || parsed.day != profile.Day)
+            if (!SaveManager.TryDeserialize(json, out var parsed) || !parsed.isOfficialDemo ||
+                parsed.seed != save.seed || parsed.day != profile.Day)
                 throw new InvalidOperationException($"Demo day {profile.Day}: schema round-trip failed.");
 
-            var validationGenerator = new MapGenerator(config);
+            var validationGenerator = new MapGenerator(config, catalog);
             var validationWorld = validationGenerator.GenerateDetailed(save.seed);
             if (validationWorld.acceptedSeed != save.seed)
                 throw new InvalidOperationException($"Demo day {profile.Day}: accepted seed is not reproducible.");

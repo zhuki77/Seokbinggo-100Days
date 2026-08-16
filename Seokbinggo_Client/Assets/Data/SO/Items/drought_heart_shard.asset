@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64403802d66930b43ba57a2cd38a006c, type: 3}
+  m_Name: drought_heart_shard
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
+  id: drought_heart_shard
+  displayName: "\uAC00\uBB44 \uC2EC\uC7A5 \uC870\uAC01"
+  maxStack: 1
+  category: 5
+  mvpScope: 2
+  note: "\uC544\uD2F0\uD329\uD2B8(v37) \u2014 \uBCF4\uC2A4:\uBD88\uBCD5 \uAC15\uCCA0\uC774
+    \xB7 \uC804\uD22C \uC218\uCE58 0 \uC0C1\uC2B9\xB7\uB3D9\uC0AC\uB9CC \uD655\uC7A5\xB7\uC81C\uC791
+    \uBD88\uAC00\xB7\uC545\uC138 2\uC2AC\uB86F \uACF5\uC720"

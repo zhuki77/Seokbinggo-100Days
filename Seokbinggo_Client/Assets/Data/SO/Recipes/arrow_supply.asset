@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: arrow_supply
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: arrow_supply
+  station: 2
+  ingredients:
+  - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
+    amount: 3
+  - item: {fileID: 11400000, guid: d821cf6376d84ed44bb84d57fac7b553, type: 2}
+    amount: 10
+  output:
+    item: {fileID: 11400000, guid: 1a1060348c1d40e43987c5bbfed2c781, type: 2}
+    amount: 1
+  durationSeconds: 40
+  type: 14
+  mvpScope: 2
+  note: "\uC720\uD2F8 \uD130\uB81B \u2014 \uD0C4\uC57D \uC790\uB3D9 \uBCF4\uAE09\xB7DPS0"

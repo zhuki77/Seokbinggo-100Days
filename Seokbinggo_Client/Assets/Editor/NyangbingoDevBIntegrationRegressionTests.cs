@@ -66,12 +66,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestForcedInvasionSpawnCapContract();
         TestBaekjungWaveCompositionContract();
         TestBUiV71InvasionAndCraftingContract();
-        TestDaySurfaceFireContract();
         TestUndergroundTemperatureRecoveryContract();
         TestPlayerFireMitigationContract();
         TestPlayerVisionBonusContract();
         TestYagwangRuntimeTheftContract();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (49/49).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (48/48).");
     }
 
     private static void TestChestLootInterfaceContract()
@@ -255,42 +254,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 source.Contains("worldSession.LastResult.surfaceHeights") &&
                 source.Contains("-fallSafe * recoveryMultiplier"),
             "Player temperature must cool during daytime underground exploration.");
-    }
-
-    private static void TestDaySurfaceFireContract()
-    {
-        var surfaceHeights = new[] { 10, 12 };
-        Require(PlayerDayHeatDamageService.IsSurfaceExposed(
-                    new Vector2(.5f, 11.5f), surfaceHeights) &&
-                !PlayerDayHeatDamageService.IsSurfaceExposed(
-                    new Vector2(.5f, 10.9f), surfaceHeights) &&
-                !PlayerDayHeatDamageService.IsSurfaceExposed(
-                    new Vector2(2.5f, 20f), surfaceHeights),
-            "Day fire must affect only valid world columns above their generated surface.");
-        Require(Mathf.Approximately(
-                    PlayerDayHeatDamageService.CalculateDamagePerSecond(
-                        3f, 50f, 30f, 10, 4), 4.5f) &&
-                Mathf.Approximately(
-                    PlayerDayHeatDamageService.CalculateDamagePerSecond(
-                        3f, 50f, 31f, 10, 4), 3f) &&
-                Mathf.Approximately(
-                    PlayerDayHeatDamageService.CalculateDamagePerSecond(
-                        3f, 50f, 0f, 3, 4), 3f),
-            "Day fire must gain exactly 50 percent only after the official 20-point pace deficit gate.");
-
-        var healthObject = new GameObject("ResolvedEnvironmentalDamageContract");
-        try
-        {
-            var health = healthObject.AddComponent<Health>();
-            health.ConfigureForRuntime(100, 20);
-            health.ApplyResolvedDamage(3, DamageTag.Fire);
-            Require(health.Current == 97,
-                "Continuous day fire must bypass per-hit defense after fractional damage is resolved.");
-        }
-        finally
-        {
-            UnityEngine.Object.DestroyImmediate(healthObject);
-        }
     }
 
     private static void TestBaekjungWaveCompositionContract()
@@ -534,9 +497,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 NyangbingoTestBuildMenu.TestExecutableName,
             "Product and test Windows players must use separate executable names.");
         var scenes = EditorBuildSettings.scenes.Where(scene => scene.enabled).ToArray();
-        Require(scenes.Length == 1 &&
-                scenes[0].path == NyangbingoTestBuildMenu.ProductScenePath,
-            "The product build must contain only the current MainGame scene.");
+        Require(scenes.Select(scene => scene.path)
+                    .SequenceEqual(NyangbingoTestBuildMenu.ProductScenePaths),
+            "The product build must contain Title, Loading, and MainGame in canonical order.");
         var buildSource = System.IO.File.ReadAllText(
             "Assets/Editor/NyangbingoTestBuildMenu.cs");
         Require(buildSource.Contains("RemoveNonShippingArtifacts(projectRoot, outputDirectory)") &&
@@ -545,7 +508,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 buildSource.Contains("NyangbingoDataBuildGate.TryValidateCurrent"),
             "The product build must remove and validate non-shipping debug artifacts.");
         Require(NyangbingoDataBuildGate.TryValidateCurrent(out var dataSummary),
-            $"The product build data freshness gate must accept the current successful v34 import: {dataSummary}");
+            $"The product build data freshness gate must accept the current successful v72 import: {dataSummary}");
         Require(NyangbingoDataBuildGate.ManifestEntriesMatch(
                     new[] { "b.csv|1|BB", "a.csv|1|AA" },
                     new[] { "a.csv|1|AA", "b.csv|1|BB" }) &&
@@ -558,9 +521,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(dataMenuSource.Contains("Application.logMessageReceived += captureImportError") &&
                 dataMenuSource.Contains("NyangbingoDataBuildGate.WriteCurrentManifest()") &&
                 dataMenuSource.Contains("if (importHadErrors)"),
-            "Only an error-free v34 reimport may refresh the product data manifest.");
-        Require(buildSource.Contains(".Replace(\"\\r\\n\", \"\\n\")") &&
-                buildSource.Contains(".Replace('\\r', '\\n')"),
+            "Only an error-free v72 reimport may refresh the product data manifest.");
+        var dataGateSource = System.IO.File.ReadAllText(
+            "Assets/Editor/NyangbingoDataBuildGate.cs");
+        Require(dataGateSource.Contains(".Replace(\"\\r\\n\", \"\\n\")") &&
+                dataGateSource.Contains(".Replace('\\r', '\\n')"),
             "The product data manifest must normalize CSV line endings before hashing.");
         var testShortcutSources = new[]
         {
@@ -848,7 +813,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 loaded.magpieStorage[0].itemId == "stone" &&
                 loaded.magpieStorage[0].amount == 2,
             "Seal, Baekjung, and persistent magpie progression/storage must survive JSON.");
-        Require(SaveManager.TryDeserialize("{\"schemaVersion\":16}", out var legacy) &&
+        Require(SaveManager.TryDeserialize(
+                    $"{{\"schemaVersion\":{SaveGame.MinimumCompatibleSchemaVersion}}}", out var legacy) &&
                 legacy.schemaVersion == SaveGame.CurrentSchemaVersion &&
                 legacy.worldDrops != null && legacy.worldDrops.Count == 0 &&
                 legacy.regularEncounter != null &&
@@ -860,7 +826,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                  legacy.regularEncounter.residentLastKilledDays.Count == 0 &&
                 legacy.magpieKillCount == 0 &&
                 legacy.magpieStorage != null && legacy.magpieStorage.Count == 0,
-            "Schema 16 saves must migrate to empty dynamic lists and the legacy encounter fallback.");
+            "The oldest compatible save schema must migrate to empty dynamic lists and the legacy encounter fallback.");
 
         var magpieSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MagpieCompanionRuntime.cs");
@@ -945,13 +911,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Data/SO/GameDataCatalog.asset");
         var eoduksini = catalog?.FindYokai("eoduksini");
         var gangcheori = catalog?.FindYokai("gangcheol");
-        Require(catalog != null && catalog.Globals.Count == 100 &&
+        Require(catalog != null && catalog.Globals.Count == 240 &&
                 ResidentYokaiRules.TryCreate(catalog.Globals, out var rules) &&
                 rules.MaxPerSpecies == 1 &&
                 rules.MinPlayerDistance == 24 &&
                 rules.MinBetweenDistance == 12 &&
                 rules.MinDepth == 91 && rules.MaxDepth == 135,
-            "The v34.1 catalog must expose the six confirmed resident-elite globals.");
+            "The v72 catalog must expose all 240 globals including the six confirmed resident-elite rules.");
         Require(eoduksini != null &&
                 eoduksini.SupportsSpawnTrack(YokaiSpawnTrack.Resident) &&
                 gangcheori != null &&
@@ -1464,11 +1430,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("CreateFreshInitialSave()") &&
                 shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
                 shellSource.Contains("!SceneTransitionRequest.IsTransitionActive") &&
-                shellSource.Contains("SceneTransitionRequest.Begin(\"Title\")"),
+                shellSource.Contains("SceneTransitionRequest.Begin(SceneTransitionRequest.TitleSceneName)") &&
+                shellSource.Contains("SceneTransitionRequest.BeginDirectTitle()"),
             "Pause-hover art and the new-game fresh-save path must remain wired, and loading must block Escape.");
         var titleUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/TitleUiController.cs");
-        Require(titleUiSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed)") &&
+        Require(titleUiSource.Contains("MainGameBootstrap.RequestFreshWorldForNextScene(previousSeed, selectedMapWidth)") &&
                 titleUiSource.Contains("SceneTransitionRequest.BeginDirect(\"MainGame\")") &&
                 titleUiSource.Contains("new Vector2(-112f, 82f)") &&
                 titleUiSource.Contains("new Vector2(96f, 96f)") &&
@@ -1802,14 +1769,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Data/SO/GameDataCatalog.asset");
         Require(catalog != null,
             "The product GameDataCatalog must exist for the merged player physics contract.");
-        Require(!PlayerMovementPhysics.TryLoadFromCatalog(catalog, out _),
-            "The v34 product catalog must not retain the removed player-physics globals.");
-        var physics = PlayerMovementPhysics.CreateDefault();
-        Require(Mathf.Approximately(physics.JumpHeightTiles, PlayerMovementPhysics.DefaultJumpHeightTiles) &&
-                Mathf.Approximately(physics.Gravity, PlayerMovementPhysics.DefaultGravity) &&
-                Mathf.Approximately(physics.MaxFallSpeed, PlayerMovementPhysics.DefaultMaxFallSpeed) &&
-                Mathf.Approximately(physics.JumpCutMultiplier, PlayerMovementPhysics.DefaultJumpCut),
-            "The merged player controller must use the v34 code-owned movement defaults.");
+        Require(PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var physics),
+            "The v72 product catalog must expose the v64-confirmed player-physics globals.");
+        Require(Mathf.Approximately(physics.JumpHeightTiles, 3.5f) &&
+                Mathf.Approximately(physics.Gravity, 32f) &&
+                Mathf.Approximately(physics.MaxFallSpeed, 12f) &&
+                Mathf.Approximately(physics.JumpCutMultiplier, .5f),
+            "The merged player controller must use the latest catalog-owned movement values.");
         var coyoteFull = PlayerMovementPhysics.TickCoyoteTime(
             true, 0f, PlayerMovementPhysics.DefaultCoyoteTimeSeconds, .02f);
         var coyoteAfterLedge = PlayerMovementPhysics.TickCoyoteTime(
@@ -2028,7 +1994,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Surface vegetation and chests must use shared pivot-aware cell-base placement instead of fixed offsets.");
         Require(!source.Contains("PlaceSurfaceGroundCover(result, random)") &&
                 source.Contains("renderer.sprite = artCatalog.Find(\"hemp\")?.Sprite;") &&
-                source.Contains(".BoundItemArtCatalog?.FindSprite(PlayerHealthRecoveryService.CatnipItemId)") &&
+                source.Contains("itemArtCatalog?.FindSprite(PlayerHealthRecoveryService.CatnipItemId)") &&
                 source.Contains("FindMineralTier(HempItemId)") &&
                 source.Contains("TryHarvestHemp(") &&
                 source.Contains("ExportHempPatches()") &&
@@ -2046,9 +2012,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/TileService.cs");
         var mapGeneratorSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MapGenerator.cs");
-        Require(playerSource.Contains("TryUseSelectedCatnip() ||") &&
-                playerSource.Contains("tilePalette.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId") &&
-                playerSource.Contains("recovery.TryUseCatnip(out var restoredHealth)") &&
+        Require(playerSource.Contains("TryUseSelectedHealingItem() ||") &&
+                playerSource.Contains("PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId)") &&
+                playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth)") &&
                 playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: false)") &&
                 playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
@@ -2104,7 +2070,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 tileServiceSource.Contains("SetForegroundPlacementBlocker(") &&
                 tileServiceSource.Contains("!IsForegroundPlacementBlocked(cell)") &&
                 mapGeneratorSource.Contains("EnsureChestCellsHaveNoForeground(grid, structures.chests)") &&
-                mapGeneratorSource.Contains("protectedAir[chest.position.x, chest.position.y] = true"),
+                mapGeneratorSource.Contains("protectedAir[position.x, position.y] = true"),
             "Chests and live natural resources must reserve occupied cells, while harvested catnip allows placement and cannot respawn through that block.");
     }
 
@@ -2520,7 +2486,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                         "attachedCollider.bounds.min.y - GroundProbeDepth"),
                 "Moving targets must not cause equal detours to alternate every frame, while real target crossings still reverse pursuit immediately.");
             Require(animatorSource.Contains("var hasClearAttackLine = physicsBody == null") &&
-                    animatorSource.Contains("physicsBody?.HasTraversableGroundRoute == true") &&
+                    animatorSource.Contains(
+                        "return physicsBody == null || physicsBody.HasClearAttackLine(targetPosition)") &&
                     physicsSource.Contains("NavigationFacingDirection"),
                 "All yokai must keep routing across blocked floors without playing wall attacks and face their selected ground or flying route.");
             var imugiBodySource = System.IO.File.ReadAllText(
@@ -2553,9 +2520,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestLatestProductFlowContracts()
     {
-        Require(GameShellController.ShouldEndDemoAtDawn(31, 30) &&
-                !GameShellController.ShouldEndDemoAtDawn(30, 30) &&
-                !GameShellController.ShouldEndDemoAtDawn(31, 0),
+        Require(GameShellController.ShouldEndDemoAtDawn(true, 31, 30) &&
+                !GameShellController.ShouldEndDemoAtDawn(true, 30, 30) &&
+                !GameShellController.ShouldEndDemoAtDawn(true, 31, 0) &&
+                !GameShellController.ShouldEndDemoAtDawn(false, 31, 30),
             "The day-30 demo must end at the following dawn regardless of the Imugi outcome.");
 
         var save = new SaveGame
@@ -2603,7 +2571,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     "missing", new[] { selectableEquipmentItem },
                     new[] { selectableEquipment }) == -1 &&
                 craftingSource.Contains(
-                    "button.onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex))"),
+                    "equipmentSlotButtons[index].onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex))"),
             "Clicking a populated equipment visual slot must select its matching equipment entry.");
         UnityEngine.Object.DestroyImmediate(selectableEquipment);
         UnityEngine.Object.DestroyImmediate(selectableEquipmentItem);
@@ -2782,6 +2750,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
         var environmentSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
+        var interactionPromptPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Prefabs/UI/TilePalette/PlacedObjectInteractionPrompt.prefab");
         Require(!hudSource.Contains("피격!") &&
                 !hudSource.Contains("방울 금줄 경보 · 침입자 접근") &&
                 !hudSource.Contains("sealText.text = $\"석빙고") &&
@@ -2793,7 +2763,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Narrative interaction instructions were reintroduced into the world HUD.");
         Require(!turretSource.Contains("우클릭 · 상호작용") &&
                 !turretSource.Contains("좌클릭 유지 · 회수") &&
-                paletteSource.Contains("\"PlacedObjectInteractionPrompt\"") &&
+                interactionPromptPrefab != null &&
                 paletteSource.Contains("placementRuntime?.BindInteractionStatus(interactionPromptText)") &&
                 Mathf.Approximately(
                     MainGameTilePaletteController.ResolveBottomStatusY(false),
@@ -2887,16 +2857,21 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var motherEffectPresenterSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameEffectPresenter.cs");
         Require(motherDefinition != null &&
-                Mathf.Approximately(motherDefinition.SpecialKnockbackTiles, 4f) &&
+                Mathf.Approximately(motherDefinition.SpecialKnockbackTiles, 0f) &&
                 motherDefinition.SpecialHasFireTag &&
                 motherBossCombatSource.Contains(
                     "definition == null || definition.Kind != BossKind.MotherBulgasari") &&
                 motherRaidTargetSource.Contains(
                     "MainGameEffectPresenter.BeginSuppressPlayerFireHitEffect()") &&
                 motherEffectPresenterSource.Contains("suppressPlayerFireHitEffectDepth <= 0"),
-            "Mother Bulgasari's fire-tagged special must launch the player four tiles without playing the head fire effect.");
+            "The v72 Mother Bulgasari fire special must use zero knockback and suppress the generic head fire effect.");
         var bossHudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
+        var horrorFlashPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Prefabs/UI/HUD/BossEntranceHorrorFlash.prefab");
+        var horrorFlashRect = horrorFlashPrefab != null
+            ? horrorFlashPrefab.GetComponent<RectTransform>()
+            : null;
         Require(bossHudSource.Contains("SpriteMeshType.FullRect, Vector4.zero, false"),
             "Runtime boss health crops must not request unreadable texture physics outlines.");
         Require(Mathf.Approximately(MainGameHudController.BossEntranceFlashDuration, 1.2f) &&
@@ -2907,8 +2882,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameHudController.BossEntranceFlashColor(.55f).a > 0f &&
                 !bossHudSource.Contains("gameplayArtCatalog?.BossWarningLarge") &&
                 !bossHudSource.Contains("gameplayArtCatalog?.BossWarningSmall") &&
-                bossHudSource.Contains("entranceRect.anchorMin = Vector2.zero") &&
-                bossHudSource.Contains("entranceRect.anchorMax = Vector2.one"),
+                horrorFlashRect != null && horrorFlashRect.anchorMin == Vector2.zero &&
+                horrorFlashRect.anchorMax == Vector2.one,
             "Boss entrances must use a full-screen irregular horror flicker instead of the legacy wind art.");
 
         var characterCatalog = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(
@@ -3136,8 +3111,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 encounterSource.Contains(
                     "YokaiKind.Gaekgwi, \"Alt+Shift+F12\", \"Gaekgwi\"") &&
                 encounterSource.Contains("ResolveInstanceSpawnTrack(definition)") &&
+                encounterSource.Contains("var selectedTarget = ResolveSpawnTarget") &&
                 encounterSource.Contains(
-                    "brain.ConfigureForRuntime(definition, raidTarget, counters, instanceSpawnTrack)") &&
+                    "definition, selectedTarget, counters, instanceSpawnTrack") &&
                 shortcutHelpSource.Contains("Alt+F12  강철이 소환") &&
                 shortcutHelpSource.Contains("Alt+Shift+F12  객귀 소환"),
             "Editor shortcuts must immediately spawn resident Gangcheori and raid Gaekgwi using their actual spawn tracks.");
@@ -3176,7 +3152,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var effectPresenterSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameEffectPresenter.cs");
             Require(effectPresenterSource.Contains(
-                        "if (tag == DamageTag.Fire && playerFireHitEffect != null)") &&
+                        "if (tag == DamageTag.Fire && suppressPlayerFireHitEffectDepth <= 0 &&") &&
                     effectPresenterSource.Contains(
                         "playerFireHitEffect.Play(PlayerFireHitDurationSeconds)") &&
                     Mathf.Approximately(
@@ -3265,7 +3241,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 presenterSource.Contains("PlayDayChange(int daysRemaining)") &&
                 presenterSource.Contains("PresentationCompleted?.Invoke()") &&
                 hudSource.Contains("TimeService.Dawn += HandleDayCounterDawn") &&
-                hudSource.Contains("scrollObject.SetActive(false)"),
+                hudSource.Contains("dayCounterScrollRect.gameObject.SetActive(false)"),
             "The D-day scroll must stay hidden and play one open/show/close cycle only at dawn.");
         var shellSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");

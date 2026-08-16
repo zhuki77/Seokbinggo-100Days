@@ -71,6 +71,12 @@ namespace Nyangbingo.Debugging
                 Debug.LogError("[Nyangbingo] MapGeneratorTestHarness: WorldGenerationConfig가 비어 있습니다.");
                 return;
             }
+            if (catalog == null)
+            {
+                Debug.LogError("[Nyangbingo] MapGeneratorTestHarness: mineral-tiers.csv 경도 정본을 담은 " +
+                               "GameDataCatalog가 비어 있습니다.");
+                return;
+            }
 
             // "개발 A 보완 작업 명세서" §5: session.TimeService/TickDriver가 StartNewWorld 완료(=WorldLoaded
             // 발행) 시점에 이미 채워져 있어야 하므로, 세션을 만들기 전에 DayNightService/CentralTickDriver를
@@ -101,14 +107,12 @@ namespace Nyangbingo.Debugging
                 LogGenerationSummary(result);
                 BuildChestMarkers(result);
                 BindSealSystemToDebugViews();
-                if (catalog == null)
-                    Debug.LogWarning("[Nyangbingo] MapGeneratorTestHarness: catalog가 비어 있어 채굴/상자 보상 없이 파괴·설치만 동작합니다.");
                 FrameCamera(result.width, result.height);
             }
             else
             {
                 // Tilemap 없이도 맵 모양은 확인할 수 있어야 하므로, 세이브/상자 개봉 없이 텍스처 프리뷰만 그린다.
-                var generator = new MapGenerator(config);
+                var generator = new MapGenerator(config, catalog);
                 var result = generator.GenerateDetailed(seed);
                 LogGenerationSummary(result);
                 BuildPreviewSprite(result);

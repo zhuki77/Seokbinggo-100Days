@@ -11,6 +11,11 @@ using UnityEngine;
 namespace Nyangbingo.Yokai
 {
     public interface IYokaiTarget { Transform TargetTransform { get; } void DamageWall(float amount); }
+    public interface IYokaiStealthTarget { bool IsHiddenFromAggro { get; } }
+    public interface IYokaiInfiltrationTarget
+    {
+        bool TryRecordInfiltration(YokaiDefinition definition);
+    }
     public interface IYokaiCombatTarget { bool TryApplyContactDamage(int amount); }
     public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxSlots, int maxAmount); }
     public interface IYokaiTheftReceiptSource { IReadOnlyList<ItemAmount> TakeStolenItems(); }
@@ -74,6 +79,9 @@ namespace Nyangbingo.Yokai
         private float gaekgwiDashElapsed;
         private Vector2 gaekgwiDashDirection;
         private GangcheoriBreathController gangcheoriBreath;
+        private bool useAggroRadius;
+        private bool isAggroed;
+        private bool infiltrationRecorded;
         private SpriteRenderer[] pausedRenderers = System.Array.Empty<SpriteRenderer>();
         private Color[] pausedRendererColors = System.Array.Empty<Color>();
         public YokaiDefinition Definition => definition;
@@ -87,6 +95,9 @@ namespace Nyangbingo.Yokai
         public float FrostSlowRemaining => frostSlowRemaining;
         public float FrostSpeedMultiplier => CalculateFrostSpeedMultiplier(frostSlowFraction, frostSlowRemaining);
         public bool IsBossEncounterPaused => bossEncounterPaused;
+        public bool UsesAggroRadius => useAggroRadius;
+        public bool IsAggroed => isAggroed;
+        public bool HasRecordedInfiltration => infiltrationRecorded;
         public float GaekgwiCooldownRemaining => gaekgwiCooldownRemaining;
         public float GaekgwiTelegraphRemaining => gaekgwiTelegraphRemaining;
         public float GaekgwiDashRemaining => gaekgwiDashRemaining;
@@ -134,7 +145,8 @@ namespace Nyangbingo.Yokai
             if (state != State.Retreat && state != State.DawnFlee) state = State.Approach;
         }
         public void ConfigureForRuntime(YokaiDefinition value, IYokaiTarget targetValue,
-            IYokaiCounterSource counters = null, YokaiSpawnTrack instanceSpawnTrack = YokaiSpawnTrack.Raid)
+            IYokaiCounterSource counters = null, YokaiSpawnTrack instanceSpawnTrack = YokaiSpawnTrack.Raid,
+            bool gateByAggroRadius = false, bool startEngaged = true)
         {
             definition = value;
             target = targetValue;
@@ -161,6 +173,9 @@ namespace Nyangbingo.Yokai
             physicsBody = GetComponent<WorldMobPhysicsBody>();
             characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
             gangcheoriBreath = GetComponent<GangcheoriBreathController>();
+            useAggroRadius = gateByAggroRadius;
+            isAggroed = !gateByAggroRadius || startEngaged;
+            infiltrationRecorded = false;
             if (health != null)
             {
                 if (definition != null) health.ConfigureForRuntime(definition.HitPoints);
@@ -191,6 +206,10 @@ namespace Nyangbingo.Yokai
             record.gaekgwiTelegraphRemaining = gaekgwiTelegraphRemaining;
             record.gaekgwiDashRemaining = gaekgwiDashRemaining;
             record.gaekgwiDashDirection = gaekgwiDashDirection;
+            record.hasAggroState = true;
+            record.usesAggroRadius = useAggroRadius;
+            record.isAggroed = isAggroed;
+            record.infiltrationRecorded = infiltrationRecorded;
             record.stolenItems = GetComponent<YokaiLoot>()?.CaptureStolenItems() ??
                                  new List<InventorySlot>();
         }
@@ -244,6 +263,12 @@ namespace Nyangbingo.Yokai
             }
             else ResetGaekgwiPattern();
             hasFledOffscreen = false;
+            if (record.hasAggroState)
+            {
+                useAggroRadius = record.usesAggroRadius;
+                isAggroed = record.isAggroed || !useAggroRadius;
+                infiltrationRecorded = record.infiltrationRecorded;
+            }
             SetBossEncounterPaused(false);
             SetAnimationMoving(state != State.AttackWall);
             if (definition != null && definition.Kind == YokaiKind.Gaekgwi)
@@ -393,6 +418,13 @@ namespace Nyangbingo.Yokai
                 return;
             }
             if (target == null || target.TargetTransform == null) return;
+            if (useAggroRadius && !isAggroed)
+            {
+                if (target is IYokaiStealthTarget stealth && stealth.IsHiddenFromAggro) return;
+                var detectionOffset = target.TargetTransform.position - transform.position;
+                if (!IsWithinAggroRadius(detectionOffset, definition.AggroRadius)) return;
+                isAggroed = true;
+            }
             var counters = counterSource ?? target as IYokaiCounterSource;
             if (sieveCooldownRemaining > 0f)
             {
@@ -567,6 +599,13 @@ namespace Nyangbingo.Yokai
                         }
                         break;
                     }
+                    if (!infiltrationRecorded && target is IYokaiInfiltrationTarget infiltration &&
+                        infiltration.TryRecordInfiltration(definition))
+                    {
+                        infiltrationRecorded = true;
+                        BeginRetreat();
+                        break;
+                    }
                     var wall = target as IWallMaterialTarget;
                     var legacyWallDamagePerSecond = definition.WallDamageFor(
                         wall?.WallMaterial ?? YokaiWallMaterial.Default);
@@ -631,6 +670,13 @@ namespace Nyangbingo.Yokai
             var offset = targetPosition - transform.position;
             if (!IsFinite(offset) || !IsWithinAttackRange(offset.magnitude, attackRange)) return false;
             return physicsBody == null || physicsBody.HasClearAttackLine(targetPosition);
+        }
+
+        public static bool IsWithinAggroRadius(Vector3 targetOffset, float radius)
+        {
+            if (!IsFinite(targetOffset) || radius <= 0f || float.IsNaN(radius) ||
+                float.IsInfinity(radius)) return false;
+            return targetOffset.sqrMagnitude <= radius * radius;
         }
 
         private float MoveBy(Vector3 displacement)

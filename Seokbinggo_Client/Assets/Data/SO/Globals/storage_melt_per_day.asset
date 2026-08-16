@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: storage_melt_per_day
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: storage_melt_per_day
+  value: 0.25
+  unit: "\uBE44\uC728/\uC77C"
+  note: "[\uAC00\uC548] \uBE59\uACB0 \uBBF8\uB2EC \uC2DC \uC5BC\uC74C\uB958 \uAC1C\uC218
+    \uD558\uB8E8 25% \uC18C\uBA78"

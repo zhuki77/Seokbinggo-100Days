@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: frostclaw_gauntlet
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
   id: frostclaw_gauntlet
-  tier: W2
+  tier: 4
   hasBasicAttack: 1
   attackDamage: 60
   attacksPerSecond: 1.5
@@ -21,7 +21,7 @@ MonoBehaviour:
   knockbackTiles: 1.5
   rangeTiles: 2
   arcDegrees: 120
-  multiTarget: 1
+  maxTargets: 1
   hitsWalls: 1
   note: "\uAC15\uCCA0\uC774 \uC5ED\uB9B0 \uD544\uC694 \u2014 30\uC77C\uCC28 \uBC24
-    \uC774\uD6C4 \uC5D4\uB4DC \uBB34\uAE30"
+    \uC774\uD6C4 \uC5D4\uB4DC \uBB34\uAE30 [v39 \uD2F0\uC5B4 \uC815\uADDC\uD654]"

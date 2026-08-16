@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: core_range_w
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: core_range_w
+  value: 8
+  unit: "\uD0C0\uC77C"
+  note: "\uC5BC\uC74C \uC800\uC7A5\uACE0(\uCF54\uC5B4) \uB0C9\uAC01 \uBC94\uC704
+    \uAC00\uB85C \u2014 \uC624\uB108 \uC9C0\uC2DC 8x10"

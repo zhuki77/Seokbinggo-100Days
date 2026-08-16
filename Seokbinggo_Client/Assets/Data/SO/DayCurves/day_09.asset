@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.DayCurveDefinition
   day: 9
   heatStage: 1
-  dayFireDamagePerSecond: 1.5
+  dayFireDamagePerSecond: 0
   nightYokaiCount: 3
   yokaiWallDamage: 10
   paceSealPercent: 30

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: singijeon_sondae
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: singijeon_sondae
+  station: 3
+  ingredients:
+  - item: {fileID: 11400000, guid: 844734ac999e3f14496b24d3b3b1e921, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
+    amount: 2
+  output:
+    item: {fileID: 11400000, guid: 646c7035474bfbf43905142c78f2f905, type: 2}
+    amount: 1
+  durationSeconds: 45
+  type: 17
+  mvpScope: 2
+  note: "\uD65C T3 \uC9C4\uD654 \u2014 \uC6D0\uBCF8 \uC18C\uBAA8(\uC815\uBCF8 6-14)\xB7DPS28"

@@ -6,7 +6,18 @@ using Nyangbingo.Data;
 namespace Nyangbingo.Inventory
 {
     [Serializable]
-    public struct InventorySlot { public string itemId; public int amount; }
+    public struct InventorySlot
+    {
+        public string itemId;
+        public int amount;
+        /// <summary>v72 보관 상함이 적용된 스택만 true. 구 세이브의 false/0은 신선도 100%로 해석한다.</summary>
+        public bool hasStorageCondition;
+        [UnityEngine.Range(0f, 1f)] public float storageCondition01;
+        /// <summary>얼음류 25%/일을 정수 개수에 정확히 누적하기 위한 0~1 미만 잔여량.</summary>
+        [UnityEngine.Range(0f, 1f)] public float storageMeltRemainder;
+
+        public float EffectiveStorageCondition => hasStorageCondition ? storageCondition01 : 1f;
+    }
 
     public sealed class Inventory
     {
@@ -53,15 +64,22 @@ namespace Nyangbingo.Inventory
         public bool Has(string itemId, int amount) => amount > 0 && Count(itemId) >= amount;
 
         public bool TryAdd(string itemId, int amount)
+            => TryAddWithStorageState(itemId, amount, false, 1f, 0f);
+
+        public bool TryAddWithStorageState(string itemId, int amount, bool hasCondition,
+            float condition01, float meltRemainder)
         {
             var item = findItem(itemId);
-            if (item == null || item.MaxStack <= 0 || amount <= 0 || CapacityFor(itemId, item.MaxStack) < amount)
+            if (item == null || item.MaxStack <= 0 || amount <= 0 ||
+                !IsValidStorageState(hasCondition, condition01, meltRemainder) ||
+                CapacityFor(itemId, item.MaxStack, hasCondition, condition01, meltRemainder) < amount)
                 return false;
             var firstAutoFillSlot = FirstAutoFillSlot(itemId);
             for (var i = firstAutoFillSlot; i < slots.Count && amount > 0; i++)
             {
                 var slot = slots[i];
-                if (slot.itemId != itemId || slot.amount >= item.MaxStack) continue;
+                if (slot.itemId != itemId || slot.amount >= item.MaxStack ||
+                    !HasSameStorageState(slot, hasCondition, condition01, meltRemainder)) continue;
                 var added = Math.Min(amount, item.MaxStack - slot.amount);
                 slot.amount += added; amount -= added; slots[i] = slot;
             }
@@ -69,7 +87,15 @@ namespace Nyangbingo.Inventory
             {
                 if (!string.IsNullOrEmpty(slots[i].itemId)) continue;
                 var added = Math.Min(amount, item.MaxStack);
-                slots[i] = new InventorySlot { itemId = itemId, amount = added }; amount -= added;
+                slots[i] = new InventorySlot
+                {
+                    itemId = itemId,
+                    amount = added,
+                    hasStorageCondition = hasCondition,
+                    storageCondition01 = hasCondition ? condition01 : 0f,
+                    storageMeltRemainder = meltRemainder
+                };
+                amount -= added;
             }
             Changed?.Invoke(); return true;
         }
@@ -81,9 +107,26 @@ namespace Nyangbingo.Inventory
             {
                 var slot = slots[i]; if (slot.itemId != itemId) continue;
                 var removed = Math.Min(amount, slot.amount); slot.amount -= removed; amount -= removed;
-                if (slot.amount == 0) slot.itemId = string.Empty; slots[i] = slot;
+                if (slot.amount == 0) slot = default; slots[i] = slot;
             }
             Changed?.Invoke(); return true;
+        }
+
+        public bool TryRemoveOneWithStorageCondition(string itemId, out float condition01)
+        {
+            condition01 = 1f;
+            if (string.IsNullOrWhiteSpace(itemId)) return false;
+            for (var i = slots.Count - 1; i >= 0; i--)
+            {
+                var slot = slots[i];
+                if (slot.itemId != itemId || slot.amount <= 0) continue;
+                condition01 = slot.EffectiveStorageCondition;
+                slot.amount--;
+                slots[i] = slot.amount > 0 ? slot : default;
+                Changed?.Invoke();
+                return true;
+            }
+            return false;
         }
 
         public bool TryRemoveFromOccupiedSlots(int maximumSlots, int maximumAmount,
@@ -104,7 +147,14 @@ namespace Nyangbingo.Inventory
                 candidates.RemoveAt(candidateIndex);
                 var slot = slots[index];
                 var removed = Math.Min(slot.amount, maximumAmount - removedAmount);
-                removedStacks.Add(new InventorySlot { itemId = slot.itemId, amount = removed });
+                removedStacks.Add(new InventorySlot
+                {
+                    itemId = slot.itemId,
+                    amount = removed,
+                    hasStorageCondition = slot.hasStorageCondition,
+                    storageCondition01 = slot.storageCondition01,
+                    storageMeltRemainder = slot.storageMeltRemainder
+                });
                 slot.amount -= removed;
                 removedAmount += removed;
                 if (slot.amount <= 0) slot = default;
@@ -137,7 +187,10 @@ namespace Nyangbingo.Inventory
             if (target == null || ReferenceEquals(this, target) || slotIndex < 0 || slotIndex >= slots.Count)
                 return false;
             var slot = slots[slotIndex];
-            if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 || !target.TryAdd(slot.itemId, slot.amount))
+            if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 ||
+                !target.TryAddWithStorageState(slot.itemId, slot.amount,
+                    slot.hasStorageCondition, slot.EffectiveStorageCondition,
+                    slot.storageMeltRemainder))
                 return false;
             slots[slotIndex] = default;
             Changed?.Invoke();
@@ -167,13 +220,16 @@ namespace Nyangbingo.Inventory
                 if (candidate.Count >= Capacity) return false;
                 if (string.IsNullOrEmpty(slot.itemId))
                 {
-                    if (slot.amount != 0) return false;
+                    if (slot.amount != 0 || slot.hasStorageCondition ||
+                        slot.storageCondition01 != 0f || slot.storageMeltRemainder != 0f) return false;
                     candidate.Add(default);
                     continue;
                 }
 
                 var item = findItem(slot.itemId);
-                if (item == null || slot.amount <= 0 || slot.amount > item.MaxStack) return false;
+                if (item == null || slot.amount <= 0 || slot.amount > item.MaxStack ||
+                    !IsValidStorageState(slot.hasStorageCondition,
+                        slot.EffectiveStorageCondition, slot.storageMeltRemainder)) return false;
                 candidate.Add(slot);
             }
 
@@ -182,13 +238,16 @@ namespace Nyangbingo.Inventory
             return true;
         }
 
-        private long CapacityFor(string itemId, int maxStack)
+        private long CapacityFor(string itemId, int maxStack, bool hasCondition,
+            float condition01, float meltRemainder)
         {
             long capacity = 0;
             for (var index = FirstAutoFillSlot(itemId); index < slots.Count; index++)
             {
                 var slot = slots[index];
-                if (slot.itemId == itemId) capacity += Math.Max(0L, (long)maxStack - slot.amount);
+                if (slot.itemId == itemId &&
+                    HasSameStorageState(slot, hasCondition, condition01, meltRemainder))
+                    capacity += Math.Max(0L, (long)maxStack - slot.amount);
                 else if (string.IsNullOrEmpty(slot.itemId)) capacity += maxStack;
             }
             return capacity;
@@ -198,6 +257,19 @@ namespace Nyangbingo.Inventory
             reservedAutoFillSlotCount == 0 || canAutoFillReservedSlot(itemId)
                 ? 0
                 : reservedAutoFillSlotCount;
+
+        private static bool IsValidStorageState(bool hasCondition, float condition01,
+            float meltRemainder) =>
+            !float.IsNaN(condition01) && !float.IsInfinity(condition01) &&
+            !float.IsNaN(meltRemainder) && !float.IsInfinity(meltRemainder) &&
+            (!hasCondition || condition01 >= 0f && condition01 <= 1f) &&
+            meltRemainder >= 0f && meltRemainder < 1f;
+
+        private static bool HasSameStorageState(InventorySlot slot, bool hasCondition,
+            float condition01, float meltRemainder) =>
+            slot.hasStorageCondition == hasCondition &&
+            (!hasCondition || Math.Abs(slot.storageCondition01 - condition01) <= .0001f) &&
+            Math.Abs(slot.storageMeltRemainder - meltRemainder) <= .0001f;
     }
 
     [Serializable]

@@ -31,8 +31,10 @@ namespace Nyangbingo.Save
         [Range(0, SaveManager.SlotCount - 1)][SerializeField] private int autoSaveSlot;
         [SerializeField] private bool validateRoundTripInEditor = true;
         private MainGameProgressTracker progressTracker;
+        private bool isOfficialDemoSession;
 
         public bool IsInitialized { get; private set; }
+        public bool IsOfficialDemoSession => isOfficialDemoSession;
         public MainGameProgressTracker ProgressTracker => progressTracker;
 
         public void ConfigureForScene(
@@ -169,7 +171,7 @@ namespace Nyangbingo.Save
         public SaveGame CaptureSnapshot()
         {
             if (!IsInitialized && !Initialize()) return CaptureFailed("initialization");
-            var save = new SaveGame();
+            var save = new SaveGame { isOfficialDemo = isOfficialDemoSession };
             if (!bootstrap.Session.CaptureSnapshot(save)) return CaptureFailed("world session");
             save.doorStates = bootstrap.TileService.ExportDoorStates();
 
@@ -186,7 +188,13 @@ namespace Nyangbingo.Save
                 .ToList();
             save.seokbinggoStage = runtimeServices.Seokbinggo?.Stage ?? 0;
             save.altarClears = runtimeServices.FrostSpread?.AltarClears ?? 0;
-            save.heatStage = ResolveCapturedHeatStage();
+            save.heatStage = runtimeServices.HeatStage?.Current ?? 1;
+            save.invasionTemperatureRise = runtimeServices.Invasion?.TemperatureRiseCelsius ?? 0f;
+            save.invasionRecoolAvailableDay = runtimeServices.Invasion?.RecoolAvailableDay ?? 0;
+            save.invasionLastInfiltrationDay = runtimeServices.Invasion?.LastInfiltrationDay ?? 0;
+            save.talismanStrideRemaining = runtimeServices.Talismans?.StrideRemaining ?? 0f;
+            save.talismanHideRemaining = runtimeServices.Talismans?.HideRemaining ?? 0f;
+            save.talismanFrostRemaining = runtimeServices.Talismans?.FrostRemaining ?? 0f;
             save.gimmickWeaponsGranted = runtimeServices.GimmickWeapons?.Export() ?? new List<string>();
             save.frostPendingCells = runtimeServices.FrostSpread?.ExportPendingCells() ?? new List<string>();
             save.coolingSources = environmentState.ExportCoolingSources();
@@ -240,14 +248,6 @@ namespace Nyangbingo.Save
         {
             Debug.LogError($"[Nyangbingo] MainGameSaveCoordinator: save capture failed at stage '{stage}'.");
             return null;
-        }
-
-        private int ResolveCapturedHeatStage()
-        {
-            var curve = timeService?.CurrentDayCurve;
-            if (curve != null) return Mathf.Clamp(curve.HeatStage, 1, 3);
-            var day = timeService != null ? timeService.Day : 1;
-            return HeatStagePresentation.ResolveForDay(day);
         }
 
         public bool SaveNow(int slot)
@@ -336,10 +336,20 @@ namespace Nyangbingo.Save
                 RestoreStage("progress tracker", () => progressTracker.RestoreFrom(save)) &&
                 RestoreStage("player temperature", () => !save.playerState.hasTemperature ||
                     runtimeServices.PlayerTemperature.Restore(save.playerState.temperature)) &&
+                RestoreStage("talisman effects", () => runtimeServices.Talismans != null &&
+                    runtimeServices.Talismans.Restore(
+                        save.talismanStrideRemaining,
+                        save.talismanHideRemaining,
+                        save.talismanFrostRemaining)) &&
                 RestoreStage("death tear pouches", () =>
                     runtimeServices.DeathTearPouches.Restore(save.deathTearPouches)) &&
                 RestoreStage("world drops", () => RestoreWorldDrops(save.worldDrops)) &&
                 RestoreStage("seokbinggo stage", () => RestoreSeokbinggoStage(save)) &&
+                RestoreStage("invasion temperature", () =>
+                    runtimeServices.Invasion != null && runtimeServices.Invasion.Restore(
+                        save.invasionTemperatureRise,
+                        save.invasionRecoolAvailableDay,
+                        save.invasionLastInfiltrationDay)) &&
                 RestoreStage("catnip patches", () =>
                     worldDecorationRenderer.RestoreCatnipPatches(save.catnipPatches)) &&
                 RestoreStage("hemp patches", () =>
@@ -348,9 +358,9 @@ namespace Nyangbingo.Save
                     worldDecorationRenderer.RestoreHarvestedTrees(save.harvestedTrees)) &&
                 RestoreStage("harvested rebar", () =>
                     worldDecorationRenderer.RestoreHarvestedRebar(save.harvestedRebar)) &&
-                RestoreStage("encounters", () => encounterCoordinator.RestoreProgress(save)) &&
                 RestoreStage("placed objects", () =>
                     environmentState.TryRestorePlacedObjects(save.placedObjectRecords, save.coolingSources)) &&
+                RestoreStage("encounters", () => encounterCoordinator.RestoreProgress(save)) &&
                 RestoreStage("magpie companion", () =>
                     runtimeServices.MagpieCompanion == null ||
                     runtimeServices.MagpieCompanion.Restore(save)) &&
@@ -360,6 +370,7 @@ namespace Nyangbingo.Save
                          .Where(record => record.definitionId == Nyangbingo.Inventory.JangdokStorageRuntime.DefinitionId)
                          .Select(record => record.objectId))) &&
                 RestoreStage("turrets", () => turretRuntime.RestoreProgress(save));
+                if (succeeded) isOfficialDemoSession = save.isOfficialDemo;
                 return succeeded;
             }
             finally
@@ -442,16 +453,17 @@ namespace Nyangbingo.Save
             var frost = runtimeServices.FrostSpread;
             if (frost != null && save != null)
             {
-                frost.SetAltarClears(save.altarClears);
+                if (!frost.RestoreAltarClears(save.altarClears)) return false;
                 frost.RestorePendingCells(save.frostPendingCells);
                 var tiles = bootstrap?.TileService;
                 if (tiles != null)
                 {
                     tiles.FrostSpread = frost;
-                    if (save.altarClears >= 3)
-                        FrostSpreadService.UnsealBedrockLayer(tiles);
                 }
             }
+
+            if (runtimeServices?.HeatStage == null ||
+                !runtimeServices.HeatStage.Restore(save?.heatStage ?? 1)) return false;
 
             runtimeServices.GimmickWeapons?.Restore(save?.gimmickWeaponsGranted);
             return true;

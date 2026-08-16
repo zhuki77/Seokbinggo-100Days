@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: hapjukseon
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CombatProfileDefinition
   id: hapjukseon
-  tier: U1
+  tier: 1
   hasBasicAttack: 0
   attackDamage: 0
   attacksPerSecond: 0
@@ -21,7 +21,8 @@ MonoBehaviour:
   knockbackTiles: 2
   rangeTiles: 2
   arcDegrees: 90
-  multiTarget: 1
+  maxTargets: 1
   hitsWalls: 0
   note: "\uAE30\uBCF8 \uACF5\uACA9 \uC5C6\uC74C \u2014 \uC561\uD2F0\uBE0C \uC804\uC6A9:
-    \uBC00\uCE58\uAE30 \uB3800\xB7\uB109\uBC312\uD0C0\uC77C\xB7\uCFE83\uCD08\xB7\uC804\uBC292\uD0C0\uC77C(6-13)"
+    \uBC00\uCE58\uAE30 \uB3800\xB7\uB109\uBC312\uD0C0\uC77C\xB7\uCFE83\uCD08\xB7\uC804\uBC292\uD0C0\uC77C(6-13)
+    [v39 \uD2F0\uC5B4 \uC815\uADDC\uD654]"

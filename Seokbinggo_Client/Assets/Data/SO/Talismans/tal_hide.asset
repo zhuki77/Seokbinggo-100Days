@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27db6f288038a534aaf3c090fb3f8a77, type: 3}
+  m_Name: tal_hide
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TalismanDefinition
+  id: tal_hide
+  displayName: "\uC740\uC2E0\uBD80"
+  form: "\uC18C\uBAA8\uD488"
+  stationId: workbench
+  materials:
+  - itemId: hemp_stalk
+    amount: 2
+  - itemId: yokai_tear
+    amount: 1
+  effect: "\uC694\uAD34 \uC778\uC2DD \uBC94\uC704 \uBB34\uC2DC \xB7 30\uCD08"
+  rationale: "v63 \uC2E0\uC124 \uC778\uC2DD \uBC94\uC704 \uC2DC\uC2A4\uD15C\uC758
+    \uCE74\uC6B4\uD130"
+  note: "\uBCBD \uACF5\uACA9\uD615(\uBC29\uB9DD\uC774\xB7\uBD88\uAC00\uC0AC\uB9AC)\uC5D0\uB294
+    \uBB34\uD6A8 \u2014 \uADF8\uB4E4\uC740 \uC778\uC2DD\uACFC \uBB34\uAD00\uD558\uAC8C
+    \uAE30\uC9C0\uB85C \uC628\uB2E4"

@@ -63,17 +63,18 @@ public static class NyangbingoP4RegressionTests
             Require(InsulationPanels.TierForDefinition("clay_plaster") == 2, "clay plaster tier 2");
             Require(InsulationPanels.TierForDefinition("straw_insul") == 1, "straw insul tier 1");
 
-            var band1 = FrostSpreadService.BandForClear(1);
-            Require(band1.MinDepth == 91 && band1.MaxDepth == 135, "BandForClear(1) deep band");
-            var band2 = FrostSpreadService.BandForClear(2);
-            Require(band2.MinDepth == 46 && band2.MaxDepth == 135, "BandForClear(2) mid band");
-            var band3 = FrostSpreadService.BandForClear(3);
-            Require(band3.MinDepth == 136 && band3.MaxDepth == 140, "BandForClear(3) bedrock band");
-            FrostSpreadService.UnsealBedrockLayer(null);
+            Require(Mathf.Approximately(FrostSpreadService.CalculateBandFromNorm(1), .9f),
+                "one clear reveals deepest 10 percent");
+            Require(Mathf.Approximately(FrostSpreadService.CalculateBandFromNorm(5), .5f),
+                "five clears reveal lower half");
+            Require(Mathf.Approximately(FrostSpreadService.CalculateBandFromNorm(10), 0f),
+                "ten clears reveal all underground bands");
+            Require(FrostSpreadService.IsInFrostBand(.9f, 1) &&
+                    !FrostSpreadService.IsInFrostBand(.89f, 1), "normalized frost boundary");
 
             var frost = new FrostSpreadService();
-            frost.OnAltarClear(1);
-            Require(frost.AltarClears == 1, "OnAltarClear sets stage 1");
+            frost.OnAltarBossClear();
+            Require(frost.AltarClears == 1, "altar boss clear increments once");
             frost.MarkPending(new Vector2Int(3, 7));
             Require(frost.IsPending(new Vector2Int(3, 7)), "pending cell marked");
             Require(frost.TryLazyReveal(new Vector2Int(3, 7), true, out var ore) &&

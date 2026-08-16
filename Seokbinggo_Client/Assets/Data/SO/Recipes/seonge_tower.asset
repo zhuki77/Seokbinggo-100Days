@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: seonge_tower
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: seonge_tower
+  station: 5
+  ingredients:
+  - item: {fileID: 11400000, guid: ec12767decdbf464c9ba2d98fab9a07a, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 7fc3fd8a2d79c06418cb4c866a3bada8, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 6c2f0c29ab8fcbc47ad799634db43c1c, type: 2}
+    amount: 3
+  output:
+    item: {fileID: 11400000, guid: c7fb0e698a8f0764fa09268ae3428bea, type: 2}
+    amount: 1
+  durationSeconds: 60
+  type: 14
+  mvpScope: 2
+  note: "\uD130\uB81B T4 \uC9C4\uD654 \u2014 \uC6D0\uBCF8 \uC18C\uBAA8(\uC815\uBCF8
+    6-14)"

@@ -9,7 +9,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 제품 빌드가 마지막으로 성공한 v34 CSV 임포트와 동일한 데이터에서 만들어지는지 검증한다.
+/// 제품 빌드가 마지막으로 성공한 v72 CSV 임포트와 동일한 데이터에서 만들어지는지 검증한다.
 /// CSV 원본이 바뀌거나 생성된 카탈로그가 불완전하면 재임포트 전까지 제품 빌드를 차단한다.
 /// </summary>
 public static class NyangbingoDataBuildGate
@@ -43,7 +43,7 @@ public static class NyangbingoDataBuildGate
                 throw new InvalidDataException(
                     "CSV가 마지막 성공 임포트 상태와 다릅니다. " +
                     $"기존/변경 {JoinOrNone(missingOrChanged)}; 현재/변경 {JoinOrNone(newOrChanged)}. " +
-                    "Nyangbingo/Reimport v34 Data Bundle을 먼저 실행하세요.");
+                    "Nyangbingo/Reimport v72 Data Bundle을 먼저 실행하세요.");
             }
 
             ValidateGeneratedCatalog();
@@ -108,7 +108,7 @@ public static class NyangbingoDataBuildGate
         if (!File.Exists(path))
             throw new FileNotFoundException(
                 "제품 데이터 임포트 기록이 없습니다. " +
-                "Nyangbingo/Reimport v34 Data Bundle을 먼저 실행하세요.",
+                "Nyangbingo/Reimport v72 Data Bundle을 먼저 실행하세요.",
                 path);
         var lines = File.ReadAllLines(path, Encoding.UTF8);
         if (lines.Length == 0 ||
@@ -163,26 +163,38 @@ public static class NyangbingoDataBuildGate
             ["yokai"] = catalog.Yokai.Count,
             ["bosses"] = catalog.Bosses.Count,
             ["chests"] = catalog.Chests.Count,
-            ["day events"] = catalog.DayEvents.Count
+            ["day events"] = catalog.DayEvents.Count,
+            ["zones"] = catalog.Zones.Count,
+            ["terrain spawns"] = catalog.TerrainSpawns.Count,
+            ["talismans"] = catalog.Talismans.Count,
+            ["codex entries"] = catalog.CodexEntries.Count,
+            ["traits"] = catalog.Traits.Count,
+            ["crops"] = catalog.Crops.Count
         };
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["items"] = 86,
-            ["recipes"] = 53,
-            ["modules"] = 5,
-            ["mineral tiers"] = 12,
+            ["items"] = 174,
+            ["recipes"] = 95,
+            ["modules"] = 11,
+            ["mineral tiers"] = 15,
             ["seal rules"] = 23,
             ["ID migrations"] = 26,
             ["day curves"] = 30,
-            ["globals"] = 100,
+            ["globals"] = 240,
             ["smelting"] = 3,
-            ["equipment"] = 15,
+            ["equipment"] = 44,
             ["utilities"] = 2,
-            ["combat profiles"] = 7,
+            ["combat profiles"] = 18,
             ["yokai"] = 7,
-            ["bosses"] = 3,
+            ["bosses"] = 10,
             ["chests"] = 4,
-            ["day events"] = 1
+            ["day events"] = 1,
+            ["zones"] = 10,
+            ["terrain spawns"] = 70,
+            ["talismans"] = 5,
+            ["codex entries"] = 17,
+            ["traits"] = 4,
+            ["crops"] = 10
         };
         var mismatches = expected
             .Where(pair => !actual.TryGetValue(pair.Key, out var count) || count != pair.Value)
@@ -194,7 +206,7 @@ public static class NyangbingoDataBuildGate
             .ToArray();
         if (mismatches.Length > 0)
             throw new InvalidDataException(
-                $"Generated v34.1 catalog count mismatch: {string.Join(", ", mismatches)}.");
+                $"Generated v72 catalog count mismatch: {string.Join(", ", mismatches)}.");
     }
 
     private static string ComputeSha256(string path)

@@ -30,3 +30,6 @@ MonoBehaviour:
   verbId: IncreaseVisionDeep
   usageLimitPerDay: 0
   activationCondition: Deep
+  hasColdTolerance: 0
+  coldToleranceC: 0
+  coldNote:
