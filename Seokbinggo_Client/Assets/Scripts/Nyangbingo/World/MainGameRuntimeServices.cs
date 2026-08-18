@@ -43,6 +43,7 @@ namespace Nyangbingo.World
         public CraftingProcess CraftingProcess { get; private set; }
         public UtilityService UtilityService { get; private set; }
         public EquipmentSystem EquipmentSystem { get; private set; }
+        public EquipmentColdPenaltyRules EquipmentColdPenalty { get; private set; }
         public EquipmentCollection EquipmentCollection { get; private set; }
         public ActiveSlotSystem ActiveSlot { get; private set; }
         public PortableLanternRuntime PortableLantern { get; private set; }
@@ -136,6 +137,12 @@ namespace Nyangbingo.World
             CraftingProcess = new CraftingProcess(CraftingService);
             UtilityService = new UtilityService(PlayerInventory);
             EquipmentSystem = new EquipmentSystem();
+            if (!EquipmentColdPenaltyRules.TryCreate(gameDataCatalog, out var equipmentColdPenalty))
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: v74 equipment cold-penalty globals are invalid.");
+                return false;
+            }
+            EquipmentColdPenalty = equipmentColdPenalty;
             EquipmentCollection = new EquipmentCollection(gameDataCatalog.FindEquipment);
             ActiveSlot = new ActiveSlotSystem(PlayerInventory, gameDataCatalog.FindItem);
             var lanternRadiusDefinition = gameDataCatalog.FindGlobal(GlobalKeys.PortableLanternRadius);
@@ -221,6 +228,11 @@ namespace Nyangbingo.World
             }
             Seokbinggo = new SeokbinggoUpgradeService(gameDataCatalog, () => PlayerInventory);
             FrostSpread = new FrostSpreadService(gameDataCatalog);
+            if (!FrostSpread.EndingConfigurationValid)
+            {
+                Debug.LogError("[Nyangbingo] MainGameRuntimeServices: v75 gate-ending globals are invalid.");
+                return false;
+            }
             GimmickWeapons = new GimmickWeaponProgress(gameDataCatalog.FindItem);
             FrostSpread.FirstFrostRevealed += HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd += HandleGimmickBaekjungSurvived;
@@ -412,6 +424,7 @@ namespace Nyangbingo.World
             Invasion = null;
             Bed = null;
             HeatStage = null;
+            EquipmentColdPenalty = null;
             GimmickWeapons = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
@@ -441,9 +454,8 @@ namespace Nyangbingo.World
         {
             HeatStage?.OnNamedKill(definition?.Id);
             GimmickWeapons?.NotifyBossDefeated(definition);
-            if (definition == null || FrostSpread == null ||
-                !(definition.RequiresDeepAltar || definition.SummonStation == CraftingStation.IceAnvil)) return;
-            FrostSpread.OnAltarBossClear(bootstrap?.TileService);
+            if (definition == null || FrostSpread == null) return;
+            FrostSpread.OnAltarBossClear(definition.Id, bootstrap?.TileService);
         }
 
         private void HandleRecipeUnlockYokaiKilled(YokaiDefinition definition)

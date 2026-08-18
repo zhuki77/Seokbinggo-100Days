@@ -13,18 +13,15 @@ MonoBehaviour:
   m_Name: seokbinggo_s2
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ModuleDefinition
   id: seokbinggo_s2
-  displayName: "\uC11D\uBE59\uACE0 2\uB2E8\uACC4"
-  item: {fileID: 11400000, guid: bd428b0b7cae3484abcab7b0754e7c09, type: 2}
-  role: "\uC11D\uBE59\uACE0 \uC2B9\uAE09\xB7\uD130\uB81B \uC2AC\uB86F2 (kit \uC624\uBA74
-    materials \uB36E\uC5B4\uC4F0\uAE30)"
+  displayName: "\uC11D\uBE59\uACE0 2\uB2E8 \uD1A0\uAD74 \uC11D\uBE59\uACE0"
+  item: {fileID: 0}
+  role: "\uD654\uB85C\xB7\uC7A5\uB3C5\xB7\uB0C9\uAE30\uC6D0 \uC0C1\uD55C 50%"
   materials:
   - item: {fileID: 11400000, guid: 2fb77bca93d4e9a42874825576ffcd9d, type: 2}
-    amount: 25
-  - item: {fileID: 11400000, guid: 8a0f12f13c8cd5b4b93c78c17d4ec5ee, type: 2}
     amount: 20
+  - item: {fileID: 11400000, guid: 6eafd891183383d40b146faf9d5b99c9, type: 2}
+    amount: 12
   - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
     amount: 2
-  - item: {fileID: 11400000, guid: ddc78b50168b1854f9b73807b3594b6b, type: 2}
-    amount: 3
-  buildTimeSeconds: 45
+  buildTimeSeconds: 60
   priority: 0

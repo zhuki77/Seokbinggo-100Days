@@ -13,16 +13,13 @@ MonoBehaviour:
   m_Name: seokbinggo_s1
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ModuleDefinition
   id: seokbinggo_s1
-  displayName: "\uC11D\uBE59\uACE0 1\uB2E8\uACC4"
-  item: {fileID: 11400000, guid: 80b2cee525a8adb428392542b1eae29a, type: 2}
-  role: "\uC11D\uBE59\uACE0 \uC2B9\uAE09\xB7\uD130\uB81B \uC2AC\uB86F1 (kit \uC624\uBA74
-    materials \uB36E\uC5B4\uC4F0\uAE30)"
+  displayName: "\uC11D\uBE59\uACE0 1\uB2E8 \uC6C0\uC9D1"
+  item: {fileID: 0}
+  role: "\uBC00\uD3D0 \uAC1C\uB150\xB7\uB0C9\uAE30\uC6D0 1\uC885"
   materials:
   - item: {fileID: 11400000, guid: 2fb77bca93d4e9a42874825576ffcd9d, type: 2}
-    amount: 15
-  - item: {fileID: 11400000, guid: 8a0f12f13c8cd5b4b93c78c17d4ec5ee, type: 2}
     amount: 10
-  - item: {fileID: 11400000, guid: d821cf6376d84ed44bb84d57fac7b553, type: 2}
-    amount: 8
+  - item: {fileID: 11400000, guid: 6eafd891183383d40b146faf9d5b99c9, type: 2}
+    amount: 6
   buildTimeSeconds: 30
   priority: 0

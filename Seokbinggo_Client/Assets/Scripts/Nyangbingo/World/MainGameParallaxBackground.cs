@@ -13,6 +13,8 @@ namespace Nyangbingo.World
         [SerializeField] private float undergroundThreshold;
         private Camera targetCamera;
         private DayNightService timeService;
+        private HeatStageService heatStage;
+        private bool sunScaleTiedToHeatStage;
         private SpriteRenderer skyRenderer;
         private SpriteRenderer mountainRenderer;
         private SpriteRenderer frontCloudRenderer;
@@ -33,6 +35,12 @@ namespace Nyangbingo.World
         {
             artCatalog = catalog;
             undergroundThreshold = undergroundWorldY;
+        }
+
+        public void ConfigureHeatStage(HeatStageService stages, bool tieSunScaleToHeatStage)
+        {
+            heatStage = stages;
+            sunScaleTiedToHeatStage = tieSunScaleToHeatStage;
         }
 
         private void Awake()
@@ -192,7 +200,11 @@ namespace Nyangbingo.World
             if (bounds.x <= 0f || bounds.y <= 0f) return;
             var viewHeight = targetCamera.orthographicSize * 2f;
             var viewWidth = viewHeight * targetCamera.aspect;
-            var targetHeight = viewHeight * .32f;
+            var isNight = timeService != null && timeService.IsNight;
+            var stageMultiplier = sunScaleTiedToHeatStage && !isNight
+                ? CalculateSunScaleMultiplier(heatStage?.Current ?? 1)
+                : 1f;
+            var targetHeight = viewHeight * .32f * stageMultiplier;
             var scale = targetHeight / bounds.y;
             celestialRenderer.transform.localScale = new Vector3(scale, scale, 1f);
             var spriteCenter = celestialRenderer.sprite.bounds.center;
@@ -200,6 +212,16 @@ namespace Nyangbingo.World
                 viewWidth * .31f - spriteCenter.x * scale,
                 viewHeight * .25f - spriteCenter.y * scale,
                 celestialRenderer.transform.localPosition.z);
+        }
+
+        public static float CalculateSunScaleMultiplier(int heatStage)
+        {
+            return Mathf.Clamp(heatStage, 1, 3) switch
+            {
+                2 => 1.5f,
+                3 => 2f,
+                _ => 1f
+            };
         }
     }
 }

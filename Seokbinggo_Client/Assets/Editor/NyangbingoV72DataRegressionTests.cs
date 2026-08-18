@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Nyangbingo.Data;
 using UnityEditor;
@@ -66,10 +67,40 @@ public static class NyangbingoV72DataRegressionTests
             "starting trait data");
         Require(catalog.FindCrop("zone10:catnip")?.HealHitPoints == 40,
             "zone10 crop data");
-        Require(NyangbingoCsvUtility.ReadRows("Assets/Data/CSV/content-status.csv").Count == 847,
+        Require(NyangbingoCsvUtility.ReadRows("Assets/Data/CSV/content-status.csv").Count == 858,
             "content-status editor reference row count");
+        Require(catalog.Globals.Count == 253 && catalog.IdMigrations.Count == 28 &&
+                catalog.FindGlobal("wave_mult_target")?.Value == "hp_only",
+            "v79 globals and ID migration contract");
+        ValidateBossSemanticGuard();
 
-        Debug.Log("[Nyangbingo] v72 data regression passed: 10/70/5/17/4/10 + 847 rows.");
+        Debug.Log("[Nyangbingo] v79 data regression passed: 10/70/5/17/4/10 + 858 rows + 253 globals + 28 migrations; " +
+                  "malformed boss combat columns rejected.");
+    }
+
+    private static void ValidateBossSemanticGuard()
+    {
+        var rows = NyangbingoCsvUtility.ReadRows("Assets/Data/CSV/bosses.csv");
+        var king = rows.Single(row => row["id"] == "king_dokkaebi");
+        NyangbingoV24DataValidator.ValidateBossCombatRow(king);
+
+        var shifted = new Dictionary<string, string>(king, StringComparer.Ordinal)
+        {
+            ["tele_sec"] = "T1 rush 613 sec exceeds night 540 sec)",
+            ["shape"] = "0.75",
+            ["range_tiles"] = "Box",
+            ["special_dmg_per_hit"] = string.Empty
+        };
+        var rejected = false;
+        try
+        {
+            NyangbingoV24DataValidator.ValidateBossCombatRow(shifted);
+        }
+        catch (InvalidDataException)
+        {
+            rejected = true;
+        }
+        Require(rejected, "shifted king_dokkaebi combat columns passed semantic validation");
     }
 
     private static void Require(bool condition, string message)

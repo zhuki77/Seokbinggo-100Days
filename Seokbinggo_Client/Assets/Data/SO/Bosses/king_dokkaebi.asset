@@ -26,7 +26,7 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: d821cf6376d84ed44bb84d57fac7b553, type: 2}
     amount: 5
   summonStation: 1
-  recommendedDay: "~8\uC77C\uCC28(T2)"
+  recommendedDay: 8
   requiresDeepAltar: 0
   forcedDay: 0
   guaranteedDrops:

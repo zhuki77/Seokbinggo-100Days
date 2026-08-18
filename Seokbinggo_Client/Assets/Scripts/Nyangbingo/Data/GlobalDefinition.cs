@@ -14,6 +14,12 @@ namespace Nyangbingo.Data
         public const string TotalDays = "total_days";
         public const string DeadlineRemoved = "deadline_removed";
         public const string WinCondition = "win_condition";
+        public const string WinGates = "win_gates";
+        public const string WinGateDemo = "win_gate_demo";
+        public const string WinGateFinal = "win_gate_final";
+        public const string WinEndingMode = "win_ending_mode";
+        public const string SurvivalContinuesAfterEnding = "survival_continues_after_ending";
+        public const string DayCounterDisplay = "day_counter_display";
         public const string StartAtNight = "start_at_night";
         public const string BaekjungDay = "baekjung_day";
         public const string SealWindowRadiusX = "seal_window_rx";
@@ -58,6 +64,12 @@ namespace Nyangbingo.Data
         public const string InvasionPeriodDays = "invasion_period_days";
         public const string InvasionOffsetDays = "invasion_offset_days";
         public const string SunScaleTiesHeatStage = "sun_scale_ties_heat_stage";
+        public const string SunScaleByStage = "sun_scale_by_stage";
+        public const string GearMismatchDefenseMultiplier = "gear_mismatch_defense_mult";
+        public const string GearMismatchDefenseFloor = "gear_mismatch_defense_floor";
+        public const string GearMismatchDefensePerDegree = "gear_mismatch_defense_per_degree";
+        public const string GearMismatchStatPenalty = "gear_mismatch_stat_penalty";
+        public const string GearMismatchSetBonus = "gear_mismatch_set_bonus";
         public const string InvasionAnnounce = "invasion_announce";
         public const string BedLockedOnInvasion = "bed_locked_on_invasion";
         public const string BedEnabled = "bed_enabled";

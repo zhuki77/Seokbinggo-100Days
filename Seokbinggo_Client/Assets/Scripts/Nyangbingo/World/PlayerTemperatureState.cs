@@ -90,6 +90,7 @@ namespace Nyangbingo.World
         public float RecoveryMultiplier => recoveryMultiplier;
         public event Action<float> Changed;
         public event Action ReachedMaximum;
+        public event Action<int> RoomTemperatureChanged;
 
         public int CurrentRoomTemperature { get; private set; }
         public bool IsHypothermia => trackedTransform != null && roomTemperature != null &&
@@ -116,7 +117,12 @@ namespace Nyangbingo.World
             var hypothermia = trackedTransform != null && roomTemperature != null;
             if (hypothermia)
             {
-                CurrentRoomTemperature = roomTemperature.Resolve(trackedTransform.position);
+                var resolvedRoomTemperature = roomTemperature.Resolve(trackedTransform.position);
+                if (resolvedRoomTemperature != CurrentRoomTemperature)
+                {
+                    CurrentRoomTemperature = resolvedRoomTemperature;
+                    RoomTemperatureChanged?.Invoke(CurrentRoomTemperature);
+                }
                 hypothermia = CurrentRoomTemperature <= hypothermiaRoomTemp;
             }
             var safe = timeService.IsNight || IsUnderground() ||

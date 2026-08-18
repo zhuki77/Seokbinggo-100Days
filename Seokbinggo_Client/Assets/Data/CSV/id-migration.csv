@@ -25,3 +25,5 @@ gangcheori,gangcheol,yokai,rename,개체 도메인: 심층 정예(v34 교체) �
 goblin_chief,king_dokkaebi,boss,rename,
 smelt_ice_steel,smelt_icesteel,smelting,rename,v24 명명 규칙 정합(icesteel_*와 동일 — ice_steel 표기는 전 도메인에서 icesteel로 통일)
 fox_rain_charm,,item,remove_refund,"여우비 부적 — 오너 기각(2026-07-14 22:47 결정 원장, GDD 3-5b 제목 명기). 대체재 없음(철선은 합죽선 진화 계열로 별개). 세이브 정책: 인벤 보유분 1개당 yokai_tear:3 환불(제작비 전액 — GDD v11 눈물×3), 쿨다운·사용 상태 전부 폐기. 레시피·도감 항목도 제거"
+wave_night_period,invasion_period_days,globals,rename,v79 — 파도 폐지 후 침공이 물려받은 값. 주기 10 동일
+wave_night_offset,invasion_offset_days,globals,rename,"v79 — 오프셋 5→6으로 교정됨(5는 백중날 밤 15일차와 충돌, verify가 2026-08-11에 잡음). 값이 다르니 그대로 옮기지 말 것"

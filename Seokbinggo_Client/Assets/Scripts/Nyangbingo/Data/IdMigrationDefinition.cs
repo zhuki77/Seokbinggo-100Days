@@ -9,7 +9,8 @@ namespace Nyangbingo.Data
         Item,
         Yokai,
         Boss,
-        Smelting
+        Smelting,
+        Globals
     }
 
     public enum IdMigrationAction
@@ -98,7 +99,7 @@ namespace Nyangbingo.Data
     public static class IdMigrationRuntime
     {
         private const string ResourcePath = "Nyangbingo/IdMigrationManifest";
-        private const int OfficialRuleCount = 26;
+        private const int OfficialRuleCount = 28;
 
         public static IdMigrationPolicy LoadOfficial()
         {

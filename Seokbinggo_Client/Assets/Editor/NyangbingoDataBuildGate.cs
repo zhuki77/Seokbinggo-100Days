@@ -173,14 +173,14 @@ public static class NyangbingoDataBuildGate
         };
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["items"] = 174,
+            ["items"] = 168,
             ["recipes"] = 95,
             ["modules"] = 11,
             ["mineral tiers"] = 15,
             ["seal rules"] = 23,
-            ["ID migrations"] = 26,
+            ["ID migrations"] = 28,
             ["day curves"] = 30,
-            ["globals"] = 240,
+            ["globals"] = 253,
             ["smelting"] = 3,
             ["equipment"] = 44,
             ["utilities"] = 2,

@@ -188,6 +188,7 @@ namespace Nyangbingo.Save
                 .ToList();
             save.seokbinggoStage = runtimeServices.Seokbinggo?.Stage ?? 0;
             save.altarClears = runtimeServices.FrostSpread?.AltarClears ?? 0;
+            save.frostClearedBossIds = runtimeServices.FrostSpread?.ExportClearedBossIds() ?? new List<string>();
             save.heatStage = runtimeServices.HeatStage?.Current ?? 1;
             save.invasionTemperatureRise = runtimeServices.Invasion?.TemperatureRiseCelsius ?? 0f;
             save.invasionRecoolAvailableDay = runtimeServices.Invasion?.RecoolAvailableDay ?? 0;
@@ -453,7 +454,18 @@ namespace Nyangbingo.Save
             var frost = runtimeServices.FrostSpread;
             if (frost != null && save != null)
             {
-                if (!frost.RestoreAltarClears(save.altarClears)) return false;
+                var frostBossIds = save.frostClearedBossIds;
+                if ((frostBossIds == null || frostBossIds.Count == 0) && save.altarClears > 0)
+                {
+                    frostBossIds = new List<string>();
+                    for (var index = 0; index < save.bossRecords.Count; index++)
+                    {
+                        var record = save.bossRecords[index];
+                        if (record.count > 0 && !string.IsNullOrWhiteSpace(record.bossId))
+                            frostBossIds.Add(record.bossId);
+                    }
+                }
+                if (!frost.RestoreAltarProgress(save.altarClears, frostBossIds)) return false;
                 frost.RestorePendingCells(save.frostPendingCells);
                 var tiles = bootstrap?.TileService;
                 if (tiles != null)

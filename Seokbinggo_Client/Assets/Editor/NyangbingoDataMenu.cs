@@ -5,6 +5,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using Nyangbingo.Data;
+using Nyangbingo.World;
 
 public static class NyangbingoDataMenu
 {
@@ -201,7 +202,6 @@ public static class NyangbingoDataMenu
         DeleteAssetIfExists(rootDirectory + "/Globals/nap_timescale.asset");
         DeleteAssetIfExists(rootDirectory + "/Globals/nap_temp_mult.asset");
         DeleteAssetIfExists(rootDirectory + "/Globals/jukbuin_nap_mult.asset");
-        DeleteAssetIfExists(rootDirectory + "/IdMigrations/migration_27.asset");
 
         var items = LoadAssets<ItemDefinition>(rootDirectory + "/Items");
         var recipes = LoadAssets<RecipeDefinition>(rootDirectory + "/Recipes");
@@ -608,17 +608,20 @@ public static class NyangbingoDataMenu
         {
             var row = rows[rowIndex];
             var id = row["id"];
-            items[rowIndex] = FindItem(itemDirectory, row["item_id"]);
+            var itemId = row["item_id"];
+            var isUpgradeModule = SeokbinggoRules.IsUpgradeModuleId(id);
+            items[rowIndex] = string.IsNullOrWhiteSpace(itemId) ? null : FindItem(itemDirectory, itemId);
             if (!IsSnakeCaseId(id) || !ids.Add(id) || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
                 string.IsNullOrWhiteSpace(row["name_ko"]) || string.IsNullOrWhiteSpace(row["role"]) ||
-                items[rowIndex] == null || items[rowIndex].Id != row["item_id"] ||
+                (isUpgradeModule != string.IsNullOrWhiteSpace(itemId)) ||
+                (!isUpgradeModule && (items[rowIndex] == null || items[rowIndex].Id != itemId)) ||
                 !float.TryParse(row["build_time_sec"], NumberStyles.Float, CultureInfo.InvariantCulture,
                     out buildTimes[rowIndex]) || buildTimes[rowIndex] <= 0f ||
                 float.IsNaN(buildTimes[rowIndex]) || float.IsInfinity(buildTimes[rowIndex]) ||
                 !System.Enum.TryParse(row["priority"], false, out priorities[rowIndex]) ||
                 !System.Enum.IsDefined(typeof(ModulePriority), priorities[rowIndex]))
             {
-                Debug.LogError($"[Nyangbingo] Module '{id}' has invalid identity, item, time, or priority data.");
+                Debug.LogError($"[Nyangbingo] Module '{id}' has invalid identity, item contract, time, or priority data.");
                 return;
             }
 
@@ -925,9 +928,9 @@ public static class NyangbingoDataMenu
             return;
         }
 
-        if (rows.Count != 26 || !HasColumns(rows[0], "legacy_id", "new_id", "domain", "action", "note"))
+        if (rows.Count != 28 || !HasColumns(rows[0], "legacy_id", "new_id", "domain", "action", "note"))
         {
-            Debug.LogError("[Nyangbingo] id-migration.csv must contain the official 26-row v34 schema.");
+            Debug.LogError("[Nyangbingo] id-migration.csv must contain the official 28-row v79 schema.");
             return;
         }
 
@@ -2076,7 +2079,7 @@ public static class NyangbingoDataMenu
         }
 
         var textUnits = new HashSet<string>(System.StringComparer.Ordinal)
-            { "ore:ingot", "recipe", "rule", "scope", "file", "curve", "list", "ref", "sum", "mult", "배", "-",
+            { "ore:ingot", "recipe", "rule", "scope", "file", "curve", "list", "ref", "sum", "mult", "배", "식", "-",
               "boss_id", "HP", "HP/초", "item_id", "비율", "초/밴드", "개/도" };
         var integerUnits = new HashSet<string>(System.StringComparer.Ordinal)
             { "count", "day", "일", "단", "단계", "gauge", "hp", "person", "px", "tile",
@@ -2865,6 +2868,7 @@ public static class NyangbingoDataMenu
             case "yokai": domain = IdMigrationDomain.Yokai; return true;
             case "boss": domain = IdMigrationDomain.Boss; return true;
             case "smelting": domain = IdMigrationDomain.Smelting; return true;
+            case "globals": domain = IdMigrationDomain.Globals; return true;
             default: domain = default; return false;
         }
     }

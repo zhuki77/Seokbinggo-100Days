@@ -34,6 +34,7 @@ public static class NyangbingoV24DataValidator
         var yokai = Read(directory, "yokai-stats.csv");
         var drops = Read(directory, "drops.csv");
         var days = Read(directory, "day-curve.csv");
+        var globals = Read(directory, "globals.csv");
         var migrationPath = Path.Combine(directory, "id-migration.csv");
         var isV241 = File.Exists(migrationPath);
         var migrations = isV241
@@ -46,6 +47,7 @@ public static class NyangbingoV24DataValidator
         var itemIds = BuildIdSet(items, "items.csv", "id");
         var bossIds = BuildIdSet(bosses, "bosses.csv", "id");
         var yokaiIds = BuildIdSet(yokai, "yokai-stats.csv", "id");
+        var globalKeys = BuildIdSet(globals, "globals.csv", "key");
         var officialBossIds = new HashSet<string>(StringComparer.Ordinal)
         {
             "king_dokkaebi",
@@ -123,6 +125,7 @@ public static class NyangbingoV24DataValidator
                 if (row.ContainsKey("drops"))
                     throw new InvalidDataException("bosses.csv uses the obsolete machine-readable 'drops' column.");
             }
+            ValidateBossCombatRow(row);
             var summonItemId = OptionalValue(row, "summon_item_id");
             var stationId = OptionalValue(row, "station_id");
             var materialText = OptionalValue(row, "summon_materials");
@@ -199,8 +202,18 @@ public static class NyangbingoV24DataValidator
 
         foreach (var row in modules)
         {
-            RequireItem(itemIds, Value(row, "item_id", "modules.csv"), "modules.csv", "item_id");
-            referenceCount += 1 + ValidateItemPairs(itemIds, Value(row, "materials", "modules.csv"),
+            var moduleId = Value(row, "id", "modules.csv");
+            var itemId = OptionalValue(row, "item_id");
+            var isUpgradeModule = moduleId.StartsWith("seokbinggo_s", StringComparison.Ordinal);
+            if (isUpgradeModule != string.IsNullOrWhiteSpace(itemId))
+                throw new InvalidDataException(
+                    $"modules.csv '{moduleId}' must {(isUpgradeModule ? "omit" : "declare")} item_id.");
+            if (!isUpgradeModule)
+            {
+                RequireItem(itemIds, itemId, "modules.csv", "item_id");
+                referenceCount++;
+            }
+            referenceCount += ValidateItemPairs(itemIds, Value(row, "materials", "modules.csv"),
                 "modules.csv", "materials").Count;
         }
         foreach (var row in combat)
@@ -299,7 +312,7 @@ public static class NyangbingoV24DataValidator
         if (isV241)
         {
             ValidateCraftingExtension(craftingExtension, itemIds);
-            ValidateMigrations(migrations, itemIds, yokaiIds, bossIds, smeltingIds);
+            ValidateMigrations(migrations, itemIds, yokaiIds, bossIds, smeltingIds, globalKeys);
         }
 
         return $"{itemIds.Count} item IDs, {crafting.Count} recipes producing {totalOutputCount} items, " +
@@ -388,7 +401,8 @@ public static class NyangbingoV24DataValidator
     }
 
     private static void ValidateMigrations(List<Dictionary<string, string>> rows, HashSet<string> itemIds,
-        HashSet<string> yokaiIds, HashSet<string> bossIds, HashSet<string> smeltingIds)
+        HashSet<string> yokaiIds, HashSet<string> bossIds, HashSet<string> smeltingIds,
+        HashSet<string> globalKeys)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var row in rows)
@@ -413,6 +427,7 @@ public static class NyangbingoV24DataValidator
             else if (string.Equals(domain, "yokai", StringComparison.Ordinal)) targets = yokaiIds;
             else if (string.Equals(domain, "boss", StringComparison.Ordinal)) targets = bossIds;
             else if (string.Equals(domain, "smelting", StringComparison.Ordinal)) targets = smeltingIds;
+            else if (string.Equals(domain, "globals", StringComparison.Ordinal)) targets = globalKeys;
             else throw new InvalidDataException($"id-migration.csv uses unknown domain '{domain}'.");
             if (!targets.Contains(newId))
                 throw new InvalidDataException($"id-migration.csv target '{newId}' is missing from {domain} master data.");
@@ -444,6 +459,57 @@ public static class NyangbingoV24DataValidator
         foreach (var pair in left)
             if (!right.TryGetValue(pair.Key, out var value) || value != pair.Value) return false;
         return true;
+    }
+
+    internal static void ValidateBossCombatRow(Dictionary<string, string> row)
+    {
+        var id = Value(row, "id", "bosses.csv");
+        if (PositiveInt(Value(row, "recommended_day", "bosses.csv"),
+                "bosses.csv", $"{id}.recommended_day") < 1 ||
+            PositiveInt(Value(row, "hp", "bosses.csv"), "bosses.csv", $"{id}.hp") < 1)
+            throw new InvalidDataException($"bosses.csv boss '{id}' has invalid day or HP.");
+
+        FiniteNonNegative(Value(row, "wall_dps_default", "bosses.csv"),
+            "bosses.csv", $"{id}.wall_dps_default");
+        FiniteNonNegative(Value(row, "wall_dps_ice", "bosses.csv"),
+            "bosses.csv", $"{id}.wall_dps_ice");
+        FiniteNonNegative(Value(row, "wall_dps_iron_wall", "bosses.csv"),
+            "bosses.csv", $"{id}.wall_dps_iron_wall");
+        NonNegativeInt(Value(row, "contact_dmg", "bosses.csv"),
+            "bosses.csv", $"{id}.contact_dmg");
+
+        var telegraph = FiniteNonNegative(Value(row, "tele_sec", "bosses.csv"),
+            "bosses.csv", $"{id}.tele_sec");
+        var shape = Value(row, "shape", "bosses.csv");
+        if (shape != "Box" && shape != "Cone" && shape != "Fan")
+            throw new InvalidDataException(
+                $"bosses.csv.{id}.shape must be Box, Cone, or Fan, but was '{shape}'.");
+        var range = FiniteNonNegative(Value(row, "range_tiles", "bosses.csv"),
+            "bosses.csv", $"{id}.range_tiles");
+        var arc = FiniteNonNegative(Value(row, "arc_deg", "bosses.csv"),
+            "bosses.csv", $"{id}.arc_deg");
+        var damage = PositiveInt(Value(row, "special_dmg_per_hit", "bosses.csv"),
+            "bosses.csv", $"{id}.special_dmg_per_hit");
+        var duration = FiniteNonNegative(Value(row, "duration_sec", "bosses.csv"),
+            "bosses.csv", $"{id}.duration_sec");
+        var tick = FiniteNonNegative(Value(row, "tick_sec", "bosses.csv"),
+            "bosses.csv", $"{id}.tick_sec");
+        FiniteNonNegative(Value(row, "knockback_tiles", "bosses.csv"),
+            "bosses.csv", $"{id}.knockback_tiles");
+        var cooldown = FiniteNonNegative(Value(row, "cd_sec", "bosses.csv"),
+            "bosses.csv", $"{id}.cd_sec");
+        BinaryInt(Value(row, "fire_tag", "bosses.csv"), "bosses.csv", $"{id}.fire_tag");
+        BinaryInt(Value(row, "aim_lock", "bosses.csv"), "bosses.csv", $"{id}.aim_lock");
+
+        var scope = Value(row, "mvp_scope", "bosses.csv");
+        var arena = Value(row, "arena_layer", "bosses.csv");
+        var heatStage = PositiveInt(Value(row, "heat_stage", "bosses.csv"),
+            "bosses.csv", $"{id}.heat_stage");
+        if (telegraph < 0d || range <= 0d || arc > 180d || damage <= 0 || cooldown <= 0d ||
+            (duration == 0d) != (tick == 0d) ||
+            ((shape == "Cone" || shape == "Fan") && arc <= 0d) ||
+            (scope != "A" && scope != "B") || arena != "surface" || heatStage > 3)
+            throw new InvalidDataException($"bosses.csv boss '{id}' has invalid combat or scope semantics.");
     }
 
     private static void RequireOptionalItem(HashSet<string> itemIds, string id, string file, string column)

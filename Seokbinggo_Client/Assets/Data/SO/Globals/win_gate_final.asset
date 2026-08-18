@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: win_gate_final
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: win_gate_final
+  value: gangcheol_perfect
+  unit: boss_id
+  note: "100\uC77C \uC815\uC2DD\uD310 \uC5D4\uB529 = \uAC15\uCCA0\uC774 \uC644\uC804\uCCB4(zones
+    zone10 \uAD00\uBB38 \uCD5C\uC885\xB7\uC5D4\uB529). \u26A0\uFE0F \uC544\uD2B8\xB7\uAE30\uBBF9
+    \uBBF8\uC815\uC774\uB77C \uCC29\uC218 \uB300\uC0C1 \uC544\uB2D8 \u2014 \uC790\uB9AC\uB9CC"

@@ -162,9 +162,3 @@ daebal,대발,placeable,99,A,반경 4타일 낮 화염 -25% — daebal_flame_cut
 oyster_mushroom,느타리,material,99,A,[가안] 지하 자생 버섯 — 회복 HP+15 · 냉장 보관. 오너 지시 '테라리아 버섯 같은 회복 아이템'
 shiitake,표고,material,99,A,[가안] 지하 자생 버섯 — 회복 HP+30 · 냉장 보관. 오너 지시 '테라리아 버섯 같은 회복 아이템'
 seogi,석이(石茸),material,99,A,[가안] 지하 자생 버섯 — 회복 HP+50 · 냉장 보관 · 최희소. 오너 지시 '테라리아 버섯 같은 회복 아이템'
-seokbinggo_s1,석빙고 1단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s1. kit 오면 덮어쓰기
-seokbinggo_s2,석빙고 2단계,material,99,A,석빙고 승급 모듈(비설치) — modules.csv seokbinggo_s2. kit 오면 덮어쓰기
-seokbinggo_s3,석빙고 3단계,material,99,A,석빙고 승급 모듈(비설치)·데모 승리선. kit 오면 덮어쓰기
-seokbinggo_s4,석빙고 4단계,material,99,A,석빙고 승급·대장간 해금 — yokai_tear 160(v46). kit 오면 덮어쓰기
-seokbinggo_s5,석빙고 5단계,material,99,A,석빙고 승급 — yokai_tear 320(v46). kit 오면 덮어쓰기
-seokbinggo_s6,석빙고 6단계,material,99,A,석빙고 승급 — yokai_tear 560(v46). kit 오면 덮어쓰기

@@ -73,7 +73,7 @@ public static class NyangbingoP4RegressionTests
                     !FrostSpreadService.IsInFrostBand(.89f, 1), "normalized frost boundary");
 
             var frost = new FrostSpreadService();
-            frost.OnAltarBossClear();
+            frost.OnAltarBossClear("king_dokkaebi");
             Require(frost.AltarClears == 1, "altar boss clear increments once");
             frost.MarkPending(new Vector2Int(3, 7));
             Require(frost.IsPending(new Vector2Int(3, 7)), "pending cell marked");

@@ -22,12 +22,12 @@ namespace Nyangbingo.World
         private static readonly string[] BuiltinMaterialsByNextStage =
         {
             null, // index 0 unused
-            "stone:15,ice_shard:10,wood:8",
-            "stone:25,ice_shard:20,iron_ingot:2,rebar:3",
-            "stone:35,ice_shard:30,iron_ingot:4,copper_ingot:2",
-            "yokai_tear:160,ice_shard:40,iron_ingot:6",
-            "yokai_tear:320,ice_shard:50,icesteel_ingot:4",
-            "yokai_tear:560,ice_shard:60,icesteel_ingot:8",
+            "stone:10,clay:6",
+            "stone:20,clay:12,iron_ingot:2",
+            "stone:30,icesteel_ingot:4",
+            "seonge_ingot:6,icesteel_ingot:6,yokai_tear:160",
+            "ice_root_bundle:8,blaze_yeokrin:1,yokai_tear:320",
+            "cold_wave_ingot:10,eop_scale_mat:1,yokai_tear:560",
         };
 
         public static bool IsUpgradeModuleId(string moduleId) =>

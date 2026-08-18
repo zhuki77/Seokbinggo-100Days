@@ -264,8 +264,8 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 25;
-        /// <summary>v72: schema 24는 스택별 보관 상태, schema 25는 부적 지속 시간을 추가하며 schema 23부터 순차 이관한다.</summary>
+        public const int CurrentSchemaVersion = 26;
+        /// <summary>v72: schema 26은 서리 확산의 고유 제단 보스 처치 목록을 추가하며 schema 23부터 순차 이관한다.</summary>
         public const int MinimumCompatibleSchemaVersion = 23;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
@@ -293,6 +293,7 @@ namespace Nyangbingo.Save
         public List<string> modulesDone = new List<string>();
         public int seokbinggoStage;
         public int altarClears;
+        public List<string> frostClearedBossIds = new List<string>();
         /// <summary>폭염 단계(1~3). 날짜만으로 역산하지 말고 반드시 저장한다(B-UI-v71 B-9-1).</summary>
         public int heatStage = 1;
         public float invasionTemperatureRise;
@@ -364,6 +365,7 @@ namespace Nyangbingo.Save
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
             if (gimmickWeaponsGranted == null) gimmickWeaponsGranted = new List<string>();
+            if (frostClearedBossIds == null) frostClearedBossIds = new List<string>();
             if (frostPendingCells == null) frostPendingCells = new List<string>();
             if (bossRecords == null) bossRecords = new List<BossRecord>();
             if (forcedBossEncounters == null) forcedBossEncounters = new List<ForcedBossEncounterRecord>();
@@ -444,6 +446,9 @@ namespace Nyangbingo.Save
             talismanFrostRemaining = NormalizeDuration(
                 talismanFrostRemaining, TalismanRuntime.FrostDurationSeconds);
             gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
+            var uniqueFrostBossIds = new HashSet<string>(StringComparer.Ordinal);
+            frostClearedBossIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) || !uniqueFrostBossIds.Add(id));
+            if (frostClearedBossIds.Count > 10) frostClearedBossIds.RemoveRange(10, frostClearedBossIds.Count - 10);
             frostPendingCells.RemoveAll(string.IsNullOrWhiteSpace);
             if (schemaVersion < CurrentSchemaVersion) schemaVersion = CurrentSchemaVersion;
         }
