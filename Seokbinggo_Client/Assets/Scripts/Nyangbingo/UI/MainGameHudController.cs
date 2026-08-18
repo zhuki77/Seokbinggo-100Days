@@ -352,7 +352,7 @@ namespace Nyangbingo.UI
                 {
                     dayText.text = string.Empty;
                     dayText.enabled = false;
-                    // B-UI-v71: D-100 슬롯에 폭염 단계만 표시(태양 아이콘은 기존 시계/아트 유지).
+                    // B-UI-v72: 날짜 카운터 없이 폭염 단계만 표시(태양 아이콘은 기존 시계/아트 유지).
                     dayCounterGlyphs.SetText(badge);
                     dayCounterGlyphs.SetVisible(counterVisible);
                 }

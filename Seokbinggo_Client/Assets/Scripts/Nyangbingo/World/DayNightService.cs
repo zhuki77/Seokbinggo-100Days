@@ -47,7 +47,7 @@ namespace Nyangbingo.World
         [Min(1)][SerializeField] private int startDay = 1;
         [SerializeField] private bool startAtNight;
 
-        [Header("HUD용 — 생존 목표 D-day 표시 기준 (기획 정본: '백일폭염' 세계관, 100일 — 5 UI UX v15 QA-E / 1 개요 기준으로 확정)")]
+        [Header("레거시 진단용 콘텐츠 일수 상한 — v72 승리 판정에는 사용하지 않음")]
         [Min(1)][SerializeField] private int survivalDayLimit = DefaultSurvivalDayLimit;
 
         private float gameSeconds;
@@ -76,7 +76,7 @@ namespace Nyangbingo.World
             ? gameDataCatalog.FindDayCurve(day) : null;
         public GlobalSettings OfficialGlobals => globalSettings;
 
-        /// <summary>D-100 HUD 표시용 — 생존 목표일까지 남은 날짜(도달/초과 시 0).</summary>
+        /// <summary>레거시 진단용 콘텐츠 잔여 일수. v72 HUD·승리 판정에는 사용하지 않는다.</summary>
         public int DaysRemaining => CalculateDaysRemaining(survivalDayLimit, day);
 
         public static int CalculateDaysRemaining(int targetDay, int currentDay) =>

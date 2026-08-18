@@ -298,7 +298,6 @@ globals.csv,key,seal_window_ry,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,seal_cap,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,seal_target_cells,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,seal_penalty_start_day,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,cold_source_required,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,muldanji_duration,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,icejar_fuel_sec,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,jukbuin_regen_mult,수정예정,v70,v63~ 대개편 대상
@@ -347,10 +346,8 @@ globals.csv,key,evolution_bench_t456,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,gimmick_weapon_bonus,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,turret_slot_cap,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,turret_damage_slot_cap,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,wave_night_period,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,wave_mult_target,수정예정,v70,v63~ 대개편 대상
+globals.csv,key,wave_mult_target,구현됨,v70,v77 — 파도 폐지에도 살아남은 키(침공 주기·변종 배율). 이름만 낡음
 globals.csv,key,day_brightness_by_stage,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,wave_night_offset,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,magpie_guide_mode,추가예정,,
 globals.csv,key,magpie_guide_return_sec,추가예정,,
 globals.csv,key,world_half_width,추가예정,,
@@ -846,3 +843,17 @@ globals.csv,key,bed_item_id,추가예정,2026-08-12,v72 침대 신설 — 개발
 globals.csv,key,bed_sleep_room_temp_max,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
 globals.csv,key,bed_skip_mode,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
 globals.csv,key,bed_skip_applies_daily_tick,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
+globals.csv,key,gear_mismatch_defense_mult,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
+globals.csv,key,gear_mismatch_defense_floor,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
+globals.csv,key,gear_mismatch_defense_per_degree,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
+globals.csv,key,gear_mismatch_stat_penalty,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
+globals.csv,key,gear_mismatch_set_bonus,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
+globals.csv,key,sun_scale_by_stage,구현됨,2026-08-12,개발 A가 이미 구현한 값을 정본화
+globals.csv,key,day_counter_display,추가예정,2026-08-12,v74 — 개발 B가 HUD에서 D-카운터를 끄는 근거 키
+globals.csv,key,win_gates,추가예정,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,win_gate_demo,추가예정,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,win_gate_final,추가예정,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,win_ending_mode,추가예정,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,survival_continues_after_ending,추가예정,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+id-migration.csv,legacy_id,wave_night_period,구현됨,v79,구 파도 키 → invasion_* 로 대체됨(오프셋은 5→6 교정). 되살리지 말 것
+id-migration.csv,legacy_id,wave_night_offset,구현됨,v79,구 파도 키 → invasion_* 로 대체됨(오프셋은 5→6 교정). 되살리지 말 것

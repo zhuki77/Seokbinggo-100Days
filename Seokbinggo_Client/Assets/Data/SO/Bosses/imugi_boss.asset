@@ -28,7 +28,7 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
     amount: 30
   summonStation: 3
-  recommendedDay: "30\uC77C\uCC28 \uACE0\uC815+\uC7AC\uC18C\uD658"
+  recommendedDay: 30
   requiresDeepAltar: 0
   forcedDay: 30
   guaranteedDrops:
@@ -60,4 +60,4 @@ MonoBehaviour:
   arenaNote: "\uC9C0\uC0C1 \uC5BC\uC74C \uD638\uC218 \u2014 \uAD6C \uC2EC\uCE35 \uC5BC\uC74C
     \uD638\uC218\uC5D0\uC11C \uC774\uC124(v63 \uC624\uB108 \uC9C0\uC2DC). \uB109\uBC313+\uB099\uD558
     \uD53C\uD574 \uC2DC\uB108\uC9C0\uB294 \uC9C0\uC0C1 \uBC1C\uD310 \uC9C0\uD615\uC73C\uB85C
-    \uC2B9\uACC4"
+    \uC2B9\uACC4 / 30\uC77C\uCC28 \uACE0\uC815 \uB0B4\uC2B5 + \uC7AC\uC18C\uD658 \uAC00\uB2A5"

@@ -13,16 +13,16 @@ MonoBehaviour:
   m_Name: seokbinggo_s4
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ModuleDefinition
   id: seokbinggo_s4
-  displayName: "\uC11D\uBE59\uACE0 4\uB2E8\uACC4"
-  item: {fileID: 11400000, guid: 792798df6007eab4580e710f2d03cea7, type: 2}
-  role: "\uC11D\uBE59\uACE0 \uC2B9\uAE09\xB7\uB300\uC7A5\uAC04 \uD574\uAE08\xB7\uD130\uB81B
-    \uC2AC\uB86F4\xB7\uB208\uBB3C160 (v46)"
+  displayName: "\uC11D\uBE59\uACE0 4\uB2E8 \uC11C\uB9AC \uC11D\uBE59\uACE0"
+  item: {fileID: 0}
+  role: "\uB2E8\uC5F4\uC7AC 2\uB2E8\xB7\uC804\uC9C4 \uCD08\uC18C\xB7\uB300\uC7A5\uAC04
+    \uD574\uAE08"
   materials:
+  - item: {fileID: 11400000, guid: 6c2f0c29ab8fcbc47ad799634db43c1c, type: 2}
+    amount: 6
+  - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
+    amount: 6
   - item: {fileID: 11400000, guid: 5d3fb60040d70b54c90c37693e68dc60, type: 2}
     amount: 160
-  - item: {fileID: 11400000, guid: 8a0f12f13c8cd5b4b93c78c17d4ec5ee, type: 2}
-    amount: 40
-  - item: {fileID: 11400000, guid: cd284c6bf8691c14bb1d4790c7c6de46, type: 2}
-    amount: 6
-  buildTimeSeconds: 90
+  buildTimeSeconds: 120
   priority: 0

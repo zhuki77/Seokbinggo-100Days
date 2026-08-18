@@ -63,6 +63,12 @@ namespace Nyangbingo.World
             EnsureGlobalLight();
             if (timeService == null || globalLight == null) return false;
 
+            var tieSunScale = timeService.OfficialGlobals != null &&
+                              timeService.OfficialGlobals.TryGetBool(
+                                  GlobalKeys.SunScaleTiesHeatStage, out var configuredTie) &&
+                              configuredTie;
+            background?.ConfigureHeatStage(heatStage, tieSunScale);
+
             if (!dayLightAsserted)
             {
                 DayLight.AssertInvariants();

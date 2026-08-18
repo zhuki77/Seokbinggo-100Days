@@ -3,7 +3,7 @@ day_length_sec,900,sec,낮 15분 (테라리아 기준·오너확정)
 night_length_sec,540,sec,밤 9분 (테라리아 기준·오너확정)
 day_total_sec,1440,sec,1일 24분 (테라리아 동일)
 mvp_days,30,day,MVP 확대(오너지시 — 20→30 + 콘텐츠 폭)
-total_days,100,day,백일폭염 도래(정본)
+total_days,100,day,"콘텐츠 분량 지표로만 남긴다. 🔴 v74 — 이 값으로 D-카운트다운을 만들지 마라(deadline_removed=1). 개발 A DayNightService.DaysRemaining이 이 키를 survivalDayLimit으로 쓰고 HUD가 표시 중인데, 데드라인은 폐지됐다"
 heat_stage_period,0,일,폐지값 — 날짜 주기 상승 없음(구 10). 0 = 미사용
 temp_min,0,gauge,체온 시원
 temp_max,100,gauge,체온 열사병
@@ -100,6 +100,7 @@ evolution_bench_t456,smithy,rule,T4~T6 진화 전용 제작대 = 대장간(v39 �
 gimmick_weapon_bonus,1.10,mult,기믹 무기 = 그 시점 무기 대비 +10%(오너 승인 2026-07-27). 검증: 큰 밤 여유 변화 5%p 미만
 turret_slot_cap,0,개,0 = CSV는 문서·초기값이고 런타임 상한은 석빙고 Stage가 준다(유니티 v46 규약 그대로 채택). 구 정본 6 폐기
 turret_damage_slot_cap,3,count,그중 화력형 최대 3기 — 나머지 3칸은 유틸(DPS 0)이라 선택이 생긴다
+wave_mult_target,hp_only,rule,🔴 이름이 낡았다(구 '파도'). **침공 일정과 무관하다** — 침공은 invasion_period_days/invasion_offset_days가 정본. 현행 용도 = day-curve-ext `variant_mult`(31~100일 1.25→2.0)를 HP에만 곱하고 접촉 피해·벽 DPS는 고정한다는 규칙. 그 열의 유일한 규칙 서술이라 지우면 배율 적용 방식이 근거를 잃는다. 31~100일이라 B 범위. 명칭 재검토 대상(→variant_mult_target)
 day_brightness_by_stage,1.00/1.28/1.55,배,"구 10값을 3값으로 압축 — 양끝 고정, 등간격"
 magpie_guide_mode,fly_to_goal,rule,"까치 길잡이(v53 오너 승인 2026-07-28) — 까치가 **다음 목표 방향으로 날아가** 위치를 알린다. ⚠️ **대사·말풍선·텍스트 0** — NPC가 아니라 동행 개체다. GDD 3장 미채용 표가 「NPC·상점·낚시·마법 = 미채용(무스토리 원칙)」이라 NPC로 목표를 주면 무스토리·무텍스트·미채용 3중 충돌이 나는데, 까치는 정본 개체라 충돌 0. 목표는 온보딩 목표 배지(첫 3일 작업대→차열벽→화로)와 **같은 목록을 쓴다** — 새 목표 정의 0"
 magpie_guide_return_sec,6,sec,까치가 목표 쪽으로 날아갔다 플레이어에게 돌아오는 주기 — 줍기 주기(magpie_magnet_interval 4초)보다 길게 잡아 **줍기 기능을 방해하지 않는다**. 길잡이 중에도 줍기는 그대로 동작
@@ -154,6 +155,11 @@ hypothermia_dmg_per_sec,2.0,HP/초,[가안] 저체온 피해
 gear_temp_rule,wear_lower_bound|station_band,-,착용=견디는 하한 / 설치=적정 구간. 두 규칙이 다르다
 gear_cold_tolerance,straw:0/iron:-5/icesteel:-10,도,착용 세트가 견디는 실온 하한. 얼음강철은 전 구간 정상
 gear_mismatch_penalty,efficiency,-,착용 미대응 = 효율 감소만(오너 확정). 하드 차단 아님 — 4-7 순환 잠금 방지 준수
+gear_mismatch_defense_mult,"max(0.3, 1 - 0.1*(coldToleranceC - roomTempC))",식,"✅ 오너 승인 2026-08-12 — 착용 하한 미달 시 방어력 배율. 1도 미달마다 -10%, 하한 30%. 0%면 사실상 하드 차단이라 4-7 순환 잠금 방지 원칙 위반"
+gear_mismatch_defense_floor,0.30,배율,방어력 감소 하한 — 이 아래로는 안 내려간다
+gear_mismatch_defense_per_degree,0.10,배율/도,1도 미달마다 감소량
+gear_mismatch_stat_penalty,none,-,🔴 개별 효과(이동 속도·채굴 크리·시야)는 감소 없음. 이동이 깎이면 추운 데서 빠져나오지 못한다 = 순환 잠금
+gear_mismatch_set_bonus,disabled,-,세트 효과(설한풍 한벌옷)는 하한 미달 시 즉시 비활성. 부분 감소 없음 — 세트는 완전 대응의 보상이라 대응이 깨지면 꺼진다
 station_temp_strict,1,bool,설치 설비는 적정 구간 밖에서 작동 정지
 night_budget_model,roundtrip_distance,-,밤 기준선 = 왕복 거리 예산(구 법칙② 파도 피크 대체)
 band_roundtrip_formula,2*(map_width/2/zone_count)/player_speed,초/밴드,밴드 1칸 왕복 시간 — **고정값이 아니라 공식이다**(맵 가변). 현 400x160·10밴드·이속 3.0 → 13.3초
@@ -173,9 +179,16 @@ talisman_table,talismans.csv,-,부적 5종 — 판타지 조선 소품으로 이
 talisman_count,5,종,귀환부·축지부·이정표 부적·은신부·한기부
 boss_arena_layer,surface,-,보스 아레나 전부 지상. 구 이무기 심층 얼음 호수 -> 지상 얼음 호수
 altar_count,10,개,제단 10개 유지 — 중간보스 삭제 취소(오너 정정 2026-08-11)
-win_condition,final_boss_kill,-,최종보스 처치 = 엔딩. 구 win_seal_pct=100 폐지 — 밀폐도는 생존 유지 조건으로 격하
+win_condition,gate_named_clear,-,✅ 오너 확정 2026-08-12 — 게임이 제공하는 끝 = 관문 네임드 격파. 구 final_boss_kill(유보 상태라 붙일 대상이 없었다) 대체. 관문은 zones.csv gate_role이 정본
 deadline_removed,1,bool,무한 생존 = 데드라인 삭제(오너 확정). 콘텐츠는 유한 — D-100 카운터 폐지
 sun_scale_ties_heat_stage,1,bool,태양 크기를 폭염 단계에 묶는다 — 구 sun_scale_ties_dcounter 대체(D-100 소멸)
+sun_scale_by_stage,1.0/1.5/2.0,배,"⬅️ 개발 A 확정 등재(v72) — 폭염 단계별 태양 크기. 출처는 아트 발주서 ⑦ #4(bg_sun 128x128, 3단계에서 코드가 x2.0 = 화면 256px)인데 globals에 값이 없어 개발이 물었다. 개발이 이미 이 값으로 구현했고 아트 규격과 일치하므로 그대로 정본화"
+day_counter_display,off,-,🔴 v74 신설 — D-카운터(D-70 등) 표시 금지. 데드라인이 삭제됐는데 total_days가 남아 있어 DaysRemaining이 계속 계산됐다. 그 자리는 폭염 단계 배지가 쓴다(sun_scale_ties_heat_stage). 경과 일수(Day N) 표시는 무방
+win_gates,king_dokkaebi|imugi_boss|gangcheol_perfect,boss_id,관문 네임드 3종 — zones.csv gate_role과 1:1(zone01 관문1→2 / zone03 관문2→3 / zone10 관문 최종·엔딩)
+win_gate_demo,imugi_boss,boss_id,🔑 30일 데모가 제공하는 엔딩 = 이무기 격파. mvp_days=30 범위의 마지막 관문이고 v34에서 이무기가 데모 최종보스로 승격된 것과 일치. 지금 붙일 수 있는 유일한 종결점
+win_gate_final,gangcheol_perfect,boss_id,100일 정식판 엔딩 = 강철이 완전체(zones zone10 관문 최종·엔딩). ⚠️ 아트·기믹 미정이라 착수 대상 아님 — 자리만
+win_ending_mode,two_tier,-,엔딩 2층: 데모(이무기) / 정식(강철이 완전체). 한 층만 두면 zone10 관문(최종·엔딩)과 모순되거나 지금 끝이 없어진다
+survival_continues_after_ending,1,bool,"엔딩 후에도 무한 생존은 계속된다(deadline_removed=1). 엔딩은 종결 연출이지 세션 종료가 아니다 — 오너 ""기본적으로 게임 내에서 제공하는 끝"""
 turret_slot_cap_source,seokbinggo_stage,-,터렛 동시 가동 상한의 런타임 출처
 turret_tier_early,dokkaebi_fire_tower,item_id,극초반 터렛 — 작업대·단계1(도깨비 대장 확정 드랍). 싸고 약하다
 turret_tier_late,singijeon_cart|seonge_tower|cold_wave_tower,item_id,극후반 터렛 3종 — 전부 대장간(석빙고 4단 해금). '만들기 어려운 걸로'(오너)
@@ -237,5 +250,5 @@ boundary_ice_rock_hardness,2,경도,🔧 v71 정정(오너 승인) — 경계 �
 bed_enabled,1,bool,"침대(시간 스킵) 신설 — v72 오너 지시. 구 정본 시간 스킵 없음(의도)""은 폐기. 신규 아이템 0: 기존 보금자리 nest_bed가 겸한다"""
 bed_item_id,nest_bed,item_id,침대 = 보금자리. 레시피·타일(m_nest)·유니티 구현 전부 이미 있다 — 붙는 건 기능 하나뿐
 bed_sleep_room_temp_max,-4,도,이 실온보다 추우면 잘 수 없다 = 온난 밴드(0~-4)에서만(오너 지시). 기지를 전부 빙결로 만들면 잘 데가 없어진다
-bed_skip_mode,next_phase,-,"밤에 자면 새벽, 낮에 자면 해질녘 — 양방향(오너 밤, 낮 스킵 가능"")"""
+bed_skip_mode,next_phase,-,"밤에 자면 새벽, 낮에 자면 해질녘 — 양방향(오너 지시: 밤·낮 스킵 가능)"
 bed_skip_applies_daily_tick,1,bool,"🔑 스킵해도 하루 판정은 그대로 적용(보관 상함·녹음·재냉각·서리 확정). 데드라인이 없어 스킵의 시간 비용이 0이라, 판정까지 건너뛰면 6-19가 침공 밤을 막아둔 이유가 일반 밤에서 재현된다 — 메인 헤드 판단"

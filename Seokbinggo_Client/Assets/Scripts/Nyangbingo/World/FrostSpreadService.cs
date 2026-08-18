@@ -23,30 +23,68 @@ namespace Nyangbingo.World
         };
 
         private readonly HashSet<Vector2Int> pendingCells = new HashSet<Vector2Int>();
+        private readonly HashSet<string> altarBossIds = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> clearedBossIds = new HashSet<string>(StringComparer.Ordinal);
+        private readonly GameDataCatalog catalog;
         private readonly int stepCount;
         private readonly int undergroundDepthTiles;
+        private readonly string demoEndingBossId;
+        private readonly string finalEndingBossId;
+        private readonly bool survivalContinuesAfterEnding;
+        private readonly bool endingConfigurationValid;
         private int altarClears;
         private bool firstFrostNotified;
 
         public FrostSpreadService(GameDataCatalog catalog = null)
         {
+            this.catalog = catalog;
             stepCount = Mathf.Max(1, ReadInt(catalog, GlobalKeys.FrostStepCount, 10));
             undergroundDepthTiles = Mathf.Max(1, ReadInt(
                 catalog, GlobalKeys.LayerT3Depth, WorldGenerationConfig.UndergroundDepthMinTiles));
+            demoEndingBossId = ReadString(catalog, GlobalKeys.WinGateDemo);
+            finalEndingBossId = ReadString(catalog, GlobalKeys.WinGateFinal);
+            survivalContinuesAfterEnding = ReadBool(catalog, GlobalKeys.SurvivalContinuesAfterEnding);
+            var winGates = ReadString(catalog, GlobalKeys.WinGates);
+            endingConfigurationValid = catalog == null ||
+                                       ReadString(catalog, GlobalKeys.WinCondition) == "gate_named_clear" &&
+                                       ReadString(catalog, GlobalKeys.WinEndingMode) == "two_tier" &&
+                                       survivalContinuesAfterEnding &&
+                                       ContainsDelimitedId(winGates, demoEndingBossId) &&
+                                       ContainsDelimitedId(winGates, finalEndingBossId);
+            if (catalog?.Zones == null) return;
+            for (var index = 0; index < catalog.Zones.Count; index++)
+            {
+                var bossId = catalog.Zones[index]?.BossId;
+                if (!string.IsNullOrWhiteSpace(bossId)) altarBossIds.Add(bossId);
+            }
         }
 
         public int AltarClears => altarClears;
         public int StepCount => stepCount;
         public int PendingCount => pendingCells.Count;
+        public int ClearedBossCount => clearedBossIds.Count;
         public float BandFromNorm => CalculateBandFromNorm(altarClears, stepCount);
+        public bool EndingConfigurationValid => endingConfigurationValid;
+        public bool SurvivalContinuesAfterEnding => survivalContinuesAfterEnding;
+        public bool DemoEndingReached => !string.IsNullOrWhiteSpace(demoEndingBossId) &&
+                                         clearedBossIds.Contains(demoEndingBossId);
+        public bool FinalEndingReached => !string.IsNullOrWhiteSpace(finalEndingBossId) &&
+                                          clearedBossIds.Contains(finalEndingBossId);
 
         public event Action FirstFrostRevealed;
+        public event Action<string> EndingReached;
 
-        public bool OnAltarBossClear(TileService tiles = null)
+        public bool OnAltarBossClear(string bossId, TileService tiles = null)
         {
-            if (altarClears >= stepCount) return false;
+            if (string.IsNullOrWhiteSpace(bossId) || altarClears >= stepCount ||
+                (altarBossIds.Count > 0 && !altarBossIds.Contains(bossId)) ||
+                !clearedBossIds.Add(bossId))
+                return false;
             altarClears++;
             if (tiles != null) MarkPendingBand(tiles);
+            if (string.Equals(bossId, demoEndingBossId, StringComparison.Ordinal) ||
+                string.Equals(bossId, finalEndingBossId, StringComparison.Ordinal))
+                EndingReached?.Invoke(bossId);
             return true;
         }
 
@@ -92,7 +130,7 @@ namespace Nyangbingo.World
             var key = new Vector2Int(cell.x, cell.y);
             if (!IsPending(key) || !tiles.IsAirAdjacent(cell)) return false;
             var oreType = OreOf(altarClears);
-            var hardness = ResolveOreHardness(oreType);
+            if (!TryResolveOreHardness(oreType, out var hardness)) return false;
             if (!tiles.TrySetForegroundElement(cell, oreType, hardness)) return false;
             pendingCells.Remove(key);
             NotifyFirstFrostIfNeeded();
@@ -105,11 +143,31 @@ namespace Nyangbingo.World
         public static bool IsInFrostBand(float depthNorm, int clears, int steps = 10) =>
             clears > 0 && Mathf.Clamp01(depthNorm) >= CalculateBandFromNorm(clears, steps);
 
-        public bool RestoreAltarClears(int value)
+        public bool RestoreAltarProgress(int value, IEnumerable<string> bossIds)
         {
             if (value < 0 || value > stepCount) return false;
-            altarClears = value;
+            clearedBossIds.Clear();
+            if (bossIds != null)
+            {
+                foreach (var bossId in bossIds)
+                {
+                    if (string.IsNullOrWhiteSpace(bossId)) return false;
+                    // 구 세이브의 bossRecords에는 폐기된 보스 ID가 남을 수 있으므로
+                    // 현재 zones.csv에 없는 ID는 서리 진행 복원에서만 무시한다.
+                    if (altarBossIds.Count > 0 && !altarBossIds.Contains(bossId)) continue;
+                    clearedBossIds.Add(bossId);
+                }
+            }
+            if (clearedBossIds.Count > stepCount) return false;
+            altarClears = Mathf.Max(value, clearedBossIds.Count);
             return true;
+        }
+
+        public List<string> ExportClearedBossIds()
+        {
+            var list = new List<string>(clearedBossIds);
+            list.Sort(StringComparer.Ordinal);
+            return list;
         }
 
         public List<string> ExportPendingCells()
@@ -143,8 +201,14 @@ namespace Nyangbingo.World
             FirstFrostRevealed?.Invoke();
         }
 
-        private static int ResolveOreHardness(string oreType) =>
-            string.Equals(oreType, WorldTileTypes.IceSteelOre, StringComparison.Ordinal) ? 3 : 2;
+        public bool TryResolveOreHardness(string oreType, out int hardness)
+        {
+            hardness = 0;
+            var definition = catalog?.FindMineralTier(oreType);
+            if (definition == null || definition.Hardness < 1) return false;
+            hardness = definition.Hardness;
+            return true;
+        }
 
         private static string OreOf(int stage) =>
             stage >= 3 ? WorldTileTypes.IceSteelOre :
@@ -155,6 +219,24 @@ namespace Nyangbingo.World
         {
             var definition = catalog?.FindGlobal(key);
             return definition != null && definition.TryGetInt(out var value) ? value : fallback;
+        }
+
+        private static string ReadString(GameDataCatalog catalog, string key) =>
+            catalog?.FindGlobal(key)?.Value;
+
+        private static bool ReadBool(GameDataCatalog catalog, string key)
+        {
+            var definition = catalog?.FindGlobal(key);
+            return definition != null && definition.TryGetBool(out var value) && value;
+        }
+
+        private static bool ContainsDelimitedId(string raw, string id)
+        {
+            if (string.IsNullOrWhiteSpace(raw) || string.IsNullOrWhiteSpace(id)) return false;
+            var parts = raw.Split('|');
+            for (var index = 0; index < parts.Length; index++)
+                if (string.Equals(parts[index].Trim(), id, StringComparison.Ordinal)) return true;
+            return false;
         }
     }
 }

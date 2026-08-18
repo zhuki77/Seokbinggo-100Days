@@ -352,6 +352,7 @@ namespace Nyangbingo.World
             runtimeServices.ActiveSlot.Changed += RefreshCombatProfile;
             runtimeServices.PortableLantern.Changed += RefreshPortableLanternLight;
             runtimeServices.EquipmentSystem.Changed += RefreshEquipmentStats;
+            runtimeServices.PlayerTemperature.RoomTemperatureChanged += HandleRoomTemperatureChanged;
             health.Died += HandleDied;
             runtimeServices.PlayerTemperature.ReachedMaximum += HandleTemperatureMaximum;
             runtimeServices.DeathTearPouches.Changed += RefreshTearPouchVisuals;
@@ -1746,12 +1747,16 @@ namespace Nyangbingo.World
         private void RefreshEquipmentStats()
         {
             if (runtimeServices?.EquipmentSystem == null || health == null) return;
-            statSheet.Recalculate(runtimeServices.EquipmentSystem);
+            statSheet.Recalculate(runtimeServices.EquipmentSystem,
+                runtimeServices.PlayerTemperature?.CurrentRoomTemperature ?? 0,
+                runtimeServices.EquipmentColdPenalty);
             currentMoveSpeed = baseMoveSpeed * statSheet.MovementMultiplier;
             health.SetDefense(statSheet.Defense);
             RefreshPlayerFireDamageMultiplier();
             RefreshPlayerVisionLight();
         }
+
+        private void HandleRoomTemperatureChanged(int _) => RefreshEquipmentStats();
 
         private void RefreshPlayerFireDamageMultiplier()
         {
@@ -2273,7 +2278,10 @@ namespace Nyangbingo.World
                 runtimeServices.EquipmentSystem.Changed -= RefreshEquipmentStats;
             if (health != null) health.Died -= HandleDied;
             if (runtimeServices?.PlayerTemperature != null)
+            {
+                runtimeServices.PlayerTemperature.RoomTemperatureChanged -= HandleRoomTemperatureChanged;
                 runtimeServices.PlayerTemperature.ReachedMaximum -= HandleTemperatureMaximum;
+            }
             if (runtimeServices?.DeathTearPouches != null)
                 runtimeServices.DeathTearPouches.Changed -= RefreshTearPouchVisuals;
             foreach (var visual in tearPouchVisuals.Values)

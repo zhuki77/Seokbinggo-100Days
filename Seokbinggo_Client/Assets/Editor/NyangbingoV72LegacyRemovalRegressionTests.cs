@@ -23,7 +23,6 @@ public static class NyangbingoV72LegacyRemovalRegressionTests
         "night_wave_table",
         "wave_night_period",
         "wave_night_offset",
-        "wave_mult_target",
         "wave_advance_sec",
         "sun_scale_ties_dcounter",
         "tree_decay_by_day",
@@ -45,6 +44,8 @@ public static class NyangbingoV72LegacyRemovalRegressionTests
                 invasionPeriod == "10", "invasion period must be 10 days");
         Require(globals.TryGetValue(GlobalKeys.InvasionOffsetDays, out var invasionOffset) &&
                 invasionOffset == "6", "invasion offset must be 6 days");
+        Require(globals.TryGetValue("wave_mult_target", out var waveMultTarget) &&
+                waveMultTarget == "hp_only", "v79 variant multiplier target must remain hp_only");
         Require(globals.TryGetValue(GlobalKeys.SunScaleTiesHeatStage, out var sunScale) && sunScale == "1",
             "sun scale must follow named heat stage");
 
@@ -63,6 +64,8 @@ public static class NyangbingoV72LegacyRemovalRegressionTests
             "catalog invasion period mismatch");
         Require(catalog.FindGlobal(GlobalKeys.InvasionOffsetDays)?.Value == "6",
             "catalog invasion offset mismatch");
+        Require(catalog.FindGlobal("wave_mult_target")?.Value == "hp_only",
+            "catalog variant multiplier target mismatch");
 
         Require(catalog.DayCurves.Count == 30, "30-day demo curve count changed");
         Require(catalog.DayCurves.All(curve => curve != null && curve.MaxActive > 0),

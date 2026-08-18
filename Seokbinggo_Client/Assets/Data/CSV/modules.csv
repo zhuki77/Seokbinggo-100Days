@@ -4,9 +4,9 @@ door,단열 문,door,통행+flood-fill 밀폐 인정,"wood:6,hemp_stalk:4,ice_sh
 roof,차열 지붕,roof,상부 밀폐,"stone:6,rebar:3,hemp_stalk:2",20,P0
 jangdok,장독 창고,jangdok,보관함 40슬롯,"dirt:10,stone:8,wood:6",45,P1
 ice_core,얼음 저장고,ice_core,체온 회복 거점(코어),"ice_shard:20,stone:10,iron_ingot:2",60,P0
-seokbinggo_s1,석빙고 1단계,seokbinggo_s1,석빙고 승급·터렛 슬롯1 (kit 오면 materials 덮어쓰기),"stone:15,ice_shard:10,wood:8",30,P0
-seokbinggo_s2,석빙고 2단계,seokbinggo_s2,석빙고 승급·터렛 슬롯2 (kit 오면 materials 덮어쓰기),"stone:25,ice_shard:20,iron_ingot:2,rebar:3",45,P0
-seokbinggo_s3,석빙고 3단계,seokbinggo_s3,석빙고 승급·터렛 슬롯3·데모 승리선·눈물0 (kit 오면 materials 덮어쓰기),"stone:35,ice_shard:30,iron_ingot:4,copper_ingot:2",60,P0
-seokbinggo_s4,석빙고 4단계,seokbinggo_s4,석빙고 승급·대장간 해금·터렛 슬롯4·눈물160 (v46),"yokai_tear:160,ice_shard:40,iron_ingot:6",90,P0
-seokbinggo_s5,석빙고 5단계,seokbinggo_s5,석빙고 승급·터렛 슬롯5·눈물320 (v46),"yokai_tear:320,ice_shard:50,icesteel_ingot:4",120,P0
-seokbinggo_s6,석빙고 6단계,seokbinggo_s6,석빙고 승급·터렛 슬롯6·눈물560 (v46),"yokai_tear:560,ice_shard:60,icesteel_ingot:8",150,P0
+seokbinggo_s1,석빙고 1단 움집,,밀폐 개념·냉기원 1종,"stone:10,clay:6",30,P0
+seokbinggo_s2,석빙고 2단 토굴 석빙고,,화로·장독·냉기원 상한 50%,"stone:20,clay:12,iron_ingot:2",60,P0
+seokbinggo_s3,석빙고 3단 돌 석빙고,,얼음 저장고(코어)·상한 100% — 데모 승리선,"stone:30,icesteel_ingot:4",90,P0
+seokbinggo_s4,석빙고 4단 서리 석빙고,,단열재 2단·전진 초소·대장간 해금,"seonge_ingot:6,icesteel_ingot:6,yokai_tear:160",120,P0
+seokbinggo_s5,석빙고 5단 도관 석빙고,,냉기 도관망·한파 코어 2호기·별관,"ice_root_bundle:8,blaze_yeokrin:1,yokai_tear:320",150,P0
+seokbinggo_s6,석빙고 6단 한파 석빙고,,단열재 3단·한파 코어 3호기·경계암 접속,"cold_wave_ingot:10,eop_scale_mat:1,yokai_tear:560",180,P0

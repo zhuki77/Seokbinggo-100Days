@@ -20,8 +20,8 @@ public static class NyangbingoV72ExpansionRegressionTests
         var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
         var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
         Require(catalog != null && config != null, "catalog or world config missing");
-        Require(catalog.Items.Count == 174 && catalog.Recipes.Count == 95 &&
-                catalog.Globals.Count == 240 && catalog.Equipment.Count == 44 &&
+        Require(catalog.Items.Count == 168 && catalog.Recipes.Count == 95 &&
+                catalog.Globals.Count == 253 && catalog.Equipment.Count == 44 &&
                 catalog.CombatProfiles.Count == 18 && catalog.Bosses.Count == 10 &&
                 catalog.DayCurves.Count == 30 && catalog.Talismans.Count == 5,
             "v72 union catalog counts mismatch");
@@ -34,7 +34,7 @@ public static class NyangbingoV72ExpansionRegressionTests
         ValidateExpansionGate(catalog);
         ValidateDemoContract();
 
-        Debug.Log("[Nyangbingo] v72 expansion regression passed: catalog 174/95/240/44/18/10, " +
+        Debug.Log("[Nyangbingo] v72 expansion regression passed: catalog 168/95/253/44/18/10, " +
                   "boundary ice rock hardness 2, 31-day scope-B gate, ten surface bosses, " +
                   "five forced encounters, and 30-day demo saves contract.");
     }
@@ -42,7 +42,7 @@ public static class NyangbingoV72ExpansionRegressionTests
     private static void ValidateLatestGlobals(GameDataCatalog catalog)
     {
         Require(ReadInt(catalog, GlobalKeys.DeadlineRemoved) == 1 &&
-                catalog.FindGlobal(GlobalKeys.WinCondition)?.Value == "final_boss_kill" &&
+                catalog.FindGlobal(GlobalKeys.WinCondition)?.Value == "gate_named_clear" &&
                 catalog.FindGlobal(GlobalKeys.BossArenaLayer)?.Value == "surface" &&
                 ReadInt(catalog, GlobalKeys.AltarCount) == 10 &&
                 catalog.FindGlobal(GlobalKeys.FurnitureMvpScope)?.Value == "A",
@@ -52,12 +52,14 @@ public static class NyangbingoV72ExpansionRegressionTests
         {
             "cold_source_required", "cold_cap_muldanji", "cold_cap_icejar",
             "cold_cap_icestorage", "cold_cap_frostcooler", "win_seal_pct",
-            "night_wave_table", "wave_night_period", "wave_night_offset", "wave_mult_target",
+            "night_wave_table", "wave_night_period", "wave_night_offset",
             "wave_advance_sec", "sun_scale_ties_dcounter", "tree_decay_by_day",
             "day_surface_reach_tiles_s10", "shade_gate_stage"
         };
         foreach (var key in removed)
             Require(catalog.FindGlobal(key) == null, $"removed legacy global still loaded: {key}");
+        Require(catalog.FindGlobal("wave_mult_target")?.Value == "hp_only",
+            "v79 variant HP multiplier target is missing");
     }
 
     private static void ValidateBoundaryIceRock(GameDataCatalog catalog, WorldGenerationConfig config)

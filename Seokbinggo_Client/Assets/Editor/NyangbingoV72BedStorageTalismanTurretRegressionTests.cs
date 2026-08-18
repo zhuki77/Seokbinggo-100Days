@@ -20,8 +20,8 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
         var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
         var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
         Require(catalog != null && config != null, "catalog or world config missing");
-        Require(catalog.Items.Count == 174 && catalog.Recipes.Count == 95 &&
-                catalog.MineralTiers.Count == 15 && catalog.Globals.Count == 240 &&
+        Require(catalog.Items.Count == 168 && catalog.Recipes.Count == 95 &&
+                catalog.MineralTiers.Count == 15 && catalog.Globals.Count == 253 &&
                 catalog.Talismans.Count == 5,
             "step7 catalog counts mismatch");
 
@@ -34,7 +34,7 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
 
         Debug.Log("[Nyangbingo] v72 bed/storage/talisman/turret regression passed: " +
                   "bed -4C and next phase, daily spoil/melt, mushrooms 7/5/3, " +
-                  "talismans 5 and durations, smithy singijeon, stage/damage caps, schema 25.");
+                  "talismans 5 and durations, smithy singijeon, stage/damage caps, schema 26.");
     }
 
     private static void ValidateBedAndDailyTick(GameDataCatalog catalog)
@@ -233,14 +233,14 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
         var restored = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
         restored.NormalizeAfterLoad();
         Require(restored.schemaVersion == SaveGame.CurrentSchemaVersion &&
-                SaveGame.CurrentSchemaVersion == 25 && restored.inventory.Count == 1 &&
+                SaveGame.CurrentSchemaVersion == 26 && restored.inventory.Count == 1 &&
                 restored.inventory[0].hasStorageCondition &&
                 Mathf.Approximately(restored.inventory[0].storageCondition01, .4f) &&
                 Mathf.Approximately(restored.inventory[0].storageMeltRemainder, .75f) &&
                 Mathf.Approximately(restored.talismanStrideRemaining, 45f) &&
                 Mathf.Approximately(restored.talismanHideRemaining, 20f) &&
                 Mathf.Approximately(restored.talismanFrostRemaining, 90f),
-            "schema 25 storage/talisman save round-trip mismatch");
+            "schema 26 storage/talisman save round-trip mismatch");
     }
 
     private static bool ReadBool(GameDataCatalog catalog, string key)
