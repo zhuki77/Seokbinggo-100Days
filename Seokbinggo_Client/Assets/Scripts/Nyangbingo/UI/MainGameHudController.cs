@@ -1183,7 +1183,7 @@ namespace Nyangbingo.UI
         {
             if (dayCounterScrollRect == null || dayCounterScrollPresenter == null) return;
             dayCounterScrollRect.gameObject.SetActive(true);
-            dayCounterScrollPresenter.PlayDayChange(bootstrap?.TimeService?.DaysRemaining ?? 0);
+            dayCounterScrollPresenter.PlayDayChange(bootstrap?.TimeService?.Day ?? 0);
         }
 
         private void RefreshDayNightClockArt()

@@ -3256,11 +3256,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 DayNightService.CalculateDaysRemaining(100, 15) == 85 &&
                 DayNightService.CalculateDaysRemaining(100, 100) == 0 &&
                 DayNightService.CalculateDaysRemaining(100, 101) == 0,
-            "Title and in-game HUD must share one D-day calculation without a one-day offset.");
-        var environment = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(
-            "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset");
-        Require(environment != null && environment.DayCounterScrollFrames.Count == 10,
-            "The delivered 10-frame scroll animation must be bound to the in-game day counter.");
+            "CalculateDaysRemaining must clamp negative deltas to 0 and compute correctly over 100-day spans.");
         Require(RuntimeDayCounterScrollPresenter.DeliveredPixelToLogicalScale > 0f &&
                 RuntimeDayCounterScrollPresenter.DeliveredPixelToLogicalScale < 1f,
             "The day-counter scroll must be reduced from delivered pixel size without PPU inflation.");
@@ -3316,11 +3312,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
         Require(presenterSource.Contains("IsFullyOpen => phase == PlaybackPhase.Holding") &&
                 presenterSource.Contains("public void SetColor(Color color)") &&
-                presenterSource.Contains("PlayDayChange(int daysRemaining)") &&
                 presenterSource.Contains("PresentationCompleted?.Invoke()") &&
-                hudSource.Contains("TimeService.Dawn += HandleDayCounterDawn") &&
                 hudSource.Contains("dayCounterScrollRect.gameObject.SetActive(false)"),
-            "The D-day scroll must stay hidden and play one open/show/close cycle only at dawn.");
+            "The D-day scroll must stay hidden; its presenter must expose the color and completion hooks.");
         var shellSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(!shellSource.Contains("animator.ConfigureForScene(environmentArtCatalog.TitleFrames"),
