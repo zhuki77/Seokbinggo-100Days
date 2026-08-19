@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nyangbingo.Audio;
+using Nyangbingo.Data;
 using Nyangbingo.Save;
 using UnityEngine;
 
@@ -11,7 +12,8 @@ namespace Nyangbingo.UI
 
     public sealed class DemoResultState
     {
-        public const string Teaser = "D-70 — 백일폭염까지";
+        /// <summary>D-카운터 폐지. 결과 화면은 날짜 티저를 쓰지 않는다.</summary>
+        public const string Teaser = "";
         public float SealPercentage { get; internal set; }
         public IReadOnlyList<string> CompletedModuleIds { get; internal set; }
         public bool ImugiDefeated { get; internal set; }
@@ -27,7 +29,6 @@ namespace Nyangbingo.UI
     public sealed class GameShellController : MonoBehaviour
     {
         public const int AutoSaveSlot = 0;
-        public const int DemoEndDay = 30;
         public static readonly int[] DemoSaveDays = { 1, 15, 30 };
 
         [SerializeField] private NyangbingoAudioService audioService;
@@ -161,12 +162,27 @@ namespace Nyangbingo.UI
             SetScreen(GameShellScreen.Result);
         }
 
-        public bool ReturnFromResultToTitle()
+        /// <summary>
+        /// 결과 화면만 Gameplay로 되돌린다. 타이틀 복귀·일시정지 Resume과 섞지 않는다.
+        /// </summary>
+        public bool ContinueFromResult()
         {
             if (Screen != GameShellScreen.Result) return false;
-            TitleRequested?.Invoke();
+            resumeTimeScale = 1f;
+            ShowGameplay(true);
             return true;
         }
+
+        public static bool ShouldOpenDemoResult(string bossId, GameDataCatalog catalog)
+        {
+            if (string.IsNullOrWhiteSpace(bossId) || catalog == null) return false;
+            var demoGate = catalog.FindGlobal(GlobalKeys.WinGateDemo)?.Value;
+            var finalGate = catalog.FindGlobal(GlobalKeys.WinGateFinal)?.Value;
+            if (string.Equals(bossId, finalGate, StringComparison.Ordinal)) return false;
+            return string.Equals(bossId, demoGate, StringComparison.Ordinal);
+        }
+
+        public static bool ShouldEndDemoAtDay(int day) => false;
 
         public static DemoResultState BuildResult(SaveGame save)
         {
@@ -196,13 +212,6 @@ namespace Nyangbingo.UI
                 Deaths = save.stats.deaths
             };
         }
-
-        /// <summary>
-        /// v34 정본: 데모는 30일차 이무기의 격퇴 여부가 아니라 30일차 밤이 끝난 새벽에 종료한다.
-        /// DayNightService.Dawn은 날짜를 먼저 증가시킨 뒤 발행되므로 새 날짜가 MVP 제한일+1인지 검사한다.
-        /// </summary>
-        public static bool ShouldEndDemoAtDawn(bool isOfficialDemo, int newDay, int mvpDayLimit) =>
-            isOfficialDemo && mvpDayLimit > 0 && newDay == mvpDayLimit + 1;
 
         private void ShowGameplay(bool preserveCurrentMusic)
         {

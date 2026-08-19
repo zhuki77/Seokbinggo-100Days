@@ -228,7 +228,7 @@ namespace Nyangbingo.Debugging
         private void HandleDayStart()
         {
             if (logDayNightTransitions)
-                Debug.Log($"[Nyangbingo] 새벽 — Day {dayNightService.Day} 시작 (D-{dayNightService.DaysRemaining}).");
+                Debug.Log($"[Nyangbingo] 새벽 — Day {dayNightService.Day} 시작.");
             ClearSpawnQueryMarkers();
         }
 
@@ -288,7 +288,7 @@ namespace Nyangbingo.Debugging
             var style = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = Color.white } };
             var lines = new[]
             {
-                $"D-{dayNightService.DaysRemaining} (Day {dayNightService.Day})",
+                $"Day {dayNightService.Day}",
                 $"상태: {dayNightService.State} — 다음 전환까지 {dayNightService.SecondsUntilNextTransition:0.0}초",
                 $"누적 GameSeconds: {dayNightService.GameSeconds:0.0}s",
                 tickProbe != null
