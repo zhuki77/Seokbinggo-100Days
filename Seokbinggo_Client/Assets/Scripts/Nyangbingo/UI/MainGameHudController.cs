@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Combat;
@@ -39,6 +40,13 @@ namespace Nyangbingo.UI
         private const float SealLeakMarkerSeconds = 1.4f;
         private const float SealLeakMarkerVisualYOffset = .5f;
         private const float SealDeltaDisplaySeconds = 1.15f;
+
+        public static bool IsDayCounterDisplayEnabled(GameDataCatalog catalog)
+        {
+            var value = catalog?.FindGlobal(GlobalKeys.DayCounterDisplay)?.Value;
+            return !string.IsNullOrWhiteSpace(value) &&
+                   !string.Equals(value, "off", StringComparison.OrdinalIgnoreCase);
+        }
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
@@ -274,7 +282,8 @@ namespace Nyangbingo.UI
                 hasDayTextDefaultPosition = true;
             }
             BuildDayCounterScroll();
-            bootstrap.TimeService.Dawn += HandleDayCounterDawn;
+            if (IsDayCounterDisplayEnabled(gameDataCatalog) && bootstrap?.TimeService != null)
+                bootstrap.TimeService.Dawn += HandleDayCounterDawn;
             encounterCoordinator = FindAnyObjectByType<MainGameEncounterCoordinator>();
             baekjungHudActive = encounterCoordinator?.BaekjungScheduler?.IsActive == true;
             baekjungHudSuppressedForBoss = bossManager?.IsBossActive == true;
@@ -347,7 +356,9 @@ namespace Nyangbingo.UI
             {
                 var heatStage = ResolveDisplayedHeatStage();
                 var badge = HeatStagePresentation.FormatBadge(heatStage);
-                var counterVisible = dayCounterScrollPresenter == null || dayCounterScrollPresenter.IsFullyOpen;
+                var counterVisible = !IsDayCounterDisplayEnabled(gameDataCatalog) ||
+                                     dayCounterScrollPresenter == null ||
+                                     dayCounterScrollPresenter.IsFullyOpen;
                 if (dayCounterGlyphs != null)
                 {
                     dayText.text = string.Empty;
@@ -1135,7 +1146,7 @@ namespace Nyangbingo.UI
             if (baekjungDayCounterBorder != null) baekjungDayCounterBorder.SetActive(false);
             dayCounterScrollPresenter = dayCounterScrollRect.GetComponent<RuntimeDayCounterScrollPresenter>() ??
                                          dayCounterScrollRect.gameObject.AddComponent<RuntimeDayCounterScrollPresenter>();
-            dayCounterScrollPresenter.ConfigureForRuntime(frames, bootstrap.TimeService.DaysRemaining);
+            dayCounterScrollPresenter.ConfigureForRuntime(frames, 0);
             dayCounterScrollPresenter.PresentationCompleted += HandleDayCounterPresentationCompleted;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
@@ -1159,24 +1170,20 @@ namespace Nyangbingo.UI
             dayNightClockArt.rectTransform.anchoredPosition = dayClockDefaultPosition + new Vector2(-22f, 0f);
             if (nightSpawnLockRoot != null) nightSpawnLockRoot.SetActive(false);
             RefreshDayNightClockArt();
-            dayText.gameObject.SetActive(false);
-            dayCounterScrollRect.gameObject.SetActive(false);
-        }
-
-        private void HandleDayCounterDawn()
-        {
-            if (dayCounterScrollPresenter == null || dayText == null || bootstrap?.TimeService == null) return;
-            dayCounterScrollRect.gameObject.SetActive(true);
-            dayText.gameObject.SetActive(true);
-            dayCounterScrollPresenter.PlayDayChange(bootstrap.TimeService.DaysRemaining);
-            RefreshStatus();
+            if (dayText != null) dayText.gameObject.SetActive(true);
+            if (dayCounterScrollRect != null) dayCounterScrollRect.gameObject.SetActive(false);
         }
 
         private void HandleDayCounterPresentationCompleted()
         {
-            if (dayCounterGlyphs != null) dayCounterGlyphs.SetVisible(false);
-            if (dayText != null) dayText.gameObject.SetActive(false);
             if (dayCounterScrollRect != null) dayCounterScrollRect.gameObject.SetActive(false);
+        }
+
+        private void HandleDayCounterDawn()
+        {
+            if (dayCounterScrollRect == null || dayCounterScrollPresenter == null) return;
+            dayCounterScrollRect.gameObject.SetActive(true);
+            dayCounterScrollPresenter.PlayDayChange(bootstrap?.TimeService?.Day ?? 0);
         }
 
         private void RefreshDayNightClockArt()
@@ -1511,9 +1518,10 @@ namespace Nyangbingo.UI
             foreach (var sprite in runtimeBossHealthSpriteCache.Values)
                 if (sprite != null) Destroy(sprite);
             runtimeBossHealthSpriteCache.Clear();
-            if (bootstrap?.TimeService != null) bootstrap.TimeService.Dawn -= HandleDayCounterDawn;
             if (dayCounterScrollPresenter != null)
                 dayCounterScrollPresenter.PresentationCompleted -= HandleDayCounterPresentationCompleted;
+            if (bootstrap?.TimeService != null)
+                bootstrap.TimeService.Dawn -= HandleDayCounterDawn;
             GameEvents.OnSealChanged -= RefreshStatus;
             GameEvents.OnBaekjungStart -= HandleBaekjungStarted;
             GameEvents.OnBaekjungEnd -= HandleBaekjungEnded;

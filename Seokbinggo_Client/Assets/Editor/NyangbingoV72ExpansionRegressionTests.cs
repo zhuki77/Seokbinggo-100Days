@@ -189,12 +189,10 @@ public static class NyangbingoV72ExpansionRegressionTests
 
     private static void ValidateDemoContract()
     {
-        Require(GameShellController.DemoEndDay == 30 &&
-                GameShellController.DemoSaveDays.SequenceEqual(new[] { 1, 15, 30 }) &&
-                GameShellController.ShouldEndDemoAtDawn(true, 31, 30) &&
-                !GameShellController.ShouldEndDemoAtDawn(true, 30, 30) &&
-                !GameShellController.ShouldEndDemoAtDawn(false, 31, 30),
-            "30-day judge demo contract mismatch");
+        Require(GameShellController.DemoSaveDays.SequenceEqual(new[] { 1, 15, 30 }) &&
+                !GameShellController.ShouldEndDemoAtDay(31) &&
+                !GameShellController.ShouldEndDemoAtDay(100),
+            "Date alone must not open the result screen on day 31 or day 100.");
     }
 
     private static int ReadInt(GameDataCatalog catalog, string key)

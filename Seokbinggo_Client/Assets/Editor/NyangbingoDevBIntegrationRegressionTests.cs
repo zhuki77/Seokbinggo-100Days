@@ -66,11 +66,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestForcedInvasionSpawnCapContract();
         TestBaekjungWaveCompositionContract();
         TestBUiV71InvasionAndCraftingContract();
+        TestV79EndingUiContract();
         TestUndergroundTemperatureRecoveryContract();
         TestPlayerFireMitigationContract();
         TestPlayerVisionBonusContract();
         TestYagwangRuntimeTheftContract();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (48/48).");
+        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (49/49).");
     }
 
     private static void TestChestLootInterfaceContract()
@@ -311,6 +312,84 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 audioSource.Contains("HypothermiaEntered") &&
                 audioSource.Contains("FrostMineralRevealed"),
             "B-UI-v71 HUD and audio hooks must wire invasion, hypothermia, and frost reveal cues.");
+    }
+
+    private static void TestV79EndingUiContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && !MainGameHudController.IsDayCounterDisplayEnabled(catalog),
+            "day_counter_display must disable the remaining-day counter.");
+        var demoGate = catalog.FindGlobal(GlobalKeys.WinGateDemo)?.Value;
+        var finalGate = catalog.FindGlobal(GlobalKeys.WinGateFinal)?.Value;
+        Require(GameShellController.ShouldOpenDemoResult(demoGate, catalog) &&
+                !GameShellController.ShouldOpenDemoResult(finalGate, catalog),
+            "The demo result screen must follow win_gate_demo and ignore win_gate_final.");
+
+        var frost = new FrostSpreadService(catalog);
+        var demoOpens = 0;
+        var endings = 0;
+        frost.EndingReached += bossId =>
+        {
+            endings++;
+            if (GameShellController.ShouldOpenDemoResult(bossId, catalog)) demoOpens++;
+        };
+        Require(frost.OnAltarBossClear(demoGate) && frost.DemoEndingReached &&
+                demoOpens == 1 && endings == 1,
+            "The demo gate must open the result UI exactly once.");
+        Require(!frost.OnAltarBossClear(demoGate) && demoOpens == 1 && endings == 1,
+            "Repeat clears must not re-fire EndingReached.");
+        Require(frost.OnAltarBossClear(finalGate) && frost.FinalEndingReached &&
+                endings == 2 && demoOpens == 1,
+            "The final gate event must not open the demo result screen.");
+
+        var restored = new FrostSpreadService(catalog);
+        var restoredFires = 0;
+        restored.EndingReached += _ => restoredFires++;
+        Require(restored.RestoreAltarProgress(1, new[] { demoGate }) &&
+                restored.DemoEndingReached && restoredFires == 0,
+            "Load must restore the demo ending without re-raising EndingReached.");
+
+        var shellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        var hudSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
+        var harnessSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Debug/MapGeneratorTestHarness.cs");
+        Require(shellSource.Contains("frostSpread.EndingReached += HandleEndingReached") &&
+                shellSource.Contains("frostSpread.EndingReached -= HandleEndingReached") &&
+                shellSource.Contains("ContinueFromResult") &&
+                shellSource.Contains("계속 플레이") &&
+                !shellSource.Contains("30일차 데모 종료") &&
+                !shellSource.Contains("HandleMvpDawn") &&
+                !hudSource.Contains("TimeService.DaysRemaining") &&
+                !harnessSource.Contains("D-{") &&
+                string.IsNullOrEmpty(DemoResultState.Teaser),
+            "v79 B UI must drop D-counter copy, date endings, and title-return from the result screen.");
+
+        var shellObject = new GameObject("V79ResultShell");
+        var previousTimeScale = Time.timeScale;
+        try
+        {
+            var shell = shellObject.AddComponent<GameShellController>();
+            shell.EnterGameplay(new SaveGame { day = 1 });
+            var titleRequested = false;
+            shell.TitleRequested += () => titleRequested = true;
+            shell.ShowResult(new SaveGame { day = 12 });
+            Require(shell.Screen == GameShellScreen.Result && Mathf.Approximately(Time.timeScale, 0f),
+                "ShowResult must pause on the result screen.");
+            Require(shell.ContinueFromResult() &&
+                    shell.Screen == GameShellScreen.Gameplay &&
+                    Time.timeScale > 0f &&
+                    !titleRequested &&
+                    !shell.ContinueFromResult(),
+                "ContinueFromResult must restore gameplay without TitleRequested.");
+        }
+        finally
+        {
+            Time.timeScale = previousTimeScale;
+            UnityEngine.Object.DestroyImmediate(shellObject);
+        }
     }
 
     private static void TestForcedInvasionSpawnCapContract()
@@ -911,13 +990,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Data/SO/GameDataCatalog.asset");
         var eoduksini = catalog?.FindYokai("eoduksini");
         var gangcheori = catalog?.FindYokai("gangcheol");
-        Require(catalog != null && catalog.Globals.Count == 240 &&
+        Require(catalog != null && catalog.Globals.Count == 253 &&
                 ResidentYokaiRules.TryCreate(catalog.Globals, out var rules) &&
                 rules.MaxPerSpecies == 1 &&
                 rules.MinPlayerDistance == 24 &&
                 rules.MinBetweenDistance == 12 &&
                 rules.MinDepth == 91 && rules.MaxDepth == 135,
-            "The v72 catalog must expose all 240 globals including the six confirmed resident-elite rules.");
+            "The v79 catalog must expose all 253 globals including the six confirmed resident-elite rules.");
         Require(eoduksini != null &&
                 eoduksini.SupportsSpawnTrack(YokaiSpawnTrack.Resident) &&
                 gangcheori != null &&
@@ -2520,11 +2599,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
     private static void TestLatestProductFlowContracts()
     {
-        Require(GameShellController.ShouldEndDemoAtDawn(true, 31, 30) &&
-                !GameShellController.ShouldEndDemoAtDawn(true, 30, 30) &&
-                !GameShellController.ShouldEndDemoAtDawn(true, 31, 0) &&
-                !GameShellController.ShouldEndDemoAtDawn(false, 31, 30),
-            "The day-30 demo must end at the following dawn regardless of the Imugi outcome.");
+        Require(!GameShellController.ShouldEndDemoAtDay(31) &&
+                !GameShellController.ShouldEndDemoAtDay(30) &&
+                !GameShellController.ShouldEndDemoAtDay(0),
+            "v79 removes date-based endings; day count alone must never trigger a result screen.");
 
         var save = new SaveGame
         {
@@ -3178,11 +3256,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 DayNightService.CalculateDaysRemaining(100, 15) == 85 &&
                 DayNightService.CalculateDaysRemaining(100, 100) == 0 &&
                 DayNightService.CalculateDaysRemaining(100, 101) == 0,
-            "Title and in-game HUD must share one D-day calculation without a one-day offset.");
-        var environment = AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(
-            "Assets/Art/Backgrounds/EnvironmentArtCatalog.asset");
-        Require(environment != null && environment.DayCounterScrollFrames.Count == 10,
-            "The delivered 10-frame scroll animation must be bound to the in-game day counter.");
+            "CalculateDaysRemaining must clamp negative deltas to 0 and compute correctly over 100-day spans.");
         Require(RuntimeDayCounterScrollPresenter.DeliveredPixelToLogicalScale > 0f &&
                 RuntimeDayCounterScrollPresenter.DeliveredPixelToLogicalScale < 1f,
             "The day-counter scroll must be reduced from delivered pixel size without PPU inflation.");
@@ -3238,11 +3312,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
         Require(presenterSource.Contains("IsFullyOpen => phase == PlaybackPhase.Holding") &&
                 presenterSource.Contains("public void SetColor(Color color)") &&
-                presenterSource.Contains("PlayDayChange(int daysRemaining)") &&
                 presenterSource.Contains("PresentationCompleted?.Invoke()") &&
-                hudSource.Contains("TimeService.Dawn += HandleDayCounterDawn") &&
                 hudSource.Contains("dayCounterScrollRect.gameObject.SetActive(false)"),
-            "The D-day scroll must stay hidden and play one open/show/close cycle only at dawn.");
+            "The D-day scroll must stay hidden; its presenter must expose the color and completion hooks.");
         var shellSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(!shellSource.Contains("animator.ConfigureForScene(environmentArtCatalog.TitleFrames"),

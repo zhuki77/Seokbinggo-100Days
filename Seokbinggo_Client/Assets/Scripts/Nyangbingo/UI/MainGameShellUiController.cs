@@ -50,6 +50,7 @@ namespace Nyangbingo.UI
         private Image bgmSpeakerImage;
         private Image sfxSpeakerImage;
         private Button pauseSaveButton;
+        private FrostSpreadService frostSpread;
         private RectTransform pauseHoverIndicator;
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
@@ -115,7 +116,8 @@ namespace Nyangbingo.UI
             shell.TitleRequested += HandleTitleRequested;
             gameDataCatalog = FindAnyObjectByType<MainGameBootstrap>()?.GameDataCatalog;
             bossManager = FindAnyObjectByType<BossManager>();
-            timeService.Dawn += HandleMvpDawn;
+            frostSpread = FindAnyObjectByType<MainGameRuntimeServices>()?.FrostSpread;
+            if (frostSpread != null) frostSpread.EndingReached += HandleEndingReached;
             ConfigurePauseMenuLayout();
             BindButtons();
             BuildResultView();
@@ -509,6 +511,7 @@ namespace Nyangbingo.UI
                     case GameShellScreen.Gameplay: shell.OpenPause(); break;
                     case GameShellScreen.Pause: shell.ResumeGameplay(); break;
                     case GameShellScreen.Settings: shell.CloseSettings(); break;
+                    case GameShellScreen.Result: shell.ContinueFromResult(); break;
                     case GameShellScreen.Confirmation: shell.CancelConfirmation(); break;
                 }
             }
@@ -526,7 +529,7 @@ namespace Nyangbingo.UI
             settingsBackButton.onClick.AddListener(() => shell.CloseSettings());
             confirmButton.onClick.AddListener(() => shell.Confirm());
             cancelButton.onClick.AddListener(() => shell.CancelConfirmation());
-            resultTitleButton.onClick.AddListener(() => shell.ReturnFromResultToTitle());
+            resultTitleButton.onClick.AddListener(() => shell.ContinueFromResult());
         }
 
         private void ConfigurePauseMenuLayout()
@@ -776,19 +779,18 @@ namespace Nyangbingo.UI
             audioService.TryPreviewBusVolumes(bgmSlider.value, sfxSlider.value);
         }
 
-        private void HandleMvpDawn()
+        private void HandleEndingReached(string bossId)
         {
-            if (!GameShellController.ShouldEndDemoAtDawn(shell.IsOfficialDemo, timeService.Day,
-                    timeService.MvpContentDayLimit)) return;
+            if (shell == null || shell.Screen == GameShellScreen.Result) return;
+            if (!GameShellController.ShouldOpenDemoResult(bossId, gameDataCatalog)) return;
             var snapshot = saveCoordinator.CaptureSnapshot();
             if (snapshot == null)
             {
-                Debug.LogError("[Nyangbingo] 30일차 결과 스냅샷 생성에 실패했습니다.");
+                Debug.LogError("[Nyangbingo] 데모 관문 결과 스냅샷 생성에 실패했습니다.");
                 return;
             }
             shell.ShowResult(snapshot);
             RefreshResultView();
-            Debug.Log("[Nyangbingo] 30일차 밤 종료 후 MVP 결과 화면을 표시했습니다.");
         }
 
         private void BuildResultView()
@@ -802,7 +804,7 @@ namespace Nyangbingo.UI
 
             if (resultHeaderText != null)
             {
-                resultHeaderText.text = "30일차 데모 종료";
+                resultHeaderText.text = "이무기 격파";
                 resultHeaderText.fontSize = 18;
                 resultHeaderText.fontStyle = FontStyle.Bold;
                 var headerRect = resultHeaderText.rectTransform;
@@ -815,13 +817,14 @@ namespace Nyangbingo.UI
             resultTeaserText = CreateResultText(panel, "Teaser", font, 15, TextAnchor.MiddleCenter,
                 new Vector2(0f, -68f), new Vector2(240f, 26f));
             resultTeaserText.fontStyle = FontStyle.Bold;
+            resultTeaserText.gameObject.SetActive(false);
 
             var buttonRect = resultTitleButton.GetComponent<RectTransform>();
             buttonRect.anchoredPosition = new Vector2(0f, -106f);
             buttonRect.sizeDelta = new Vector2(110f, 22f);
             if (buttonLabel != null)
             {
-                buttonLabel.text = "타이틀로";
+                buttonLabel.text = "계속 플레이";
                 buttonLabel.fontSize = 9;
             }
         }
@@ -858,9 +861,6 @@ namespace Nyangbingo.UI
                     if (modules[index] != null && completed.Contains(modules[index].Id)) installedModules++;
 
             var builder = new StringBuilder();
-            builder.AppendLine(result.SealPercentage >= 100f
-                ? $"✓ 석빙고 온도 {result.SealPercentage:0.#}%"
-                : $"□ 석빙고 온도 {result.SealPercentage:0.#}% / 100%");
             builder.AppendLine($"핵심 모듈 {installedModules}/{totalModules}");
             if (modules != null)
             {
@@ -872,13 +872,14 @@ namespace Nyangbingo.UI
                         .AppendLine(module.DisplayName);
                 }
             }
-            builder.AppendLine(result.ImugiDefeated ? "✓ 이무기 격퇴" : "□ 이무기 도주");
+            builder.AppendLine(result.ImugiDefeated ? "✓ 이무기 격퇴" : "□ 이무기 격퇴");
             builder.AppendLine();
             builder.AppendLine($"요괴 처치 {result.YokaiKills}");
             builder.AppendLine($"채굴 타일 {result.MinedTiles}");
             builder.AppendLine($"사망 횟수 {result.Deaths}");
             resultSummaryText.text = builder.ToString().TrimEnd();
-            resultTeaserText.text = DemoResultState.Teaser;
+            if (resultTeaserText != null)
+                resultTeaserText.text = string.Empty;
         }
 
         private void HandleTitleRequested()
@@ -896,7 +897,7 @@ namespace Nyangbingo.UI
         private void OnDestroy()
         {
             if (shell != null) shell.TitleRequested -= HandleTitleRequested;
-            if (timeService != null) timeService.Dawn -= HandleMvpDawn;
+            if (frostSpread != null) frostSpread.EndingReached -= HandleEndingReached;
         }
     }
 }

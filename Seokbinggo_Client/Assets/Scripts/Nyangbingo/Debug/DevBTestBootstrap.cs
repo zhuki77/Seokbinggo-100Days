@@ -3017,22 +3017,24 @@ namespace Nyangbingo.Debugging
             shell.RequestReturnToTitle();
             var returnToTitleConfirmed = shell.Confirm() && titleRequested;
 
-            var endingPolicy = GameShellController.ShouldEndDemoAtDawn(true, 31, 30) &&
-                               !GameShellController.ShouldEndDemoAtDawn(true, 30, 30) &&
-                               !GameShellController.ShouldEndDemoAtDawn(true, 32, 30) &&
-                               !GameShellController.ShouldEndDemoAtDawn(true, 31, 100) &&
-                               !GameShellController.ShouldEndDemoAtDawn(false, 31, 30);
+            var endingPolicy = !GameShellController.ShouldEndDemoAtDay(31) &&
+                               !GameShellController.ShouldEndDemoAtDay(100);
             shell.ShowResult(activeSave);
             var result = shell.Result;
             var resultMatches = shell.Screen == GameShellScreen.Result && result != null &&
                                 Mathf.Approximately(result.SealPercentage, 87.5f) &&
                                 result.CompletedModuleIds.Count == 5 && result.ImugiDefeated &&
                                 result.YokaiKills == 5 && result.MinedTiles == 17 && result.Deaths == 2 &&
-                                DemoResultState.Teaser == "D-70 — 백일폭염까지" &&
+                                string.IsNullOrEmpty(DemoResultState.Teaser) &&
                                 Mathf.Approximately(Time.timeScale, 0f);
             var resultTitleRequested = false;
             shell.TitleRequested += () => resultTitleRequested = true;
-            var resultSingleExit = shell.ReturnFromResultToTitle() && resultTitleRequested;
+            var currentTrack = audioService.CurrentTrack;
+            var resultSingleExit = shell.ContinueFromResult() &&
+                                   shell.Screen == GameShellScreen.Gameplay &&
+                                   Time.timeScale > 0f &&
+                                   audioService.CurrentTrack == currentTrack &&
+                                   !resultTitleRequested;
 
             Time.timeScale = originalTimeScale;
             Screen.fullScreen = originalFullscreen;
@@ -3042,7 +3044,7 @@ namespace Nyangbingo.Debugging
                 paused && settingsOpened && settingsPreviewed && settingsApplied && settingsClosed &&
                 returnWarning && cancelToPause && resumed && returnToTitleConfirmed && endingPolicy &&
                 resultMatches && resultSingleExit)
-                Debug.Log("[Nyangbingo] Game shell pause, settings, confirmation, and D30 result flow completed.");
+                Debug.Log("[Nyangbingo] Game shell pause, settings, confirmation, and demo-gate result flow completed.");
             else Debug.LogError("[Nyangbingo] Game shell flow test failed.");
         }
 
