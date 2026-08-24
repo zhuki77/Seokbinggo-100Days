@@ -1,5 +1,5 @@
 {
-    "schemaVersion": 25,
+    "schemaVersion": 26,
     "isOfficialDemo": true,
     "seed": 12345,
     "day": 15,
@@ -935,6 +935,7 @@
     "talismanHideRemaining": 0.0,
     "talismanFrostRemaining": 0.0,
     "gimmickWeaponsGranted": [],
+    "frostClearedBossIds": [],
     "frostPendingCells": [],
     "sealPct": 50.0,
     "yokaiTears": 0,
