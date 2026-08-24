@@ -45,8 +45,10 @@ namespace Nyangbingo.UI
         private GameDataCatalog gameDataCatalog;
         private BossManager bossManager;
         private Text resultHeaderText;
+        private Text resultTempText;
         private Text resultSummaryText;
         private Text resultTeaserText;
+        private Button resultGoTitleButton;
         private Image bgmSpeakerImage;
         private Image sfxSpeakerImage;
         private Button pauseSaveButton;
@@ -229,7 +231,7 @@ namespace Nyangbingo.UI
             ApplyButtonLabelArt(pauseSaveButton, gameplayArtCatalog.ShellSave);
             ApplyButtonLabelArt(settingsButton, gameplayArtCatalog.ShellSettings);
             ApplyButtonLabelArt(returnTitleButton, gameplayArtCatalog.ShellReturnTitle);
-            ApplyButtonLabelArt(resultTitleButton, gameplayArtCatalog.ShellReturnTitle);
+            ApplyButtonLabelArt(resultGoTitleButton, gameplayArtCatalog.ShellReturnTitle);
             ApplyButtonLabelArt(settingsApplyButton, gameplayArtCatalog.ShellApply);
             ApplyButtonLabelArt(settingsBackButton, gameplayArtCatalog.ShellBack);
             ApplyShellTextArt(resumeButton?.transform.parent?.Find("Title"),
@@ -274,6 +276,7 @@ namespace Nyangbingo.UI
             RuntimeUiButtonArt.Apply(confirmButton, gameplayArtCatalog);
             RuntimeUiButtonArt.Apply(cancelButton, gameplayArtCatalog);
             RuntimeUiButtonArt.Apply(resultTitleButton, gameplayArtCatalog);
+            RuntimeUiButtonArt.Apply(resultGoTitleButton, gameplayArtCatalog);
         }
 
         private static void ApplyButtonLabelArt(Button button, Sprite sprite)
@@ -808,24 +811,48 @@ namespace Nyangbingo.UI
                 resultHeaderText.fontSize = 18;
                 resultHeaderText.fontStyle = FontStyle.Bold;
                 var headerRect = resultHeaderText.rectTransform;
-                headerRect.anchoredPosition = new Vector2(0f, 98f);
-                headerRect.sizeDelta = new Vector2(340f, 30f);
+                headerRect.anchoredPosition = new Vector2(0f, 96f);
+                headerRect.sizeDelta = new Vector2(340f, 26f);
             }
 
+            // 실온(도) 대형 표기
+            resultTempText = CreateResultText(panel, "Temperature", font, 16, TextAnchor.MiddleCenter,
+                new Vector2(0f, 68f), new Vector2(200f, 22f));
+            resultTempText.fontStyle = FontStyle.Bold;
+
+            // 모듈 체크리스트 + 통계 3줄
             resultSummaryText = CreateResultText(panel, "Summary", font, 9, TextAnchor.UpperLeft,
-                new Vector2(0f, 18f), new Vector2(340f, 126f));
+                new Vector2(0f, 6f), new Vector2(340f, 108f));
+
+            // Teaser 비활성 유지(D-카운터 폐지)
             resultTeaserText = CreateResultText(panel, "Teaser", font, 15, TextAnchor.MiddleCenter,
                 new Vector2(0f, -68f), new Vector2(240f, 26f));
             resultTeaserText.fontStyle = FontStyle.Bold;
             resultTeaserText.gameObject.SetActive(false);
 
-            var buttonRect = resultTitleButton.GetComponent<RectTransform>();
-            buttonRect.anchoredPosition = new Vector2(0f, -106f);
-            buttonRect.sizeDelta = new Vector2(110f, 22f);
+            // [계속 플레이] — 왼쪽, 기본 포커스
+            var continueRect = resultTitleButton.GetComponent<RectTransform>();
+            continueRect.anchoredPosition = new Vector2(-60f, -90f);
+            continueRect.sizeDelta = new Vector2(100f, 22f);
             if (buttonLabel != null)
             {
                 buttonLabel.text = "계속 플레이";
                 buttonLabel.fontSize = 9;
+            }
+
+            // [타이틀로] — 오른쪽
+            var titleButtonObj = Instantiate(resultTitleButton.gameObject, panel);
+            resultGoTitleButton = titleButtonObj.GetComponent<Button>();
+            resultGoTitleButton.onClick.RemoveAllListeners();
+            resultGoTitleButton.onClick.AddListener(HandleTitleRequested);
+            var titleButtonRect = titleButtonObj.GetComponent<RectTransform>();
+            titleButtonRect.anchoredPosition = new Vector2(60f, -90f);
+            titleButtonRect.sizeDelta = new Vector2(100f, 22f);
+            var titleButtonLabel = titleButtonObj.GetComponentInChildren<Text>(true);
+            if (titleButtonLabel != null)
+            {
+                titleButtonLabel.text = "타이틀로";
+                titleButtonLabel.fontSize = 9;
             }
         }
 
@@ -851,6 +878,11 @@ namespace Nyangbingo.UI
         {
             var result = shell.Result;
             if (result == null || resultSummaryText == null || resultTeaserText == null) return;
+
+            // 실온(도) 대형 표기
+            if (resultTempText != null)
+                resultTempText.text = $"실온 {result.RoomTemperatureCelsius}°C";
+
             var completed = new HashSet<string>(result.CompletedModuleIds ?? Array.Empty<string>(),
                 StringComparer.Ordinal);
             var modules = gameDataCatalog?.Modules;
@@ -872,7 +904,6 @@ namespace Nyangbingo.UI
                         .AppendLine(module.DisplayName);
                 }
             }
-            builder.AppendLine(result.ImugiDefeated ? "✓ 이무기 격퇴" : "□ 이무기 격퇴");
             builder.AppendLine();
             builder.AppendLine($"요괴 처치 {result.YokaiKills}");
             builder.AppendLine($"채굴 타일 {result.MinedTiles}");
