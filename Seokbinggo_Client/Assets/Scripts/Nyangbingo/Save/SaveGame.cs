@@ -986,7 +986,8 @@ namespace Nyangbingo.Save
                     CodexSourceFor(definition.Kind), kills, firstKillDay);
             }
 
-            if (!catalog.TryGetInt(GlobalKeys.MvpDays, out var mvpDays)) mvpDays = 30;
+            var mvpDaysDef = catalog.FindGlobal(GlobalKeys.MvpDays);
+            var mvpDays = mvpDaysDef != null && mvpDaysDef.TryGetInt(out var parsedMvpDays) ? parsedMvpDays : 30;
             for (var i = 0; i < catalog.Bosses.Count; i++)
             {
                 var definition = catalog.Bosses[i];
