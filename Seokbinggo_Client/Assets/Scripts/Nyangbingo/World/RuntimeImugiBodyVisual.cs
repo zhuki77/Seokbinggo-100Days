@@ -1,8 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor.Sprites;
-#endif
 
 namespace Nyangbingo.World
 {
@@ -37,29 +34,24 @@ namespace Nyangbingo.World
         {
             var texture = source.texture;
             if (texture != null && texture.isReadable)
-                return CreateNamedSubSprite(texture, source, cropRect, rightHalf);
+            {
+                var readableCrop = CreateNamedSubSprite(texture, source, cropRect, rightHalf);
+                if (readableCrop != null) return readableCrop;
+            }
 
             return CreateCroppedSpriteFromRenderCopy(source, cropRect, rightHalf);
         }
 
         /// <summary>
         /// Aseprite 임포트 텍스처는 isReadable=false인 경우가 많아 Sprite.Create가
-        /// 실패한다. 전체 atlas를 RT로 복사한 뒤 원본 rect 좌표로 서브 스프라이트를 만든다.
+        /// 실패한다. 전체 atlas를 RT로 복사한 뒤 원본 atlas rect 좌표로 서브 스프라이트를 만든다.
+        /// SpriteUtility.GetSpriteTexture는 스프라이트 로컬 픽셀만 반환하므로 사용하지 않는다.
         /// </summary>
         private static Sprite CreateCroppedSpriteFromRenderCopy(
             Sprite source, Rect cropRect, bool rightHalf)
         {
             var texture = source.texture;
             if (texture == null) return null;
-
-#if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                var readableAtlas = SpriteUtility.GetSpriteTexture(source, true);
-                if (readableAtlas != null)
-                    return CreateNamedSubSprite(readableAtlas, source, cropRect, rightHalf);
-            }
-#endif
 
             var renderTarget = RenderTexture.GetTemporary(
                 texture.width,
