@@ -91,6 +91,7 @@ namespace Nyangbingo.UI
             RefreshTitleControls();
             SetStatus(string.Empty);
             if (confirmationPanel != null) confirmationPanel.SetActive(false);
+            BringDemoButtonsToFront();
             isInitialized = true;
             Debug.Log("[Nyangbingo] TitleUiController: 타이틀 셸·맵 크기 슬라이더 연결 완료.");
         }
@@ -147,10 +148,29 @@ namespace Nyangbingo.UI
             RefreshMapWidthLabel();
             for (var index = 0; index < demoSaveButtons.Count; index++)
             {
+                var day = GameShellController.DemoSaveDays[index];
                 var visible = shell.Title.ShowsDemoSaves;
                 demoSaveButtons[index].gameObject.SetActive(visible);
+                var hasDemo = saveManager.HasDemoSave(day);
                 demoSaveButtons[index].interactable = visible &&
-                    saveManager.HasDemoSave(GameShellController.DemoSaveDays[index]);
+                    (Application.isEditor || hasDemo);
+            }
+
+            if (statusText != null)
+            {
+                statusText.raycastTarget = false;
+                var statusRect = statusText.rectTransform;
+                statusRect.anchoredPosition = new Vector2(-112f, -154f);
+                statusRect.sizeDelta = new Vector2(320f, 20f);
+            }
+        }
+
+        private void BringDemoButtonsToFront()
+        {
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+            {
+                if (demoSaveButtons[index] != null)
+                    demoSaveButtons[index].transform.SetAsLastSibling();
             }
         }
 
@@ -220,6 +240,7 @@ namespace Nyangbingo.UI
             text.fontSize = 11;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Color.white;
+            text.raycastTarget = false;
         }
 
         private void EnsureMapWidthSlider()
