@@ -21,8 +21,8 @@ internal static class NyangbingoEditorVerifyLog
         Debug.LogError($"[Nyangbingo] {FailTag} {menuName}: {detail}");
     }
 
-    internal static void SummaryHeader() =>
-        Debug.Log("[Nyangbingo] ===== 제품 검증 체크리스트 =====");
+    internal static void SummaryHeader(string title = "제품 검증 체크리스트") =>
+        Debug.Log($"[Nyangbingo] ===== {title} =====");
 
     internal static void SummaryLine(string name, bool passed, string detail = null)
     {

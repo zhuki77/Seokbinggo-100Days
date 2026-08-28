@@ -28,7 +28,7 @@ public static class NyangbingoProductVerificationMenu
         NyangbingoEditorVerifyLog.SummaryFooter(allPassed);
     }
 
-    private static bool TryRunDevBRegression(out string summary)
+    internal static bool TryRunDevBRegression(out string summary)
     {
         try
         {

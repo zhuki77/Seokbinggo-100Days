@@ -91,6 +91,14 @@ public static class NyangbingoAudioMixerIntegrator
     [MenuItem("Nyangbingo/Audio/Validate Product Audio Mixer")]
     public static void Validate()
     {
+        if (TryValidate(out var summary))
+            NyangbingoEditorVerifyLog.Pass("Validate Product Audio Mixer", summary);
+        else
+            NyangbingoEditorVerifyLog.Fail("Validate Product Audio Mixer", summary);
+    }
+
+    public static bool TryValidate(out string summary)
+    {
         var failures = new System.Collections.Generic.List<string>();
         var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerPath);
         var bgm = FindGroup(mixer, BgmGroupName);
@@ -129,13 +137,14 @@ public static class NyangbingoAudioMixerIntegrator
 
         if (failures.Count > 0)
         {
-            Debug.LogError("[Nyangbingo] Product audio mixer validation failed:\n- " +
-                           string.Join("\n- ", failures));
-            return;
+            summary = failures.Count == 1
+                ? failures[0]
+                : $"{failures[0]} (+{failures.Count - 1} more)";
+            return false;
         }
-        Debug.Log("[Nyangbingo] Product audio mixer validation passed: " +
-                  "Master/BGM/SFX, exposed parameters 2/2, MainGame routing 3/3, " +
-                  "streaming BGM and SFX cue coverage complete.");
+
+        summary = "Master/BGM/SFX, routing 3/3, cue coverage complete";
+        return true;
     }
 
     private static AudioMixer CreateMixer()
