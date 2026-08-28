@@ -63,11 +63,22 @@ namespace Nyangbingo.World
                 hideFlags = HideFlags.HideAndDontSave
             };
 
-            if (Graphics.CopyTexture(texture, copy))
+            try
             {
+                Graphics.CopyTexture(texture, copy);
                 copy.Apply();
                 return copy;
             }
+            catch
+            {
+                Object.DestroyImmediate(copy);
+            }
+
+            copy = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false)
+            {
+                filterMode = texture.filterMode,
+                hideFlags = HideFlags.HideAndDontSave
+            };
 
             var renderTarget = RenderTexture.GetTemporary(
                 texture.width,
