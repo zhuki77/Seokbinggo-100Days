@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.CodexEntryDefinition
   id: imugi_boss
   kind: "\uBCF4\uC2A4"
-  displayName: "\uC774\uBB34\uAE30(30\uC77C \uB370\uBAA8 \uCD5C\uC885\uBCF4\uC2A4)"
+  displayName: "\uC774\uBB34\uAE30"
   source: "[\uCD9C\uCC98 \uBBF8\uD655\uC778]"
   sourceVerification: "\uBBF8\uD655\uC778"
   cardFrontAssetId: card_imugi_boss

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: three_horn
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
   id: three_horn
-  displayName: "\uC138 \uAC08\uB798 \uBFD4(\uC544\uD2F0\uD329\uD2B8)"
+  displayName: "\uC138 \uAC08\uB798 \uBFD4"
   maxStack: 1
   category: 5
   mvpScope: 2
