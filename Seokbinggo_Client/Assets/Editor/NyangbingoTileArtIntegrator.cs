@@ -669,9 +669,16 @@ namespace Nyangbingo.Editor
             SetSpriteArray(serializedCatalog.FindProperty("titleFrames"), titleFrames);
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
-            NyangbingoMainGameSceneCreator.CreateOrUpdate(catalog);
+            AssetDatabase.SaveAssets();
+            if (!NyangbingoMainGameSceneCreator.TryRefreshEnvironmentArtInMainGameScene(
+                    catalog, out var refreshSummary))
+            {
+                Debug.LogWarning("[Nyangbingo] Environment art catalog saved, but MainGame parallax " +
+                                 $"refresh skipped: {refreshSummary}. HUD 배선은 유지됩니다.");
+            }
+
             Debug.Log("[Nyangbingo] Environment art integration completed: sky 2/2, underground 1/1, " +
-                      "title background 1/1, title 10/10. MainGame scene updated.");
+                      "title background 1/1, title 10/10. Parallax refreshed without rebuilding MainGame scene.");
         }
 
         [MenuItem("Nyangbingo/Art/Validate Environment Art")]
@@ -754,14 +761,13 @@ namespace Nyangbingo.Editor
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
-            NyangbingoMainGameSceneCreator.CreateOrUpdate();
             Debug.Log($"[Nyangbingo] Combat/temperature art integration completed: " +
                       $"temperature {temperatureFrames.Count}, attack {attackFrames.Count}, " +
                       $"mining {miningFrames.Count}, warning {warningFrames.Count}, " +
                       $"Gangcheori fire {gangcheoriFireFrames.Count}, " +
                       $"player fire hit {playerFireHitFrames.Count}, " +
                       $"Imugi electric {imugiElectricFrames.Count}, " +
-                      $"projectile {projectileFrames.Count}. MainGame scene updated.");
+                      $"projectile {projectileFrames.Count}. Catalog updated without rebuilding MainGame scene.");
         }
 
         [MenuItem("Nyangbingo/Art/Apply Building Art")]
@@ -847,9 +853,8 @@ namespace Nyangbingo.Editor
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
-            NyangbingoMainGameSceneCreator.CreateOrUpdate();
             Debug.Log($"[Nyangbingo] World decoration art integration completed: " +
-                      $"{DecorationArtFiles.Count} decorations. MainGame scene updated.");
+                      $"{DecorationArtFiles.Count} decorations. Catalog updated without rebuilding MainGame scene.");
         }
 
         [MenuItem("Nyangbingo/Art/Validate World Decoration Art")]

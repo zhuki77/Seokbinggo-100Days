@@ -76,6 +76,47 @@ public static class NyangbingoMainGameSceneCreator
         Selection.activeGameObject = GameObject.Find("GameBootstrap");
     }
 
+    /// <summary>
+    /// EnvironmentArtCatalog 갱신 후 기존 MainGame 씬의 패럴랙스 참조만 다시 연결한다.
+    /// CreateOrUpdate처럼 씬 전체를 재생성하지 않아 수동 HUD 배선이 유지된다.
+    /// </summary>
+    public static bool TryRefreshEnvironmentArtInMainGameScene(
+        EnvironmentArtCatalog catalogOverride, out string summary)
+    {
+        summary = string.Empty;
+        var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
+        var environmentArtCatalog = catalogOverride != null
+            ? catalogOverride
+            : AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentArtCatalogPath);
+        if (config == null)
+        {
+            summary = "WorldGenerationConfig 누락";
+            return false;
+        }
+
+        if (environmentArtCatalog == null)
+        {
+            summary = "EnvironmentArtCatalog 누락";
+            return false;
+        }
+
+        var scene = SceneManager.GetActiveScene().path == ScenePath
+            ? SceneManager.GetActiveScene()
+            : EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
+        if (camera == null)
+        {
+            summary = "MainGame 카메라 누락";
+            return false;
+        }
+
+        ConfigureParallaxBackground(camera.gameObject, config, environmentArtCatalog);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        summary = "parallax catalog refreshed";
+        return true;
+    }
+
     [MenuItem("Nyangbingo/Main Game/Validate Main Game Scene")]
     public static void Validate()
     {
