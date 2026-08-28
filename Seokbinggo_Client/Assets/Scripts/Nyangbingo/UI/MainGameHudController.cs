@@ -175,6 +175,16 @@ namespace Nyangbingo.UI
         public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
         public ItemArtCatalog BoundItemArtCatalog => itemArtCatalog;
         public bool HasPlayerStatusBindings => playerHealth != null && playerHealthText != null && deathPanel != null;
+
+        /// <summary>
+        /// 인스펙터에 수동 배선되는 납품 HUD 하이어라키가 살아 있는지. 씬을 재생성하면 전부 끊기므로
+        /// Validate Main Game Scene에서 조기에 잡아낸다.
+        /// </summary>
+        public bool HasDeliveredHudBindings =>
+            bossHealthBarRoot != null && bossHealthPortrait != null && bossHealthValueText != null &&
+            goalBadgeRoot != null && statusArtRoot != null && sealDeltaText != null &&
+            alertOverlayRoot != null && dayCounterScrollRect != null && dayClockText != null &&
+            dayNightClockArt != null;
         public bool HasCraftingProgressBindings => craftingProgressPanel != null && craftingProgressText != null &&
                                                    craftingProgressFill != null;
         public static bool BlocksWorldPrimaryInput => activeHud != null && activeHud.IsPointerOverSealGauge();

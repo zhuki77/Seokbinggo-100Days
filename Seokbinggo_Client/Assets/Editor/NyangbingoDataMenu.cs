@@ -133,11 +133,15 @@ public static class NyangbingoDataMenu
         Application.logMessageReceived += captureImportError;
         try
         {
-            if (ReimportV72DataBundleCore())
+            if (!ReimportV72DataBundleCore())
             {
-                NyangbingoV72ContentImporter.ReimportAllFromCommandLine();
-                if (!importHadErrors) RebuildGameDataCatalog();
+                NyangbingoEditorVerifyLog.Fail("Reimport v72 Data Bundle",
+                    "v72 cross-file validation 또는 코어 CSV 임포트가 실패했습니다. 콘솔 Error를 확인하세요.");
+                return;
             }
+
+            NyangbingoV72ContentImporter.ReimportAllFromCommandLine();
+            if (!importHadErrors) RebuildGameDataCatalog();
         }
         finally
         {
@@ -146,19 +150,21 @@ public static class NyangbingoDataMenu
 
         if (importHadErrors)
         {
-            Debug.LogError("[Nyangbingo] v72 data import logged an error. " +
-                           "The product data freshness manifest was not updated.");
+            NyangbingoEditorVerifyLog.Fail("Reimport v72 Data Bundle",
+                "임포트 중 Error/Exception이 기록됐습니다. product data freshness manifest를 갱신하지 않았습니다.");
             return;
         }
 
         try
         {
             NyangbingoDataBuildGate.WriteCurrentManifest();
+            NyangbingoEditorVerifyLog.Pass("Reimport v72 Data Bundle",
+                "CSV 임포트·카탈로그 재빌드·freshness manifest 기록 완료");
         }
         catch (System.Exception exception)
         {
-            Debug.LogError("[Nyangbingo] v72 data import completed, but recording the product " +
-                           $"data freshness manifest failed: {exception.Message}");
+            NyangbingoEditorVerifyLog.Fail("Reimport v72 Data Bundle",
+                "임포트는 끝났지만 manifest 기록 실패 — " + exception.Message);
         }
     }
 

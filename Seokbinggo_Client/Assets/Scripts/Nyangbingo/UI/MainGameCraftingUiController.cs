@@ -124,6 +124,11 @@ namespace Nyangbingo.UI
         public static bool BlocksGameplayInput => openControllerCount > 0;
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsOpen => open;
+
+        /// <summary>인스펙터에 수동 배선되는 납품 제작·제련 패널 하이어라키가 살아 있는지.</summary>
+        public bool HasDeliveredPanelBindings =>
+            panel != null && titleText != null && tabButtons != null && tabButtons.Length == 4 &&
+            tabButtons.All(button => button != null);
         public int VisibleRecipeCount => visibleRecipes.Count;
         public const int UnifiedTabCount = 4;
         public const int InventoryGridColumns = 10;

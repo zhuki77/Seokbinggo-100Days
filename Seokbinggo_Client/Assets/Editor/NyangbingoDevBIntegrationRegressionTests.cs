@@ -22,6 +22,20 @@ public static class NyangbingoDevBIntegrationRegressionTests
     [MenuItem("Nyangbingo/Run Dev B Integration Regression Tests")]
     public static void RunAll()
     {
+        try
+        {
+            RunAllCore();
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "49/49 tests");
+        }
+        catch (System.Exception exception)
+        {
+            NyangbingoEditorVerifyLog.Fail("Run Dev B Integration Regression Tests", exception.Message);
+            throw;
+        }
+    }
+
+    private static void RunAllCore()
+    {
         TestIceStorageSealCoreLifecycle();
         TestV29InventoryLayoutContract();
         TestV29InventoryArtBindings();
@@ -71,7 +85,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestPlayerFireMitigationContract();
         TestPlayerVisionBonusContract();
         TestYagwangRuntimeTheftContract();
-        Debug.Log("[Nyangbingo] Dev B integration regression tests passed (49/49).");
     }
 
     private static void TestChestLootInterfaceContract()

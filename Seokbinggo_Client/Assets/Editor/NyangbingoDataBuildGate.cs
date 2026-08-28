@@ -23,9 +23,9 @@ public static class NyangbingoDataBuildGate
     public static void ValidateFromMenu()
     {
         if (TryValidateCurrent(out var summary))
-            Debug.Log($"[Nyangbingo] Product data freshness validation passed: {summary}");
+            NyangbingoEditorVerifyLog.Pass("Validate Product Data Freshness", summary);
         else
-            Debug.LogError($"[Nyangbingo] Product data freshness validation failed: {summary}");
+            NyangbingoEditorVerifyLog.Fail("Validate Product Data Freshness", summary);
     }
 
     public static bool TryValidateCurrent(out string summary)

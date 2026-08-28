@@ -96,6 +96,9 @@ namespace Nyangbingo.UI
             instance.StartCoroutine(instance.LoadNextFrame());
         }
 
+        /// <summary>로드가 반영되지 않을 때 무한 대기하지 않도록 두는 상한(프레임).</summary>
+        private const int LoadTimeoutFrames = 300;
+
         private IEnumerator LoadNextFrame()
         {
             // EventSystem.Update / Start 스택이 완전히 끝난 뒤 로드.
@@ -111,24 +114,42 @@ namespace Nyangbingo.UI
 
             Time.timeScale = 1f;
             var buildIndex = SceneTransitionRequest.ResolveBuildIndex(sceneName);
-            if (buildIndex >= 0)
+            if (buildIndex < 0)
             {
-                Debug.Log(
-                    $"[Nyangbingo] SceneTransitionRunner: LoadScene Single buildIndex={buildIndex} ({sceneName})");
-                SceneManager.LoadScene(buildIndex, LoadSceneMode.Single);
-            }
-            else
-            {
-                Debug.Log($"[Nyangbingo] SceneTransitionRunner: LoadScene Single name='{sceneName}'");
-                SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
+                Debug.LogError(
+                    $"[Nyangbingo] SceneTransitionRunner: '{sceneName}' 씬이 Build Settings에 없어 전환에 " +
+                    "실패했습니다. File > Build Settings에 Title/Loading/MainGame이 등록돼 있는지 확인하세요.");
+                Cleanup();
+                yield break;
             }
 
+            Debug.Log(
+                $"[Nyangbingo] SceneTransitionRunner: LoadScene Single buildIndex={buildIndex} ({sceneName})");
+            SceneManager.LoadScene(buildIndex, LoadSceneMode.Single);
+
+            // 로드가 실제로 반영될 때까지 러너를 살려 둔다. 여기서 곧바로 자신을 파괴하면
+            // 코루틴이 끊겨 전환이 조용히 사라질 수 있다.
+            for (var frame = 0; frame < LoadTimeoutFrames; frame++)
+            {
+                var active = SceneManager.GetActiveScene();
+                if (active.buildIndex == buildIndex && active.isLoaded)
+                {
+                    Cleanup();
+                    yield break;
+                }
+                yield return null;
+            }
+
+            Debug.LogError(
+                $"[Nyangbingo] SceneTransitionRunner: '{sceneName}'(buildIndex={buildIndex}) 로드가 " +
+                $"{LoadTimeoutFrames}프레임 안에 반영되지 않았습니다. 현재 활성 씬=" +
+                $"'{SceneManager.GetActiveScene().name}'. Time.timeScale 또는 잔류 Additive 씬을 확인하세요.");
             Cleanup();
         }
 
         private void Cleanup()
         {
-            instance = null;
+            if (instance == this) instance = null;
             Destroy(gameObject);
         }
     }

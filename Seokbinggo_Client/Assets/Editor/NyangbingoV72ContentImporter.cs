@@ -28,7 +28,7 @@ public static class NyangbingoV72ContentImporter
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[Nyangbingo] v72 new content CSV import completed: zones 10, terrain-spawn 70, " +
-                      "talismans 5, codex 17, traits 4, crops 10, content-status 847.");
+                      "talismans 5, codex 17, traits 4, crops 10, content-status 858.");
         }
         catch (Exception exception)
         {
@@ -249,7 +249,7 @@ public static class NyangbingoV72ContentImporter
 
     private static void ValidateContentStatus()
     {
-        var rows = Read("content-status.csv", 847);
+        var rows = Read("content-status.csv", 858);
         var statuses = new HashSet<string>(new[] { "구현됨", "수정예정", "추가예정" }, StringComparer.Ordinal);
         if (rows.Any(row => string.IsNullOrWhiteSpace(row["file"]) ||
                             string.IsNullOrWhiteSpace(row["row_key"]) ||

@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor.Sprites;
+#endif
 
 namespace Nyangbingo.World
 {
@@ -19,14 +22,77 @@ namespace Nyangbingo.World
             var sourceRect = source.rect;
             var halfWidth = Mathf.Floor(sourceRect.width * .5f);
             if (halfWidth < 1f) return source;
-            var rect = new Rect(
+            var cropRect = new Rect(
                 rightHalf ? sourceRect.x + halfWidth : sourceRect.x,
                 sourceRect.y,
                 rightHalf ? sourceRect.width - halfWidth : halfWidth,
                 sourceRect.height);
+            var sprite = CreateCroppedSprite(source, cropRect, rightHalf);
+            if (sprite == null) return source;
+            cache[source] = sprite;
+            return sprite;
+        }
+
+        private static Sprite CreateCroppedSprite(Sprite source, Rect cropRect, bool rightHalf)
+        {
+            var texture = source.texture;
+            if (texture != null && texture.isReadable)
+                return CreateNamedSubSprite(texture, source, cropRect, rightHalf);
+
+            return CreateCroppedSpriteFromRenderCopy(source, cropRect, rightHalf);
+        }
+
+        /// <summary>
+        /// Aseprite 임포트 텍스처는 isReadable=false인 경우가 많아 Sprite.Create가
+        /// 실패한다. 전체 atlas를 RT로 복사한 뒤 원본 rect 좌표로 서브 스프라이트를 만든다.
+        /// </summary>
+        private static Sprite CreateCroppedSpriteFromRenderCopy(
+            Sprite source, Rect cropRect, bool rightHalf)
+        {
+            var texture = source.texture;
+            if (texture == null) return null;
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                var readableAtlas = SpriteUtility.GetSpriteTexture(source, true);
+                if (readableAtlas != null)
+                    return CreateNamedSubSprite(readableAtlas, source, cropRect, rightHalf);
+            }
+#endif
+
+            var renderTarget = RenderTexture.GetTemporary(
+                texture.width,
+                texture.height,
+                0,
+                RenderTextureFormat.ARGB32);
+            var previousTarget = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(texture, renderTarget);
+                RenderTexture.active = renderTarget;
+                var readableAtlas = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false)
+                {
+                    filterMode = texture.filterMode,
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                readableAtlas.ReadPixels(new Rect(0f, 0f, texture.width, texture.height), 0, 0);
+                readableAtlas.Apply();
+                return CreateNamedSubSprite(readableAtlas, source, cropRect, rightHalf);
+            }
+            finally
+            {
+                RenderTexture.active = previousTarget;
+                RenderTexture.ReleaseTemporary(renderTarget);
+            }
+        }
+
+        private static Sprite CreateNamedSubSprite(
+            Texture2D atlas, Sprite source, Rect cropRect, bool rightHalf)
+        {
             var sprite = Sprite.Create(
-                source.texture,
-                rect,
+                atlas,
+                cropRect,
                 new Vector2(.5f, .5f),
                 source.pixelsPerUnit,
                 0,
@@ -34,7 +100,6 @@ namespace Nyangbingo.World
                 Vector4.zero,
                 false);
             sprite.name = $"{source.name}_{(rightHalf ? "RightHalf" : "LeftHalf")}";
-            cache[source] = sprite;
             return sprite;
         }
     }
