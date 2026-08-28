@@ -189,21 +189,37 @@ namespace Nyangbingo.UI
             ConfigureShellButton(titleContinueButton, new Vector2(-112f, 17f), new Vector2(150f, 27f));
             ConfigureShellButton(titleNewGameButton, new Vector2(-112f, -17f), new Vector2(150f, 27f));
             ConfigureShellButton(titleQuitButton, new Vector2(-112f, -51f), new Vector2(150f, 27f));
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-                ConfigureShellButton(demoSaveButtons[index],
-                    new Vector2(-162f + index * 50f, -82f), new Vector2(46f, 15f));
             if (mapWidthSlider != null)
             {
                 var rect = mapWidthSlider.GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2(-112f, -100f);
+                rect.anchoredPosition = new Vector2(-112f, -88f);
                 rect.sizeDelta = new Vector2(150f, 14f);
             }
             if (mapWidthLabel != null)
             {
                 var labelRect = mapWidthLabel.rectTransform;
-                labelRect.anchoredPosition = new Vector2(-112f, -114f);
+                labelRect.anchoredPosition = new Vector2(-112f, -102f);
                 labelRect.sizeDelta = new Vector2(150f, 12f);
             }
+            for (var index = 0; index < demoSaveButtons.Count; index++)
+            {
+                ConfigureShellButton(demoSaveButtons[index],
+                    new Vector2(-112f + (index - 1) * 56f, -128f), new Vector2(52f, 22f));
+                EnsureDemoButtonLabel(demoSaveButtons[index],
+                    $"{GameShellController.DemoSaveDays[index]}일차 데모");
+            }
+        }
+
+        private static void EnsureDemoButtonLabel(Button button, string label)
+        {
+            if (button == null) return;
+            var text = button.GetComponentInChildren<Text>(true);
+            if (text == null) return;
+            text.gameObject.SetActive(true);
+            text.text = label;
+            text.fontSize = 11;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
         }
 
         private void EnsureMapWidthSlider()
