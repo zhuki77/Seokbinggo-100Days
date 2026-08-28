@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor.Sprites;
+#endif
 
 namespace Nyangbingo.World
 {
@@ -9,6 +12,15 @@ namespace Nyangbingo.World
             new Dictionary<Sprite, Sprite>();
         private static readonly Dictionary<Sprite, Sprite> RightHalfCache =
             new Dictionary<Sprite, Sprite>();
+
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        private static void ClearCachesOnDomainReload()
+        {
+            LeftHalfCache.Clear();
+            RightHalfCache.Clear();
+        }
+#endif
 
         public static Sprite CropHorizontalHalf(Sprite source, bool rightHalf)
         {
@@ -32,6 +44,14 @@ namespace Nyangbingo.World
 
         private static Sprite CreateCroppedSprite(Sprite source, Rect cropRect, bool rightHalf)
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                var editorCrop = TryCreateCroppedSpriteInEditor(source, cropRect, rightHalf);
+                if (editorCrop != null) return editorCrop;
+            }
+#endif
+
             var texture = source.texture;
             if (texture != null && texture.isReadable)
             {
@@ -42,10 +62,23 @@ namespace Nyangbingo.World
             return CreateCroppedSpriteFromRenderCopy(source, cropRect, rightHalf);
         }
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// 에디터 회귀 테스트는 GPU Blit 없이 atlas 픽셀을 읽어야 한다.
+        /// getAtlasData=true면 전체 atlas 텍스처를 반환하므로 cropRect는 atlas 좌표를 그대로 쓴다.
+        /// </summary>
+        private static Sprite TryCreateCroppedSpriteInEditor(
+            Sprite source, Rect cropRect, bool rightHalf)
+        {
+            var atlas = SpriteUtility.GetSpriteTexture(source, true);
+            if (atlas == null) return null;
+            return CreateNamedSubSprite(atlas, source, cropRect, rightHalf);
+        }
+#endif
+
         /// <summary>
         /// Aseprite 임포트 텍스처는 isReadable=false인 경우가 많아 Sprite.Create가
-        /// 실패한다. 전체 atlas를 RT로 복사한 뒤 원본 atlas rect 좌표로 서브 스프라이트를 만든다.
-        /// SpriteUtility.GetSpriteTexture는 스프라이트 로컬 픽셀만 반환하므로 사용하지 않는다.
+        /// 실패한다. 플레이 중에는 전체 atlas를 RT로 복사한 뒤 서브 스프라이트를 만든다.
         /// </summary>
         private static Sprite CreateCroppedSpriteFromRenderCopy(
             Sprite source, Rect cropRect, bool rightHalf)
@@ -91,6 +124,7 @@ namespace Nyangbingo.World
                 SpriteMeshType.FullRect,
                 Vector4.zero,
                 false);
+            if (sprite == null) return null;
             sprite.name = $"{source.name}_{(rightHalf ? "RightHalf" : "LeftHalf")}";
             return sprite;
         }

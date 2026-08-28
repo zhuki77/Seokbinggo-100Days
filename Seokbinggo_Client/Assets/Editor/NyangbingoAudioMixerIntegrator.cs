@@ -99,6 +99,7 @@ public static class NyangbingoAudioMixerIntegrator
 
     public static bool TryValidate(out string summary)
     {
+        ConfigureAudioImporters();
         var failures = new System.Collections.Generic.List<string>();
         var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerPath);
         var bgm = FindGroup(mixer, BgmGroupName);
