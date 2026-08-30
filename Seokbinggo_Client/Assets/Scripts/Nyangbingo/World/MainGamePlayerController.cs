@@ -117,6 +117,8 @@ namespace Nyangbingo.World
         private float baseMoveSpeed;
         private float currentMoveSpeed;
         private float attackCooldown;
+        private float iceSlideVelocity;
+        private float oreEchoMessageUntil;
         private CombatProfileDefinition activeProfile;
         private CombatProfileDefinition lanternCarryProfile;
         private SpriteRenderer attackIndicator;
@@ -360,6 +362,9 @@ namespace Nyangbingo.World
             GameEvents.OnDayStart += HandleArtifactContextChanged;
             GameEvents.OnNightStart += HandleArtifactContextChanged;
             wireSnare = new WireSnareAbility(attack);
+            attack.KnockbackApplied += HandleAttackKnockbackApplied;
+            if (GetComponent<ArtifactTunnelEdgePresenter>() == null)
+                gameObject.AddComponent<ArtifactTunnelEdgePresenter>();
             RefreshEquipmentStats();
             RefreshCombatProfile();
             RefreshTearPouchVisuals();
@@ -542,7 +547,16 @@ namespace Nyangbingo.World
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
             if (fallDamageBounceAscending && verticalVelocity <= 0f)
                 fallDamageBounceAscending = false;
-            var horizontalVelocity = CalculateHorizontalVelocity(movementInput.x, CurrentMoveSpeed);
+            var horizontalInput = movementInput.x;
+            if (attackCooldown > 0f && IsBowCombatProfile(activeProfile) &&
+                !(runtimeServices?.ArtifactVerbs?.AllowsWalkWhileCharging(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? false))
+                horizontalInput = 0f;
+            float horizontalVelocity;
+            if (TryResolveIceSlideVelocity(horizontalInput, out var slideVelocity))
+                horizontalVelocity = slideVelocity;
+            else
+                horizontalVelocity = CalculateHorizontalVelocity(horizontalInput, CurrentMoveSpeed);
             if (bossKnockbackRemainingSeconds > 0f)
             {
                 horizontalVelocity = bossKnockbackHorizontalVelocity;
@@ -1060,6 +1074,111 @@ namespace Nyangbingo.World
             profile != null && profile.HasBasicAttack && profile.AttacksPerSecond > 0f &&
             profile.Id != HapjukseonId;
 
+        public static bool IsBowCombatProfile(CombatProfileDefinition profile) =>
+            profile != null && !string.IsNullOrWhiteSpace(profile.Id) &&
+            profile.Id.IndexOf("bow", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        public bool TryArtifactEscapeSwallow()
+        {
+            if (!initialized || dead || runtimeServices?.ArtifactVerbs == null ||
+                runtimeServices.EquipmentSystem == null)
+                return false;
+            if (!runtimeServices.ArtifactVerbs.CanEscapeOnSwallow(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return false;
+            interactionMessages?.ShowExternalMessage("영노의 탈 — 삼킴에서 즉시 탈출했습니다.");
+            Debug.Log("[Nyangbingo] Artifact yeongno_mask consumed swallow escape.");
+            return true;
+        }
+
+        private void HandleAttackKnockbackApplied(Health target, float knockbackStrength)
+        {
+            if (target == null || knockbackStrength <= 0f ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
+                return;
+            if (!runtimeServices.ArtifactVerbs.CanGrabKnockedTarget(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return;
+            target.GetComponent<WorldMobPhysicsBody>()?.TryApplyKnockbackGrab(
+                ArtifactVerbRuntime.KnockbackGrabSeconds);
+        }
+
+        private bool TryResolveIceSlideVelocity(float horizontalInput, out float horizontalVelocity)
+        {
+            horizontalVelocity = 0f;
+            if (!grounded || !IsStandingOnIceLake())
+            {
+                iceSlideVelocity = 0f;
+                return false;
+            }
+            var allowsTurn = runtimeServices?.ArtifactVerbs?.AllowsTurnWhileSliding(
+                runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? false;
+            if (allowsTurn)
+            {
+                iceSlideVelocity = CalculateHorizontalVelocity(horizontalInput, CurrentMoveSpeed);
+            }
+            else if (Mathf.Abs(iceSlideVelocity) <= Mathf.Epsilon)
+            {
+                if (Mathf.Abs(horizontalInput) > Mathf.Epsilon)
+                    iceSlideVelocity = Mathf.Sign(horizontalInput) * CurrentMoveSpeed;
+                else
+                    iceSlideVelocity = horizontalFacing.x * CurrentMoveSpeed;
+            }
+            horizontalVelocity = iceSlideVelocity;
+            return true;
+        }
+
+        private bool IsStandingOnIceLake()
+        {
+            var tileService = bootstrap?.TileService;
+            if (tileService == null) return false;
+            var cell = tileService.WorldToCell(transform.position);
+            var groundCell = cell + Vector3Int.down;
+            return tileService.InBounds(groundCell) &&
+                   string.Equals(tileService.GetTile(groundCell).elementType, WorldTileTypes.IceLake,
+                       StringComparison.Ordinal);
+        }
+
+        private void TryPresentIronVeinEcho(Vector3Int minedCell)
+        {
+            if (Time.time < oreEchoMessageUntil ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
+                return;
+            if (!runtimeServices.ArtifactVerbs.HighlightsOreVeins(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return;
+            var tileService = bootstrap?.TileService;
+            if (tileService == null) return;
+            var minedTile = tileService.GetTile(minedCell);
+            if (!string.Equals(ResolveMiningDefinitionId(minedTile.elementType), WorldTileTypes.IronOre,
+                    StringComparison.Ordinal))
+                return;
+            Vector3Int? bestCell = null;
+            var bestDistance = float.PositiveInfinity;
+            for (var dx = -8; dx <= 8; dx++)
+            {
+                for (var dy = -8; dy <= 8; dy++)
+                {
+                    var candidate = minedCell + new Vector3Int(dx, dy, 0);
+                    if (!tileService.InBounds(candidate)) continue;
+                    var tile = tileService.GetTile(candidate);
+                    if (tile.IsAir || !string.Equals(tile.elementType, WorldTileTypes.IronOre,
+                            StringComparison.Ordinal)) continue;
+                    var distance = (candidate - minedCell).sqrMagnitude;
+                    if (distance >= bestDistance) continue;
+                    bestDistance = distance;
+                    bestCell = candidate;
+                }
+            }
+            if (!bestCell.HasValue) return;
+            var delta = bestCell.Value - minedCell;
+            var direction = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+                ? delta.x > 0 ? "동쪽" : "서쪽"
+                : delta.y > 0 ? "북쪽" : "남쪽";
+            oreEchoMessageUntil = Time.time + ArtifactVerbRuntime.OreEchoHighlightSeconds;
+            interactionMessages?.ShowExternalMessage($"무쇠 식성 — 철 광맥이 {direction}에 있습니다.");
+        }
+
         private bool TryTickRebarMining(int clawTier, float miningDelta)
         {
             if (worldDecorationRenderer == null ||
@@ -1417,6 +1536,8 @@ namespace Nyangbingo.World
             using (ItemAcquisition.CaptureRequests())
                 if (!tileService.TryBreakForeground(cell, clawTier, out itemId, out amount)) return;
 
+            TryPresentIronVeinEcho(cell);
+
             var totalAmount = amount;
             var item = string.IsNullOrEmpty(itemId) ? null : catalog?.FindItem(itemId);
             var baseCriticalChance = 0f;
@@ -1754,7 +1875,9 @@ namespace Nyangbingo.World
             statSheet.Recalculate(runtimeServices.EquipmentSystem,
                 runtimeServices.PlayerTemperature?.CurrentRoomTemperature ?? 0,
                 runtimeServices.EquipmentColdPenalty);
-            currentMoveSpeed = baseMoveSpeed * statSheet.MovementMultiplier;
+            currentMoveSpeed = baseMoveSpeed * statSheet.MovementMultiplier +
+                               (runtimeServices?.ArtifactVerbs?.ResolveDaySurfaceMoveBonus(
+                                   runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? 0f);
             health.SetDefense(statSheet.Defense);
             RefreshPlayerFireDamageMultiplier();
             RefreshPlayerVisionLight();

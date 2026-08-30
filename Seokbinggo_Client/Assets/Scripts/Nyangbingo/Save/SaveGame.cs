@@ -854,6 +854,8 @@ namespace Nyangbingo.Save
 
     public sealed class YokaiCodexBinding : IDisposable
     {
+        public static event Action<YokaiDefinition, bool> CodexEntryChanged;
+
         private readonly SaveGame save;
         private readonly Func<string, YokaiDefinition> findYokai;
         private bool disposed;
@@ -884,10 +886,12 @@ namespace Nyangbingo.Save
                 if (record.yokaiId != definition.Id) continue;
                 if (record.kills < int.MaxValue) record.kills++;
                 save.dogam[i] = record;
+                CodexEntryChanged?.Invoke(definition, false);
                 return;
             }
             save.dogam.Add(new CodexRecord { yokaiId = definition.Id, kills = 1 });
             save.dogam.Sort((left, right) => string.CompareOrdinal(left.yokaiId, right.yokaiId));
+            CodexEntryChanged?.Invoke(definition, true);
         }
     }
 

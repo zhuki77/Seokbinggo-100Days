@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Bosses;
 using Nyangbingo.Core;
 using Nyangbingo.Crafting;
 using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.World;
 using UnityEngine;
 using UnityEngine.UI;
@@ -302,8 +304,9 @@ namespace Nyangbingo.UI
             if (nearbyStation != definition.SummonStation)
             { ShowMessage($"{StationLabel(definition.SummonStation)} 근처에서 제작해야 합니다."); return; }
 
+            var scaledMaterials = ScaleSummonMaterials(definition.SummonMaterials);
             var recipe = RecipeDefinition.CreateRuntime($"runtime_{definition.SummonItem.Id}",
-                definition.SummonStation, definition.SummonMaterials,
+                definition.SummonStation, scaledMaterials,
                 new ItemAmount { item = definition.SummonItem, amount = 1 }, 0f,
                 RecipeType.Summon, definition.MvpScope, "bosses.csv summon material contract");
             var crafted = runtimeServices.CraftingService.TryCraft(recipe, nearbyStation);
@@ -468,6 +471,29 @@ namespace Nyangbingo.UI
                 case CraftingStation.Smithy: return "대장간";
                 default: return station.ToString();
             }
+        }
+
+        private ItemAmount[] ScaleSummonMaterials(ItemAmount[] materials)
+        {
+            if (materials == null || materials.Length == 0 ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                playerTarget == null || bootstrap?.TimeService == null)
+                return materials;
+            var context = ArtifactActivationContextFactory.Build(
+                bootstrap.TileService, playerTarget.transform.position, bootstrap.TimeService);
+            var scaled = new ItemAmount[materials.Length];
+            for (var index = 0; index < materials.Length; index++)
+            {
+                var material = materials[index];
+                var amount = material.amount;
+                if (material.item != null &&
+                    string.Equals(material.item.Id, ArtifactVerbRuntime.CodexTearItemId,
+                        StringComparison.Ordinal))
+                    amount = runtimeServices.ArtifactVerbs.ResolveAltarTearCost(
+                        runtimeServices.EquipmentSystem, context, amount);
+                scaled[index] = new ItemAmount { item = material.item, amount = amount };
+            }
+            return scaled;
         }
 
         private void ShowMessage(string value)

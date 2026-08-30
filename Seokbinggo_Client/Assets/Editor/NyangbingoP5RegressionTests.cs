@@ -97,6 +97,29 @@ public static class NyangbingoP5RegressionTests
             verbs.ResetDailyUses();
             Require(verbs.DailyUseCount("old_key") == 0, "artifact daily reset");
 
+            var drought = EquipmentDefinition.CreateRuntime("drought_heart_shard", EquipmentSlot.AccessoryOne,
+                true, artifactVerbId: "ReduceFlameAndHasten", activation: "DaySurface");
+            var daySurfaceGear = new EquipmentSystem();
+            Require(daySurfaceGear.TryEquipAccessory(drought, 0), "drought equip");
+            var daySurfaceContext = new ArtifactActivationContext(false, true, true);
+            Require(Mathf.Approximately(verbs.ResolveDaySurfaceMoveBonus(
+                daySurfaceGear, daySurfaceContext), ArtifactVerbRuntime.DaySurfaceMoveBonus),
+                "drought hasten bonus");
+            Require(Mathf.Approximately(verbs.ResolveCoolerRadiusTiles(daySurfaceGear, daySurfaceContext),
+                ArtifactVerbRuntime.CoolerBaseRadiusTiles), "cooler base radius");
+            var yeouiju = EquipmentDefinition.CreateRuntime("yeouiju_shard", EquipmentSlot.AccessoryOne, true,
+                artifactVerbId: "ExtendCoolerRadius");
+            var coolerGear = new EquipmentSystem();
+            Require(coolerGear.TryEquipAccessory(yeouiju, 0), "yeouiju equip");
+            Require(Mathf.Approximately(verbs.ResolveCoolerRadiusTiles(coolerGear, daySurfaceContext),
+                ArtifactVerbRuntime.CoolerExtendedRadiusTiles), "yeouiju cooler radius");
+            var altar = EquipmentDefinition.CreateRuntime("altar_echo", EquipmentSlot.AccessoryOne, true,
+                artifactVerbId: "ReduceOfferTears");
+            var altarGear = new EquipmentSystem();
+            Require(altarGear.TryEquipAccessory(altar, 0), "altar_echo equip");
+            Require(verbs.ResolveAltarTearCost(altarGear, daySurfaceContext, 30) == 20,
+                "altar tear 30→20");
+
             var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
                 "Assets/Data/SO/GameDataCatalog.asset");
             Require(catalog != null && catalog.Bosses.Count >= 1, "catalog bosses loaded");

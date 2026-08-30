@@ -49,6 +49,7 @@ namespace Nyangbingo.World
         private Transform trackedTransform;
         private Health trackedHealth;
         private bool heatstrokeRaised;
+        private Func<bool> suppressDaySurfaceHeatRise;
         private float recoveryMultiplier = 1f;
         private float fractionalHypothermiaDamage;
 
@@ -104,6 +105,8 @@ namespace Nyangbingo.World
             fractionalHypothermiaDamage = 0f;
         }
 
+        public void ConfigureShadeHeatSuppressor(Func<bool> value) => suppressDaySurfaceHeatRise = value;
+
         public bool SetRecoveryMultiplier(float value)
         {
             if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f) return false;
@@ -140,10 +143,12 @@ namespace Nyangbingo.World
                         hypothermiaFallPerSecond)
                 : safe
                     ? -fallSafe * recoveryMultiplier * insulationMultiplier * deltaGameSeconds
-                    : risePerStage * CalculateEffectiveHeatStage(
-                        heatStage?.Current ?? 1,
-                        environmentState?.HeatStageReduction ?? 0) *
-                      DayRiseMultiplier() * deltaGameSeconds;
+                    : suppressDaySurfaceHeatRise?.Invoke() == true
+                        ? 0f
+                        : risePerStage * CalculateEffectiveHeatStage(
+                            heatStage?.Current ?? 1,
+                            environmentState?.HeatStageReduction ?? 0) *
+                          DayRiseMultiplier() * deltaGameSeconds;
             Set(Current + delta);
             HypothermiaDamage(deltaGameSeconds, hypothermia);
         }

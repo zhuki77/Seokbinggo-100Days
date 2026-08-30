@@ -28,15 +28,23 @@ namespace Nyangbingo.Inventory
     public sealed class ArtifactVerbRuntime
     {
         public const float MagpieRadiusMultiplier = 1.5f;
-        public const float CoolerRadiusMultiplier = 1.25f;
+        public const float CoolerBaseRadiusTiles = 6f;
+        public const float CoolerExtendedRadiusTiles = 10f;
         public const float DeepVisionBonusTiles = 3f;
         public const float ReduceFlameTagModifier = -.25f;
-        public const float ReduceFlameAndHastenModifier = -.15f;
+        public const float ReduceFlameAndHastenModifier = -.25f;
+        public const float DaySurfaceMoveBonus = .5f;
         public const float AltarTearDiscount = .25f;
+        public const int AltarTearBaseCost = 30;
+        public const int AltarTearDiscountedCost = 20;
         public const float CodexTearBonus = 1f;
         public const float ClayCraftDurationMultiplier = .5f;
         public const float SalvageRecoveryMultiplier = 1f;
         public const float OreEchoHighlightSeconds = 4f;
+        public const float KnockbackGrabSeconds = 1f;
+        public const float ModuleHoldoverSeconds = 60f;
+        public const float IceMeltSlowMultiplier = .5f;
+        public const string CodexTearItemId = "yokai_tear";
 
         private readonly Dictionary<string, int> dailyUses =
             new Dictionary<string, int>(StringComparer.Ordinal);
@@ -83,10 +91,20 @@ namespace Nyangbingo.Inventory
                 ? MagpieRadiusMultiplier
                 : 1f;
 
-        public float ResolveCoolerRadiusMultiplier(EquipmentSystem equipment, ArtifactActivationContext context) =>
+        public float ResolveCoolerRadiusTiles(EquipmentSystem equipment, ArtifactActivationContext context) =>
             IsVerbActive(equipment, ArtifactVerbId.ExtendCoolerRadius, context)
-                ? CoolerRadiusMultiplier
+                ? CoolerExtendedRadiusTiles
+                : CoolerBaseRadiusTiles;
+
+        public float ResolveIceMeltMultiplier(EquipmentSystem equipment, ArtifactActivationContext context) =>
+            IsVerbActive(equipment, ArtifactVerbId.ExtendCoolerRadius, context)
+                ? IceMeltSlowMultiplier
                 : 1f;
+
+        public float ResolveDaySurfaceMoveBonus(EquipmentSystem equipment, ArtifactActivationContext context) =>
+            IsVerbActive(equipment, ArtifactVerbId.ReduceFlameAndHasten, context)
+                ? DaySurfaceMoveBonus
+                : 0f;
 
         public float ResolveDeepVisionBonusTiles(EquipmentSystem equipment, ArtifactActivationContext context) =>
             IsVerbActive(equipment, ArtifactVerbId.IncreaseVisionDeep, context)
@@ -117,6 +135,14 @@ namespace Nyangbingo.Inventory
             IsVerbActive(equipment, ArtifactVerbId.ReduceOfferTears, context)
                 ? 1f - AltarTearDiscount
                 : 1f;
+
+        public int ResolveAltarTearCost(EquipmentSystem equipment, ArtifactActivationContext context, int baseCost)
+        {
+            if (baseCost <= 0) return baseCost;
+            if (!IsVerbActive(equipment, ArtifactVerbId.ReduceOfferTears, context)) return baseCost;
+            if (baseCost == AltarTearBaseCost) return AltarTearDiscountedCost;
+            return Mathf.Max(1, Mathf.RoundToInt(baseCost * ResolveAltarTearMultiplier(equipment, context)));
+        }
 
         public float ResolveCodexTearBonus(EquipmentSystem equipment, ArtifactActivationContext context) =>
             IsVerbActive(equipment, ArtifactVerbId.BonusTearOnCodex, context) ? CodexTearBonus : 0f;

@@ -51,6 +51,10 @@ namespace Nyangbingo.World
         private float wallpaperDurationMultiplier = 1.25f;
         private bool suppressTileDoorSync;
         private float strawInsulationBonusPerPiece = .05f;
+        private Func<float> iceCrystalCoolerRadiusProvider;
+        private Func<bool> maintainsModuleAfterShutdown;
+        private readonly Dictionary<string, float> moduleHoldoverSeconds =
+            new Dictionary<string, float>(StringComparer.Ordinal);
 
         public int PlacedObjectCount => byObjectId.Count;
         public int ActiveCoolingSourceCount { get; private set; }
@@ -140,6 +144,12 @@ namespace Nyangbingo.World
             // 1x2 문 위칸: 비주얼은 아래 door 타일이 담당, 위는 충돌·밀폐만.
             renderer.RegisterRuntimeColliderOnlyForegroundTile(TileService.DoorTopElementType);
         }
+
+        public void ConfigureIceCrystalCoolerRadiusProvider(Func<float> provider) =>
+            iceCrystalCoolerRadiusProvider = provider;
+
+        public void ConfigureModuleHoldoverProvider(Func<bool> provider) =>
+            maintainsModuleAfterShutdown = provider;
 
         public bool IsRecognizedBarrier(Vector3Int cell) =>
             byCell.TryGetValue(cell, out var entry) && entry.BarrierActive &&
@@ -662,6 +672,11 @@ namespace Nyangbingo.World
                 multiplier, hasUnpaperedOpenDoor);
         }
 
+        public float ResolveCoolerRadiusTilesForRecovery(Vector2 position) =>
+            iceCrystalCoolerRadiusProvider != null && IsFinite(position.x) && IsFinite(position.y)
+                ? Mathf.Max(ArtifactVerbRuntime.CoolerBaseRadiusTiles, iceCrystalCoolerRadiusProvider())
+                : ArtifactVerbRuntime.CoolerBaseRadiusTiles;
+
         public static float CalculateStrawInsulationRecoveryMultiplier(
             int attachedPieces, float bonusPerPiece)
         {
@@ -840,6 +855,7 @@ namespace Nyangbingo.World
 
         public void Tick(float deltaGameSeconds)
         {
+            TickModuleHoldovers(deltaGameSeconds);
             if (coolingSources == null) return;
             var beforeCount = coolingSources.ActiveCount;
             coolingSources.Tick(deltaGameSeconds, ResolveCoolingDurationMultiplier());
@@ -847,7 +863,41 @@ namespace Nyangbingo.World
                 RecomputeCoolingAndInvalidate();
         }
 
-        private void HandleConsumableExpired(string objectId) => TryRemove(objectId);
+        private void HandleConsumableExpired(string objectId)
+        {
+            if (maintainsModuleAfterShutdown?.Invoke() == true &&
+                byObjectId.ContainsKey(objectId))
+            {
+                moduleHoldoverSeconds[objectId] = ArtifactVerbRuntime.ModuleHoldoverSeconds;
+                if (byObjectId.TryGetValue(objectId, out var entry))
+                {
+                    entry.CoolingActive = true;
+                    RecomputeCoolingAndInvalidate();
+                }
+                return;
+            }
+            TryRemove(objectId);
+        }
+
+        private void TickModuleHoldovers(float deltaGameSeconds)
+        {
+            if (moduleHoldoverSeconds.Count == 0 || deltaGameSeconds <= 0f) return;
+            expiredHoldovers.Clear();
+            foreach (var pair in moduleHoldoverSeconds)
+            {
+                var next = Mathf.Max(0f, pair.Value - deltaGameSeconds);
+                if (next <= 0f) expiredHoldovers.Add(pair.Key);
+                else moduleHoldoverSeconds[pair.Key] = next;
+            }
+            for (var index = 0; index < expiredHoldovers.Count; index++)
+            {
+                var objectId = expiredHoldovers[index];
+                moduleHoldoverSeconds.Remove(objectId);
+                TryRemove(objectId);
+            }
+        }
+
+        private readonly List<string> expiredHoldovers = new List<string>();
 
         private void HandleAttachmentSupportBroken(Vector3Int cell)
         {

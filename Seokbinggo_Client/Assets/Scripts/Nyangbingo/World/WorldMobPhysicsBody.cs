@@ -69,6 +69,7 @@ namespace Nyangbingo.World
         private Vector3Int groundDropLandingCell;
         private Vector2 knockbackRemainingDisplacement;
         private float knockbackRemainingSeconds;
+        private float knockbackGrabRemainingSeconds;
         private Vector2 encounterPausedLinearVelocity;
         private float encounterPausedAngularVelocity;
         private bool hasEncounterPausedVelocity;
@@ -85,7 +86,8 @@ namespace Nyangbingo.World
                 : Vector2.zero;
         public Vector2 LastMoveDisplacement { get; private set; }
         public bool IsKnockbackActive => knockbackRemainingSeconds > 0f &&
-                                         knockbackRemainingDisplacement.sqrMagnitude > Mathf.Epsilon;
+                                         (knockbackRemainingDisplacement.sqrMagnitude > Mathf.Epsilon ||
+                                          knockbackGrabRemainingSeconds > 0f);
 
         private void Awake()
         {
@@ -131,6 +133,7 @@ namespace Nyangbingo.World
             LastMoveDisplacement = Vector2.zero;
             knockbackRemainingDisplacement = Vector2.zero;
             knockbackRemainingSeconds = 0f;
+            knockbackGrabRemainingSeconds = 0f;
             body.bodyType = IsFlying ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
             body.simulated = true;
             body.useAutoMass = false;
@@ -734,6 +737,18 @@ namespace Nyangbingo.World
             body.linearVelocity = Vector2.zero;
             knockbackRemainingDisplacement = requestedDisplacement;
             knockbackRemainingSeconds = KnockbackDurationSeconds;
+            knockbackGrabRemainingSeconds = 0f;
+            return true;
+        }
+
+        public bool TryApplyKnockbackGrab(float holdSeconds)
+        {
+            if (body == null || !body.simulated || holdSeconds <= 0f ||
+                float.IsNaN(holdSeconds) || float.IsInfinity(holdSeconds))
+                return false;
+            knockbackRemainingDisplacement = Vector2.zero;
+            knockbackGrabRemainingSeconds = Mathf.Max(knockbackGrabRemainingSeconds, holdSeconds);
+            knockbackRemainingSeconds = Mathf.Max(knockbackRemainingSeconds, holdSeconds);
             return true;
         }
 
@@ -743,6 +758,18 @@ namespace Nyangbingo.World
         {
             if (!IsKnockbackActive || deltaSeconds <= 0f || float.IsNaN(deltaSeconds) ||
                 float.IsInfinity(deltaSeconds)) return 0f;
+
+            if (knockbackGrabRemainingSeconds > 0f)
+            {
+                knockbackGrabRemainingSeconds = Mathf.Max(0f, knockbackGrabRemainingSeconds - deltaSeconds);
+                knockbackRemainingSeconds = knockbackGrabRemainingSeconds;
+                if (knockbackGrabRemainingSeconds <= Mathf.Epsilon)
+                {
+                    knockbackRemainingSeconds = 0f;
+                    knockbackRemainingDisplacement = Vector2.zero;
+                }
+                return 0f;
+            }
 
             var consumedSeconds = Mathf.Min(deltaSeconds, knockbackRemainingSeconds);
             var nextRemainingSeconds = Mathf.Max(0f, knockbackRemainingSeconds - consumedSeconds);

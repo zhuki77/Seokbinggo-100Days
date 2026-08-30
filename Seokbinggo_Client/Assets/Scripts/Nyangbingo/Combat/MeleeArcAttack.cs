@@ -21,6 +21,7 @@ namespace Nyangbingo.Combat
         public CombatProfileDefinition CombatProfile => combatProfile;
         public bool HitsWalls => combatProfile == null || combatProfile.HitsWalls;
         public int LastHitCount { get; private set; }
+        public event System.Action<Health, float> KnockbackApplied;
 
         public void ConfigureForRuntime(Transform attackOrigin, LayerMask layers, float attackRange, float attackArc, int attackDamage, float attackKnockback)
         {
@@ -145,6 +146,8 @@ namespace Nyangbingo.Combat
                             frostSlowFraction, frostSlowDuration);
                 }
                 health.TryApplyKnockback(toTarget.normalized * activeKnockback);
+                if (activeKnockback > 0f)
+                    KnockbackApplied?.Invoke(health, activeKnockback);
                 if (combatProfile != null && LastHitCount >= combatProfile.MaxTargets) break;
             }
             LastHitCount = damagedTargets.Count;

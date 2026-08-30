@@ -5,6 +5,7 @@ using Nyangbingo.Bosses;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.Save;
 using Nyangbingo.Yokai;
 using UnityEngine;
@@ -305,7 +306,9 @@ namespace Nyangbingo.World
             }
             ResetResidentProgress();
             baseVicinityRadius = ReadPositiveGlobal(GlobalKeys.BaseVicinityRadius, 28f);
-            raidTarget.ConfigureStealthRuntime(() => runtimeServices?.Talismans?.IgnoresYokaiAggro == true);
+            raidTarget.ConfigureStealthRuntime(() =>
+                runtimeServices?.Talismans?.IgnoresYokaiAggro == true ||
+                SuppressesSurfaceFirstStrike());
             var coreTargetObject = new GameObject("IceCoreRaidTarget");
             coreTargetObject.transform.SetParent(transform, false);
             coreRaidTarget = coreTargetObject.AddComponent<MainGameCoreRaidTarget>();
@@ -1262,10 +1265,11 @@ namespace Nyangbingo.World
                     placedObjectRuntime.ActiveCounterAuras, targetCounters)
                 : targetCounters;
             var selectedTarget = ResolveSpawnTarget(position, out var usesAggroRadius);
+            var suppressFirstStrike = SuppressesSurfaceFirstStrike();
             brain.ConfigureForRuntime(
                 definition, selectedTarget, counters, instanceSpawnTrack,
-                gateByAggroRadius: usesAggroRadius,
-                startEngaged: !usesAggroRadius);
+                gateByAggroRadius: usesAggroRadius || suppressFirstStrike,
+                startEngaged: !usesAggroRadius && !suppressFirstStrike);
             if (definition.Kind == YokaiKind.Gangcheori)
             {
                 var breath = yokaiObject.AddComponent<GangcheoriBreathController>();
@@ -1539,6 +1543,17 @@ namespace Nyangbingo.World
 
         private static bool IsAlive(SpawnedYokai entry) =>
             entry != null && entry.health != null && !entry.health.IsDead && entry.brain != null;
+
+        private bool SuppressesSurfaceFirstStrike()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                raidTarget == null || bootstrap?.TimeService == null || bootstrap.TileService == null)
+                return false;
+            var context = ArtifactActivationContextFactory.Build(
+                bootstrap.TileService, raidTarget.transform.position, bootstrap.TimeService);
+            return runtimeServices.ArtifactVerbs.SuppressesFirstStrike(
+                runtimeServices.EquipmentSystem, context);
+        }
     }
 
     /// <summary>Runtime-spawned yokai health presentation kept separate from combat state.</summary>
