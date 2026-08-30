@@ -438,7 +438,7 @@ namespace Nyangbingo.World
 
         private void Update()
         {
-            if (!initialized) return;
+            if (!initialized || runtimeServices == null || !runtimeServices.IsInitialized) return;
             RefreshPortableLanternLight();
             RefreshPlayerFireDamageMultiplier();
             if (dead)
@@ -483,7 +483,7 @@ namespace Nyangbingo.World
                 interactionMessages?.ShowExternalMessage(statusMessage);
             }
             UpdateAimDirection();
-            runtimeServices.DeathTearPouches.TryCollectWithin(transform.position, TearPouchPickupRadius);
+            runtimeServices.DeathTearPouches?.TryCollectWithin(transform.position, TearPouchPickupRadius);
             if (Input.GetKeyDown(KeyCode.E))
             {
                 var handled = TryUseSelectedIceShard() ||

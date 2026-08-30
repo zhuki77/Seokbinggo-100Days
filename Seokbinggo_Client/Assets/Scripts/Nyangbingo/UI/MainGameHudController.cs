@@ -332,6 +332,7 @@ namespace Nyangbingo.UI
 
         private void LateUpdate()
         {
+            if (runtimeServices == null || !runtimeServices.IsInitialized) return;
             damageWarningRemaining = Mathf.Max(0f, damageWarningRemaining - Time.unscaledDeltaTime);
             bellWarningRemaining = Mathf.Max(0f, bellWarningRemaining - Time.unscaledDeltaTime);
             bossEntranceFlashRemaining = Mathf.Max(0f,
@@ -355,7 +356,8 @@ namespace Nyangbingo.UI
 
         private void RefreshStatus()
         {
-            if (bootstrap == null || runtimeServices == null) return;
+            if (bootstrap == null || runtimeServices == null || !runtimeServices.IsInitialized ||
+                runtimeServices.PlayerTemperature == null) return;
             var displayedTemperature = $"{runtimeServices.PlayerTemperature.Current:0.0}";
             if (playerTemperatureGlyphs != null)
                 playerTemperatureGlyphs.SetText(displayedTemperature);

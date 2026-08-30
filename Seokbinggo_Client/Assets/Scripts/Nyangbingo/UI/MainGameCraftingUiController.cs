@@ -113,8 +113,9 @@ namespace Nyangbingo.UI
         private bool initialized;
         private bool open;
         private CraftingStationFilter craftingFilter = CraftingStationFilter.Workbench;
+        private bool furnaceSmeltingView = true;
         private bool IsShowingSmeltingList =>
-            page == Page.Crafting && craftingFilter == CraftingStationFilter.Furnace;
+            page == Page.Crafting && craftingFilter == CraftingStationFilter.Furnace && furnaceSmeltingView;
         private YokaiCodexPresentationModel codexModel;
         private CharacterArtCatalog characterArtCatalog;
         private static int openControllerCount;
@@ -283,6 +284,9 @@ namespace Nyangbingo.UI
                 if (page == Page.Gathering &&
                     (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)))
                     SelectRelative(InventoryGridColumns);
+                if (page == Page.Crafting && craftingFilter == CraftingStationFilter.Furnace &&
+                    Input.GetKeyDown(KeyCode.Q))
+                    TryToggleFurnaceCraftingSmeltingView();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.Q)) ToggleActiveSlotFromEquipmentPage();
                 if (openedFrame != Time.frameCount && Input.GetKeyDown(KeyCode.E)) TryPrimaryAction();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.R)) TryRefuelPortableLantern();
@@ -374,6 +378,11 @@ namespace Nyangbingo.UI
             }
         }
 
+        private string CraftingFilterTitlePrefix() =>
+            craftingFilter == CraftingStationFilter.Furnace
+                ? furnaceSmeltingView ? "화로 · 제련" : "화로 · 제작"
+                : CraftingFilterLabel(craftingFilter);
+
         public bool TryOpenForStation(CraftingStation station)
         {
             if (!initialized || station == CraftingStation.None ||
@@ -381,6 +390,7 @@ namespace Nyangbingo.UI
 
             OpenPage(Page.Crafting);
             craftingFilter = FilterForStation(station);
+            furnaceSmeltingView = IsSmeltingStation(station);
             RebuildFilteredRecipes();
             selectedIndex = FindFirstEntryForFilter();
             Refresh();
@@ -451,6 +461,21 @@ namespace Nyangbingo.UI
 
         public static bool CanToggleCraftingSmelting(CraftingStation station) =>
             IsSmeltingStation(station);
+
+        public bool FurnaceSmeltingViewActive => furnaceSmeltingView;
+
+        public bool TryToggleFurnaceCraftingSmeltingView()
+        {
+            if (page != Page.Crafting || craftingFilter != CraftingStationFilter.Furnace) return false;
+            furnaceSmeltingView = !furnaceSmeltingView;
+            RebuildFilteredRecipes();
+            selectedIndex = FindFirstEntryForFilter();
+            message = string.Empty;
+            Refresh();
+            ResetDetailsScroll();
+            ResetCraftingListScroll();
+            return true;
+        }
 
         private void BuildUi()
         {
@@ -806,7 +831,9 @@ namespace Nyangbingo.UI
             {
                 if (target == Page.Crafting)
                 {
-                    craftingFilter = (CraftingStationFilter)(((int)craftingFilter + 1) % CraftingFilterCount);
+                    var nextFilter = (CraftingStationFilter)(((int)craftingFilter + 1) % CraftingFilterCount);
+                    if (nextFilter == CraftingStationFilter.Furnace) furnaceSmeltingView = false;
+                    craftingFilter = nextFilter;
                     RebuildFilteredRecipes();
                     selectedIndex = FindFirstEntryForFilter();
                     message = string.Empty;
@@ -1317,7 +1344,7 @@ namespace Nyangbingo.UI
             var recipe = CurrentRecipe();
             if (recipe == null)
             {
-                titleText.text = $"제작 · {CraftingFilterLabel(craftingFilter)} · 해금된 제작법 없음";
+                titleText.text = $"제작 · {CraftingFilterTitlePrefix()} · 해금된 제작법 없음";
                 detailsText.text = "탭별 제작 목록입니다. 실행은 해당 설비 근처에서 가능합니다.";
                 primaryButton.interactable = false;
                 return;
@@ -1338,7 +1365,7 @@ namespace Nyangbingo.UI
                 collectButton.interactable = true;
             }
             titleText.text =
-                $"제작 · {CraftingFilterLabel(craftingFilter)} {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
+                $"제작 · {CraftingFilterTitlePrefix()} {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
             var stationOk = recipe.Station == CraftingStation.None || recipe.Station == NearbyStation();
             var canCraft = !runtimeServices.CraftingProcess.IsCrafting && stationOk &&
                            RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook) &&
@@ -1517,7 +1544,7 @@ namespace Nyangbingo.UI
             var definition = CurrentSmelting();
             if (definition == null)
             {
-                titleText.text = $"제작 · {CraftingFilterLabel(craftingFilter)} · 표시 가능한 제련법 없음";
+                titleText.text = $"제작 · {CraftingFilterTitlePrefix()} · 표시 가능한 제련법 없음";
                 detailsText.text = string.Empty;
                 primaryButton.interactable = collectButton.interactable = false;
                 return;
@@ -1530,7 +1557,7 @@ namespace Nyangbingo.UI
                 : runtimeServices.Furnace;
             var stationOk = NearbyStation() == requiredStation;
             titleText.text =
-                $"제작 · {CraftingFilterLabel(craftingFilter)} {selectedIndex + 1}/{smeltingRecipes.Count} · {definition.Output.item.DisplayName}";
+                $"제작 · {CraftingFilterTitlePrefix()} {selectedIndex + 1}/{smeltingRecipes.Count} · {definition.Output.item.DisplayName}";
             primaryButton.interactable = stationOk;
             collectButton.interactable = station.Completed.Count > 0;
             detailsText.text =
@@ -2209,7 +2236,9 @@ namespace Nyangbingo.UI
         private string DefaultHelpText()
         {
             if (page == Page.Crafting)
-                return "2 제작 탭(제작대/화로/얼음 모루) · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+                return craftingFilter == CraftingStationFilter.Furnace
+                    ? "2 제작 탭 · Q 제련↔제작 전환 · ESC 닫기 · A/D·←/→ 선택 · E 실행"
+                    : "2 제작 탭(제작대/화로/얼음 모루) · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else

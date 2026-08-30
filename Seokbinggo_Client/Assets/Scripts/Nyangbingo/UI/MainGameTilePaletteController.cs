@@ -262,7 +262,8 @@ namespace Nyangbingo.UI
 
         private void Update()
         {
-            if (!initialized) return;
+            if (!initialized || runtimeServices == null || !runtimeServices.IsInitialized ||
+                runtimeServices.PlayerInventory == null) return;
             var gameplayVisible = (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
                                   !MainGameCraftingUiController.BlocksGameplayInput;
             if (paletteRoot != null && paletteRoot.activeSelf != gameplayVisible)
@@ -391,7 +392,15 @@ namespace Nyangbingo.UI
         private List<string> CollectHotbarSlotItemIds()
         {
             var results = new List<string>(ShortcutSlotCount);
-            var slots = runtimeServices.PlayerInventory.Slots;
+            var inventory = runtimeServices?.PlayerInventory;
+            if (inventory == null)
+            {
+                for (var index = 0; index < ShortcutSlotCount; index++)
+                    results.Add(string.Empty);
+                return results;
+            }
+
+            var slots = inventory.Slots;
             for (var index = 0; index < ShortcutSlotCount; index++)
             {
                 if (index >= slots.Count)

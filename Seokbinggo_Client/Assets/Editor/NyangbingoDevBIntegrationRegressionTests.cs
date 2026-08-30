@@ -3387,6 +3387,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Furnaces and foundries must expose both their crafting and smelting routes.");
         var craftingUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
+        Require(craftingUiSource.Contains("TryToggleFurnaceCraftingSmeltingView") &&
+                craftingUiSource.Contains("furnaceSmeltingView") &&
+                craftingUiSource.Contains("Q 제련↔제작"),
+            "The furnace filter must toggle between smelting and station crafting with Q.");
         var shellUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(craftingUiSource.Contains("$\"{index + 1} · {UnifiedTabLabel(index)}\"") &&
