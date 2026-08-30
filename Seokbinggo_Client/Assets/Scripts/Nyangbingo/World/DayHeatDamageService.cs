@@ -15,12 +15,13 @@ namespace Nyangbingo.World
         private readonly WorldSessionController session;
         private readonly HeatStageService heatStage;
         private readonly GameDataCatalog catalog;
+        private readonly MainGameEnvironmentState environmentState;
         private float fractionalDamage;
         private bool disposed;
 
         public DayHeatDamageService(Health playerHealth, Transform playerTransform,
             DayNightService clock, WorldSessionController worldSession, HeatStageService stages,
-            GameDataCatalog data)
+            GameDataCatalog data, MainGameEnvironmentState environment = null)
         {
             health = playerHealth ?? throw new ArgumentNullException(nameof(playerHealth));
             player = playerTransform ?? throw new ArgumentNullException(nameof(playerTransform));
@@ -28,6 +29,7 @@ namespace Nyangbingo.World
             session = worldSession ?? throw new ArgumentNullException(nameof(worldSession));
             heatStage = stages ?? throw new ArgumentNullException(nameof(stages));
             catalog = data;
+            environmentState = environment;
             health.Died += ResetExposure;
         }
 
@@ -43,9 +45,10 @@ namespace Nyangbingo.World
                 return;
             }
 
-            var reduction = DayCurveCombatRules.ResolveDayHeatStageReduction(
-                catalog, timeService.Day);
-            var rate = heatStage.ResolveDayFireDamagePerSecond(reduction);
+            DayCurveCombatRules.ResolveHeatStageModifiers(
+                catalog, timeService.Day, environmentState?.HeatStageReduction ?? 0,
+                out var reduction, out var escalation);
+            var rate = heatStage.ResolveDayFireDamagePerSecond(timeService.Day, reduction, escalation);
             if (rate <= 0f) return;
             var effectiveRate = rate * health.DamageTakenMultiplier * health.FireDamageMultiplier;
             if (float.IsNaN(effectiveRate) || float.IsInfinity(effectiveRate) || effectiveRate <= 0f) return;

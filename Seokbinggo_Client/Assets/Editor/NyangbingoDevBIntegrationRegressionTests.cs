@@ -1320,6 +1320,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     "public const string ColdWaveCoreDefinitionId = \"cold_wave_core\"") &&
                 environmentSource.Contains("IsGlobalSingletonDefinition(record.definitionId)") &&
                 environmentSource.Contains("restoredColdWaveCoreCount") &&
+                temperatureSource.Contains("ResolveHeatStageModifiers") &&
                 temperatureSource.Contains("environmentState?.HeatStageReduction ?? 0"),
             "The cold-wave core must be globally limited to one installation, reject duplicate " +
             "save data before restore, and affect the live daytime temperature path.");

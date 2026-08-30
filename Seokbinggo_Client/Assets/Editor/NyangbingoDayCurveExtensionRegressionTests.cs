@@ -72,6 +72,29 @@ public static class NyangbingoDayCurveExtensionRegressionTests
                 DayCurveCombatRules.ResolveDayHeatStageReduction(catalog, 40) == 0 &&
                 PlayerTemperatureState.CalculateEffectiveHeatStage(3, 1) == 2,
             "day 35 anchor must reduce daytime heat stage by one through day 39");
+        Require(DayCurveCombatRules.ResolveColdWaveCoreEscalation(39, false) == 0 &&
+                DayCurveCombatRules.ResolveColdWaveCoreEscalation(40, false) == 1 &&
+                DayCurveCombatRules.ResolveColdWaveCoreEscalation(40, true) == 0,
+            "day 40 anchor must escalate heat when cold-wave core is not operational");
+        DayCurveCombatRules.ResolveHeatStageModifiers(catalog, 40, 0,
+            out var noCoreReduction, out var noCoreEscalation);
+        DayCurveCombatRules.ResolveHeatStageModifiers(catalog, 40, 1,
+            out var withCoreReduction, out var withCoreEscalation);
+        Require(noCoreReduction == 0 && noCoreEscalation == 1 &&
+                withCoreReduction == 1 && withCoreEscalation == 0 &&
+                PlayerTemperatureState.CalculateEffectiveHeatStage(2, noCoreReduction, noCoreEscalation) == 3 &&
+                PlayerTemperatureState.CalculateEffectiveHeatStage(2, withCoreReduction, withCoreEscalation) == 1,
+            "day 40 modifiers must pair escalation only when cold-wave core is absent");
+        Require(HeatStageService.TryCreate(catalog, out var heatStages) &&
+                heatStages.Restore(2) &&
+                Mathf.Approximately(heatStages.ResolveDayFireDamagePerSecond(40, 0, 1), 15f) &&
+                Mathf.Approximately(heatStages.ResolveDayFireDamagePerSecond(54, 0, 0), 4.5f) &&
+                Mathf.Approximately(heatStages.ResolveDayFireDamagePerSecond(55, 0, 0), 3f) &&
+                heatStages.Restore(3) &&
+                Mathf.Approximately(heatStages.ResolveDayFireDamagePerSecond(54, 0, 0), 15f) &&
+                Mathf.Approximately(heatStages.ResolveDayFireDamagePerSecond(55, 0, 0), 4.5f) &&
+                Mathf.Approximately(heatStages.ResolveDayFireDamagePerSecond(55, 1, 0), 3f),
+            "day 40 deadline and day 55+ must adjust surface fire damage by effective heat stage");
         Require(!GameShellController.ShouldEndDemoAtDay(31) &&
                 !GameShellController.ShouldEndDemoAtDay(100),
             "date alone must not end the demo after day 30");

@@ -9,6 +9,13 @@ namespace Nyangbingo.Data
     /// </summary>
     public static class DayCurveCombatRules
     {
+        /// <summary>day-curve-ext 55일 앵커부터 화상 DPS = 유효 폭염 단계 × 1.5 (globals 커브 대신).</summary>
+        public const int ExpansionLinearDayFireDamageStartDay = 55;
+        public const float ExpansionDayFireDamagePerStage = 1.5f;
+
+        /// <summary>day-curve-ext 40일 앵커 — 한파 코어 미가동 시 낮 더위 1단계 가중.</summary>
+        public const int ColdWaveCoreDeadlineDay = 40;
+
         public static bool UsesVariantHpMultiplier(GameDataCatalog catalog) =>
             catalog != null &&
             string.Equals(catalog.FindGlobal("wave_mult_target")?.Value, "hp_only",
@@ -52,6 +59,18 @@ namespace Nyangbingo.Data
         {
             if (catalog == null || day < 35 || day >= 40) return 0;
             return 1;
+        }
+
+        public static int ResolveColdWaveCoreEscalation(int day, bool hasColdWaveCore) =>
+            day >= ColdWaveCoreDeadlineDay && !hasColdWaveCore ? 1 : 0;
+
+        public static void ResolveHeatStageModifiers(
+            GameDataCatalog catalog, int day, int coldWaveCoreReduction,
+            out int stageReduction, out int stageEscalation)
+        {
+            stageReduction = ResolveDayHeatStageReduction(catalog, day) +
+                             Mathf.Max(0, coldWaveCoreReduction);
+            stageEscalation = ResolveColdWaveCoreEscalation(day, coldWaveCoreReduction > 0);
         }
     }
 }

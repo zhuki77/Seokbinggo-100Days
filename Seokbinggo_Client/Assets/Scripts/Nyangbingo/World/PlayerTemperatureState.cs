@@ -137,9 +137,9 @@ namespace Nyangbingo.World
                 ? environmentState.ResolveTemperatureRecoveryMultiplier(
                     trackedTransform.position, sealSystem)
                 : 1f;
-            var heatStageReduction = (environmentState?.HeatStageReduction ?? 0) +
-                                     DayCurveCombatRules.ResolveDayHeatStageReduction(
-                                         catalog, timeService.Day);
+            DayCurveCombatRules.ResolveHeatStageModifiers(
+                catalog, timeService.Day, environmentState?.HeatStageReduction ?? 0,
+                out var heatStageReduction, out var heatStageEscalation);
             var delta = hypothermia
                 ? suppressHypothermiaFall?.Invoke() == true
                     ? 0f
@@ -151,7 +151,7 @@ namespace Nyangbingo.World
                     : suppressDaySurfaceHeatRise?.Invoke() == true
                         ? 0f
                         : risePerStage * CalculateEffectiveHeatStage(
-                            heatStage?.Current ?? 1, heatStageReduction) *
+                            heatStage?.Current ?? 1, heatStageReduction, heatStageEscalation) *
                           DayRiseMultiplier() * deltaGameSeconds;
             Set(Current + delta);
             HypothermiaDamage(deltaGameSeconds, hypothermia);
@@ -203,9 +203,11 @@ namespace Nyangbingo.World
             return wholeDamage;
         }
 
-        public static int CalculateEffectiveHeatStage(int heatStage, int reduction)
+        public static int CalculateEffectiveHeatStage(int heatStage, int reduction, int escalation = 0,
+            int maxStage = 3)
         {
-            return Mathf.Max(1, Mathf.Max(1, heatStage) - Mathf.Max(0, reduction));
+            var effective = Mathf.Max(1, heatStage) + Mathf.Max(0, escalation) - Mathf.Max(0, reduction);
+            return Mathf.Clamp(effective, 1, Mathf.Max(1, maxStage));
         }
 
         private bool IsUnderground()

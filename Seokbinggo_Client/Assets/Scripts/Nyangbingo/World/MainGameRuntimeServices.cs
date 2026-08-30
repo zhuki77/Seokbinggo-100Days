@@ -325,7 +325,7 @@ namespace Nyangbingo.World
                     : 1f);
             DayHeatDamage = new DayHeatDamageService(
                 health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage,
-                gameDataCatalog);
+                gameDataCatalog, environmentState);
             if (Register(PlayerHealthRecovery) && Register(DayHeatDamage)) return true;
 
             Unregister(PlayerHealthRecovery);
