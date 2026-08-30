@@ -175,6 +175,7 @@ namespace Nyangbingo.World
             }
             if (Input.GetKeyDown(KeyCode.J)) DefeatAllYokaiForEditorTest();
             if (Input.GetKeyDown(KeyCode.K)) DefeatActiveBossForEditorTest();
+            if (Input.GetKeyDown(KeyCode.F9)) TryJumpToNextForcedInvasionAnchorForEditorTest();
             if (Input.GetKeyDown(KeyCode.F12))
             {
                 var shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -276,9 +277,120 @@ namespace Nyangbingo.World
         {
             var health = bossManager != null ? bossManager.ActiveHealth : null;
             var definition = bossManager != null ? bossManager.ActiveDefinition : null;
-            if (health == null || health.IsDead || definition == null) return;
+            if (health == null && activeBossCombat != null)
+                health = activeBossCombat.GetComponent<Health>();
+            if (health == null || definition == null)
+            {
+                Debug.LogWarning("[Nyangbingo] K boss test defeat: no active boss.");
+                return;
+            }
+
+            if (health.IsDead)
+            {
+                Debug.LogWarning("[Nyangbingo] K boss test defeat: boss already dead.");
+                return;
+            }
+
             Debug.Log($"[Nyangbingo] K boss test defeat requested: {definition.Id}.");
-            health.ApplyDamage(int.MaxValue, DamageTag.Melee);
+            // Opening-dodge sets damageTakenMultiplier=0 for up to 120s; bypass for editor kills.
+            health.ApplyResolvedDamage(health.Current, DamageTag.Melee);
+        }
+
+        private static readonly int[] ForcedInvasionAnchorDays = { 50, 60, 90, 100 };
+
+        public bool TryJumpToNextForcedInvasionAnchorForEditorTest()
+        {
+            if ((!initialized && !Initialize()) || bootstrap?.TimeService == null)
+            {
+                Debug.LogWarning("[Nyangbingo] F9 forced invasion anchor requires initialized MainGame.");
+                return false;
+            }
+
+            if (!(bootstrap.TimeService is DayNightService dayNight))
+            {
+                Debug.LogError("[Nyangbingo] F9 requires DayNightService time source.");
+                return false;
+            }
+
+            var currentDay = dayNight.Day;
+            var targetDay = ResolveNextForcedInvasionAnchorDay(currentDay, dayNight.IsNight);
+            var targetBoss = forcedBossDefinitions.FirstOrDefault(definition =>
+                definition != null && definition.ForcedDay == targetDay);
+            if (targetBoss == null)
+            {
+                Debug.LogError($"[Nyangbingo] F9 anchor day {targetDay} boss definition missing.");
+                return false;
+            }
+
+            if (bossManager?.IsBossActive == true)
+                DefeatActiveBossForEditorTest();
+            ResetForcedBossBinding(targetDay);
+
+            var usedAtomicRestore = currentDay > targetDay ||
+                                    Mathf.Abs(targetDay - currentDay) > 1;
+            if (!TryAdvanceTimeToNightOfDay(dayNight, targetDay, usedAtomicRestore))
+            {
+                Debug.LogError($"[Nyangbingo] F9 failed advancing to day {targetDay} night.");
+                return false;
+            }
+
+            if (usedAtomicRestore)
+                HandleNightStart();
+
+            for (var index = 0; index < forcedBossBindings.Count; index++)
+                forcedBossBindings[index].TryStartForCurrentNight();
+
+            var started = bossManager?.ActiveDefinition?.Id == targetBoss.Id;
+            Debug.Log(started
+                ? $"[Nyangbingo] F9 forced invasion anchor ready: day {targetDay}, " +
+                  $"boss={targetBoss.Id} ({targetBoss.DisplayName})."
+                : $"[Nyangbingo] F9 advanced to day {targetDay} night but forced boss did not start.");
+            return started;
+        }
+
+        private static int ResolveNextForcedInvasionAnchorDay(int currentDay, bool isNight)
+        {
+            if (!isNight)
+            {
+                for (var index = 0; index < ForcedInvasionAnchorDays.Length; index++)
+                    if (currentDay <= ForcedInvasionAnchorDays[index])
+                        return ForcedInvasionAnchorDays[index];
+            }
+            else
+            {
+                for (var index = 0; index < ForcedInvasionAnchorDays.Length; index++)
+                    if (currentDay < ForcedInvasionAnchorDays[index])
+                        return ForcedInvasionAnchorDays[index];
+            }
+
+            return ForcedInvasionAnchorDays[0];
+        }
+
+        private void ResetForcedBossBinding(int forcedDay)
+        {
+            for (var index = 0; index < forcedBossDefinitions.Count; index++)
+            {
+                if (forcedBossDefinitions[index]?.ForcedDay != forcedDay) continue;
+                forcedBossBindings[index].RestoreTriggered(false);
+            }
+        }
+
+        private static bool TryAdvanceTimeToNightOfDay(
+            DayNightService dayNight, int targetDay, bool useAtomicRestore)
+        {
+            const int maxSteps = 500;
+            if (useAtomicRestore)
+                return dayNight.RestoreTimeState(targetDay, dayNight.DayDurationSeconds, true);
+
+            var steps = 0;
+            while (steps++ < maxSteps && (dayNight.Day != targetDay || !dayNight.IsNight))
+            {
+                var seconds = dayNight.SecondsUntilNextTransition;
+                if (seconds <= 0f) return false;
+                dayNight.Tick(seconds + 0.001f);
+            }
+
+            return dayNight.Day == targetDay && dayNight.IsNight;
         }
 #endif
 
