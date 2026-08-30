@@ -88,6 +88,7 @@ namespace Nyangbingo.World
         public const string HaetaeStatueItemId = "haetae_statue";
         public const string BellRopeItemId = "bell_rope";
         public const string IronBellRopeItemId = "iron_bell_rope";
+        public const string FrostBellRopeItemId = BellRopeItemIds.FrostBellRope;
         public const string DaebalItemId = "daebal";
         private const string FuelItemId = "coal";
         private const string FrostLanternFuelItemId = "frost_essence";
@@ -1002,6 +1003,13 @@ namespace Nyangbingo.World
                     kind = CounterAuraKind.BellRope;
                     radius = 10f;
                     cooldown = 4f;
+                    return true;
+                case FrostBellRopeItemId:
+                    kind = CounterAuraKind.FrostBellRope;
+                    radius = 10f;
+                    effect = .3f;
+                    duration = 4f;
+                    cooldown = 12f;
                     return true;
                 default:
                     return false;

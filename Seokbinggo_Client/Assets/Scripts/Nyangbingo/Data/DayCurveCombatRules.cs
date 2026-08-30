@@ -3,7 +3,9 @@ using UnityEngine;
 namespace Nyangbingo.Data
 {
     /// <summary>
-    /// day-curve-ext 확장 파라미터(variant_mult, heat_seep)를 전투·체온 런타임에 적용한다.
+    /// day-curve-ext 확장 파라미터(variant_mult, heat_seep, ice_melt_dps)를 전투·체온·야외 얼음에 적용한다.
+    /// ice_melt_dps 열 이름은 레거시이며, 실제 단위는 storage_melt_per_day와 동일한 일일 비율(0~1)이다.
+    /// storage_melt_per_day(0.25) = 장독 빙결 미달 시, ice_melt_dps(0.15) = 지표 직사 노출 얼음.
     /// </summary>
     public static class DayCurveCombatRules
     {
@@ -32,6 +34,15 @@ namespace Nyangbingo.Data
             if (seepPercent <= 0f || float.IsNaN(seepPercent) || float.IsInfinity(seepPercent))
                 return recoveryMultiplier;
             return recoveryMultiplier * Mathf.Clamp01(1f - seepPercent / 100f);
+        }
+
+        public static float ResolveOutdoorIceMeltPerDay(DayCurveDefinition curve)
+        {
+            if (curve == null || curve.Day <= 30) return 0f;
+            var meltPerDay = curve.IceMeltDpsPerDay;
+            if (meltPerDay <= 0f || float.IsNaN(meltPerDay) || float.IsInfinity(meltPerDay))
+                return 0f;
+            return Mathf.Clamp01(meltPerDay);
         }
     }
 }

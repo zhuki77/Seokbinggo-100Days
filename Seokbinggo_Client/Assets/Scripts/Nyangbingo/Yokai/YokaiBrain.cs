@@ -68,6 +68,8 @@ namespace Nyangbingo.Yokai
         private float contactAttackRemaining;
         private float frostSlowFraction;
         private float frostSlowRemaining;
+        private bool wasInFrostBellRopeRange;
+        private float frostBellReapplyCooldown;
         private bool bossEncounterPaused;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
@@ -405,6 +407,9 @@ namespace Nyangbingo.Yokai
                 definition == null) return;
             if (health == null) health = GetComponent<Health>();
             if (health != null && health.IsDead) return;
+            if (counterSource is CounterAuraSensor auraSensor)
+                auraSensor.TickFrostBellRope(
+                    this, ref wasInFrostBellRopeRange, ref frostBellReapplyCooldown, deltaSeconds);
             var actionSeconds = CalculateFrostAdjustedActionSeconds(
                 deltaSeconds, frostSlowFraction, frostSlowRemaining);
             frostSlowRemaining = Mathf.Max(0f, frostSlowRemaining - deltaSeconds);

@@ -20,8 +20,9 @@ public static class NyangbingoDayCurveExtensionRegressionTests
 
         var day31 = catalog.FindDayCurve(31);
         var day33 = catalog.FindDayCurve(33);
+        var day45 = catalog.FindDayCurve(45);
         var day100 = catalog.FindDayCurve(100);
-        Require(day31 != null && day33 != null && day100 != null,
+        Require(day31 != null && day33 != null && day45 != null && day100 != null,
             "FindDayCurve must resolve days 31~100 via extension anchors");
         Require(day31.NightYokaiCount == 8 && day31.MaxActive == 8 &&
                 day31.EffectiveSpawnCount == 8,
@@ -49,6 +50,18 @@ public static class NyangbingoDayCurveExtensionRegressionTests
         Require(Mathf.Approximately(
                 DayCurveCombatRules.ApplyHeatSeepPenalty(1f, catalog, catalog.FindDayCurve(30)), 1f),
             "heat_seep must not affect MVP days");
+        Require(Mathf.Approximately(
+                DayCurveCombatRules.ResolveOutdoorIceMeltPerDay(day31), .15f) &&
+                Mathf.Approximately(
+                    DayCurveCombatRules.ResolveOutdoorIceMeltPerDay(catalog.FindDayCurve(30)), 0f),
+            "ice_melt_dps must apply only on extension days");
+        var inventory = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 8);
+        inventory.TryAdd(StorageTemperatureService.IceShardId, 1);
+        var melted = 0;
+        for (var day = 0; day < 7; day++)
+            melted += inventory.ApplyOutdoorIceMelt(.15f);
+        Require(melted == 1 && inventory.Count(StorageTemperatureService.IceShardId) == 0,
+            "outdoor ice melt must use day-curve-ext daily fraction");
         Require(!GameShellController.ShouldEndDemoAtDay(31) &&
                 !GameShellController.ShouldEndDemoAtDay(100),
             "date alone must not end the demo after day 30");

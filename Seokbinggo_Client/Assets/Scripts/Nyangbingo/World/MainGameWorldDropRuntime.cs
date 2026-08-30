@@ -419,6 +419,33 @@ namespace Nyangbingo.World
         private static bool IsFiniteNonNegative(float value) =>
             !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
 
+        public int ApplyOutdoorIceMelt(float meltPerDay, IReadOnlyList<int> surfaceHeights)
+        {
+            if (meltPerDay <= 0f || surfaceHeights == null || surfaceHeights.Count == 0) return 0;
+            var melted = 0;
+            for (var index = drops.Count - 1; index >= 0; index--)
+            {
+                var entry = drops[index];
+                if (entry?.Root == null || entry.Item == null || entry.Amount <= 0 ||
+                    !OutdoorIceMeltRules.IsIceItem(entry.Item.Id))
+                    continue;
+                if (!WorldExposureRules.TryIsSurfaceExposed(
+                        entry.Root.transform.position, surfaceHeights, out var exposed) || !exposed)
+                    continue;
+                var wholeLoss = StorageTemperatureService.CalculateIceMelt(
+                    entry.Amount, 0f, meltPerDay, out var remainingAmount, out _);
+                entry.Amount = remainingAmount;
+                melted += wholeLoss;
+                if (entry.Amount <= 0)
+                {
+                    if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
+                    Destroy(entry.Root);
+                    drops.RemoveAt(index);
+                }
+            }
+            return melted;
+        }
+
         private void ClearDrops()
         {
             foreach (var entry in drops)

@@ -62,6 +62,7 @@ namespace Nyangbingo.World
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
         public StorageTemperatureService StorageTemperature { get; private set; }
+        public OutdoorIceMeltService OutdoorIceMelt { get; private set; }
         public TalismanRuntime Talismans { get; private set; }
         public SeokbinggoUpgradeService Seokbinggo { get; private set; }
         public FrostSpreadService FrostSpread { get; private set; }
@@ -229,6 +230,12 @@ namespace Nyangbingo.World
                                exception.Message);
                 return false;
             }
+            OutdoorIceMelt = new OutdoorIceMeltService(
+                gameDataCatalog,
+                bootstrap.TimeService,
+                bootstrap,
+                () => PlayerInventory,
+                () => bootstrap.GetComponentInChildren<MainGameWorldDropRuntime>());
             Seokbinggo = new SeokbinggoUpgradeService(gameDataCatalog, () => PlayerInventory);
             FrostSpread = new FrostSpreadService(gameDataCatalog);
             if (!FrostSpread.EndingConfigurationValid)
@@ -438,6 +445,8 @@ namespace Nyangbingo.World
             DeathTearPouches = null;
             StorageTemperature?.Dispose();
             StorageTemperature = null;
+            OutdoorIceMelt?.Dispose();
+            OutdoorIceMelt = null;
             JangdokStorage = null;
             Talismans = null;
             Seokbinggo = null;

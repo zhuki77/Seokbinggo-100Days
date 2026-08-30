@@ -22,6 +22,12 @@ namespace Nyangbingo.Data
         public const string LegacyFoldingFan = "folding_fan";
         public const string Hapjukseon = "hapjukseon";
         public const string Cheolseon = "cheolseon";
+        public const string Seolpungseon = "seolpungseon";
+    }
+
+    public static class BellRopeItemIds
+    {
+        public const string FrostBellRope = "frost_bell_rope";
     }
 
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Item")]

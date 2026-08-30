@@ -26,6 +26,9 @@ namespace Nyangbingo.World
         private const string BareClawId = "bare_claw";
         private const string HapjukseonId = "hapjukseon";
         private const string CheolseonId = "cheolseon";
+        private const string SeolpungseonId = FanItemIds.Seolpungseon;
+        private const float SeolpungseonFrostSlowFraction = .3f;
+        private const float SeolpungseonFrostSlowDurationSeconds = 2f;
         private const string LanternId = "lantern";
         private const string IronClawId = "iron_claw";
         private const string IceSteelClawId = "icesteel_claw";
@@ -1868,12 +1871,22 @@ namespace Nyangbingo.World
         private void TryFanAbility()
         {
             if (activeProfile == null ||
-                (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId)) return;
-            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id))) ShowAttackFeedback();
+                (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId &&
+                 activeProfile.Id != SeolpungseonId)) return;
+            if (activeProfile.Id == SeolpungseonId)
+                attack.ConfigureFrostSlow(SeolpungseonFrostSlowFraction, SeolpungseonFrostSlowDurationSeconds);
+            else
+                attack.ConfigureFrostSlow(0f, 0f);
+            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id)))
+            {
+                if (activeProfile.Id == SeolpungseonId)
+                    attack.ConfigureFrostSlow(0f, 0f);
+                ShowAttackFeedback();
+            }
         }
 
         public static int ResolveFanAbilityDamage(string combatProfileId) =>
-            combatProfileId == CheolseonId
+            combatProfileId == CheolseonId || combatProfileId == SeolpungseonId
                 ? WireSnareAbility.CheolseonDamage
                 : WireSnareAbility.HapjukseonDamage;
 

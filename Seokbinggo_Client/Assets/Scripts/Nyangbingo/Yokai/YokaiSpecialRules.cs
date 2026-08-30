@@ -103,7 +103,8 @@ namespace Nyangbingo.Yokai
         public bool IsInLanternRange => Find(CounterAuraKind.Lantern) != null || (fallback?.IsInLanternRange ?? false);
         public bool IsInSieveRange => Find(CounterAuraKind.Sieve) != null || (fallback?.IsInSieveRange ?? false);
         public bool IsInHaetaeRange => Find(CounterAuraKind.Haetae) != null;
-        public bool IsInBellRopeRange => Find(CounterAuraKind.BellRope) != null;
+        public bool IsInBellRopeRange =>
+            Find(CounterAuraKind.BellRope) != null || Find(CounterAuraKind.FrostBellRope) != null;
         public float FireDamageMultiplier
         {
             get
@@ -136,6 +137,20 @@ namespace Nyangbingo.Yokai
         {
             var aura = Find(kind);
             return aura == null ? fallbackValue : selector(aura);
+        }
+
+        public void TickFrostBellRope(YokaiBrain brain, ref bool wasInRange, ref float reapplyCooldown,
+            float deltaSeconds)
+        {
+            if (brain == null) return;
+            if (reapplyCooldown > 0f)
+                reapplyCooldown = Mathf.Max(0f, reapplyCooldown - Mathf.Max(0f, deltaSeconds));
+            var aura = Find(CounterAuraKind.FrostBellRope);
+            var inRange = aura != null;
+            if (inRange && !wasInRange && reapplyCooldown <= 0f &&
+                brain.ApplyFrostSlow(aura.EffectValue, aura.DurationSeconds))
+                reapplyCooldown = aura.CooldownSeconds;
+            wasInRange = inRange;
         }
     }
 

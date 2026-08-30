@@ -91,6 +91,7 @@ namespace Nyangbingo.UI
         [SerializeField] private GameObject[] goalBadgeChecks = new GameObject[3];
         private const string BellRopeId = "bell_rope";
         private const string IronBellRopeId = "iron_bell_rope";
+        private const string FrostBellRopeId = BellRopeItemIds.FrostBellRope;
         private const float PlayerDamageWarningSeconds = .28f;
         private const float BellWarningDisplaySeconds = 1.5f;
         private const float SaveIndicatorFrameSeconds = .12f;
@@ -728,6 +729,7 @@ namespace Nyangbingo.UI
 
             environmentState.CopyPlacedObjectPositions(BellRopeId, bellRopePositions);
             environmentState.CopyPlacedObjectPositions(IronBellRopeId, bellRopePositions, append: true);
+            environmentState.CopyPlacedObjectPositions(FrostBellRopeId, bellRopePositions, append: true);
             encounterCoordinator.CopyActiveThreatTransforms(activeThreats);
             nextBellTargetsInside.Clear();
             var radius = Mathf.Max(0f, bellRopeUtility.Value);

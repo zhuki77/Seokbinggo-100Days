@@ -20,9 +20,9 @@ public static class NyangbingoV72ExpansionRegressionTests
         var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
         var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
         Require(catalog != null && config != null, "catalog or world config missing");
-        Require(catalog.Items.Count == 168 && catalog.Recipes.Count == 95 &&
+        Require(catalog.Items.Count == 170 && catalog.Recipes.Count == 97 &&
                 catalog.Globals.Count == 253 && catalog.Equipment.Count == 44 &&
-                catalog.CombatProfiles.Count == 18 && catalog.Bosses.Count == 10 &&
+                catalog.CombatProfiles.Count == 19 && catalog.Bosses.Count == 10 &&
                 catalog.DayCurves.Count == 30 && catalog.Talismans.Count == 5,
             "v72 union catalog counts mismatch");
 
@@ -34,8 +34,9 @@ public static class NyangbingoV72ExpansionRegressionTests
         ValidateExpansionGate(catalog);
         ValidateDemoContract();
         ValidateDayCurveExtensions(catalog);
+        ValidateCraftingExtension(catalog);
 
-        Debug.Log("[Nyangbingo] v72 expansion regression passed: catalog 168/95/253/44/18/10, " +
+        Debug.Log("[Nyangbingo] v72 expansion regression passed: catalog 170/97/253/44/19/10, " +
                   "boundary ice rock hardness 2, 31-day scope-B gate, ten surface bosses, " +
                   "five forced encounters, and 30-day demo saves contract.");
     }
@@ -92,7 +93,7 @@ public static class NyangbingoV72ExpansionRegressionTests
     {
         var expectedIds = new[]
         {
-            "bare_claw", "iron_claw", "icesteel_claw", "dokkaebi_club", "cheolseon",
+            "bare_claw", "iron_claw", "icesteel_claw", "dokkaebi_club", "cheolseon", "seolpungseon",
             "frostclaw_gauntlet", "hapjukseon", "straw_sling", "gakgung", "singijeon_sondae",
             "seonge_gakgung", "ice_root_bow", "cold_wave_singijeon", "seonge_fan",
             "ice_root_whipfan", "cold_wave_fan", "sangun_claw", "perfect_claw"
@@ -123,6 +124,29 @@ public static class NyangbingoV72ExpansionRegressionTests
         };
         Require(expansionIds.All(id => catalog.FindItem(id) != null && catalog.FindRecipe(id) != null),
             "key expansion item/recipe chain missing");
+    }
+
+    private static void ValidateCraftingExtension(GameDataCatalog catalog)
+    {
+        var seolpungseon = catalog.FindRecipe(FanItemIds.Seolpungseon);
+        var frostBell = catalog.FindRecipe(BellRopeItemIds.FrostBellRope);
+        Require(seolpungseon != null && frostBell != null &&
+                seolpungseon.MvpScope == ItemMvpScope.B &&
+                frostBell.MvpScope == ItemMvpScope.B &&
+                seolpungseon.Station == CraftingStation.IceAnvil &&
+                frostBell.Station == CraftingStation.IceAnvil &&
+                seolpungseon.Ingredients[0].item.Id == FanItemIds.Cheolseon &&
+                frostBell.Ingredients[0].item.Id == "iron_bell_rope" &&
+                catalog.FindCombatProfile(FanItemIds.Seolpungseon) != null &&
+                MainGameTurretRuntime.TryGetPassiveCounterAuraConfiguration(
+                    BellRopeItemIds.FrostBellRope, out var kind, out var radius,
+                    out var effect, out var duration, out var cooldown) &&
+                kind == CounterAuraKind.FrostBellRope &&
+                Mathf.Approximately(radius, 10f) &&
+                Mathf.Approximately(effect, .3f) &&
+                Mathf.Approximately(duration, 4f) &&
+                Mathf.Approximately(cooldown, 12f),
+            "crafting-ext seolpungseon/frost_bell_rope contract mismatch");
     }
 
     private static void ValidateBosses(GameDataCatalog catalog)

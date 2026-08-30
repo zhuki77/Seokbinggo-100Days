@@ -19,7 +19,7 @@ public static class NyangbingoV46DataCompletenessTests
         ("equipment.csv", 44),
         ("globals.csv", 110),
         ("drops.csv", 17),
-        ("player-combat.csv", 18),
+        ("player-combat.csv", 19),
         ("yokai-stats.csv", 7),
         ("modules.csv", 11),
         ("day-curve.csv", 30),
