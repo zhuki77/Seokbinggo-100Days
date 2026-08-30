@@ -324,7 +324,8 @@ namespace Nyangbingo.World
                     ? environmentState.ResolveJukbuinRegenMultiplier(health.transform.position)
                     : 1f);
             DayHeatDamage = new DayHeatDamageService(
-                health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage);
+                health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage,
+                gameDataCatalog);
             if (Register(PlayerHealthRecovery) && Register(DayHeatDamage)) return true;
 
             Unregister(PlayerHealthRecovery);

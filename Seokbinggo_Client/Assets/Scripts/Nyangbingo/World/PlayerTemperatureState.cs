@@ -27,6 +27,7 @@ namespace Nyangbingo.World
 
     public sealed class PlayerTemperatureState : IGameSecondsTickable
     {
+        private readonly GameDataCatalog catalog;
         private readonly DayNightService timeService;
         private readonly SealSystem sealSystem;
         private readonly EquipmentSystem equipmentSystem;
@@ -58,6 +59,7 @@ namespace Nyangbingo.World
             WorldSessionController session = null, RoomTempService roomTemp = null,
             HeatStageService stages = null, Func<bool> hypothermiaFallSuppressed = null)
         {
+            this.catalog = catalog;
             timeService = clock ?? throw new ArgumentNullException(nameof(clock));
             sealSystem = seals ?? throw new ArgumentNullException(nameof(seals));
             equipmentSystem = equipment;
@@ -135,6 +137,9 @@ namespace Nyangbingo.World
                 ? environmentState.ResolveTemperatureRecoveryMultiplier(
                     trackedTransform.position, sealSystem)
                 : 1f;
+            var heatStageReduction = (environmentState?.HeatStageReduction ?? 0) +
+                                     DayCurveCombatRules.ResolveDayHeatStageReduction(
+                                         catalog, timeService.Day);
             var delta = hypothermia
                 ? suppressHypothermiaFall?.Invoke() == true
                     ? 0f
@@ -146,8 +151,7 @@ namespace Nyangbingo.World
                     : suppressDaySurfaceHeatRise?.Invoke() == true
                         ? 0f
                         : risePerStage * CalculateEffectiveHeatStage(
-                            heatStage?.Current ?? 1,
-                            environmentState?.HeatStageReduction ?? 0) *
+                            heatStage?.Current ?? 1, heatStageReduction) *
                           DayRiseMultiplier() * deltaGameSeconds;
             Set(Current + delta);
             HypothermiaDamage(deltaGameSeconds, hypothermia);

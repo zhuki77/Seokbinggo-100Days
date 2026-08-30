@@ -67,6 +67,11 @@ public static class NyangbingoDayCurveExtensionRegressionTests
         Require(dropPolicy.ScaleDropAmount(1) == 1 &&
                 new DayCurveRewardRules(catalog.FindDayCurve(15).DropMultiplier).ScaleDropAmount(1) == 3,
             "drop_mult must scale yokai loot amounts when above 1");
+        Require(DayCurveCombatRules.ResolveDayHeatStageReduction(catalog, 35) == 1 &&
+                DayCurveCombatRules.ResolveDayHeatStageReduction(catalog, 39) == 1 &&
+                DayCurveCombatRules.ResolveDayHeatStageReduction(catalog, 40) == 0 &&
+                PlayerTemperatureState.CalculateEffectiveHeatStage(3, 1) == 2,
+            "day 35 anchor must reduce daytime heat stage by one through day 39");
         Require(!GameShellController.ShouldEndDemoAtDay(31) &&
                 !GameShellController.ShouldEndDemoAtDay(100),
             "date alone must not end the demo after day 30");

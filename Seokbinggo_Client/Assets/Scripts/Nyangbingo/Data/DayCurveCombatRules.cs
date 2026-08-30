@@ -44,5 +44,14 @@ namespace Nyangbingo.Data
                 return 0f;
             return Mathf.Clamp01(meltPerDay);
         }
+
+        /// <summary>
+        /// day-curve-ext 35일 앵커(처서) — 35~39일 낮 지표 더위 1단계 완화.
+        /// </summary>
+        public static int ResolveDayHeatStageReduction(GameDataCatalog catalog, int day)
+        {
+            if (catalog == null || day < 35 || day >= 40) return 0;
+            return 1;
+        }
     }
 }
