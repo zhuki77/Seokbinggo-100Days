@@ -122,6 +122,16 @@ public static class NyangbingoP5RegressionTests
             Require(verbs.ResolveAltarTearCost(altarGear, daySurfaceContext, 30) == 20,
                 "altar tear 30→20");
 
+            var itemArt = AssetDatabase.LoadAssetAtPath<ItemArtCatalog>(
+                "Assets/Art/Items/ItemArtCatalog.asset");
+            Require(itemArt != null, "ItemArtCatalog missing");
+            foreach (var artifactId in ArtifactVerbCatalog.All.Keys)
+            {
+                var sprite = itemArt.FindSprite(artifactId);
+                Require(sprite != null,
+                    $"artifact inventory icon missing: {artifactId} (run Nyangbingo/Bind Delivered Art Catalogs)");
+            }
+
             var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
                 "Assets/Data/SO/GameDataCatalog.asset");
             Require(catalog != null && catalog.Bosses.Count >= 1, "catalog bosses loaded");

@@ -353,6 +353,8 @@ public static class NyangbingoArt720Binder
             ContainsItem(itemSerialized.FindProperty("entries"), "workbench") &&
             ContainsItem(itemSerialized.FindProperty("entries"), "coal") &&
             ContainsItem(itemSerialized.FindProperty("entries"), "yokai_tear") &&
+            ContainsItem(itemSerialized.FindProperty("entries"), "frost_map") &&
+            ContainsItem(itemSerialized.FindProperty("entries"), "ssireum_knot") &&
             gameplaySerialized.FindProperty("dayCounterFrames")?.arraySize == 17 &&
             gameplaySerialized.FindProperty("inventorySlot")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellStart")?.objectReferenceValue != null &&

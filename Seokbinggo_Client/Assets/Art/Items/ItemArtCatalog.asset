@@ -193,3 +193,43 @@ MonoBehaviour:
     sprite: {fileID: 3434850802841734024, guid: e77ee64969a386f4ea717460b832c847, type: 3}
   - id: catnip
     sprite: {fileID: 2943590112692646875, guid: 019840ff016e77f43a85c1bca444283b, type: 3}
+  - id: ssireum_knot
+    sprite: {fileID: -4789564392577086773, guid: f8e65023324def4469768759b4c61ab6, type: 3}
+  - id: iron_appetite
+    sprite: {fileID: 3014366921870239792, guid: 83966a29249c24b40b8b38f6f28f5877, type: 3}
+  - id: yeouiju_shard
+    sprite: {fileID: -6519206505240377793, guid: 893b0f91be5ea0346bb8e6b81ec38d93, type: 3}
+  - id: jigwi_ember
+    sprite: {fileID: -1226543796841951702, guid: 167f0ddf45410d842814f3c7cac3a44a, type: 3}
+  - id: drought_heart_shard
+    sprite: {fileID: 5068518710447696915, guid: 41158da986d670e4292c2ceaeff209cb, type: 3}
+  - id: tiger_gait
+    sprite: {fileID: -2136581596903892600, guid: 2e3425a72a91cfb439b402f2df976c32, type: 3}
+  - id: three_horn
+    sprite: {fileID: 4534529900422791100, guid: 539c838e67adff441a321054da9440fb, type: 3}
+  - id: eop_scale
+    sprite: {fileID: -6421563326968154241, guid: db7222984a239b24a9d758eaacd49561, type: 3}
+  - id: yeongno_mask
+    sprite: {fileID: -6519206505240377793, guid: 893b0f91be5ea0346bb8e6b81ec38d93, type: 3}
+  - id: perfect_core
+    sprite: {fileID: 2800340530316660160, guid: 241a0dbcdb9f2ff47ba06c0582d1dd50, type: 3}
+  - id: clay_hand
+    sprite: {fileID: 4435367028424857646, guid: 6775af95da65d4e4a8f30fa532210731, type: 3}
+  - id: skate_pad
+    sprite: {fileID: 1238311553344376276, guid: c150b64428b417c41bc93348dc793a8d, type: 3}
+  - id: magpie_bell
+    sprite: {fileID: 838726891366919000, guid: 779eb720205e1d642981353b078193cf, type: 3}
+  - id: old_key
+    sprite: {fileID: 7259331501261611562, guid: 28ce00cf0dffa864a86bf8e2f4fe2b7a, type: 3}
+  - id: minhwa_ink
+    sprite: {fileID: 2812874859036319154, guid: a6b6d5da2bc6ffe45b2c906ef174b823, type: 3}
+  - id: vault_seal
+    sprite: {fileID: 7259331501261611562, guid: 28ce00cf0dffa864a86bf8e2f4fe2b7a, type: 3}
+  - id: gate_mark
+    sprite: {fileID: -612776767698426218, guid: 146967aeda3cd2844855482056a6fb5e, type: 3}
+  - id: dry_trace
+    sprite: {fileID: -5399225537425003476, guid: a4ab74dc0d7c1cf47b3dd43bc009075e, type: 3}
+  - id: altar_echo
+    sprite: {fileID: 2812874859036319154, guid: a6b6d5da2bc6ffe45b2c906ef174b823, type: 3}
+  - id: frost_map
+    sprite: {fileID: -7911935547710846901, guid: 8f8f996a80f898841800b30f466ddafd, type: 3}
