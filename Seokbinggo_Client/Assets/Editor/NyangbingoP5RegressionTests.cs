@@ -113,6 +113,8 @@ public static class NyangbingoP5RegressionTests
             Require(coolerGear.TryEquipAccessory(yeouiju, 0), "yeouiju equip");
             Require(Mathf.Approximately(verbs.ResolveCoolerRadiusTiles(coolerGear, daySurfaceContext),
                 ArtifactVerbRuntime.CoolerExtendedRadiusTiles), "yeouiju cooler radius");
+            Require(Mathf.Approximately(verbs.ResolveIceMeltMultiplier(coolerGear, daySurfaceContext),
+                ArtifactVerbRuntime.IceMeltSlowMultiplier), "yeouiju ice melt half rate");
             var altar = EquipmentDefinition.CreateRuntime("altar_echo", EquipmentSlot.AccessoryOne, true,
                 artifactVerbId: "ReduceOfferTears");
             var altarGear = new EquipmentSystem();

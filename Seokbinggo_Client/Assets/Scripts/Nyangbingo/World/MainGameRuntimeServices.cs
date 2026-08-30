@@ -545,6 +545,14 @@ namespace Nyangbingo.World
                     bootstrap.TileService, playerTransform.position, bootstrap.TimeService);
                 return ArtifactVerbs.MaintainsModuleAfterShutdown(EquipmentSystem, context);
             });
+            StorageTemperature?.ConfigureIceMeltMultiplierProvider(() =>
+            {
+                if (ArtifactVerbs == null || EquipmentSystem == null || bootstrap?.TimeService == null)
+                    return 1f;
+                var context = ArtifactActivationContextFactory.Build(
+                    bootstrap.TileService, playerTransform.position, bootstrap.TimeService);
+                return ArtifactVerbs.ResolveIceMeltMultiplier(EquipmentSystem, context);
+            });
         }
 
         private bool TryReadPositiveGlobal(string key, out float value)

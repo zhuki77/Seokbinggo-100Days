@@ -130,6 +130,14 @@ namespace Nyangbingo.World
         private bool loggedFirstAttackInput;
         private bool loggedFirstAttackHit;
         private bool dead;
+        private const int YeongnoSwallowWeakPointHits = 3;
+        private static readonly Color SwallowedTint = new(.45f, .2f, .55f, .65f);
+        private bool swallowedByYeongno;
+        private float swallowRemainingSeconds;
+        private float swallowTickRemaining;
+        private float swallowTickInterval;
+        private int swallowTickDamage;
+        private int swallowWeakPointHits;
         private bool respawnApplied;
         private float deathSequenceElapsed;
         private bool deathPhysicsLocked;
@@ -170,6 +178,7 @@ namespace Nyangbingo.World
         public float VerticalVelocity => verticalVelocity;
         public float MiningProgress => CalculateMiningProgress(miningElapsedSeconds, miningRequiredSeconds);
         public bool IsDead => dead;
+        public bool IsSwallowedByYeongno => swallowedByYeongno;
 
         public void ConfigureForScene(GameDataCatalog gameDataCatalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, Camera camera, CharacterArtCatalog artCatalog = null,
@@ -437,6 +446,11 @@ namespace Nyangbingo.World
                 TickDeathSequence(Time.deltaTime);
                 return;
             }
+            if (swallowedByYeongno)
+            {
+                TickYeongnoSwallowState(Time.deltaTime);
+                return;
+            }
             if (Nyangbingo.UI.MainGameCraftingUiController.BlocksGameplayInput ||
                 Nyangbingo.UI.MainGameBossSummonUiController.IsDebugShortcutHelpOpen)
             {
@@ -521,7 +535,7 @@ namespace Nyangbingo.World
 
         private void FixedUpdate()
         {
-            if (!initialized || dead || body == null) return;
+            if (!initialized || dead || body == null || swallowedByYeongno) return;
             var deltaSeconds = Time.fixedDeltaTime;
             grounded = IsStandingOnForeground() && verticalVelocity <= 0f;
             coyoteTimeRemaining = PlayerMovementPhysics.TickCoyoteTime(
@@ -1078,17 +1092,101 @@ namespace Nyangbingo.World
             profile != null && !string.IsNullOrWhiteSpace(profile.Id) &&
             profile.Id.IndexOf("bow", StringComparison.OrdinalIgnoreCase) >= 0;
 
+        public bool TryBeginYeongnoSwallow(int tickDamage, float durationSeconds, float tickInterval)
+        {
+            if (!initialized || dead || tickDamage <= 0 || durationSeconds <= 0f || tickInterval <= 0f)
+                return false;
+            if (TryArtifactEscapeSwallow())
+                return false;
+
+            swallowedByYeongno = true;
+            swallowTickDamage = tickDamage;
+            swallowRemainingSeconds = durationSeconds;
+            swallowTickInterval = tickInterval;
+            swallowTickRemaining = 0f;
+            swallowWeakPointHits = 0;
+            movementInput = Vector2.zero;
+            CancelMining();
+            verticalVelocity = 0f;
+            if (body != null) body.linearVelocity = Vector2.zero;
+            if (playerRenderer != null) playerRenderer.color = SwallowedTint;
+            interactionMessages?.ShowExternalMessage("영노에게 삼켜졌습니다! 공격으로 약점을 부수세요.");
+            ApplyYeongnoSwallowTick();
+            return true;
+        }
+
         public bool TryArtifactEscapeSwallow()
         {
-            if (!initialized || dead || runtimeServices?.ArtifactVerbs == null ||
-                runtimeServices.EquipmentSystem == null)
+            if (!initialized || dead || !swallowedByYeongno ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
                 return false;
             if (!runtimeServices.ArtifactVerbs.CanEscapeOnSwallow(
                     runtimeServices.EquipmentSystem, BuildArtifactContext()))
                 return false;
-            interactionMessages?.ShowExternalMessage("영노의 탈 — 삼킴에서 즉시 탈출했습니다.");
+            ReleaseYeongnoSwallow("영노의 탈 — 삼킴에서 즉시 탈출했습니다.");
             Debug.Log("[Nyangbingo] Artifact yeongno_mask consumed swallow escape.");
             return true;
+        }
+
+        private void TickYeongnoSwallowState(float deltaSeconds)
+        {
+            movementInput = Vector2.zero;
+            CancelMining();
+            HideMiningTargetFeedback();
+            characterAnimator?.SetMoving(false);
+            attackCooldown = Mathf.Max(0f, attackCooldown - deltaSeconds);
+            TickYeongnoSwallow(deltaSeconds);
+
+            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            if (!pointerOverUi && Input.GetMouseButton(0) && attackCooldown <= 0f)
+                TrySwallowWeakPointStrike();
+        }
+
+        private void TickYeongnoSwallow(float deltaSeconds)
+        {
+            swallowRemainingSeconds = Mathf.Max(0f, swallowRemainingSeconds - deltaSeconds);
+            swallowTickRemaining -= deltaSeconds;
+            while (swallowRemainingSeconds > 0f && swallowTickRemaining <= 0f)
+            {
+                ApplyYeongnoSwallowTick();
+                swallowTickRemaining += swallowTickInterval;
+            }
+            if (swallowRemainingSeconds <= 0f)
+                ReleaseYeongnoSwallow();
+        }
+
+        private void ApplyYeongnoSwallowTick()
+        {
+            if (!swallowedByYeongno || health == null || health.IsDead) return;
+            var before = health.Current;
+            health.ApplyDamage(swallowTickDamage, DamageTag.Melee);
+            if (health.Current < before)
+                GameEvents.RaisePlayerDamaged();
+        }
+
+        private bool TrySwallowWeakPointStrike()
+        {
+            if (!swallowedByYeongno) return false;
+            characterAnimator?.PlayAttack();
+            ShowAttackFeedback();
+            attackCooldown = activeProfile != null && activeProfile.AttacksPerSecond > 0f
+                ? 1f / activeProfile.AttacksPerSecond
+                : .5f;
+            swallowWeakPointHits++;
+            if (swallowWeakPointHits >= YeongnoSwallowWeakPointHits)
+                ReleaseYeongnoSwallow("영노의 약점을 부쉈습니다!");
+            return true;
+        }
+
+        private void ReleaseYeongnoSwallow(string message = null)
+        {
+            if (!swallowedByYeongno) return;
+            swallowedByYeongno = false;
+            swallowRemainingSeconds = 0f;
+            swallowTickRemaining = 0f;
+            if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
+            interactionMessages?.ShowExternalMessage(
+                string.IsNullOrWhiteSpace(message) ? "영노 배에서 빠져나왔습니다." : message);
         }
 
         private void HandleAttackKnockbackApplied(Health target, float knockbackStrength)

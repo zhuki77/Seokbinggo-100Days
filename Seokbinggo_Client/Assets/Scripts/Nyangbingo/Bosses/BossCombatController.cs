@@ -380,6 +380,12 @@ namespace Nyangbingo.Bosses
                 if (imugiLakePulsesRemaining <= 0) FinishSpecial();
                 return;
             }
+            if (definition.Kind == BossKind.Yeongno)
+            {
+                ApplyYeongnoSwallow();
+                FinishSpecial();
+                return;
+            }
             if (definition.Kind == BossKind.GoblinChief)
                 characterAnimator?.AlignActionImpactFrame(GoblinChiefSpecialImpactFrameIndex);
             if (definition.SpecialDurationSeconds <= .0001f || definition.SpecialTickSeconds <= .0001f)
@@ -474,6 +480,21 @@ namespace Nyangbingo.Bosses
         {
             PlayImugiSpecialEffect();
             TryApplySpecialDamage(ImugiPhaseDamage, DamageTag.Melee, Vector2.zero);
+        }
+
+        private void ApplyYeongnoSwallow()
+        {
+            if (definition == null || definition.Kind != BossKind.Yeongno ||
+                targetTransform == null)
+                return;
+            var player = targetTransform.GetComponent<MainGamePlayerController>();
+            if (player != null &&
+                player.TryBeginYeongnoSwallow(
+                    definition.SpecialDamagePerHit,
+                    definition.SpecialDurationSeconds,
+                    definition.SpecialTickSeconds))
+                return;
+            TryApplySpecialDamage(definition.SpecialDamagePerHit, DamageTag.Melee, Vector2.zero);
         }
 
         private void FinishSpecial()
