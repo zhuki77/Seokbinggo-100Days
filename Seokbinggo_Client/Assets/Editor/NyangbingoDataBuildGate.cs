@@ -23,9 +23,9 @@ public static class NyangbingoDataBuildGate
     public static void ValidateFromMenu()
     {
         if (TryValidateCurrent(out var summary))
-            Debug.Log($"[Nyangbingo] Product data freshness validation passed: {summary}");
+            NyangbingoEditorVerifyLog.Pass("Validate Product Data Freshness", summary);
         else
-            Debug.LogError($"[Nyangbingo] Product data freshness validation failed: {summary}");
+            NyangbingoEditorVerifyLog.Fail("Validate Product Data Freshness", summary);
     }
 
     public static bool TryValidateCurrent(out string summary)
@@ -173,8 +173,8 @@ public static class NyangbingoDataBuildGate
         };
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["items"] = 168,
-            ["recipes"] = 95,
+            ["items"] = 170,
+            ["recipes"] = 97,
             ["modules"] = 11,
             ["mineral tiers"] = 15,
             ["seal rules"] = 23,
@@ -184,7 +184,7 @@ public static class NyangbingoDataBuildGate
             ["smelting"] = 3,
             ["equipment"] = 44,
             ["utilities"] = 2,
-            ["combat profiles"] = 18,
+            ["combat profiles"] = 19,
             ["yokai"] = 7,
             ["bosses"] = 10,
             ["chests"] = 4,

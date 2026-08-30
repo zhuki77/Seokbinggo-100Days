@@ -6,6 +6,7 @@ using Nyangbingo.Core;
 using Nyangbingo.Crafting;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
+using Nyangbingo.Save;
 using Nyangbingo.UI;
 using UnityEngine;
 
@@ -61,10 +62,13 @@ namespace Nyangbingo.World
         public DeathTearPouchRuntime DeathTearPouches { get; private set; }
         public JangdokStorageRuntime JangdokStorage { get; private set; }
         public StorageTemperatureService StorageTemperature { get; private set; }
+        public OutdoorIceMeltService OutdoorIceMelt { get; private set; }
         public TalismanRuntime Talismans { get; private set; }
         public SeokbinggoUpgradeService Seokbinggo { get; private set; }
         public FrostSpreadService FrostSpread { get; private set; }
         public GimmickWeaponProgress GimmickWeapons { get; private set; }
+        public ArtifactVerbRuntime ArtifactVerbs { get; private set; }
+        public ArtifactModuleHoldover ModuleHoldover { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
@@ -226,6 +230,12 @@ namespace Nyangbingo.World
                                exception.Message);
                 return false;
             }
+            OutdoorIceMelt = new OutdoorIceMeltService(
+                gameDataCatalog,
+                bootstrap.TimeService,
+                bootstrap,
+                () => PlayerInventory,
+                () => bootstrap.GetComponentInChildren<MainGameWorldDropRuntime>());
             Seokbinggo = new SeokbinggoUpgradeService(gameDataCatalog, () => PlayerInventory);
             FrostSpread = new FrostSpreadService(gameDataCatalog);
             if (!FrostSpread.EndingConfigurationValid)
@@ -234,9 +244,12 @@ namespace Nyangbingo.World
                 return false;
             }
             GimmickWeapons = new GimmickWeaponProgress(gameDataCatalog.FindItem);
+            ArtifactVerbs = new ArtifactVerbRuntime();
+            ModuleHoldover = new ArtifactModuleHoldover();
             FrostSpread.FirstFrostRevealed += HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd += HandleGimmickBaekjungSurvived;
             GameEvents.OnBossDefeated += HandleBossDefeated;
+            GameEvents.OnDayStart += HandleArtifactDayStart;
 
             Register(CraftingProcess);
             Register(UtilityService);
@@ -245,7 +258,8 @@ namespace Nyangbingo.World
             Register(PlayerTemperature);
             Register(PortableLantern);
             Register(Talismans);
-            IsInitialized = registered.Count == 7;
+            Register(ModuleHoldover);
+            IsInitialized = registered.Count == 8;
 
             if (IsInitialized)
             {
@@ -256,8 +270,9 @@ namespace Nyangbingo.World
                     worldLoadedHooked = true;
                 }
                 GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled;
+                YokaiCodexBinding.CodexEntryChanged += HandleCodexEntryChanged;
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
-                          $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·등불·부적 Tick 소비자 7개 등록 완료.");
+                          $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·등불·부적·모듈유지 Tick 소비자 8개 등록 완료.");
             }
             if (IsInitialized)
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: ItemAcquisition receiver 1개가 " +
@@ -269,6 +284,7 @@ namespace Nyangbingo.World
         {
             if (!IsInitialized || health == null) return false;
             PlayerTemperature?.BindHealth(health);
+            BindArtifactPlayerHooks(health.transform);
             if (PlayerHealthRecovery?.Health == health) return true;
             if (!TryReadPositiveGlobal("hp_regen_delay", out var regenDelay) ||
                 !TryReadPositiveGlobal("hp_regen_rate", out var regenRate) ||
@@ -303,8 +319,13 @@ namespace Nyangbingo.World
             }
             PlayerHealthRecovery = new PlayerHealthRecoveryService(
                 PlayerInventory, health, regenDelay, regenRate, Mathf.RoundToInt(catnipHeal), mushroomHealing);
+            PlayerHealthRecovery.SetRegenMultiplierProvider(() =>
+                environmentState != null
+                    ? environmentState.ResolveJukbuinRegenMultiplier(health.transform.position)
+                    : 1f);
             DayHeatDamage = new DayHeatDamageService(
-                health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage);
+                health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage,
+                gameDataCatalog, environmentState);
             if (Register(PlayerHealthRecovery) && Register(DayHeatDamage)) return true;
 
             Unregister(PlayerHealthRecovery);
@@ -357,6 +378,13 @@ namespace Nyangbingo.World
                 MagpieCompanion = new MagpieCompanionRuntime(
                     gameDataCatalog, PlayerInventory, environmentState, worldDrops,
                     player, bootstrap.TimeService, bootstrap.SealSystem, characterArtCatalog);
+                MagpieCompanion.ConfigureArtifactRadius(() =>
+                {
+                    if (ArtifactVerbs == null || EquipmentSystem == null) return 1f;
+                    var context = ArtifactActivationContextFactory.Build(
+                        bootstrap.TileService, player.position, bootstrap.TimeService);
+                    return ArtifactVerbs.ResolveMagpieRadiusMultiplier(EquipmentSystem, context);
+                });
                 if (Register(MagpieCompanion)) return true;
                 MagpieCompanion.Dispose();
                 MagpieCompanion = null;
@@ -392,7 +420,9 @@ namespace Nyangbingo.World
                 FrostSpread.FirstFrostRevealed -= HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd -= HandleGimmickBaekjungSurvived;
             GameEvents.OnBossDefeated -= HandleBossDefeated;
+            GameEvents.OnDayStart -= HandleArtifactDayStart;
             GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
+            YokaiCodexBinding.CodexEntryChanged -= HandleCodexEntryChanged;
             if (bootstrap != null && worldLoadedHooked)
             {
                 bootstrap.WorldReady -= BindFrostSpreadToWorld;
@@ -416,6 +446,8 @@ namespace Nyangbingo.World
             DeathTearPouches = null;
             StorageTemperature?.Dispose();
             StorageTemperature = null;
+            OutdoorIceMelt?.Dispose();
+            OutdoorIceMelt = null;
             JangdokStorage = null;
             Talismans = null;
             Seokbinggo = null;
@@ -426,6 +458,8 @@ namespace Nyangbingo.World
             HeatStage = null;
             EquipmentColdPenalty = null;
             GimmickWeapons = null;
+            ArtifactVerbs = null;
+            ModuleHoldover = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
             if (bootstrap?.TickDriver != null)
@@ -450,6 +484,8 @@ namespace Nyangbingo.World
 
         private void HandleGimmickBaekjungSurvived() => GimmickWeapons?.NotifyBaekjungSurvived();
 
+        private void HandleArtifactDayStart() => ArtifactVerbs?.ResetDailyUses();
+
         private void HandleBossDefeated(BossDefinition definition)
         {
             HeatStage?.OnNamedKill(definition?.Id);
@@ -470,6 +506,63 @@ namespace Nyangbingo.World
             if (RecipeBook.IsUnlocked(recipe)) return;
             RecipeBook.Unlock(recipe.Id);
             Debug.Log($"[Nyangbingo] 강철이 최초 처치로 제작법을 해금했습니다: {recipe.Output.item.DisplayName}.");
+        }
+
+        private void HandleCodexEntryChanged(YokaiDefinition definition, bool isFirstEntry)
+        {
+            if (!isFirstEntry || definition == null || ArtifactVerbs == null ||
+                EquipmentSystem == null || PlayerInventory == null || bootstrap?.TimeService == null)
+                return;
+            var context = ArtifactActivationContextFactory.Build(
+                bootstrap.TileService, Vector2.zero, bootstrap.TimeService);
+            var bonus = ArtifactVerbs.ResolveCodexTearBonus(EquipmentSystem, context);
+            if (bonus <= 0f) return;
+            var amount = Mathf.Max(1, Mathf.RoundToInt(bonus));
+            if (!PlayerInventory.TryAdd(ArtifactVerbRuntime.CodexTearItemId, amount)) return;
+            Debug.Log($"[Nyangbingo] Artifact minhwa_ink granted codex tear bonus x{amount} ({definition.Id}).");
+        }
+
+        private void BindArtifactPlayerHooks(Transform playerTransform)
+        {
+            if (playerTransform == null) return;
+            PlayerTemperature?.ConfigureShadeHeatSuppressor(() =>
+            {
+                if (ArtifactVerbs == null || EquipmentSystem == null || bootstrap?.TimeService == null ||
+                    bootstrap.Session?.HasWorld != true)
+                    return false;
+                var context = ArtifactActivationContextFactory.Build(
+                    bootstrap.TileService, playerTransform.position, bootstrap.TimeService);
+                if (!ArtifactVerbs.LocksShadeTemperature(EquipmentSystem, context)) return false;
+                return WorldExposureRules.TryIsSurfaceExposed(
+                           playerTransform.position,
+                           bootstrap.Session.LastResult.surfaceHeights,
+                           out var exposed) &&
+                       !exposed;
+            });
+            environmentState?.ConfigureIceCrystalCoolerRadiusProvider(() =>
+            {
+                if (ArtifactVerbs == null || EquipmentSystem == null || bootstrap?.TimeService == null)
+                    return ArtifactVerbRuntime.CoolerBaseRadiusTiles;
+                var context = ArtifactActivationContextFactory.Build(
+                    bootstrap.TileService, playerTransform.position, bootstrap.TimeService);
+                return ArtifactVerbs.ResolveCoolerRadiusTiles(EquipmentSystem, context);
+            });
+            environmentState?.ConfigureModuleHoldoverProvider(() =>
+            {
+                if (ArtifactVerbs == null || EquipmentSystem == null || bootstrap?.TimeService == null)
+                    return false;
+                var context = ArtifactActivationContextFactory.Build(
+                    bootstrap.TileService, playerTransform.position, bootstrap.TimeService);
+                return ArtifactVerbs.MaintainsModuleAfterShutdown(EquipmentSystem, context);
+            });
+            StorageTemperature?.ConfigureIceMeltMultiplierProvider(() =>
+            {
+                if (ArtifactVerbs == null || EquipmentSystem == null || bootstrap?.TimeService == null)
+                    return 1f;
+                var context = ArtifactActivationContextFactory.Build(
+                    bootstrap.TileService, playerTransform.position, bootstrap.TimeService);
+                return ArtifactVerbs.ResolveIceMeltMultiplier(EquipmentSystem, context);
+            });
         }
 
         private bool TryReadPositiveGlobal(string key, out float value)

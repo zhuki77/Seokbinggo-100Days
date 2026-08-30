@@ -1,6 +1,7 @@
 using System;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
+using Nyangbingo.Data;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -13,17 +14,22 @@ namespace Nyangbingo.World
         private readonly DayNightService timeService;
         private readonly WorldSessionController session;
         private readonly HeatStageService heatStage;
+        private readonly GameDataCatalog catalog;
+        private readonly MainGameEnvironmentState environmentState;
         private float fractionalDamage;
         private bool disposed;
 
         public DayHeatDamageService(Health playerHealth, Transform playerTransform,
-            DayNightService clock, WorldSessionController worldSession, HeatStageService stages)
+            DayNightService clock, WorldSessionController worldSession, HeatStageService stages,
+            GameDataCatalog data, MainGameEnvironmentState environment = null)
         {
             health = playerHealth ?? throw new ArgumentNullException(nameof(playerHealth));
             player = playerTransform ?? throw new ArgumentNullException(nameof(playerTransform));
             timeService = clock ?? throw new ArgumentNullException(nameof(clock));
             session = worldSession ?? throw new ArgumentNullException(nameof(worldSession));
             heatStage = stages ?? throw new ArgumentNullException(nameof(stages));
+            catalog = data;
+            environmentState = environment;
             health.Died += ResetExposure;
         }
 
@@ -39,7 +45,10 @@ namespace Nyangbingo.World
                 return;
             }
 
-            var rate = heatStage.DayFireDamagePerSecond;
+            DayCurveCombatRules.ResolveHeatStageModifiers(
+                catalog, timeService.Day, environmentState?.HeatStageReduction ?? 0,
+                out var reduction, out var escalation);
+            var rate = heatStage.ResolveDayFireDamagePerSecond(timeService.Day, reduction, escalation);
             if (rate <= 0f) return;
             var effectiveRate = rate * health.DamageTakenMultiplier * health.FireDamageMultiplier;
             if (float.IsNaN(effectiveRate) || float.IsInfinity(effectiveRate) || effectiveRate <= 0f) return;

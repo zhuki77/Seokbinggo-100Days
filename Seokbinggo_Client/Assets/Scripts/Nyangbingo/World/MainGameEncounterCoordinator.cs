@@ -5,6 +5,7 @@ using Nyangbingo.Bosses;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.Save;
 using Nyangbingo.Yokai;
 using UnityEngine;
@@ -305,7 +306,9 @@ namespace Nyangbingo.World
             }
             ResetResidentProgress();
             baseVicinityRadius = ReadPositiveGlobal(GlobalKeys.BaseVicinityRadius, 28f);
-            raidTarget.ConfigureStealthRuntime(() => runtimeServices?.Talismans?.IgnoresYokaiAggro == true);
+            raidTarget.ConfigureStealthRuntime(() =>
+                runtimeServices?.Talismans?.IgnoresYokaiAggro == true ||
+                SuppressesSurfaceFirstStrike());
             var coreTargetObject = new GameObject("IceCoreRaidTarget");
             coreTargetObject.transform.SetParent(transform, false);
             coreRaidTarget = coreTargetObject.AddComponent<MainGameCoreRaidTarget>();
@@ -407,7 +410,7 @@ namespace Nyangbingo.World
             bossObject.AddComponent<RuntimeWorldDamagePopup>();
             health.ConfigureForRuntime(definition.HitPoints);
             var combat = bossObject.AddComponent<BossCombatController>();
-            if (!combat.ConfigureForRuntime(definition, raidTarget) || !runtimeServices.Register(combat))
+            if (!combat.ConfigureForRuntime(definition, raidTarget, gameDataCatalog) || !runtimeServices.Register(combat))
             {
                 Destroy(bossObject);
                 return null;
@@ -1253,19 +1256,21 @@ namespace Nyangbingo.World
                             9);
             }
             var loot = yokaiObject.AddComponent<YokaiLoot>();
-            loot.ConfigureForRuntime(definition, rewards: raid && baekjungScheduler?.IsActive == true
-                ? baekjungRewardRules
-                : null);
+            loot.ConfigureForRuntime(definition, rewards: ResolveYokaiRewardPolicy(raid));
             var targetCounters = raidTarget as IYokaiCounterSource;
             var counters = placedObjectRuntime != null
                 ? new CounterAuraSensor(yokaiObject.transform,
                     placedObjectRuntime.ActiveCounterAuras, targetCounters)
                 : targetCounters;
             var selectedTarget = ResolveSpawnTarget(position, out var usesAggroRadius);
+            var suppressFirstStrike = SuppressesSurfaceFirstStrike();
+            var hitPoints = DayCurveCombatRules.ResolveYokaiHitPoints(
+                gameDataCatalog, currentDayCurve, definition.HitPoints);
             brain.ConfigureForRuntime(
                 definition, selectedTarget, counters, instanceSpawnTrack,
-                gateByAggroRadius: usesAggroRadius,
-                startEngaged: !usesAggroRadius);
+                gateByAggroRadius: usesAggroRadius || suppressFirstStrike,
+                startEngaged: !usesAggroRadius && !suppressFirstStrike,
+                hitPointsOverride: hitPoints);
             if (definition.Kind == YokaiKind.Gangcheori)
             {
                 var breath = yokaiObject.AddComponent<GangcheoriBreathController>();
@@ -1425,6 +1430,17 @@ namespace Nyangbingo.World
             baekjungRewardRules?.RestoreTearRemainder(tearRemainder);
         }
 
+        private IYokaiRewardPolicy ResolveYokaiRewardPolicy(bool raid)
+        {
+            DayCurveRewardRules dayCurvePolicy = null;
+            if (currentDayCurve != null && currentDayCurve.DropMultiplier > 1f + .0001f)
+                dayCurvePolicy = new DayCurveRewardRules(currentDayCurve.DropMultiplier);
+            var baekjungPolicy = raid && baekjungScheduler?.IsActive == true
+                ? baekjungRewardRules
+                : null;
+            return ChainedYokaiRewardPolicy.Create(dayCurvePolicy, baekjungPolicy);
+        }
+
         private YokaiDefinition FindRaidYokai(YokaiKind kind) =>
             gameDataCatalog.Yokai.FirstOrDefault(candidate =>
                 candidate != null && candidate.Kind == kind &&
@@ -1539,6 +1555,17 @@ namespace Nyangbingo.World
 
         private static bool IsAlive(SpawnedYokai entry) =>
             entry != null && entry.health != null && !entry.health.IsDead && entry.brain != null;
+
+        private bool SuppressesSurfaceFirstStrike()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                raidTarget == null || bootstrap?.TimeService == null || bootstrap.TileService == null)
+                return false;
+            var context = ArtifactActivationContextFactory.Build(
+                bootstrap.TileService, raidTarget.transform.position, bootstrap.TimeService);
+            return runtimeServices.ArtifactVerbs.SuppressesFirstStrike(
+                runtimeServices.EquipmentSystem, context);
+        }
     }
 
     /// <summary>Runtime-spawned yokai health presentation kept separate from combat state.</summary>

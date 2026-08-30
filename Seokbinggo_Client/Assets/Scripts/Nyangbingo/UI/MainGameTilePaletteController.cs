@@ -83,6 +83,11 @@ namespace Nyangbingo.UI
         public static bool BlocksGameplayInput => foregroundPlacementActive;
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsInitialized => initialized;
+
+        /// <summary>인스펙터에 수동 배선되는 납품 팔레트 하이어라키가 살아 있는지.</summary>
+        public bool HasDeliveredPaletteBindings =>
+            paletteRoot != null && content != null &&
+            rangeToggleStatusText != null && interactionPromptText != null;
         public bool IsForegroundPlacementActive => foregroundPreview != null;
         /// <summary>핫바에서 전경 블록·벽지를 고른 동안 좌클릭 채굴/공격을 막는다.</summary>
         public bool ShouldBlockPrimaryForPlacement =>

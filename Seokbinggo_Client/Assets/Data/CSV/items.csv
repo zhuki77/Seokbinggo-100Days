@@ -32,6 +32,7 @@ dokkaebi_club,도깨비 방망이,weapon,1,A,넉백 2.0타일 특화
 frostclaw_gauntlet,서리발톱 장갑,weapon,1,A,엔드 무기 DPS 42
 hapjukseon,합죽선,weapon,1,A,밀치기 전용(기본 공격 없음) — 무기 슬롯 점유라 weapon
 cheolseon,철선,weapon,1,A,합죽선 진화 — 원본 소모. 채굴 불가
+seolpungseon,설풍선,weapon,1,B,철선 진화(확장 31일~) — 원본 소모. 채굴 불가
 workbench,작업대,station,99,A,1일차 밤 20초 온보딩
 furnace,화로,station,99,A,T2 제작대
 blast_furnace,용광로,station,99,A,얼음강철 제련 전용 (v7 신설)
@@ -43,6 +44,7 @@ nest_bed,보금자리,placeable,99,A,리스폰 지점(4-8) + **침대(밤↔낮 
 magpie_nest,까치 둥지,placeable,99,A,까치 벗 입주 (v6) — 맵당 1개 제한(globals magpie_nest_limit)
 bell_rope,방울 금줄,placeable,99,A,경보 반경 10타일 (v11)
 iron_bell_rope,쇠 방울 금줄,placeable,99,A,방울 금줄 진화 — 원본 소모 (v12)
+frost_bell_rope,서리 금줄,placeable,99,B,쇠 방울 금줄 진화(확장 31일~) — 원본 소모
 iron_sieve,무쇠 체,placeable,99,A,체 진화 — 원본 소모 (v12). 정식 명칭 '얼레미'
 frost_lantern,서리 등불,placeable,99,A,등불 진화 — 원본 소모. 연료 석탄→서리정수 (v12)
 insul_wall,차열벽,placeable,99,A,모듈 P0 — HP600. modules.csv 기존 id 승계
@@ -137,12 +139,12 @@ perfect_heart,완전체 심장,material,99,B,보스 재료 — 완전체 발톱(
 ssireum_knot,씨름 샅바 매듭,equipment,1,B,아티팩트(v37) — 보스:도깨비 대장 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 iron_appetite,무쇠 식성,equipment,1,B,아티팩트(v37) — 보스:어미 불가사리 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 yeouiju_shard,여의주 파편,equipment,1,B,아티팩트(v37) — 보스:이무기 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
-jigwi_ember,지귀의 잉걸(아티팩트),equipment,1,B,아티팩트(v37) — 보스:지귀 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+jigwi_ember,지귀의 잉걸,equipment,1,B,아티팩트(v37) — 보스:지귀 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 drought_heart_shard,가뭄 심장 조각,equipment,1,B,아티팩트(v37) — 보스:불볕 강철이 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 tiger_gait,산군 걸음,equipment,1,B,아티팩트(v37) — 보스:산군 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
-three_horn,세 갈래 뿔(아티팩트),equipment,1,B,아티팩트(v37) — 보스:삼두구미 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
-eop_scale,업의 비늘(아티팩트),equipment,1,B,아티팩트(v37) — 보스:업구렁이 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
-yeongno_mask,영노의 탈(아티팩트),equipment,1,B,아티팩트(v37) — 보스:영노 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+three_horn,세 갈래 뿔,equipment,1,B,아티팩트(v37) — 보스:삼두구미 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+eop_scale,업의 비늘,equipment,1,B,아티팩트(v37) — 보스:업구렁이 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
+yeongno_mask,영노의 탈,equipment,1,B,아티팩트(v37) — 보스:영노 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 perfect_core,완전체 핵,equipment,1,B,아티팩트(v37) — 보스:강철이 완전체 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 clay_hand,옹기장이 손,equipment,1,B,아티팩트(v37) — 랜드마크:무너진 옹기굴 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유
 skate_pad,살얼음 발판,equipment,1,B,아티팩트(v37) — 랜드마크:얼음 실개천 · 전투 수치 0 상승·동사만 확장·제작 불가·악세 2슬롯 공유

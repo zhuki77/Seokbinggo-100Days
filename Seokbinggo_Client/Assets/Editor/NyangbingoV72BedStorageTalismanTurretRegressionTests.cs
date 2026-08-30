@@ -20,7 +20,7 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
         var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
         var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
         Require(catalog != null && config != null, "catalog or world config missing");
-        Require(catalog.Items.Count == 168 && catalog.Recipes.Count == 95 &&
+        Require(catalog.Items.Count == 170 && catalog.Recipes.Count == 97 &&
                 catalog.MineralTiers.Count == 15 && catalog.Globals.Count == 253 &&
                 catalog.Talismans.Count == 5,
             "step7 catalog counts mismatch");

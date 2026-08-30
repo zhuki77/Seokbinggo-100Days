@@ -29,6 +29,7 @@ namespace Nyangbingo.World
         private readonly Dictionary<string, int> itemHealing = new Dictionary<string, int>(StringComparer.Ordinal);
         private float secondsSinceDamage;
         private float fractionalHealing;
+        private Func<float> regenMultiplierProvider;
         private bool disposed;
 
         public PlayerHealthRecoveryService(Inventory.Inventory playerInventory, Health playerHealth,
@@ -68,6 +69,8 @@ namespace Nyangbingo.World
         public int BaseHealingFor(string itemId) =>
             !string.IsNullOrWhiteSpace(itemId) && itemHealing.TryGetValue(itemId, out var value) ? value : 0;
 
+        public void SetRegenMultiplierProvider(Func<float> provider) => regenMultiplierProvider = provider;
+
         public void Tick(float deltaGameSeconds)
         {
             if (disposed || health.IsDead || deltaGameSeconds <= 0f ||
@@ -84,7 +87,10 @@ namespace Nyangbingo.World
 
             var eligibleSeconds = Mathf.Max(0f, secondsSinceDamage - Mathf.Max(previousElapsed, regenDelaySeconds));
             if (eligibleSeconds <= 0f) return;
-            fractionalHealing += eligibleSeconds * regenPerSecond;
+            var regenMultiplier = regenMultiplierProvider != null ? regenMultiplierProvider() : 1f;
+            if (float.IsNaN(regenMultiplier) || float.IsInfinity(regenMultiplier) || regenMultiplier < 0f)
+                regenMultiplier = 1f;
+            fractionalHealing += eligibleSeconds * regenPerSecond * regenMultiplier;
             var wholeHealth = Mathf.FloorToInt(fractionalHealing);
             if (wholeHealth <= 0) return;
             var restored = health.Heal(wholeHealth);

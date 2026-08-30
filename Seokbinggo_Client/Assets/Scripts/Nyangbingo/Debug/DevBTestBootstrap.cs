@@ -807,7 +807,7 @@ namespace Nyangbingo.Debugging
                         gameDataCatalog.FindMineralTier("__missing__") == null &&
                         gameDataCatalog.FindSealRule("__missing__") == null &&
                         gameDataCatalog.FindIdMigration(IdMigrationDomain.Item, "__missing__") == null &&
-                        gameDataCatalog.FindDayCurve(0) == null && gameDataCatalog.FindDayCurve(31) == null &&
+                        gameDataCatalog.FindDayCurve(0) == null && gameDataCatalog.FindDayCurve(31) != null &&
                         gameDataCatalog.FindGlobal("__missing__") == null &&
                         gameDataCatalog.FindSmelting("__missing__") == null &&
                         gameDataCatalog.FindEquipment("__missing__") == null &&

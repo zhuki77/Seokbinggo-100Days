@@ -23,7 +23,10 @@ namespace Nyangbingo.World
         public const string ClayPlasterDefinitionId = "clay_plaster";
         public const string DoorPaperDefinitionId = "munpungji";
         public const string ColdWaveCoreDefinitionId = "cold_wave_core";
+        public const string JukbuinDefinitionId = "jukbuin";
+        public const string NestBedDefinitionId = "nest_bed";
         public const int StrawInsulationPieceCap = 6;
+        private const float JukbuinNestRadiusSquared = 4f;
 
         private sealed class Entry
         {
@@ -48,6 +51,10 @@ namespace Nyangbingo.World
         private float wallpaperDurationMultiplier = 1.25f;
         private bool suppressTileDoorSync;
         private float strawInsulationBonusPerPiece = .05f;
+        private Func<float> iceCrystalCoolerRadiusProvider;
+        private Func<bool> maintainsModuleAfterShutdown;
+        private readonly Dictionary<string, float> moduleHoldoverSeconds =
+            new Dictionary<string, float>(StringComparer.Ordinal);
 
         public int PlacedObjectCount => byObjectId.Count;
         public int ActiveCoolingSourceCount { get; private set; }
@@ -138,6 +145,12 @@ namespace Nyangbingo.World
             renderer.RegisterRuntimeColliderOnlyForegroundTile(TileService.DoorTopElementType);
         }
 
+        public void ConfigureIceCrystalCoolerRadiusProvider(Func<float> provider) =>
+            iceCrystalCoolerRadiusProvider = provider;
+
+        public void ConfigureModuleHoldoverProvider(Func<bool> provider) =>
+            maintainsModuleAfterShutdown = provider;
+
         public bool IsRecognizedBarrier(Vector3Int cell) =>
             byCell.TryGetValue(cell, out var entry) && entry.BarrierActive &&
             boundaryPolicy != null && boundaryPolicy.SealsPlacedElement(entry.Record.definitionId);
@@ -156,7 +169,7 @@ namespace Nyangbingo.World
             if (IsInsulationAttachment(record.definitionId) &&
                 !CanPlaceInsulationAt(record.definitionId, cell))
                 return false;
-            if (byObjectId.ContainsKey(record.objectId) || byCell.ContainsKey(cell) ||
+            if (byObjectId.ContainsKey(record.objectId) ||
                 IsGlobalSingletonDefinition(record.definitionId) &&
                 byObjectId.Values.Any(existing =>
                     existing.Record.definitionId == record.definitionId))
@@ -169,10 +182,13 @@ namespace Nyangbingo.World
                 BarrierActive = barrierActive && boundaryPolicy.SealsPlacedElement(record.definitionId),
                 CoolingActive = coolingActive && !CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)
             };
+            if (!IsInsulationAttachment(record.definitionId))
+                TrySnapFloorPlacedObjectToTerrain(entry);
+            if (byCell.ContainsKey(entry.Cell)) return false;
             if (CoolingSourceRuntime.IsCoolingDefinition(record.definitionId) &&
                 !coolingSources.TryRegister(record.objectId, record.definitionId, coolingActive)) return false;
             byObjectId.Add(record.objectId, entry);
-            byCell.Add(cell, entry);
+            byCell.Add(entry.Cell, entry);
             CreateVisual(entry);
             RecomputeCoolingAndInvalidate();
             GameEvents.RaisePlacedObjectBuilt(record.definitionId);
@@ -632,22 +648,39 @@ namespace Nyangbingo.World
                     out var interiorCells, out var boundaryCells) || !isSealed)
                 return 1f;
 
-            var pieces = byObjectId.Values.Count(entry =>
-                entry.Record.definitionId == StrawInsulationDefinitionId &&
-                boundaryCells.Contains(entry.Cell));
+            var insulationDefinitionIds = byObjectId.Values
+                .Where(entry =>
+                    (entry.Record.definitionId == StrawInsulationDefinitionId ||
+                     entry.Record.definitionId == ClayPlasterDefinitionId) &&
+                    boundaryCells.Contains(entry.Cell))
+                .Select(entry => entry.Record.definitionId);
+            var globalSettings = gameDataCatalog != null
+                ? new GlobalSettings(gameDataCatalog.Globals)
+                : null;
+            var panelBonus = InsulationPanels.TotalFromDefinitions(insulationDefinitionIds, globalSettings);
             var hasIceCrystalCooler = byObjectId.Values.Any(entry =>
                 entry.Record.definitionId == CoolingSourceRuntime.IceCrystalCoolerId &&
                 interiorCells.Contains(entry.Cell));
-            var multiplier = CalculateSealedRecoveryMultiplier(
-                pieces, strawInsulationBonusPerPiece, hasIceCrystalCooler);
             var tileService = bootstrap?.TileService;
             var hasUnpaperedOpenDoor = tileService != null && boundaryCells.Any(cell =>
                 tileService.IsDoorOpen(cell) &&
                 (!byCell.TryGetValue(cell, out var attachment) ||
                  attachment.Record.definitionId != DoorPaperDefinitionId));
-            return CalculateDoorAdjustedRecoveryMultiplier(
-                multiplier, hasUnpaperedOpenDoor);
+            var multiplier = CalculateDoorAdjustedRecoveryMultiplier(
+                CalculateSealedRecoveryMultiplier(panelBonus, hasIceCrystalCooler),
+                hasUnpaperedOpenDoor);
+            var day = bootstrap?.TimeService != null ? bootstrap.TimeService.Day : 0;
+            var dayCurve = day > 0 && gameDataCatalog != null
+                ? gameDataCatalog.FindDayCurve(day)
+                : null;
+            return DayCurveCombatRules.ApplyHeatSeepPenalty(
+                multiplier, gameDataCatalog, dayCurve);
         }
+
+        public float ResolveCoolerRadiusTilesForRecovery(Vector2 position) =>
+            iceCrystalCoolerRadiusProvider != null && IsFinite(position.x) && IsFinite(position.y)
+                ? Mathf.Max(ArtifactVerbRuntime.CoolerBaseRadiusTiles, iceCrystalCoolerRadiusProvider())
+                : ArtifactVerbRuntime.CoolerBaseRadiusTiles;
 
         public static float CalculateStrawInsulationRecoveryMultiplier(
             int attachedPieces, float bonusPerPiece)
@@ -663,6 +696,14 @@ namespace Nyangbingo.World
         {
             var insulationMultiplier = CalculateStrawInsulationRecoveryMultiplier(
                 attachedStrawPieces, strawBonusPerPiece);
+            return CalculateSealedRecoveryMultiplier(
+                Mathf.Clamp01(Mathf.Max(0f, insulationMultiplier - 1f)), hasIceCrystalCooler);
+        }
+
+        public static float CalculateSealedRecoveryMultiplier(
+            float insulationPanelBonus, bool hasIceCrystalCooler)
+        {
+            var insulationMultiplier = 1f + Mathf.Max(0f, insulationPanelBonus);
             return insulationMultiplier * (hasIceCrystalCooler ? 2f : 1f);
         }
 
@@ -674,6 +715,29 @@ namespace Nyangbingo.World
                 float.IsInfinity(sealedRecoveryMultiplier))
                 return 0f;
             return hasUnpaperedOpenDoor ? 0f : sealedRecoveryMultiplier;
+        }
+
+        public float ResolveJukbuinRegenMultiplier(Vector2 playerPosition)
+        {
+            if (!IsFinite(playerPosition.x) || !IsFinite(playerPosition.y)) return 1f;
+            Vector2? bedPosition = null;
+            foreach (var entry in byObjectId.Values)
+            {
+                if (entry.Record.definitionId != NestBedDefinitionId) continue;
+                if ((entry.Record.position - playerPosition).sqrMagnitude > JukbuinNestRadiusSquared)
+                    continue;
+                bedPosition = entry.Record.position;
+                break;
+            }
+            if (!bedPosition.HasValue) return 1f;
+            var hasJukbuin = byObjectId.Values.Any(entry =>
+                entry.Record.definitionId == JukbuinDefinitionId &&
+                (entry.Record.position - bedPosition.Value).sqrMagnitude <= JukbuinNestRadiusSquared);
+            if (!hasJukbuin) return 1f;
+            var definition = gameDataCatalog?.FindGlobal("jukbuin_regen_mult");
+            return definition != null && definition.TryGetFloat(out var multiplier) && multiplier > 0f
+                ? multiplier
+                : 1.5f;
         }
 
         public bool HasPlacedObjectWithin(string definitionId, Vector2 position, float radius)
@@ -748,8 +812,10 @@ namespace Nyangbingo.World
                     BarrierActive = boundaryPolicy.SealsPlacedElement(record.definitionId),
                     CoolingActive = false
                 };
+                if (!IsInsulationAttachment(record.definitionId))
+                    TrySnapFloorPlacedObjectToTerrain(entry);
                 restoredById.Add(record.objectId, entry);
-                restoredByCell.Add(cell, entry);
+                restoredByCell.Add(entry.Cell, entry);
 
                 if (!CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)) continue;
                 if (coolingStateById.TryGetValue(record.objectId, out var state))
@@ -794,6 +860,7 @@ namespace Nyangbingo.World
 
         public void Tick(float deltaGameSeconds)
         {
+            TickModuleHoldovers(deltaGameSeconds);
             if (coolingSources == null) return;
             var beforeCount = coolingSources.ActiveCount;
             coolingSources.Tick(deltaGameSeconds, ResolveCoolingDurationMultiplier());
@@ -801,7 +868,41 @@ namespace Nyangbingo.World
                 RecomputeCoolingAndInvalidate();
         }
 
-        private void HandleConsumableExpired(string objectId) => TryRemove(objectId);
+        private void HandleConsumableExpired(string objectId)
+        {
+            if (maintainsModuleAfterShutdown?.Invoke() == true &&
+                byObjectId.ContainsKey(objectId))
+            {
+                moduleHoldoverSeconds[objectId] = ArtifactVerbRuntime.ModuleHoldoverSeconds;
+                if (byObjectId.TryGetValue(objectId, out var entry))
+                {
+                    entry.CoolingActive = true;
+                    RecomputeCoolingAndInvalidate();
+                }
+                return;
+            }
+            TryRemove(objectId);
+        }
+
+        private void TickModuleHoldovers(float deltaGameSeconds)
+        {
+            if (moduleHoldoverSeconds.Count == 0 || deltaGameSeconds <= 0f) return;
+            expiredHoldovers.Clear();
+            foreach (var pair in moduleHoldoverSeconds)
+            {
+                var next = Mathf.Max(0f, pair.Value - deltaGameSeconds);
+                if (next <= 0f) expiredHoldovers.Add(pair.Key);
+                else moduleHoldoverSeconds[pair.Key] = next;
+            }
+            for (var index = 0; index < expiredHoldovers.Count; index++)
+            {
+                var objectId = expiredHoldovers[index];
+                moduleHoldoverSeconds.Remove(objectId);
+                TryRemove(objectId);
+            }
+        }
+
+        private readonly List<string> expiredHoldovers = new List<string>();
 
         private void HandleAttachmentSupportBroken(Vector3Int cell)
         {
@@ -858,7 +959,11 @@ namespace Nyangbingo.World
             else
                 RuntimePlaceholderVisual.Configure(
                     renderer, new Color(.55f, .85f, 1f), .75f, sortingOrder);
-            TileService?.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
+            if (IsInsulationAttachment(entry.Record.definitionId))
+                TileService?.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
+            else
+                AlignPlacedFloorVisual(renderer, entry);
+            SnapPlacedVisualRoot(visual, renderer, entry);
             visualsByObjectId.Add(entry.Record.objectId, visual);
             if (isDoor)
                 RefreshDoorVisual(entry.Record.objectId, entry.BarrierActive);
@@ -950,6 +1055,57 @@ namespace Nyangbingo.World
         private Vector3Int CellFrom(Vector2 position) => TileService != null
             ? TileService.WorldToCell(position)
             : new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+
+        private bool TrySnapFloorPlacedObjectToTerrain(Entry entry)
+        {
+            var tileService = TileService;
+            if (tileService == null || entry == null) return false;
+            var columnX = Mathf.Clamp(
+                Mathf.FloorToInt(entry.Record.position.x), 0, tileService.Width - 1);
+            var preferredY = entry.Cell.y;
+            for (var y = preferredY + 4; y >= preferredY - 12; y--)
+            {
+                if (!TryResolveFloorPlacementCell(tileService, columnX, y, out var placementCell))
+                    continue;
+                var bounds = tileService.GetCellWorldBounds(placementCell);
+                entry.Cell = placementCell;
+                var record = entry.Record;
+                record.position = new Vector2(bounds.center.x, bounds.center.y);
+                entry.Record = record;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool TryResolveFloorPlacementCell(
+            TileService tileService, int columnX, int candidateY, out Vector3Int placementCell)
+        {
+            placementCell = new Vector3Int(columnX, candidateY, 0);
+            if (tileService == null || !tileService.InBounds(placementCell)) return false;
+            var head = placementCell + Vector3Int.up;
+            var ground = placementCell + Vector3Int.down;
+            if (!tileService.InBounds(head) || !tileService.InBounds(ground)) return false;
+            return tileService.GetTile(placementCell).IsAir &&
+                   tileService.GetTile(head).IsAir &&
+                   !tileService.GetTile(ground).IsAir;
+        }
+
+        private void AlignPlacedFloorVisual(SpriteRenderer renderer, Entry entry)
+        {
+            if (renderer == null || TileService == null) return;
+            TileService.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
+        }
+
+        private static void SnapPlacedVisualRoot(GameObject root, SpriteRenderer renderer, Entry entry)
+        {
+            if (root == null || renderer == null || entry == null) return;
+            var alignedWorldPosition = renderer.transform.position;
+            root.transform.position = alignedWorldPosition;
+            renderer.transform.localPosition = Vector3.zero;
+            var record = entry.Record;
+            record.position = alignedWorldPosition;
+            entry.Record = record;
+        }
 
         private bool CanPlaceInsulationAt(string definitionId, Vector3Int cell,
             bool checkRuntimeOccupancy = true)

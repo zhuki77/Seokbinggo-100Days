@@ -248,6 +248,13 @@ namespace Nyangbingo.Save
     public struct SmeltingOutputRecord { public string stationId; public string itemId; public int amount; }
 
     [Serializable]
+    public struct ArtifactDailyUseRecord
+    {
+        public string equipmentId;
+        public int count;
+    }
+
+    [Serializable]
     public struct UtilityCooldownRecord { public string kind; public float remainingGameSeconds; }
 
     [Serializable]
@@ -303,6 +310,7 @@ namespace Nyangbingo.Save
         public float talismanHideRemaining;
         public float talismanFrostRemaining;
         public List<string> gimmickWeaponsGranted = new List<string>();
+        public List<ArtifactDailyUseRecord> artifactDailyUses = new List<ArtifactDailyUseRecord>();
         public List<string> frostPendingCells = new List<string>();
         /// <summary>진단·표시용 잔존. 승리 판정에는 쓰지 않는다(win_condition=final_boss_kill).</summary>
         public float sealPct;
@@ -365,6 +373,7 @@ namespace Nyangbingo.Save
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
             if (gimmickWeaponsGranted == null) gimmickWeaponsGranted = new List<string>();
+            if (artifactDailyUses == null) artifactDailyUses = new List<ArtifactDailyUseRecord>();
             if (frostClearedBossIds == null) frostClearedBossIds = new List<string>();
             if (frostPendingCells == null) frostPendingCells = new List<string>();
             if (bossRecords == null) bossRecords = new List<BossRecord>();
@@ -845,6 +854,8 @@ namespace Nyangbingo.Save
 
     public sealed class YokaiCodexBinding : IDisposable
     {
+        public static event Action<YokaiDefinition, bool> CodexEntryChanged;
+
         private readonly SaveGame save;
         private readonly Func<string, YokaiDefinition> findYokai;
         private bool disposed;
@@ -875,10 +886,12 @@ namespace Nyangbingo.Save
                 if (record.yokaiId != definition.Id) continue;
                 if (record.kills < int.MaxValue) record.kills++;
                 save.dogam[i] = record;
+                CodexEntryChanged?.Invoke(definition, false);
                 return;
             }
             save.dogam.Add(new CodexRecord { yokaiId = definition.Id, kills = 1 });
             save.dogam.Sort((left, right) => string.CompareOrdinal(left.yokaiId, right.yokaiId));
+            CodexEntryChanged?.Invoke(definition, true);
         }
     }
 
@@ -986,10 +999,14 @@ namespace Nyangbingo.Save
                     CodexSourceFor(definition.Kind), kills, firstKillDay);
             }
 
+            var mvpDaysDef = catalog.FindGlobal(GlobalKeys.MvpDays);
+            var mvpDays = mvpDaysDef != null && mvpDaysDef.TryGetInt(out var parsedMvpDays) ? parsedMvpDays : 30;
             for (var i = 0; i < catalog.Bosses.Count; i++)
             {
                 var definition = catalog.Bosses[i];
                 if (definition.Kind == BossKind.Gangcheori || definition.Kind == BossKind.Imugi) continue;
+                // 데모 범위(mvp_days)를 초과하거나 일수를 파악할 수 없는 보스는 도감에 포함하지 않는다.
+                if (!int.TryParse(definition.RecommendedDay, out var bossDay) || bossDay > mvpDays) continue;
                 bossRecords.TryGetValue(definition.Id, out var record);
                 AddCard(entryIds, definition.Id, true, definition.DisplayName, definition.RecommendedDay,
                     CodexSourceFor(definition.Kind), record.count, record.firstDay);
@@ -1067,7 +1084,15 @@ namespace Nyangbingo.Save
                 case BossKind.MotherBulgasari: return "《송남잡지》 — 쇠를 먹으며 자라나는 불가사리 전승.";
                 case BossKind.Imugi: return "이무기 구전 — 물 아래에서 여의주를 기다리며 용이 되기를 바라는 뱀.";
                 case BossKind.Gangcheori: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
-                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown boss codex source.");
+                case BossKind.Jigwi: return "신라 설화의 화귀(火鬼) — 사람이 불덩이가 됐다.";
+                case BossKind.GangcheolBlaze:
+                case BossKind.GangcheolPerfect: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
+                case BossKind.Samdugumi: return "제주 전승 — 머리 세 달린 짐승.";
+                // 출처 미검증 — 문헌명 확인 전까지 공란
+                case BossKind.Sangun:
+                case BossKind.EopGuryeongi:
+                case BossKind.Yeongno:
+                default: return string.Empty;
             }
         }
     }

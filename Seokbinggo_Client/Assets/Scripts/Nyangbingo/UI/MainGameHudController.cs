@@ -91,6 +91,7 @@ namespace Nyangbingo.UI
         [SerializeField] private GameObject[] goalBadgeChecks = new GameObject[3];
         private const string BellRopeId = "bell_rope";
         private const string IronBellRopeId = "iron_bell_rope";
+        private const string FrostBellRopeId = BellRopeItemIds.FrostBellRope;
         private const float PlayerDamageWarningSeconds = .28f;
         private const float BellWarningDisplaySeconds = 1.5f;
         private const float SaveIndicatorFrameSeconds = .12f;
@@ -175,6 +176,16 @@ namespace Nyangbingo.UI
         public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
         public ItemArtCatalog BoundItemArtCatalog => itemArtCatalog;
         public bool HasPlayerStatusBindings => playerHealth != null && playerHealthText != null && deathPanel != null;
+
+        /// <summary>
+        /// 인스펙터에 수동 배선되는 납품 HUD 하이어라키가 살아 있는지. 씬을 재생성하면 전부 끊기므로
+        /// Validate Main Game Scene에서 조기에 잡아낸다.
+        /// </summary>
+        public bool HasDeliveredHudBindings =>
+            bossHealthBarRoot != null && bossHealthPortrait != null && bossHealthValueText != null &&
+            goalBadgeRoot != null && statusArtRoot != null && sealDeltaText != null &&
+            alertOverlayRoot != null && dayCounterScrollRect != null && dayClockText != null &&
+            dayNightClockArt != null;
         public bool HasCraftingProgressBindings => craftingProgressPanel != null && craftingProgressText != null &&
                                                    craftingProgressFill != null;
         public static bool BlocksWorldPrimaryInput => activeHud != null && activeHud.IsPointerOverSealGauge();
@@ -718,6 +729,7 @@ namespace Nyangbingo.UI
 
             environmentState.CopyPlacedObjectPositions(BellRopeId, bellRopePositions);
             environmentState.CopyPlacedObjectPositions(IronBellRopeId, bellRopePositions, append: true);
+            environmentState.CopyPlacedObjectPositions(FrostBellRopeId, bellRopePositions, append: true);
             encounterCoordinator.CopyActiveThreatTransforms(activeThreats);
             nextBellTargetsInside.Clear();
             var radius = Mathf.Max(0f, bellRopeUtility.Value);

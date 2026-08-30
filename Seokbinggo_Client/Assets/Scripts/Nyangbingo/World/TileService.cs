@@ -131,6 +131,16 @@ namespace Nyangbingo.World
             ? renderer.GetCellVisualAnchorWorld(cell)
             : new Vector3(cell.x + .5f, cell.y, cell.z);
 
+        /// <summary>
+        /// 전경 채굴 드롭의 물리 루트 위치. 원형 콜라이더 하단이 셀 바닥에 닿도록 한다.
+        /// </summary>
+        public Vector2 ResolveForegroundMiningDropWorldPosition(Vector3Int cell)
+        {
+            var bounds = GetCellWorldBounds(cell);
+            return new Vector2(bounds.center.x,
+                bounds.min.y + MainGameWorldDropRuntime.DropColliderRadius);
+        }
+
         public void AlignSpriteBoundsToCellBase(SpriteRenderer spriteRenderer, Vector3Int cell)
         {
             if (spriteRenderer == null) return;
@@ -340,6 +350,19 @@ namespace Nyangbingo.World
         public bool InBounds(Vector3Int cell) => cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
 
         public TileData GetTile(Vector3Int cell) => InBounds(cell) ? tiles[cell.x, cell.y] : default;
+
+        /// <summary>월드 좌표의 지표 대비 깊이. depth 1 = 해당 열 지표 타일.</summary>
+        public bool TryGetSurfaceRelativeDepth(Vector2 worldPosition, out int depth)
+        {
+            depth = 0;
+            if (float.IsNaN(worldPosition.x) || float.IsInfinity(worldPosition.x) ||
+                float.IsNaN(worldPosition.y) || float.IsInfinity(worldPosition.y))
+                return false;
+            var surfaceY = FindSurfaceNaturalY(Mathf.FloorToInt(worldPosition.x));
+            if (surfaceY < 0) return false;
+            depth = surfaceY - Mathf.FloorToInt(worldPosition.y) + 1;
+            return depth > 0;
+        }
 
         /// <summary>열 x의 최상위 자연 고체 Y. 없으면 -1.</summary>
         public int FindSurfaceNaturalY(int x)
@@ -733,7 +756,8 @@ namespace Nyangbingo.World
             RecordBackgroundChange(cell, removedId, placed: false);
             GameEvents.RaiseTileBroken(cell);
             if (TryResolveDrop(removedId, out var item, out var amount))
-                WorldItemDropRequest.Request(item, amount, new Vector2(cell.x + .5f, cell.y + .5f));
+                WorldItemDropRequest.Request(item, amount,
+                    ResolveForegroundMiningDropWorldPosition(cell), cell);
             return true;
         }
 

@@ -76,8 +76,58 @@ public static class NyangbingoMainGameSceneCreator
         Selection.activeGameObject = GameObject.Find("GameBootstrap");
     }
 
+    /// <summary>
+    /// EnvironmentArtCatalog 갱신 후 기존 MainGame 씬의 패럴랙스 참조만 다시 연결한다.
+    /// CreateOrUpdate처럼 씬 전체를 재생성하지 않아 수동 HUD 배선이 유지된다.
+    /// </summary>
+    public static bool TryRefreshEnvironmentArtInMainGameScene(
+        EnvironmentArtCatalog catalogOverride, out string summary)
+    {
+        summary = string.Empty;
+        var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
+        var environmentArtCatalog = catalogOverride != null
+            ? catalogOverride
+            : AssetDatabase.LoadAssetAtPath<EnvironmentArtCatalog>(EnvironmentArtCatalogPath);
+        if (config == null)
+        {
+            summary = "WorldGenerationConfig 누락";
+            return false;
+        }
+
+        if (environmentArtCatalog == null)
+        {
+            summary = "EnvironmentArtCatalog 누락";
+            return false;
+        }
+
+        var scene = SceneManager.GetActiveScene().path == ScenePath
+            ? SceneManager.GetActiveScene()
+            : EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
+        if (camera == null)
+        {
+            summary = "MainGame 카메라 누락";
+            return false;
+        }
+
+        ConfigureParallaxBackground(camera.gameObject, config, environmentArtCatalog);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        summary = "parallax catalog refreshed";
+        return true;
+    }
+
     [MenuItem("Nyangbingo/Main Game/Validate Main Game Scene")]
     public static void Validate()
+    {
+        if (TryValidate(out var summary))
+            NyangbingoEditorVerifyLog.Pass("Validate Main Game Scene", summary);
+        else
+            NyangbingoEditorVerifyLog.Fail("Validate Main Game Scene", summary);
+    }
+
+    /// <summary>MainGame 씬 배선 검증. 체크리스트·자동화에서 재사용.</summary>
+    public static bool TryValidate(out string summary)
     {
         var scene = SceneManager.GetActiveScene().path == ScenePath
             ? SceneManager.GetActiveScene()
@@ -157,6 +207,14 @@ public static class NyangbingoMainGameSceneCreator
             "Player MeleeArcAttack");
         Require(hud != null && hud.HasPlayerStatusBindings, "HUD player status bindings");
         Require(hud != null && hud.HasCraftingProgressBindings, "HUD crafting progress bindings");
+        var tilePalette = Object.FindAnyObjectByType<MainGameTilePaletteController>();
+        var craftingUi = Object.FindAnyObjectByType<MainGameCraftingUiController>();
+        Require(hud != null && hud.HasDeliveredHudBindings, "Delivered HUD hierarchy bindings");
+        Require(tilePalette != null && tilePalette.HasDeliveredPaletteBindings,
+            "Delivered TilePalette bindings");
+        Require(craftingUi != null && craftingUi.HasDeliveredPanelBindings,
+            "Delivered CraftingAndSmeltingPanel bindings");
+        Require(codex != null && codex.HasDeliveredCodexBindings, "Delivered Codex bindings");
         Require(codex != null && codex.BoundCardCount == YokaiCodexPresentationModel.ExpectedCardCount,
             "Codex cards");
         Require(hud != null && hud.BoundSlotCount == MainGameHudController.LegacyInventoryBarSlotCount,
@@ -172,16 +230,19 @@ public static class NyangbingoMainGameSceneCreator
 
         if (valid)
         {
-            Debug.Log("[Nyangbingo] MainGame B-08 검증 완료: 제품 부트스트랩, 월드 Tilemap, " +
-                      "DayNightService, CentralTickDriver, Main Camera, Build Settings 배선 정상.");
+            summary = "제품 부트스트랩, 월드 Tilemap, DayNightService, CentralTickDriver, " +
+                      "Main Camera, Build Settings 배선 정상";
+            return true;
         }
-        else
-        {
-            Debug.LogError("[Nyangbingo] MainGame B-08 검증 실패: 필수 컴포넌트 또는 Build Settings " +
-                           $"배선이 누락됐습니다. 누락 Binding=[{string.Join(", ", missingBindings)}], " +
-                           $"누락 TileBase=[{string.Join(", ", missingTileIds)}]. " +
-                           "Create or Update Main Game Scene을 다시 실행하세요.");
-        }
+
+        var deliveredMissing = missingBindings.Any(name =>
+            name.StartsWith("Delivered", System.StringComparison.Ordinal));
+        summary = "누락 Binding=[" + string.Join(", ", missingBindings) + "], " +
+                  "누락 TileBase=[" + string.Join(", ", missingTileIds) + "]. " +
+                  (deliveredMissing
+                      ? "Delivered* 항목은 인스펙터 수동 배선입니다. 씬 재생성 대신 MainGame.unity 복구 또는 Prefabs/UI 재배선."
+                      : "Create or Update Main Game Scene을 다시 실행하세요.");
+        return false;
     }
 
     private static void CreateCamera(WorldGenerationConfig config, EnvironmentArtCatalog environmentArtCatalog)

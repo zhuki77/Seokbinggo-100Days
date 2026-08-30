@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.World;
 
 namespace Nyangbingo.Inventory
 {
@@ -110,6 +111,30 @@ namespace Nyangbingo.Inventory
                 if (slot.amount == 0) slot = default; slots[i] = slot;
             }
             Changed?.Invoke(); return true;
+        }
+
+        public int ApplyOutdoorIceMelt(float meltPerDay)
+        {
+            if (meltPerDay <= 0f || float.IsNaN(meltPerDay) || float.IsInfinity(meltPerDay)) return 0;
+            var melted = 0;
+            var changed = false;
+            for (var index = 0; index < slots.Count; index++)
+            {
+                var slot = slots[index];
+                if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 ||
+                    !OutdoorIceMeltRules.IsIceItem(slot.itemId))
+                    continue;
+                var wholeLoss = StorageTemperatureService.CalculateIceMelt(
+                    slot.amount, slot.storageMeltRemainder, meltPerDay,
+                    out var remainingAmount, out var remainingFraction);
+                slot.storageMeltRemainder = remainingFraction;
+                slot.amount = remainingAmount;
+                slots[index] = slot.amount > 0 ? slot : default;
+                changed = true;
+                melted += wholeLoss;
+            }
+            if (changed) Changed?.Invoke();
+            return melted;
         }
 
         public bool TryRemoveOneWithStorageCondition(string itemId, out float condition01)
@@ -375,7 +400,7 @@ namespace Nyangbingo.Inventory
     {
         private static readonly HashSet<string> AllowedItemIds = new HashSet<string>(StringComparer.Ordinal)
         {
-            "dokkaebi_club", "hapjukseon", "cheolseon", "frostclaw_gauntlet", "lantern"
+            "dokkaebi_club", "hapjukseon", "cheolseon", FanItemIds.Seolpungseon, "frostclaw_gauntlet", "lantern"
         };
 
         private readonly Inventory inventory;

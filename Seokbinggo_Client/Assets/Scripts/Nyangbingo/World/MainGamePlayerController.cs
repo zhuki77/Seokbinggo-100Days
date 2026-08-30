@@ -26,6 +26,9 @@ namespace Nyangbingo.World
         private const string BareClawId = "bare_claw";
         private const string HapjukseonId = "hapjukseon";
         private const string CheolseonId = "cheolseon";
+        private const string SeolpungseonId = FanItemIds.Seolpungseon;
+        private const float SeolpungseonFrostSlowFraction = .3f;
+        private const float SeolpungseonFrostSlowDurationSeconds = 2f;
         private const string LanternId = "lantern";
         private const string IronClawId = "iron_claw";
         private const string IceSteelClawId = "icesteel_claw";
@@ -117,6 +120,8 @@ namespace Nyangbingo.World
         private float baseMoveSpeed;
         private float currentMoveSpeed;
         private float attackCooldown;
+        private float iceSlideVelocity;
+        private float oreEchoMessageUntil;
         private CombatProfileDefinition activeProfile;
         private CombatProfileDefinition lanternCarryProfile;
         private SpriteRenderer attackIndicator;
@@ -128,6 +133,14 @@ namespace Nyangbingo.World
         private bool loggedFirstAttackInput;
         private bool loggedFirstAttackHit;
         private bool dead;
+        private const int YeongnoSwallowWeakPointHits = 3;
+        private static readonly Color SwallowedTint = new(.45f, .2f, .55f, .65f);
+        private bool swallowedByYeongno;
+        private float swallowRemainingSeconds;
+        private float swallowTickRemaining;
+        private float swallowTickInterval;
+        private int swallowTickDamage;
+        private int swallowWeakPointHits;
         private bool respawnApplied;
         private float deathSequenceElapsed;
         private bool deathPhysicsLocked;
@@ -168,6 +181,7 @@ namespace Nyangbingo.World
         public float VerticalVelocity => verticalVelocity;
         public float MiningProgress => CalculateMiningProgress(miningElapsedSeconds, miningRequiredSeconds);
         public bool IsDead => dead;
+        public bool IsSwallowedByYeongno => swallowedByYeongno;
 
         public void ConfigureForScene(GameDataCatalog gameDataCatalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, Camera camera, CharacterArtCatalog artCatalog = null,
@@ -197,7 +211,8 @@ namespace Nyangbingo.World
             placedObjectInteractions = GetComponentInParent<MainGameTurretRuntime>();
             if (placedObjectInteractions != null)
                 playerCounterAuraSensor = new CounterAuraSensor(
-                    transform, placedObjectInteractions.ActiveCounterAuras);
+                    transform, placedObjectInteractions.ActiveCounterAuras,
+                    dayNight: bootstrap?.TimeService);
             worldDecorationRenderer = GetComponentInParent<MainGameWorldDecorationRenderer>();
             tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             raidTarget = GetComponent<MainGameRaidTarget>();
@@ -356,7 +371,12 @@ namespace Nyangbingo.World
             health.Died += HandleDied;
             runtimeServices.PlayerTemperature.ReachedMaximum += HandleTemperatureMaximum;
             runtimeServices.DeathTearPouches.Changed += RefreshTearPouchVisuals;
+            GameEvents.OnDayStart += HandleArtifactContextChanged;
+            GameEvents.OnNightStart += HandleArtifactContextChanged;
             wireSnare = new WireSnareAbility(attack);
+            attack.KnockbackApplied += HandleAttackKnockbackApplied;
+            if (GetComponent<ArtifactTunnelEdgePresenter>() == null)
+                gameObject.AddComponent<ArtifactTunnelEdgePresenter>();
             RefreshEquipmentStats();
             RefreshCombatProfile();
             RefreshTearPouchVisuals();
@@ -429,6 +449,11 @@ namespace Nyangbingo.World
                 TickDeathSequence(Time.deltaTime);
                 return;
             }
+            if (swallowedByYeongno)
+            {
+                TickYeongnoSwallowState(Time.deltaTime);
+                return;
+            }
             if (Nyangbingo.UI.MainGameCraftingUiController.BlocksGameplayInput ||
                 Nyangbingo.UI.MainGameBossSummonUiController.IsDebugShortcutHelpOpen)
             {
@@ -464,7 +489,8 @@ namespace Nyangbingo.World
                 var handled = TryUseSelectedIceShard() ||
                       TryUseSelectedTalisman() ||
                       TryUseSelectedHealingItem() ||
-                      TryInteractClosestWorldTarget(includePlacedObjects: false);
+                      TryInteractClosestWorldTarget(includePlacedObjects: false) ||
+                      TryOpenRemoteJangdok();
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
                         "가까이 있는 상호작용 대상을 찾지 못했습니다.");
@@ -512,7 +538,7 @@ namespace Nyangbingo.World
 
         private void FixedUpdate()
         {
-            if (!initialized || dead || body == null) return;
+            if (!initialized || dead || body == null || swallowedByYeongno) return;
             var deltaSeconds = Time.fixedDeltaTime;
             grounded = IsStandingOnForeground() && verticalVelocity <= 0f;
             coyoteTimeRemaining = PlayerMovementPhysics.TickCoyoteTime(
@@ -538,7 +564,16 @@ namespace Nyangbingo.World
             verticalVelocity = ApplyGravity(verticalVelocity, gravityAcceleration, maximumFallSpeed, deltaSeconds);
             if (fallDamageBounceAscending && verticalVelocity <= 0f)
                 fallDamageBounceAscending = false;
-            var horizontalVelocity = CalculateHorizontalVelocity(movementInput.x, CurrentMoveSpeed);
+            var horizontalInput = movementInput.x;
+            if (attackCooldown > 0f && IsBowCombatProfile(activeProfile) &&
+                !(runtimeServices?.ArtifactVerbs?.AllowsWalkWhileCharging(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? false))
+                horizontalInput = 0f;
+            float horizontalVelocity;
+            if (TryResolveIceSlideVelocity(horizontalInput, out var slideVelocity))
+                horizontalVelocity = slideVelocity;
+            else
+                horizontalVelocity = CalculateHorizontalVelocity(horizontalInput, CurrentMoveSpeed);
             if (bossKnockbackRemainingSeconds > 0f)
             {
                 horizontalVelocity = bossKnockbackHorizontalVelocity;
@@ -1056,6 +1091,195 @@ namespace Nyangbingo.World
             profile != null && profile.HasBasicAttack && profile.AttacksPerSecond > 0f &&
             profile.Id != HapjukseonId;
 
+        public static bool IsBowCombatProfile(CombatProfileDefinition profile) =>
+            profile != null && !string.IsNullOrWhiteSpace(profile.Id) &&
+            profile.Id.IndexOf("bow", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        public bool TryBeginYeongnoSwallow(int tickDamage, float durationSeconds, float tickInterval)
+        {
+            if (!initialized || dead || tickDamage <= 0 || durationSeconds <= 0f || tickInterval <= 0f)
+                return false;
+            if (TryArtifactEscapeSwallow())
+                return false;
+
+            swallowedByYeongno = true;
+            swallowTickDamage = tickDamage;
+            swallowRemainingSeconds = durationSeconds;
+            swallowTickInterval = tickInterval;
+            swallowTickRemaining = 0f;
+            swallowWeakPointHits = 0;
+            movementInput = Vector2.zero;
+            CancelMining();
+            verticalVelocity = 0f;
+            if (body != null) body.linearVelocity = Vector2.zero;
+            if (playerRenderer != null) playerRenderer.color = SwallowedTint;
+            interactionMessages?.ShowExternalMessage("영노에게 삼켜졌습니다! 공격으로 약점을 부수세요.");
+            ApplyYeongnoSwallowTick();
+            return true;
+        }
+
+        public bool TryArtifactEscapeSwallow()
+        {
+            if (!initialized || dead || !swallowedByYeongno ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
+                return false;
+            if (!runtimeServices.ArtifactVerbs.CanEscapeOnSwallow(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return false;
+            ReleaseYeongnoSwallow("영노의 탈 — 삼킴에서 즉시 탈출했습니다.");
+            Debug.Log("[Nyangbingo] Artifact yeongno_mask consumed swallow escape.");
+            return true;
+        }
+
+        private void TickYeongnoSwallowState(float deltaSeconds)
+        {
+            movementInput = Vector2.zero;
+            CancelMining();
+            HideMiningTargetFeedback();
+            characterAnimator?.SetMoving(false);
+            attackCooldown = Mathf.Max(0f, attackCooldown - deltaSeconds);
+            TickYeongnoSwallow(deltaSeconds);
+
+            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            if (!pointerOverUi && Input.GetMouseButton(0) && attackCooldown <= 0f)
+                TrySwallowWeakPointStrike();
+        }
+
+        private void TickYeongnoSwallow(float deltaSeconds)
+        {
+            swallowRemainingSeconds = Mathf.Max(0f, swallowRemainingSeconds - deltaSeconds);
+            swallowTickRemaining -= deltaSeconds;
+            while (swallowRemainingSeconds > 0f && swallowTickRemaining <= 0f)
+            {
+                ApplyYeongnoSwallowTick();
+                swallowTickRemaining += swallowTickInterval;
+            }
+            if (swallowRemainingSeconds <= 0f)
+                ReleaseYeongnoSwallow();
+        }
+
+        private void ApplyYeongnoSwallowTick()
+        {
+            if (!swallowedByYeongno || health == null || health.IsDead) return;
+            var before = health.Current;
+            health.ApplyDamage(swallowTickDamage, DamageTag.Melee);
+            if (health.Current < before)
+                GameEvents.RaisePlayerDamaged();
+        }
+
+        private bool TrySwallowWeakPointStrike()
+        {
+            if (!swallowedByYeongno) return false;
+            characterAnimator?.PlayAttack();
+            ShowAttackFeedback();
+            attackCooldown = activeProfile != null && activeProfile.AttacksPerSecond > 0f
+                ? 1f / activeProfile.AttacksPerSecond
+                : .5f;
+            swallowWeakPointHits++;
+            if (swallowWeakPointHits >= YeongnoSwallowWeakPointHits)
+                ReleaseYeongnoSwallow("영노의 약점을 부쉈습니다!");
+            return true;
+        }
+
+        private void ReleaseYeongnoSwallow(string message = null)
+        {
+            if (!swallowedByYeongno) return;
+            swallowedByYeongno = false;
+            swallowRemainingSeconds = 0f;
+            swallowTickRemaining = 0f;
+            if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
+            interactionMessages?.ShowExternalMessage(
+                string.IsNullOrWhiteSpace(message) ? "영노 배에서 빠져나왔습니다." : message);
+        }
+
+        private void HandleAttackKnockbackApplied(Health target, float knockbackStrength)
+        {
+            if (target == null || knockbackStrength <= 0f ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
+                return;
+            if (!runtimeServices.ArtifactVerbs.CanGrabKnockedTarget(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return;
+            target.GetComponent<WorldMobPhysicsBody>()?.TryApplyKnockbackGrab(
+                ArtifactVerbRuntime.KnockbackGrabSeconds);
+        }
+
+        private bool TryResolveIceSlideVelocity(float horizontalInput, out float horizontalVelocity)
+        {
+            horizontalVelocity = 0f;
+            if (!grounded || !IsStandingOnIceLake())
+            {
+                iceSlideVelocity = 0f;
+                return false;
+            }
+            var allowsTurn = runtimeServices?.ArtifactVerbs?.AllowsTurnWhileSliding(
+                runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? false;
+            if (allowsTurn)
+            {
+                iceSlideVelocity = CalculateHorizontalVelocity(horizontalInput, CurrentMoveSpeed);
+            }
+            else if (Mathf.Abs(iceSlideVelocity) <= Mathf.Epsilon)
+            {
+                if (Mathf.Abs(horizontalInput) > Mathf.Epsilon)
+                    iceSlideVelocity = Mathf.Sign(horizontalInput) * CurrentMoveSpeed;
+                else
+                    iceSlideVelocity = horizontalFacing.x * CurrentMoveSpeed;
+            }
+            horizontalVelocity = iceSlideVelocity;
+            return true;
+        }
+
+        private bool IsStandingOnIceLake()
+        {
+            var tileService = bootstrap?.TileService;
+            if (tileService == null) return false;
+            var cell = tileService.WorldToCell(transform.position);
+            var groundCell = cell + Vector3Int.down;
+            return tileService.InBounds(groundCell) &&
+                   string.Equals(tileService.GetTile(groundCell).elementType, WorldTileTypes.IceLake,
+                       StringComparison.Ordinal);
+        }
+
+        private void TryPresentIronVeinEcho(Vector3Int minedCell)
+        {
+            if (Time.time < oreEchoMessageUntil ||
+                runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
+                return;
+            if (!runtimeServices.ArtifactVerbs.HighlightsOreVeins(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return;
+            var tileService = bootstrap?.TileService;
+            if (tileService == null) return;
+            var minedTile = tileService.GetTile(minedCell);
+            if (!string.Equals(ResolveMiningDefinitionId(minedTile.elementType), WorldTileTypes.IronOre,
+                    StringComparison.Ordinal))
+                return;
+            Vector3Int? bestCell = null;
+            var bestDistance = float.PositiveInfinity;
+            for (var dx = -8; dx <= 8; dx++)
+            {
+                for (var dy = -8; dy <= 8; dy++)
+                {
+                    var candidate = minedCell + new Vector3Int(dx, dy, 0);
+                    if (!tileService.InBounds(candidate)) continue;
+                    var tile = tileService.GetTile(candidate);
+                    if (tile.IsAir || !string.Equals(tile.elementType, WorldTileTypes.IronOre,
+                            StringComparison.Ordinal)) continue;
+                    var distance = (candidate - minedCell).sqrMagnitude;
+                    if (distance >= bestDistance) continue;
+                    bestDistance = distance;
+                    bestCell = candidate;
+                }
+            }
+            if (!bestCell.HasValue) return;
+            var delta = bestCell.Value - minedCell;
+            var direction = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+                ? delta.x > 0 ? "동쪽" : "서쪽"
+                : delta.y > 0 ? "북쪽" : "남쪽";
+            oreEchoMessageUntil = Time.time + ArtifactVerbRuntime.OreEchoHighlightSeconds;
+            interactionMessages?.ShowExternalMessage($"무쇠 식성 — 철 광맥이 {direction}에 있습니다.");
+        }
+
         private bool TryTickRebarMining(int clawTier, float miningDelta)
         {
             if (worldDecorationRenderer == null ||
@@ -1413,6 +1637,8 @@ namespace Nyangbingo.World
             using (ItemAcquisition.CaptureRequests())
                 if (!tileService.TryBreakForeground(cell, clawTier, out itemId, out amount)) return;
 
+            TryPresentIronVeinEcho(cell);
+
             var totalAmount = amount;
             var item = string.IsNullOrEmpty(itemId) ? null : catalog?.FindItem(itemId);
             var baseCriticalChance = 0f;
@@ -1431,7 +1657,7 @@ namespace Nyangbingo.World
             if (item != null && totalAmount > 0)
             {
                 WorldItemDropRequest.Request(item, totalAmount,
-                    tileService.GetCellCenterWorld(cell));
+                    tileService.ResolveForegroundMiningDropWorldPosition(cell), cell);
                 Nyangbingo.Core.GameEvents.RaiseMiningResult(cell, item.DisplayName, totalAmount, critical);
             }
         }
@@ -1645,12 +1871,22 @@ namespace Nyangbingo.World
         private void TryFanAbility()
         {
             if (activeProfile == null ||
-                (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId)) return;
-            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id))) ShowAttackFeedback();
+                (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId &&
+                 activeProfile.Id != SeolpungseonId)) return;
+            if (activeProfile.Id == SeolpungseonId)
+                attack.ConfigureFrostSlow(SeolpungseonFrostSlowFraction, SeolpungseonFrostSlowDurationSeconds);
+            else
+                attack.ConfigureFrostSlow(0f, 0f);
+            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id)))
+            {
+                if (activeProfile.Id == SeolpungseonId)
+                    attack.ConfigureFrostSlow(0f, 0f);
+                ShowAttackFeedback();
+            }
         }
 
         public static int ResolveFanAbilityDamage(string combatProfileId) =>
-            combatProfileId == CheolseonId
+            combatProfileId == CheolseonId || combatProfileId == SeolpungseonId
                 ? WireSnareAbility.CheolseonDamage
                 : WireSnareAbility.HapjukseonDamage;
 
@@ -1750,7 +1986,9 @@ namespace Nyangbingo.World
             statSheet.Recalculate(runtimeServices.EquipmentSystem,
                 runtimeServices.PlayerTemperature?.CurrentRoomTemperature ?? 0,
                 runtimeServices.EquipmentColdPenalty);
-            currentMoveSpeed = baseMoveSpeed * statSheet.MovementMultiplier;
+            currentMoveSpeed = baseMoveSpeed * statSheet.MovementMultiplier +
+                               (runtimeServices?.ArtifactVerbs?.ResolveDaySurfaceMoveBonus(
+                                   runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? 0f);
             health.SetDefense(statSheet.Defense);
             RefreshPlayerFireDamageMultiplier();
             RefreshPlayerVisionLight();
@@ -1758,12 +1996,31 @@ namespace Nyangbingo.World
 
         private void HandleRoomTemperatureChanged(int _) => RefreshEquipmentStats();
 
+        private void HandleArtifactContextChanged() => RefreshEquipmentStats();
+
         private void RefreshPlayerFireDamageMultiplier()
         {
             if (health == null) return;
             var auraMultiplier = playerCounterAuraSensor?.FireDamageMultiplier ?? 1f;
+            var artifactFire = runtimeServices?.ArtifactVerbs?.ResolveFireDamageModifier(
+                runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? 0f;
             health.SetFireDamageMultiplier(CalculateFireDamageMultiplier(
-                statSheet.FireDamageModifier, auraMultiplier));
+                statSheet.FireDamageModifier + artifactFire, auraMultiplier));
+        }
+
+        private ArtifactActivationContext BuildArtifactContext() =>
+            ArtifactActivationContextFactory.Build(
+                bootstrap?.TileService, transform.position, bootstrap?.TimeService);
+
+        private bool TryOpenRemoteJangdok()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                storageUi == null || environmentState == null)
+                return false;
+            if (!runtimeServices.ArtifactVerbs.AllowsRemoteJangdok(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return false;
+            return storageUi.TryOpenRemoteJangdok(environmentState);
         }
 
         public static float CalculateFireDamageMultiplier(
@@ -2244,7 +2501,9 @@ namespace Nyangbingo.World
 
         private void RefreshPlayerVisionLight()
         {
-            var bonus = CalculatePersonalVisionRadius(0f, statSheet.VisionRadiusBonus);
+            var artifactVision = runtimeServices?.ArtifactVerbs?.ResolveDeepVisionBonusTiles(
+                runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? 0f;
+            var bonus = CalculatePersonalVisionRadius(0f, statSheet.VisionRadiusBonus + artifactVision);
             if (personalVisionLight != null)
             {
                 personalVisionLight.pointLightInnerRadius = bonus * .35f;
@@ -2284,6 +2543,8 @@ namespace Nyangbingo.World
             }
             if (runtimeServices?.DeathTearPouches != null)
                 runtimeServices.DeathTearPouches.Changed -= RefreshTearPouchVisuals;
+            GameEvents.OnDayStart -= HandleArtifactContextChanged;
+            GameEvents.OnNightStart -= HandleArtifactContextChanged;
             foreach (var visual in tearPouchVisuals.Values)
                 if (visual != null) Destroy(visual);
             tearPouchVisuals.Clear();

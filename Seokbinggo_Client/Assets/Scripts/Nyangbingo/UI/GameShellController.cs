@@ -14,6 +14,8 @@ namespace Nyangbingo.UI
     {
         /// <summary>D-카운터 폐지. 결과 화면은 날짜 티저를 쓰지 않는다.</summary>
         public const string Teaser = "";
+        /// <summary>석빙고 밀폐도에서 유도한 실온 추정치(℃). 0/-5/-10 중 하나.</summary>
+        public int RoomTemperatureCelsius { get; internal set; }
         public float SealPercentage { get; internal set; }
         public IReadOnlyList<string> CompletedModuleIds { get; internal set; }
         public bool ImugiDefeated { get; internal set; }
@@ -202,9 +204,11 @@ namespace Nyangbingo.UI
                 if (save.bossRecords[i].bossId == "imugi_boss" && save.bossRecords[i].count > 0)
                     imugiDefeated = true;
 
+            var sealPct = Mathf.Clamp(save.sealPct, 0f, 100f);
             return new DemoResultState
             {
-                SealPercentage = Mathf.Clamp(save.sealPct, 0f, 100f),
+                RoomTemperatureCelsius = sealPct >= 80f ? -10 : sealPct >= 40f ? -5 : 0,
+                SealPercentage = sealPct,
                 CompletedModuleIds = modules,
                 ImugiDefeated = imugiDefeated,
                 YokaiKills = Math.Max(0, kills),

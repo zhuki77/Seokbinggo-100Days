@@ -27,6 +27,7 @@ namespace Nyangbingo.World
 
     public sealed class PlayerTemperatureState : IGameSecondsTickable
     {
+        private readonly GameDataCatalog catalog;
         private readonly DayNightService timeService;
         private readonly SealSystem sealSystem;
         private readonly EquipmentSystem equipmentSystem;
@@ -49,6 +50,7 @@ namespace Nyangbingo.World
         private Transform trackedTransform;
         private Health trackedHealth;
         private bool heatstrokeRaised;
+        private Func<bool> suppressDaySurfaceHeatRise;
         private float recoveryMultiplier = 1f;
         private float fractionalHypothermiaDamage;
 
@@ -57,6 +59,7 @@ namespace Nyangbingo.World
             WorldSessionController session = null, RoomTempService roomTemp = null,
             HeatStageService stages = null, Func<bool> hypothermiaFallSuppressed = null)
         {
+            this.catalog = catalog;
             timeService = clock ?? throw new ArgumentNullException(nameof(clock));
             sealSystem = seals ?? throw new ArgumentNullException(nameof(seals));
             equipmentSystem = equipment;
@@ -104,6 +107,8 @@ namespace Nyangbingo.World
             fractionalHypothermiaDamage = 0f;
         }
 
+        public void ConfigureShadeHeatSuppressor(Func<bool> value) => suppressDaySurfaceHeatRise = value;
+
         public bool SetRecoveryMultiplier(float value)
         {
             if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f) return false;
@@ -132,6 +137,9 @@ namespace Nyangbingo.World
                 ? environmentState.ResolveTemperatureRecoveryMultiplier(
                     trackedTransform.position, sealSystem)
                 : 1f;
+            DayCurveCombatRules.ResolveHeatStageModifiers(
+                catalog, timeService.Day, environmentState?.HeatStageReduction ?? 0,
+                out var heatStageReduction, out var heatStageEscalation);
             var delta = hypothermia
                 ? suppressHypothermiaFall?.Invoke() == true
                     ? 0f
@@ -140,10 +148,11 @@ namespace Nyangbingo.World
                         hypothermiaFallPerSecond)
                 : safe
                     ? -fallSafe * recoveryMultiplier * insulationMultiplier * deltaGameSeconds
-                    : risePerStage * CalculateEffectiveHeatStage(
-                        heatStage?.Current ?? 1,
-                        environmentState?.HeatStageReduction ?? 0) *
-                      DayRiseMultiplier() * deltaGameSeconds;
+                    : suppressDaySurfaceHeatRise?.Invoke() == true
+                        ? 0f
+                        : risePerStage * CalculateEffectiveHeatStage(
+                            heatStage?.Current ?? 1, heatStageReduction, heatStageEscalation) *
+                          DayRiseMultiplier() * deltaGameSeconds;
             Set(Current + delta);
             HypothermiaDamage(deltaGameSeconds, hypothermia);
         }
@@ -194,9 +203,11 @@ namespace Nyangbingo.World
             return wholeDamage;
         }
 
-        public static int CalculateEffectiveHeatStage(int heatStage, int reduction)
+        public static int CalculateEffectiveHeatStage(int heatStage, int reduction, int escalation = 0,
+            int maxStage = 3)
         {
-            return Mathf.Max(1, Mathf.Max(1, heatStage) - Mathf.Max(0, reduction));
+            var effective = Mathf.Max(1, heatStage) + Mathf.Max(0, escalation) - Mathf.Max(0, reduction);
+            return Mathf.Clamp(effective, 1, Mathf.Max(1, maxStage));
         }
 
         private bool IsUnderground()

@@ -44,6 +44,7 @@ namespace Nyangbingo.World
         private readonly float frozenMaximum;
         private readonly float spoilPerDay;
         private readonly float meltPerDay;
+        private Func<float> iceMeltMultiplierProvider;
         private bool disposed;
 
         public StorageTemperatureService(GameDataCatalog data, DayNightService timeService,
@@ -83,6 +84,9 @@ namespace Nyangbingo.World
         public float SpoilPerDay => spoilPerDay;
         public float MeltPerDay => meltPerDay;
         public StorageDailyResult LastDailyResult { get; private set; }
+
+        public void ConfigureIceMeltMultiplierProvider(Func<float> provider) =>
+            iceMeltMultiplierProvider = provider;
 
         public StorageTemperatureBand RequiredBand(string itemId)
         {
@@ -156,7 +160,7 @@ namespace Nyangbingo.World
                     else if (requirement == StorageTemperatureBand.Frozen && temperature > frozenMaximum)
                     {
                         var wholeLoss = CalculateIceMelt(slot.amount, slot.storageMeltRemainder,
-                            meltPerDay, out var remainingAmount, out var remainingFraction);
+                            ResolveMeltPerDay(), out var remainingAmount, out var remainingFraction);
                         slot.storageMeltRemainder = remainingFraction;
                         slot.amount = remainingAmount;
                         slots[index] = slot.amount > 0 ? slot : default;
@@ -203,6 +207,16 @@ namespace Nyangbingo.World
         }
 
         private void HandleDailyTick() => ApplyDailyTick();
+
+        private float ResolveMeltPerDay()
+        {
+            var multiplier = iceMeltMultiplierProvider != null
+                ? iceMeltMultiplierProvider()
+                : 1f;
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier))
+                multiplier = 1f;
+            return meltPerDay * Mathf.Clamp(multiplier, 0f, 1f);
+        }
 
         private bool ReadBool(string key) =>
             catalog.FindGlobal(key) is { } value && value.TryGetBool(out var parsed) && parsed;

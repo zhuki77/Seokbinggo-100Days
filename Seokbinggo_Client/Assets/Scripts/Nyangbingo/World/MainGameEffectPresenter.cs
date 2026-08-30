@@ -43,15 +43,19 @@ namespace Nyangbingo.World
         private readonly List<Vector3Int> expiredWallDurabilityCells =
             new List<Vector3Int>();
 
-        public void ConfigureForScene(GameplayArtCatalog catalog, Transform player)
+        private TileService tileService;
+
+        public void ConfigureForScene(GameplayArtCatalog catalog, Transform player, TileService tiles = null)
         {
             artCatalog = catalog;
             playerTransform = player;
+            tileService = tiles;
         }
 
         private void Start()
         {
             if (artCatalog == null || playerTransform == null) return;
+            tileService ??= FindAnyObjectByType<MainGameBootstrap>()?.TileService;
             worldRenderer = FindAnyObjectByType<TilemapRenderer>();
             miningEffect = CreateEffect("MiningCrackEffect", transform, artCatalog.MiningCrackFrames, 24);
             miningBreakEffect = CreateEffect("MiningBreakEffect", transform, artCatalog.MiningBreakFrames, 29);
@@ -121,7 +125,8 @@ namespace Nyangbingo.World
             if (miningTargetRenderer == null) return;
             miningTargetRenderer.enabled = visible;
             if (!visible) return;
-            miningTargetRenderer.transform.position = CellCenter(cell);
+            miningTargetRenderer.transform.position = CellVisualAnchor(cell);
+            AlignMiningOverlayToCell(miningTargetRenderer, cell);
             miningTargetRenderer.color = mineable
                 ? new Color(.2f, .9f, 1f, .18f)
                 : new Color(1f, .2f, .2f, .24f);
@@ -173,6 +178,7 @@ namespace Nyangbingo.World
                 Mathf.CeilToInt(Mathf.Clamp01(normalizedProgress) * miningProgressFrames.Count) - 1,
                 0, miningProgressFrames.Count - 1);
             miningProgressRenderer.sprite = miningProgressFrames[frameIndex];
+            AlignMiningOverlayToCell(miningProgressRenderer, cell);
             miningProgressRenderer.enabled = true;
         }
 
@@ -182,14 +188,9 @@ namespace Nyangbingo.World
             if (miningProgressRenderer != null && miningProgressRenderer.enabled && miningProgressCell == cell)
                 miningProgressRenderer.enabled = false;
             if (miningEffect == null) return;
-            var visualAnchor = CellVisualAnchor(cell);
-            miningEffect.transform.position = visualAnchor;
-            miningEffect.Play(.35f);
+            PlayMiningCellEffect(miningEffect, cell, .35f);
             if (miningBreakEffect != null && artCatalog.MiningBreakFrames.Count > 0)
-            {
-                miningBreakEffect.transform.position = visualAnchor;
-                miningBreakEffect.Play(.2f);
-            }
+                PlayMiningCellEffect(miningBreakEffect, cell, .2f);
             else RuntimeTileDebrisBurst.Create(transform, CellCenter(cell), lastMiningSurface);
         }
 
@@ -291,10 +292,7 @@ namespace Nyangbingo.World
             popupObject.AddComponent<RuntimeFloatingWorldText>().Configure(text, .8f, .65f);
             if (!critical) return;
             if (miningCriticalEffect != null && artCatalog.MiningCriticalFrames.Count > 0)
-            {
-                miningCriticalEffect.transform.position = CellVisualAnchor(cell);
-                miningCriticalEffect.Play(.3f);
-            }
+                PlayMiningCellEffect(miningCriticalEffect, cell, .3f);
             else RuntimeMiningCriticalSparkle.Create(transform, CellCenter(cell));
         }
 
@@ -305,6 +303,26 @@ namespace Nyangbingo.World
         private Vector3 CellVisualAnchor(Vector3Int cell) => worldRenderer != null
             ? worldRenderer.GetCellVisualAnchorWorld(cell)
             : new Vector3(cell.x + .5f, cell.y, cell.z);
+
+        private void AlignMiningOverlayToCell(SpriteRenderer renderer, Vector3Int cell)
+        {
+            if (renderer == null) return;
+            if (tileService != null)
+                tileService.AlignSpriteBoundsToCellBase(renderer, cell);
+        }
+
+        private void PlayMiningCellEffect(RuntimeOneShotSpriteEffect effect, Vector3Int cell, float duration)
+        {
+            if (effect == null) return;
+            var renderer = effect.GetComponent<SpriteRenderer>();
+            if (renderer != null)
+            {
+                renderer.transform.position = CellVisualAnchor(cell);
+                AlignMiningOverlayToCell(renderer, cell);
+            }
+            else effect.transform.position = CellVisualAnchor(cell);
+            effect.Play(duration);
+        }
 
         private static RuntimeOneShotSpriteEffect CreateEffect(string name, Transform parent,
             System.Collections.Generic.IReadOnlyList<Sprite> frames, int sortingOrder)

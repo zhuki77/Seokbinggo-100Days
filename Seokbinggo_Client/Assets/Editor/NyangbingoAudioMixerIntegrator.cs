@@ -53,14 +53,53 @@ public static class NyangbingoAudioMixerIntegrator
         ExposeVolume(controller, sfx, NyangbingoAudioService.SfxVolumeParameter);
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();
-        NyangbingoMainGameSceneCreator.CreateOrUpdate();
+        if (!TryRouteMainGameAudio(mixer, bgm, sfx)) return;
         Debug.Log("[Nyangbingo] Product audio mixer integration completed: Master/BGM/SFX, " +
                   "BGMVolume/SFXVolume exposed, MainGame scene updated.");
+    }
+
+    /// <summary>
+    /// 기존 MainGame 씬의 오디오 라우팅만 갱신한다. 씬을 재생성하면 인스펙터에 수동 배선된
+    /// 납품 HUD·팔레트·제작 UI 참조가 모두 사라지므로 여기서는 절대 재생성하지 않는다.
+    /// </summary>
+    private static bool TryRouteMainGameAudio(AudioMixer mixer, AudioMixerGroup bgm, AudioMixerGroup sfx)
+    {
+        var scene = EditorSceneManager.OpenScene(
+            NyangbingoSceneBuildSettings.MainGameScenePath, OpenSceneMode.Single);
+        var audioService = scene.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<NyangbingoAudioService>(true))
+            .FirstOrDefault();
+        if (audioService == null)
+        {
+            Debug.LogError("[Nyangbingo] MainGame 씬에서 NyangbingoAudioService를 찾지 못해 오디오 " +
+                           "라우팅을 갱신하지 못했습니다. Main Game/Create or Update Main Game Scene을 " +
+                           "실행하면 씬이 재생성되어 수동 UI 배선이 사라지니 주의하세요.");
+            return false;
+        }
+
+        var serialized = new SerializedObject(audioService);
+        serialized.FindProperty("audioMixer").objectReferenceValue = mixer;
+        serialized.FindProperty("bgmOutput").objectReferenceValue = bgm;
+        serialized.FindProperty("sfxOutput").objectReferenceValue = sfx;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(audioService);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, NyangbingoSceneBuildSettings.MainGameScenePath);
+        return true;
     }
 
     [MenuItem("Nyangbingo/Audio/Validate Product Audio Mixer")]
     public static void Validate()
     {
+        if (TryValidate(out var summary))
+            NyangbingoEditorVerifyLog.Pass("Validate Product Audio Mixer", summary);
+        else
+            NyangbingoEditorVerifyLog.Fail("Validate Product Audio Mixer", summary);
+    }
+
+    public static bool TryValidate(out string summary)
+    {
+        ConfigureAudioImporters();
         var failures = new System.Collections.Generic.List<string>();
         var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerPath);
         var bgm = FindGroup(mixer, BgmGroupName);
@@ -99,13 +138,14 @@ public static class NyangbingoAudioMixerIntegrator
 
         if (failures.Count > 0)
         {
-            Debug.LogError("[Nyangbingo] Product audio mixer validation failed:\n- " +
-                           string.Join("\n- ", failures));
-            return;
+            summary = failures.Count == 1
+                ? failures[0]
+                : $"{failures[0]} (+{failures.Count - 1} more)";
+            return false;
         }
-        Debug.Log("[Nyangbingo] Product audio mixer validation passed: " +
-                  "Master/BGM/SFX, exposed parameters 2/2, MainGame routing 3/3, " +
-                  "streaming BGM and SFX cue coverage complete.");
+
+        summary = "Master/BGM/SFX, routing 3/3, cue coverage complete";
+        return true;
     }
 
     private static AudioMixer CreateMixer()

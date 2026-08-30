@@ -41,11 +41,17 @@ namespace Nyangbingo.World
             public CounterAura Aura;
             public float FuelRemaining;
 
+            public Func<bool> IsHoldoverActive;
+            public Action TryBeginHoldover;
+
             public void Tick(float deltaGameSeconds)
             {
-                if (deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) || float.IsInfinity(deltaGameSeconds) ||
-                    FuelRemaining <= 0f) return;
-                FuelRemaining = Mathf.Max(0f, FuelRemaining - deltaGameSeconds);
+                if (deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) || float.IsInfinity(deltaGameSeconds))
+                    return;
+                if (FuelRemaining > 0f)
+                    FuelRemaining = Mathf.Max(0f, FuelRemaining - deltaGameSeconds);
+                else
+                    TryBeginHoldover?.Invoke();
                 RefreshActiveState();
             }
 
@@ -68,7 +74,7 @@ namespace Nyangbingo.World
 
             public void RefreshActiveState()
             {
-                var active = FuelRemaining > 0f;
+                var active = FuelRemaining > 0f || (IsHoldoverActive?.Invoke() ?? false);
                 if (Light != null) Light.enabled = active;
                 if (Aura != null) Aura.enabled = active;
             }
@@ -82,6 +88,8 @@ namespace Nyangbingo.World
         public const string HaetaeStatueItemId = "haetae_statue";
         public const string BellRopeItemId = "bell_rope";
         public const string IronBellRopeItemId = "iron_bell_rope";
+        public const string FrostBellRopeItemId = BellRopeItemIds.FrostBellRope;
+        public const string DaebalItemId = "daebal";
         private const string FuelItemId = "coal";
         private const string FrostLanternFuelItemId = "frost_essence";
         private const string FrostLanternFuelSecondsKey = "frost_lantern_fuel_sec";
@@ -789,6 +797,8 @@ namespace Nyangbingo.World
                 ShowMessage("인벤토리 공간이 없어 설치물을 회수할 수 없습니다.");
                 return true;
             }
+            var fullSalvage = AllowsFullSalvageRecovery();
+            if (fullSalvage) TryRefundRemainingFuel(record);
             if (!environmentState.TryRemove(record.objectId))
             {
                 runtimeServices.PlayerInventory.TryRemove(record.definitionId, 1);
@@ -804,7 +814,14 @@ namespace Nyangbingo.World
             }
             RemoveLantern(record.objectId);
             RemovePassiveCounterAura(record.objectId);
-            ShowMessage($"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.");
+            runtimeServices?.ModuleHoldover?.Clear(record.objectId);
+            var message = fullSalvage
+                ? $"{item.DisplayName} 회수 완료 · 남은 연료를 반환했습니다."
+                : $"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.";
+            if (record.definitionId == MainGameEnvironmentState.ColdWaveCoreDefinitionId &&
+                AllowsRelocateColdCore())
+                message += " · 완전체 핵으로 다른 위치에 재설치할 수 있습니다.";
+            ShowMessage(message);
             Debug.Log($"[Nyangbingo] Product placeable recovered: id={record.objectId}, " +
                       $"definition={record.definitionId}.");
             BuildStateChanged?.Invoke();
@@ -907,7 +924,9 @@ namespace Nyangbingo.World
                     : FuelSecondsPerUnit,
                 RuntimeRoot = runtimeRoot,
                 Light = light,
-                Aura = aura
+                Aura = aura,
+                TryBeginHoldover = () => TryBeginArtifactModuleHoldover(objectId),
+                IsHoldoverActive = () => runtimeServices?.ModuleHoldover?.IsActive(objectId) ?? false
             };
             entry.RefreshActiveState();
             lanterns.Add(objectId, entry);
@@ -974,11 +993,23 @@ namespace Nyangbingo.World
                     radius = 8f;
                     effect = .5f;
                     return true;
+                case DaebalItemId:
+                    kind = CounterAuraKind.Daebal;
+                    radius = 4f;
+                    effect = .75f;
+                    return true;
                 case BellRopeItemId:
                 case IronBellRopeItemId:
                     kind = CounterAuraKind.BellRope;
                     radius = 10f;
                     cooldown = 4f;
+                    return true;
+                case FrostBellRopeItemId:
+                    kind = CounterAuraKind.FrostBellRope;
+                    radius = 10f;
+                    effect = .3f;
+                    duration = 4f;
+                    cooldown = 12f;
                     return true;
                 default:
                     return false;
@@ -1003,6 +1034,65 @@ namespace Nyangbingo.World
                 ? record.remainingGameSeconds
                 : record.fuel * FuelSecondsPerUnit;
             return entry.RestoreFuel(seconds);
+        }
+
+        private bool AllowsFullSalvageRecovery()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                playerController == null)
+                return false;
+            var timeService = FindAnyObjectByType<DayNightService>();
+            var tileService = FindAnyObjectByType<MainGameBootstrap>()?.TileService;
+            var context = ArtifactActivationContextFactory.Build(
+                tileService, playerController.transform.position, timeService);
+            return runtimeServices.ArtifactVerbs.AllowsFullSalvage(
+                runtimeServices.EquipmentSystem, context);
+        }
+
+        private bool AllowsRelocateColdCore()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                playerController == null)
+                return false;
+            var context = ArtifactActivationContextFactory.Build(
+                environmentState?.TileService, playerController.transform.position,
+                FindAnyObjectByType<DayNightService>());
+            return runtimeServices.ArtifactVerbs.CanRelocateColdCore(
+                runtimeServices.EquipmentSystem, context);
+        }
+
+        private bool TryBeginArtifactModuleHoldover(string objectId)
+        {
+            if (runtimeServices?.ModuleHoldover == null || runtimeServices.ArtifactVerbs == null ||
+                runtimeServices.EquipmentSystem == null || playerController == null)
+                return false;
+            if (runtimeServices.ModuleHoldover.IsActive(objectId)) return true;
+            var context = ArtifactActivationContextFactory.Build(
+                environmentState?.TileService, playerController.transform.position,
+                FindAnyObjectByType<DayNightService>());
+            if (!runtimeServices.ArtifactVerbs.MaintainsModuleAfterShutdown(
+                    runtimeServices.EquipmentSystem, context))
+                return false;
+            return runtimeServices.ModuleHoldover.TryBegin(
+                objectId, ArtifactVerbRuntime.ModuleHoldoverSeconds);
+        }
+
+        private void TryRefundRemainingFuel(PlacedObjectRecord record)
+        {
+            if (runtimeServices?.PlayerInventory == null || string.IsNullOrWhiteSpace(record.objectId)) return;
+            if (turrets.TryGetValue(record.objectId, out var turret) &&
+                turret.Controller.FuelRemaining > 0f && FuelSecondsPerUnit > 0f)
+            {
+                var units = Mathf.Max(1, Mathf.RoundToInt(
+                    turret.Controller.FuelRemaining / FuelSecondsPerUnit));
+                runtimeServices.PlayerInventory.TryAdd(FuelItemId, units);
+            }
+            if (!lanterns.TryGetValue(record.objectId, out var lantern) ||
+                lantern.FuelRemaining <= 0f || lantern.FuelSecondsPerUnit <= 0f)
+                return;
+            var lanternUnits = Mathf.Max(1, Mathf.RoundToInt(
+                lantern.FuelRemaining / lantern.FuelSecondsPerUnit));
+            runtimeServices.PlayerInventory.TryAdd(lantern.FuelItemId, lanternUnits);
         }
 
         private void RemoveLantern(string objectId)

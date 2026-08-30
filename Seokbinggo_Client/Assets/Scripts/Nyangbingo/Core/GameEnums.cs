@@ -30,6 +30,6 @@ namespace Nyangbingo.Core
     public enum EquipmentSlot { Head, Body, Feet, AccessoryOne, AccessoryTwo }
     public enum UtilityKind { Hapjukseon, BellRope }
     public enum SmeltingStationKind { Furnace, Foundry }
-    public enum CounterAuraKind { Lantern, Sieve, Haetae, BellRope }
+    public enum CounterAuraKind { Lantern, Sieve, Haetae, BellRope, FrostBellRope, Daebal }
     public enum ChestRegion { Ruins, Upper, Middle, Deep }
 }

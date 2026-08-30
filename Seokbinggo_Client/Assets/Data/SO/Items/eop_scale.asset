@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: eop_scale
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.ItemDefinition
   id: eop_scale
-  displayName: "\uC5C5\uC758 \uBE44\uB298(\uC544\uD2F0\uD329\uD2B8)"
+  displayName: "\uC5C5\uC758 \uBE44\uB298"
   maxStack: 1
   category: 5
   mvpScope: 2

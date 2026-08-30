@@ -34,6 +34,11 @@ namespace Nyangbingo.UI
         private bool unifiedPanelMode;
 
         public int BoundCardCount => cardButtons?.Length ?? 0;
+
+        /// <summary>인스펙터에 수동 배선되는 납품 도감 확대 카드·아트 카탈로그가 살아 있는지.</summary>
+        public bool HasDeliveredCodexBindings =>
+            gameplayArtCatalog != null && characterArtCatalog != null &&
+            expandedBackdrop != null && expandedPortrait != null && expandedTitle != null;
         public bool IsOpen => open;
         public void ConfigureGameShell(GameShellController value) => gameShell = value;
         public void UseUnifiedPanel()

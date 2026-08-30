@@ -10,31 +10,140 @@ namespace Nyangbingo.World
         private static readonly Dictionary<Sprite, Sprite> RightHalfCache =
             new Dictionary<Sprite, Sprite>();
 
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        private static void ClearCachesOnDomainReload()
+        {
+            LeftHalfCache.Clear();
+            RightHalfCache.Clear();
+        }
+#endif
+
+        private static bool ShouldUseCropCache =>
+#if UNITY_EDITOR
+            Application.isPlaying;
+#else
+            true;
+#endif
+
         public static Sprite CropHorizontalHalf(Sprite source, bool rightHalf)
         {
             if (source == null) return null;
             var cache = rightHalf ? RightHalfCache : LeftHalfCache;
-            if (cache.TryGetValue(source, out var cached)) return cached;
+            if (ShouldUseCropCache && cache.TryGetValue(source, out var cached)) return cached;
 
             var sourceRect = source.rect;
             var halfWidth = Mathf.Floor(sourceRect.width * .5f);
             if (halfWidth < 1f) return source;
-            var rect = new Rect(
+            var cropRect = new Rect(
                 rightHalf ? sourceRect.x + halfWidth : sourceRect.x,
                 sourceRect.y,
                 rightHalf ? sourceRect.width - halfWidth : halfWidth,
                 sourceRect.height);
+            var sprite = CreateCroppedSprite(source, cropRect, rightHalf);
+            if (sprite == null || !HasExpectedCropRect(sprite, cropRect)) return source;
+            if (ShouldUseCropCache) cache[source] = sprite;
+            return sprite;
+        }
+
+        private static bool HasExpectedCropRect(Sprite sprite, Rect cropRect)
+        {
+            return sprite != null &&
+                   Mathf.Approximately(sprite.rect.x, cropRect.x) &&
+                   Mathf.Approximately(sprite.rect.y, cropRect.y) &&
+                   Mathf.Approximately(sprite.rect.width, cropRect.width) &&
+                   Mathf.Approximately(sprite.rect.height, cropRect.height);
+        }
+
+        private static Sprite CreateCroppedSprite(Sprite source, Rect cropRect, bool rightHalf)
+        {
+            var atlas = TryCreateReadableAtlasCopy(source.texture);
+            if (atlas == null) return null;
+            return CreateNamedSubSprite(atlas, source, cropRect, rightHalf);
+        }
+
+        /// <summary>
+        /// Aseprite 스프라이트는 packed atlas가 아니므로 GetSpriteTexture(atlas)를 쓰지 않는다.
+        /// readable 원본 또는 CopyTexture/RT 복사본에서 atlas 좌표로 서브 스프라이트를 만든다.
+        /// </summary>
+        private static Texture2D TryCreateReadableAtlasCopy(Texture texture)
+        {
+            if (texture == null) return null;
+            if (texture is not Texture2D source) return null;
+
+            if (source.isReadable)
+                return DuplicateTexturePixels(source);
+
+            var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
+            {
+                filterMode = source.filterMode,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+
+            try
+            {
+                Graphics.CopyTexture(texture, copy);
+                copy.Apply();
+                return copy;
+            }
+            catch
+            {
+                Object.DestroyImmediate(copy);
+            }
+
+            copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
+            {
+                filterMode = source.filterMode,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+
+            var renderTarget = RenderTexture.GetTemporary(
+                source.width,
+                source.height,
+                0,
+                RenderTextureFormat.ARGB32);
+            var previousTarget = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(source, renderTarget);
+                RenderTexture.active = renderTarget;
+                copy.ReadPixels(new Rect(0f, 0f, source.width, source.height), 0, 0);
+                copy.Apply();
+                return copy;
+            }
+            finally
+            {
+                RenderTexture.active = previousTarget;
+                RenderTexture.ReleaseTemporary(renderTarget);
+            }
+        }
+
+        private static Texture2D DuplicateTexturePixels(Texture2D source)
+        {
+            var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
+            {
+                filterMode = source.filterMode,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            copy.SetPixels(source.GetPixels());
+            copy.Apply();
+            return copy;
+        }
+
+        private static Sprite CreateNamedSubSprite(
+            Texture2D atlas, Sprite source, Rect cropRect, bool rightHalf)
+        {
             var sprite = Sprite.Create(
-                source.texture,
-                rect,
+                atlas,
+                cropRect,
                 new Vector2(.5f, .5f),
                 source.pixelsPerUnit,
                 0,
                 SpriteMeshType.FullRect,
                 Vector4.zero,
                 false);
+            if (sprite == null) return null;
             sprite.name = $"{source.name}_{(rightHalf ? "RightHalf" : "LeftHalf")}";
-            cache[source] = sprite;
             return sprite;
         }
     }

@@ -31,6 +31,23 @@ namespace Nyangbingo.World
         public int Current { get; private set; }
         public int StageCount => stageCount;
         public float DayFireDamagePerSecond => dayFireDamageByStage[Current - 1];
+
+        public float ResolveDayFireDamagePerSecond(int stageReduction, int stageEscalation = 0)
+        {
+            var effectiveStage = PlayerTemperatureState.CalculateEffectiveHeatStage(
+                Current, stageReduction, stageEscalation, stageCount);
+            return dayFireDamageByStage[effectiveStage - 1];
+        }
+
+        public float ResolveDayFireDamagePerSecond(int day, int stageReduction, int stageEscalation = 0)
+        {
+            var effectiveStage = PlayerTemperatureState.CalculateEffectiveHeatStage(
+                Current, stageReduction, stageEscalation, stageCount);
+            if (day >= DayCurveCombatRules.ExpansionLinearDayFireDamageStartDay)
+                return effectiveStage * DayCurveCombatRules.ExpansionDayFireDamagePerStage;
+            return dayFireDamageByStage[effectiveStage - 1];
+        }
+
         public float TreeDensityMultiplier => treeDensityByStage[Current - 1];
         public event Action<int> Changed;
 

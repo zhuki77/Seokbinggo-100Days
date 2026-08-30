@@ -10,9 +10,10 @@ namespace Nyangbingo.World
 {
     public static class WorldItemDropRequest
     {
-        public static event Action<ItemDefinition, int, Vector2> Requested;
+        public static event Action<ItemDefinition, int, Vector2, Vector3Int?> Requested;
 
-        public static void Request(ItemDefinition item, int amount, Vector2 position)
+        public static void Request(ItemDefinition item, int amount, Vector2 position,
+            Vector3Int? minedCell = null)
         {
             if (item == null || amount <= 0) return;
             if (Requested == null)
@@ -20,7 +21,7 @@ namespace Nyangbingo.World
                 ItemAcquisition.Request(item, amount);
                 return;
             }
-            Requested.Invoke(item, amount, position);
+            Requested.Invoke(item, amount, position, minedCell);
         }
     }
 
@@ -40,6 +41,7 @@ namespace Nyangbingo.World
         // Terrain visuals now share the logical Grid boundary. This remains as a named value
         // because vegetation and drop rendering use the same surface contract.
         public const float VisualSurfaceOffset = 0f;
+        public const float DropColliderRadius = .22f;
         public const bool DropToDropCollisionResponseEnabled = false;
         private const float MinimumLaunchAngle = 25f;
         private const float MaximumLaunchAngle = 155f;
@@ -59,6 +61,7 @@ namespace Nyangbingo.World
         private ItemArtCatalog itemArtCatalog;
         private Collider2D[] playerColliders = Array.Empty<Collider2D>();
         private PhysicsMaterial2D dropMaterial;
+        private TileService tileService;
 
         public int ActiveDropCount => drops.Count;
 
@@ -213,7 +216,7 @@ namespace Nyangbingo.World
             for (var index = 0; index < validated.Count; index++)
             {
                 var pair = validated[index];
-                var entry = SpawnSingle(pair.item, pair.record.position, 0, 1);
+                var entry = SpawnSingle(pair.item, pair.record.position, 0, 1, null);
                 if (entry == null)
                 {
                     ClearDrops();
@@ -234,6 +237,7 @@ namespace Nyangbingo.World
             player = playerTransform;
             inventory = playerInventory;
             itemArtCatalog = artCatalog;
+            tileService = worldTileService;
             playerColliders = playerTransform != null
                 ? playerTransform.GetComponentsInChildren<Collider2D>(true)
                 : Array.Empty<Collider2D>();
@@ -287,13 +291,15 @@ namespace Nyangbingo.World
             if (acquiredAny) GameEvents.RaiseItemAcquired();
         }
 
-        private void Spawn(ItemDefinition item, int amount, Vector2 position)
+        private void Spawn(ItemDefinition item, int amount, Vector2 position, Vector3Int? minedCell)
         {
             if (item == null || amount <= 0) return;
-            for (var index = 0; index < amount; index++) SpawnSingle(item, position, index, amount);
+            for (var index = 0; index < amount; index++)
+                SpawnSingle(item, position, index, amount, minedCell);
         }
 
-        private Entry SpawnSingle(ItemDefinition item, Vector2 position, int batchIndex, int batchCount)
+        private Entry SpawnSingle(ItemDefinition item, Vector2 position, int batchIndex, int batchCount,
+            Vector3Int? minedCell)
         {
             if (item == null) return null;
             var root = new GameObject($"WorldDrop_{item.Id}");
@@ -310,7 +316,7 @@ namespace Nyangbingo.World
             body.linearDamping = .8f;
             body.linearVelocity = direction * CalculateLaunchSpeed(batchCount);
             var dropCollider = root.AddComponent<CircleCollider2D>();
-            dropCollider.radius = .22f;
+            dropCollider.radius = DropColliderRadius;
             dropCollider.sharedMaterial = dropMaterial;
             for (var index = 0; index < playerColliders.Length; index++)
                 if (playerColliders[index] != null)
@@ -327,16 +333,19 @@ namespace Nyangbingo.World
             var renderer = visual.AddComponent<SpriteRenderer>();
             var sprite = itemArtCatalog?.FindSprite(item.Id);
             if (sprite != null)
-            {
-                RuntimePlaceholderVisual.ConfigureSprite(renderer, sprite, 32);
-                var maximumSize = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
-                var scale = maximumSize > Mathf.Epsilon ? .42f / maximumSize : 1f;
-                visual.transform.localScale = Vector3.one * scale;
-                visual.transform.localPosition = -(Vector3)sprite.bounds.center * scale;
-            }
+                ConfigureDropVisual(renderer, sprite, .42f);
             else
+            {
                 RuntimePlaceholderVisual.Configure(renderer, new Color(.85f, .92f, 1f, 1f), .42f, 32);
-            visual.transform.localPosition += Vector3.up * VisualSurfaceOffset;
+                renderer.transform.localPosition = new Vector3(0f, -.21f + VisualSurfaceOffset, 0f);
+            }
+
+            if (minedCell.HasValue && tileService != null)
+            {
+                var snapped = tileService.ResolveForegroundMiningDropWorldPosition(minedCell.Value);
+                root.transform.position = new Vector3(snapped.x, snapped.y, root.transform.position.z) +
+                                          (Vector3)(direction * .08f);
+            }
 
             var entry = new Entry
             {
@@ -382,6 +391,21 @@ namespace Nyangbingo.World
                 mobBody.IgnoreCollisionWith(dropCollider);
         }
 
+        private static void ConfigureDropVisual(SpriteRenderer renderer, Sprite sprite, float targetSize)
+        {
+            RuntimePlaceholderVisual.ConfigureSprite(renderer, sprite, 32);
+            var maximumSize = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            var scale = maximumSize > Mathf.Epsilon ? targetSize / maximumSize : 1f;
+            renderer.transform.localScale = Vector3.one * scale;
+            var bounds = sprite.bounds;
+            // Root carries the circle collider. Put sprite feet on the root origin so art
+            // matches the grounded drop position instead of floating around the collider center.
+            renderer.transform.localPosition = new Vector3(
+                -bounds.center.x * scale,
+                -bounds.min.y * scale + VisualSurfaceOffset,
+                0f);
+        }
+
         private static float ResolveGravityScale()
         {
             var gravity = Mathf.Abs(Physics2D.gravity.y);
@@ -394,6 +418,33 @@ namespace Nyangbingo.World
 
         private static bool IsFiniteNonNegative(float value) =>
             !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
+
+        public int ApplyOutdoorIceMelt(float meltPerDay, IReadOnlyList<int> surfaceHeights)
+        {
+            if (meltPerDay <= 0f || surfaceHeights == null || surfaceHeights.Count == 0) return 0;
+            var melted = 0;
+            for (var index = drops.Count - 1; index >= 0; index--)
+            {
+                var entry = drops[index];
+                if (entry?.Root == null || entry.Item == null || entry.Amount <= 0 ||
+                    !OutdoorIceMeltRules.IsIceItem(entry.Item.Id))
+                    continue;
+                if (!WorldExposureRules.TryIsSurfaceExposed(
+                        entry.Root.transform.position, surfaceHeights, out var exposed) || !exposed)
+                    continue;
+                var wholeLoss = StorageTemperatureService.CalculateIceMelt(
+                    entry.Amount, 0f, meltPerDay, out var remainingAmount, out _);
+                entry.Amount = remainingAmount;
+                melted += wholeLoss;
+                if (entry.Amount <= 0)
+                {
+                    if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
+                    Destroy(entry.Root);
+                    drops.RemoveAt(index);
+                }
+            }
+            return melted;
+        }
 
         private void ClearDrops()
         {

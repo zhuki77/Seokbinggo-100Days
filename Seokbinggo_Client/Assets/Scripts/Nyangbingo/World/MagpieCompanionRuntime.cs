@@ -30,6 +30,7 @@ namespace Nyangbingo.World
         private readonly int joinKillCount;
         private readonly float collectionRadius;
         private readonly float collectionIntervalSeconds;
+        private Func<float> collectionRadiusMultiplier;
         private readonly GameObject visualRoot;
         private readonly RuntimeCharacterSpriteAnimator visualAnimator;
 
@@ -93,6 +94,9 @@ namespace Nyangbingo.World
                                 TryResolveFunctionalNest(out _);
         public Inventory.Inventory NestStorage => nestStorage;
 
+        public void ConfigureArtifactRadius(Func<float> multiplierProvider) =>
+            collectionRadiusMultiplier = multiplierProvider;
+
         public void Tick(float deltaGameSeconds)
         {
             if (disposed || !IsFinitePositive(deltaGameSeconds))
@@ -129,8 +133,9 @@ namespace Nyangbingo.World
                     collectionElapsed %= collectionIntervalSeconds;
                     var destination = returnToNest ? nestStorage : playerInventory;
                     var origin = returnToNest ? nestPosition : (Vector2)player.position;
+                    var radius = collectionRadius * ResolveCollectionRadiusMultiplier();
                     if (worldDrops.TryFindNearestStack(
-                            origin, collectionRadius, out var target))
+                            origin, radius, out var target))
                     {
                         collectionTarget = target;
                         collectionDestination = destination;
@@ -300,6 +305,14 @@ namespace Nyangbingo.World
             collectionTarget = null;
             collectionDestination = null;
             notifyPlayerAcquisition = false;
+        }
+
+        private float ResolveCollectionRadiusMultiplier()
+        {
+            var multiplier = collectionRadiusMultiplier != null ? collectionRadiusMultiplier() : 1f;
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+                return 1f;
+            return multiplier;
         }
 
         private static int ReadPositiveInt(GameDataCatalog catalog, string key)

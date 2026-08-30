@@ -154,7 +154,7 @@ namespace Nyangbingo.Editor
                 {
                     objectId = $"demo_{profile.Day}_sieve",
                     definitionId = "sieve",
-                    position = new Vector2(world.spawnPoint.x + 4.5f, world.spawnPoint.y + .5f),
+                    position = ResolveDemoFloorPlaceablePosition(world, 4),
                     rotationDegrees = 0f
                 });
             }
@@ -187,6 +187,16 @@ namespace Nyangbingo.Editor
                 position = new Vector2(cell.x + .5f, cell.y + .5f),
                 rotationDegrees = 0f
             });
+        }
+
+        private static Vector2 ResolveDemoFloorPlaceablePosition(WorldGenerationResult world, int offsetX)
+        {
+            var x = Mathf.Clamp(world.spawnPoint.x + offsetX, 0, world.width - 1);
+            var surfaceY = world.surfaceHeights != null && x < world.surfaceHeights.Length
+                ? world.surfaceHeights[x]
+                : world.spawnPoint.y;
+            var airCellY = surfaceY + 1;
+            return new Vector2(x + .5f, airCellY + .5f);
         }
 
         private static void AddConfirmedDayFifteenEquipment(SaveGame save, GameDataCatalog catalog)

@@ -38,6 +38,7 @@ public static class NyangbingoDataMenu
         var sealWhitelist = LoadAssets<SealWhitelistDefinition>(rootDirectory + "/SealWhitelist");
         var idMigrations = LoadAssets<IdMigrationDefinition>(rootDirectory + "/IdMigrations");
         var dayCurves = LoadAssets<DayCurveDefinition>(rootDirectory + "/DayCurves");
+        var dayCurveExtensions = LoadAssets<DayCurveDefinition>(rootDirectory + "/DayCurvesExt");
         var globals = LoadAssets<GlobalDefinition>(rootDirectory + "/Globals");
         var smelting = LoadAssets<SmeltingDefinition>(rootDirectory + "/Smelting");
         var equipment = LoadAssets<EquipmentDefinition>(rootDirectory + "/Equipment");
@@ -61,6 +62,7 @@ public static class NyangbingoDataMenu
             !ValidateAssetIds(sealWhitelist, value => value.Element, "seal whitelist") ||
             !ValidateAssetIds(idMigrations, value => value.Key, "ID migrations") ||
             !ValidateAssetIds(dayCurves, value => value.Id, "day curves") ||
+            !ValidateAssetIds(dayCurveExtensions, value => value.Id, "day curve extensions") ||
             !ValidateAssetIds(globals, value => value.Key, "globals") ||
             !ValidateAssetIds(smelting, value => value.Id, "smelting") ||
             !ValidateAssetIds(equipment, value => value.Id, "equipment") ||
@@ -88,6 +90,7 @@ public static class NyangbingoDataMenu
         SetObjectReferences(serialized.FindProperty("sealWhitelist"), sealWhitelist);
         SetObjectReferences(serialized.FindProperty("idMigrations"), idMigrations);
         SetObjectReferences(serialized.FindProperty("dayCurves"), dayCurves);
+        SetObjectReferences(serialized.FindProperty("dayCurveExtensions"), dayCurveExtensions);
         SetObjectReferences(serialized.FindProperty("globals"), globals);
         SetObjectReferences(serialized.FindProperty("smelting"), smelting);
         SetObjectReferences(serialized.FindProperty("equipment"), equipment);
@@ -112,7 +115,7 @@ public static class NyangbingoDataMenu
                   $"{modules.Length} modules, {mineralTiers.Length} mineral tiers, {smelting.Length} smelting, " +
                   $"{sealWhitelist.Length} seal rules, " +
                   $"{idMigrations.Length} ID migrations, " +
-                  $"{dayCurves.Length} day curves, " +
+                  $"{dayCurves.Length} day curves, {dayCurveExtensions.Length} day curve extensions, " +
                   $"{globals.Length} globals, " +
                   $"{equipment.Length} equipment, {utilities.Length} utilities, " +
                   $"{combatProfiles.Length} combat profiles, " +
@@ -133,11 +136,15 @@ public static class NyangbingoDataMenu
         Application.logMessageReceived += captureImportError;
         try
         {
-            if (ReimportV72DataBundleCore())
+            if (!ReimportV72DataBundleCore())
             {
-                NyangbingoV72ContentImporter.ReimportAllFromCommandLine();
-                if (!importHadErrors) RebuildGameDataCatalog();
+                NyangbingoEditorVerifyLog.Fail("Reimport v72 Data Bundle",
+                    "v72 cross-file validation 또는 코어 CSV 임포트가 실패했습니다. 콘솔 Error를 확인하세요.");
+                return;
             }
+
+            NyangbingoV72ContentImporter.ReimportAllFromCommandLine();
+            if (!importHadErrors) RebuildGameDataCatalog();
         }
         finally
         {
@@ -146,19 +153,21 @@ public static class NyangbingoDataMenu
 
         if (importHadErrors)
         {
-            Debug.LogError("[Nyangbingo] v72 data import logged an error. " +
-                           "The product data freshness manifest was not updated.");
+            NyangbingoEditorVerifyLog.Fail("Reimport v72 Data Bundle",
+                "임포트 중 Error/Exception이 기록됐습니다. product data freshness manifest를 갱신하지 않았습니다.");
             return;
         }
 
         try
         {
             NyangbingoDataBuildGate.WriteCurrentManifest();
+            NyangbingoEditorVerifyLog.Pass("Reimport v72 Data Bundle",
+                "CSV 임포트·카탈로그 재빌드·freshness manifest 기록 완료");
         }
         catch (System.Exception exception)
         {
-            Debug.LogError("[Nyangbingo] v72 data import completed, but recording the product " +
-                           $"data freshness manifest failed: {exception.Message}");
+            NyangbingoEditorVerifyLog.Fail("Reimport v72 Data Bundle",
+                "임포트는 끝났지만 manifest 기록 실패 — " + exception.Message);
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.Yokai
@@ -88,19 +89,32 @@ namespace Nyangbingo.Yokai
         private readonly Transform observedTransform;
         private readonly IReadOnlyList<CounterAura> auras;
         private readonly IYokaiCounterSource fallback;
+        private readonly DayNightService dayNightService;
 
-        public CounterAuraSensor(Transform observed, IReadOnlyList<CounterAura> auraList, IYokaiCounterSource fallbackSource = null)
+        public CounterAuraSensor(Transform observed, IReadOnlyList<CounterAura> auraList,
+            IYokaiCounterSource fallbackSource = null, DayNightService dayNight = null)
         {
             observedTransform = observed;
             auras = auraList;
             fallback = fallbackSource;
+            dayNightService = dayNight;
         }
 
         public bool IsInLanternRange => Find(CounterAuraKind.Lantern) != null || (fallback?.IsInLanternRange ?? false);
         public bool IsInSieveRange => Find(CounterAuraKind.Sieve) != null || (fallback?.IsInSieveRange ?? false);
         public bool IsInHaetaeRange => Find(CounterAuraKind.Haetae) != null;
-        public bool IsInBellRopeRange => Find(CounterAuraKind.BellRope) != null;
-        public float FireDamageMultiplier => Value(CounterAuraKind.Haetae, aura => aura.EffectValue, 1f);
+        public bool IsInBellRopeRange =>
+            Find(CounterAuraKind.BellRope) != null || Find(CounterAuraKind.FrostBellRope) != null;
+        public float FireDamageMultiplier
+        {
+            get
+            {
+                var multiplier = Value(CounterAuraKind.Haetae, aura => aura.EffectValue, 1f);
+                if (dayNightService == null || !dayNightService.IsNight)
+                    multiplier *= Value(CounterAuraKind.Daebal, aura => aura.EffectValue, 1f);
+                return multiplier;
+            }
+        }
         public bool HasGroundLoot => fallback?.HasGroundLoot ?? false;
         public bool IsInventoryTheftBlocked => fallback?.IsInventoryTheftBlocked ?? false;
         public float SieveStopSeconds => Value(CounterAuraKind.Sieve, aura => aura.DurationSeconds, fallback?.SieveStopSeconds ?? 0f);
@@ -123,6 +137,20 @@ namespace Nyangbingo.Yokai
         {
             var aura = Find(kind);
             return aura == null ? fallbackValue : selector(aura);
+        }
+
+        public void TickFrostBellRope(YokaiBrain brain, ref bool wasInRange, ref float reapplyCooldown,
+            float deltaSeconds)
+        {
+            if (brain == null) return;
+            if (reapplyCooldown > 0f)
+                reapplyCooldown = Mathf.Max(0f, reapplyCooldown - Mathf.Max(0f, deltaSeconds));
+            var aura = Find(CounterAuraKind.FrostBellRope);
+            var inRange = aura != null;
+            if (inRange && !wasInRange && reapplyCooldown <= 0f &&
+                brain.ApplyFrostSlow(aura.EffectValue, aura.DurationSeconds))
+                reapplyCooldown = aura.CooldownSeconds;
+            wasInRange = inRange;
         }
     }
 

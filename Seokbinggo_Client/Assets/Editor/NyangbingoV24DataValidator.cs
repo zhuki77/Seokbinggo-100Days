@@ -311,7 +311,7 @@ public static class NyangbingoV24DataValidator
 
         if (isV241)
         {
-            ValidateCraftingExtension(craftingExtension, itemIds);
+            ValidateCraftingExtension(craftingExtension, items);
             ValidateMigrations(migrations, itemIds, yokaiIds, bossIds, smeltingIds, globalKeys);
         }
 
@@ -382,14 +382,21 @@ public static class NyangbingoV24DataValidator
     }
 
     private static void ValidateCraftingExtension(List<Dictionary<string, string>> rows,
-        HashSet<string> itemIds)
+        List<Dictionary<string, string>> items)
     {
+        var itemIds = BuildIdSet(items, "items.csv", "id");
+        var itemScopes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var item in items)
+            itemScopes[Value(item, "id", "items.csv")] = Value(item, "mvp_scope", "items.csv");
+
         var ids = BuildIdSet(rows, "crafting-ext.csv", "id");
         foreach (var row in rows)
         {
             var id = Value(row, "id", "crafting-ext.csv");
-            if (itemIds.Contains(id))
-                throw new InvalidDataException($"crafting-ext.csv output '{id}' must remain outside the MVP item master.");
+            if (itemIds.Contains(id) &&
+                !string.Equals(itemScopes[id], "B", StringComparison.Ordinal))
+                throw new InvalidDataException(
+                    $"crafting-ext.csv output '{id}' must use items.csv mvp_scope 'B' when registered.");
             RequireItem(itemIds, Value(row, "station_id", "crafting-ext.csv"),
                 "crafting-ext.csv", "station_id");
             ValidateItemPairs(itemIds, Value(row, "materials", "crafting-ext.csv"),

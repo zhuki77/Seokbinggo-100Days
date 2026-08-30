@@ -18,5 +18,5 @@ MonoBehaviour:
   action: 0
   note: "v79 \u2014 \uD30C\uB3C4 \uD3D0\uC9C0 \uD6C4 \uCE68\uACF5\uC774 \uBB3C\uB824\uBC1B\uC740
     \uAC12. \uC8FC\uAE30 10 \uB3D9\uC77C"
-  refundItemId:
+  refundItemId: 
   refundAmount: 0

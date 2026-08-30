@@ -27,6 +27,9 @@ namespace Nyangbingo.Data
         [Min(0f)][SerializeField] private float spawnMultiplier = 1f;
         [Min(0f)][SerializeField] private float dropMultiplier = 1f;
         [SerializeField] private string eventId;
+        [Min(1f)][SerializeField] private float variantMultiplier = 1f;
+        [Range(0f, 100f)][SerializeField] private float heatSeepPercent;
+        [Min(0f)][SerializeField] private float iceMeltDpsPerDay;
 
         public string Id => day.ToString(System.Globalization.CultureInfo.InvariantCulture);
         public int Day => day;
@@ -42,6 +45,9 @@ namespace Nyangbingo.Data
         public float SpawnMultiplier => spawnMultiplier;
         public float DropMultiplier => dropMultiplier;
         public string EventId => eventId ?? string.Empty;
+        public float VariantMultiplier => variantMultiplier;
+        public float HeatSeepPercent => heatSeepPercent;
+        public float IceMeltDpsPerDay => iceMeltDpsPerDay;
 
         public int EffectiveSpawnCount
         {
@@ -60,6 +66,40 @@ namespace Nyangbingo.Data
             for (var i = 0; i < composition.Length; i++)
                 if (composition[i].kind == kind) return Math.Max(0, composition[i].amount);
             return 0;
+        }
+
+        public void Configure(
+            int valueDay,
+            int valueHeatStage,
+            float valueDayFireDamagePerSecond,
+            int valueNightYokaiCount,
+            float valueYokaiWallDamage,
+            float valuePaceSealPercent,
+            int valuePaceMineralTier,
+            int valueMaxActive,
+            DayCurveSpawnAmount[] valueSpawnComposition,
+            float valueSpawnMultiplier,
+            float valueDropMultiplier,
+            string valueEventId,
+            float valueVariantMultiplier = 1f,
+            float valueHeatSeepPercent = 0f,
+            float valueIceMeltDpsPerDay = 0f)
+        {
+            day = valueDay;
+            heatStage = valueHeatStage;
+            dayFireDamagePerSecond = valueDayFireDamagePerSecond;
+            nightYokaiCount = valueNightYokaiCount;
+            yokaiWallDamage = valueYokaiWallDamage;
+            paceSealPercent = valuePaceSealPercent;
+            paceMineralTier = valuePaceMineralTier;
+            maxActive = valueMaxActive;
+            spawnComposition = valueSpawnComposition ?? Array.Empty<DayCurveSpawnAmount>();
+            spawnMultiplier = valueSpawnMultiplier;
+            dropMultiplier = valueDropMultiplier;
+            eventId = valueEventId ?? string.Empty;
+            variantMultiplier = Mathf.Max(1f, valueVariantMultiplier);
+            heatSeepPercent = Mathf.Clamp(valueHeatSeepPercent, 0f, 100f);
+            iceMeltDpsPerDay = Mathf.Max(0f, valueIceMeltDpsPerDay);
         }
     }
 }

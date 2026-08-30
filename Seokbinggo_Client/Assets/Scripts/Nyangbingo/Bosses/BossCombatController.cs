@@ -92,6 +92,7 @@ namespace Nyangbingo.Bosses
         private bool imugiLakePhaseTriggered;
         private ImugiPhaseAttack imugiPhaseAttack;
         private int imugiLakePulsesRemaining;
+        private float openingDodgeRemaining;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
 
@@ -170,7 +171,7 @@ namespace Nyangbingo.Bosses
             RefreshWarningPosition();
         }
 
-        public bool ConfigureForRuntime(BossDefinition value, MonoBehaviour target)
+        public bool ConfigureForRuntime(BossDefinition value, MonoBehaviour target, GameDataCatalog catalog = null)
         {
             definition = value;
             targetComponent = target;
@@ -181,6 +182,15 @@ namespace Nyangbingo.Bosses
             characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
             if (definition == null || targetTransform == null || combatTarget == null || health == null)
                 return false;
+
+            openingDodgeRemaining = 0f;
+            health.SetDamageTakenMultiplier(1f);
+            if (catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, definition.Id, out var dodgeSeconds))
+            {
+                openingDodgeRemaining = dodgeSeconds;
+                health.SetDamageTakenMultiplier(0f);
+            }
 
             contactAttackRemaining = 0f;
             specialCooldownRemaining = Mathf.Max(0f, definition.SpecialCooldownSeconds);
@@ -206,6 +216,7 @@ namespace Nyangbingo.Bosses
             SetAnimationMoving(false);
             if (!IsFinite(deltaGameSeconds) || deltaGameSeconds < 0f || definition == null ||
                 targetTransform == null || combatTarget == null || health == null || health.IsDead) return;
+            TickOpeningDodge(deltaGameSeconds);
             TickSpecialEffect(deltaGameSeconds);
 
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - deltaGameSeconds);
@@ -268,6 +279,14 @@ namespace Nyangbingo.Bosses
                 contactAttackRemaining = ContactAttackIntervalGameSeconds;
                 Attacked?.Invoke();
             }
+        }
+
+        private void TickOpeningDodge(float deltaGameSeconds)
+        {
+            if (openingDodgeRemaining <= 0f || health == null) return;
+            openingDodgeRemaining = Mathf.Max(0f, openingDodgeRemaining - deltaGameSeconds);
+            if (openingDodgeRemaining > 0f) return;
+            health.SetDamageTakenMultiplier(1f);
         }
 
         private float ResolveContactRange() =>
@@ -359,6 +378,12 @@ namespace Nyangbingo.Bosses
                 SetTelegraphVisible(true);
                 RefreshTelegraphVisual();
                 if (imugiLakePulsesRemaining <= 0) FinishSpecial();
+                return;
+            }
+            if (definition.Kind == BossKind.Yeongno)
+            {
+                ApplyYeongnoSwallow();
+                FinishSpecial();
                 return;
             }
             if (definition.Kind == BossKind.GoblinChief)
@@ -455,6 +480,21 @@ namespace Nyangbingo.Bosses
         {
             PlayImugiSpecialEffect();
             TryApplySpecialDamage(ImugiPhaseDamage, DamageTag.Melee, Vector2.zero);
+        }
+
+        private void ApplyYeongnoSwallow()
+        {
+            if (definition == null || definition.Kind != BossKind.Yeongno ||
+                targetTransform == null)
+                return;
+            var player = targetTransform.GetComponent<MainGamePlayerController>();
+            if (player != null &&
+                player.TryBeginYeongnoSwallow(
+                    definition.SpecialDamagePerHit,
+                    definition.SpecialDurationSeconds,
+                    definition.SpecialTickSeconds))
+                return;
+            TryApplySpecialDamage(definition.SpecialDamagePerHit, DamageTag.Melee, Vector2.zero);
         }
 
         private void FinishSpecial()

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d44deba777cf448a50391bfd81f9d9, type: 3}
+  m_Name: seolpungseon
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.RecipeDefinition
+  id: seolpungseon
+  station: 3
+  ingredients:
+  - item: {fileID: 11400000, guid: 1916f7aabd4e88f4f980ad593f7687eb, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 2a9acc045ab79f647bf05ed49b4f4bb3, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 3d3a021a3305ee94383f99102a9b7039, type: 2}
+    amount: 1
+  output:
+    item: {fileID: 11400000, guid: e8b4c2a71f3d4e5b9a8c7d6e5f4a3b20, type: 2}
+    amount: 1
+  durationSeconds: 30
+  type: 7
+  mvpScope: 2
+  note: "\uD655\uC7A5 31\uC77C~ \uC124\uD48D\uC120 \u2014 \uCCA0\uC120 \uC9C4\uD654(crafting-ext)"

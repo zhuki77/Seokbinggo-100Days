@@ -124,6 +124,11 @@ namespace Nyangbingo.UI
         public static bool BlocksGameplayInput => openControllerCount > 0;
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsOpen => open;
+
+        /// <summary>인스펙터에 수동 배선되는 납품 제작·제련 패널 하이어라키가 살아 있는지.</summary>
+        public bool HasDeliveredPanelBindings =>
+            panel != null && titleText != null && tabButtons != null && tabButtons.Length == 4 &&
+            tabButtons.All(button => button != null);
         public int VisibleRecipeCount => visibleRecipes.Count;
         public const int UnifiedTabCount = 4;
         public const int InventoryGridColumns = 10;
@@ -397,6 +402,33 @@ namespace Nyangbingo.UI
             Refresh();
             Debug.Log($"[Nyangbingo] Jangdok storage opened: id={objectId}, slots={JangdokStorageRuntime.SlotCount}.");
             return true;
+        }
+
+        public bool TryOpenRemoteJangdok(MainGameEnvironmentState environment)
+        {
+            if (!initialized || environment == null || runtimeServices?.JangdokStorage == null) return false;
+            foreach (var record in environment.ExportPlacedObjects())
+            {
+                if (record.definitionId != JangdokStorageRuntime.DefinitionId) continue;
+                if (TryOpenJangdok(record.objectId)) return true;
+            }
+            ShowMessage("열 수 있는 장독이 없습니다.");
+            return false;
+        }
+
+        private float ResolveCraftDurationMultiplier(RecipeDefinition recipe)
+        {
+            if (recipe == null || runtimeServices?.ArtifactVerbs == null ||
+                runtimeServices.EquipmentSystem == null)
+                return 1f;
+            var player = FindAnyObjectByType<MainGamePlayerController>();
+            var bootstrap = FindAnyObjectByType<MainGameBootstrap>();
+            var context = ArtifactActivationContextFactory.Build(
+                bootstrap?.TileService,
+                player != null ? player.transform.position : Vector2.zero,
+                bootstrap?.TimeService);
+            return runtimeServices.ArtifactVerbs.ResolveCraftDurationMultiplier(
+                runtimeServices.EquipmentSystem, recipe, context);
         }
 
         public bool TryOpenChest(ChestProgress progress, string id)
@@ -1025,7 +1057,8 @@ namespace Nyangbingo.UI
             }
 
             var succeeded = recipe.DurationSeconds > 0f
-                ? runtimeServices.CraftingProcess.TryStart(recipe, recipe.Station)
+                ? runtimeServices.CraftingProcess.TryStart(
+                    recipe, recipe.Station, durationMultiplier: ResolveCraftDurationMultiplier(recipe))
                 : runtimeServices.CraftingService.TryCraft(recipe, recipe.Station);
             if (succeeded)
             {
