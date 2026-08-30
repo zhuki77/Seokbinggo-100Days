@@ -655,6 +655,26 @@ namespace Nyangbingo.World
                     return null;
                 }
             }
+            else if (definition.Kind == BossKind.Yeongno)
+            {
+                var yeongno = bossObject.AddComponent<BossYeongnoBehaviour>();
+                yeongno.Configure(raidTarget.transform);
+                if (!runtimeServices.Register(yeongno))
+                {
+                    Destroy(bossObject);
+                    return null;
+                }
+            }
+            else if (definition.Kind == BossKind.GangcheolPerfect)
+            {
+                var gangcheolPerfect = bossObject.AddComponent<BossGangcheolPerfectBehaviour>();
+                gangcheolPerfect.Configure();
+                if (!runtimeServices.Register(gangcheolPerfect))
+                {
+                    Destroy(bossObject);
+                    return null;
+                }
+            }
             activeBossCombat = combat;
             activeBossIsForcedInvasion = forcedInvasion;
             forcedBossSpawnPending = forcedInvasion;

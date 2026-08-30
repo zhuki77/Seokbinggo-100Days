@@ -26,7 +26,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         try
         {
             RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "52/52 tests");
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "54/54 tests");
         }
         catch (System.Exception exception)
         {
@@ -57,6 +57,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestSamdugumiCounterCombatContract();
         TestEopGuryeongiModuleShutdownContract();
         TestSangunRetreatCombatContract();
+        TestYeongnoSwallowCombatContract();
+        TestGangcheolPerfectPhaseCombatContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
         TestBossPausedYokaiVisibilityContract();
@@ -966,6 +968,137 @@ public static class NyangbingoDevBIntegrationRegressionTests
         finally
         {
             UnityEngine.Object.DestroyImmediate(playerObject);
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+    }
+
+    private static void TestYeongnoSwallowCombatContract()
+    {
+        var yeongnoSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossYeongnoBehaviour.cs");
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var coordinatorSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(yeongnoSource.Contains("IsSwallowedByYeongno") &&
+                yeongnoSource.Contains("WeakPointBurstDamage") &&
+                playerSource.Contains("YeongnoSwallowEnded") &&
+                coordinatorSource.Contains("BossKind.Yeongno") &&
+                coordinatorSource.Contains("BossYeongnoBehaviour"),
+            "Yeongno must become immune during swallow and burst damage when weak points break.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "yeongno", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 110f),
+            "Yeongno opening dodge must resolve to 110 seconds from boss_dodge_sec_curve.");
+
+        var bossObject = new GameObject("YeongnoSwallowCombatContract");
+        var playerObject = new GameObject("YeongnoSwallowCombatContractPlayer");
+        try
+        {
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(200);
+            var player = playerObject.AddComponent<MainGamePlayerController>();
+            var yeongno = bossObject.AddComponent<BossYeongnoBehaviour>();
+            yeongno.Configure(playerObject.transform);
+
+            SetField(player, "swallowedByYeongno", true);
+            yeongno.Tick(.01f);
+            Require(Mathf.Approximately(bossHealth.DamageTakenMultiplier, 0f),
+                "Yeongno must be immune while the player is swallowed.");
+
+            SetField(player, "swallowedByYeongno", false);
+            yeongno.Tick(.01f);
+            Require(Mathf.Approximately(bossHealth.DamageTakenMultiplier, 1f),
+                "Yeongno must become vulnerable again after the player escapes swallow.");
+
+            var beforeBurst = bossHealth.Current;
+            SetField(player, "swallowedByYeongno", true);
+            typeof(MainGamePlayerController).GetMethod("ReleaseYeongnoSwallow", InstanceMembers)
+                ?.Invoke(player, new object[] { "영노의 약점을 부쉈습니다!", true });
+            Require(bossHealth.Current == beforeBurst - BossYeongnoBehaviour.WeakPointBurstDamage,
+                "Yeongno must take burst damage when the player breaks all weak points.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(playerObject);
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+    }
+
+    private static void TestGangcheolPerfectPhaseCombatContract()
+    {
+        var perfectSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossGangcheolPerfectBehaviour.cs");
+        var combatSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossCombatController.cs");
+        var coordinatorSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(perfectSource.Contains("DamageWindowSecondsPerPhase") &&
+                perfectSource.Contains("PhaseCount") &&
+                perfectSource.Contains("TryBeginForcedSpecialTelegraph") &&
+                combatSource.Contains("TryBeginForcedSpecialTelegraph") &&
+                coordinatorSource.Contains("BossKind.GangcheolPerfect") &&
+                coordinatorSource.Contains("BossGangcheolPerfectBehaviour"),
+            "Gangcheol Perfect must cycle four damage windows and force fan breath transitions.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "gangcheol_perfect", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 120f),
+            "Gangcheol Perfect opening dodge must resolve to 120 seconds from boss_dodge_sec_curve.");
+
+        var definition = AssetDatabase.LoadAssetAtPath<BossDefinition>(
+            "Assets/Data/SO/Bosses/gangcheol_perfect.asset");
+        var bossObject = new GameObject("GangcheolPerfectPhaseCombatContract");
+        var targetObject = new GameObject("GangcheolPerfectPhaseCombatContractTarget");
+        try
+        {
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(definition != null ? definition.HitPoints : 1);
+            var targetBody = targetObject.AddComponent<Rigidbody2D>();
+            targetBody.bodyType = RigidbodyType2D.Kinematic;
+            targetBody.gravityScale = 0f;
+            var targetHealth = targetObject.AddComponent<Health>();
+            targetHealth.ConfigureForRuntime(100);
+            var target = targetObject.AddComponent<MainGameRaidTarget>();
+            var combat = bossObject.AddComponent<BossCombatController>();
+            var perfect = bossObject.AddComponent<BossGangcheolPerfectBehaviour>();
+
+            Require(definition != null && combat.ConfigureForRuntime(definition, target),
+                "Gangcheol Perfect must configure its phase combat runtime.");
+            perfect.Configure();
+
+            perfect.Tick(BossGangcheolPerfectBehaviour.DamageWindowSecondsPerPhase);
+            Require(perfect.IsInTransition &&
+                    perfect.CurrentPhase == 0 &&
+                    Mathf.Approximately(bossHealth.DamageTakenMultiplier, 0f) &&
+                    combat.IsTelegraphing,
+                "Gangcheol Perfect must enter transition immunity and telegraph fan breath after a damage window.");
+
+            var transitionElapsed = 0f;
+            while (transitionElapsed < BossGangcheolPerfectBehaviour.TransitionImmunitySeconds)
+            {
+                var step = Mathf.Min(.5f,
+                    BossGangcheolPerfectBehaviour.TransitionImmunitySeconds - transitionElapsed);
+                combat.Tick(step);
+                perfect.Tick(step);
+                transitionElapsed += step;
+            }
+
+            Require(!perfect.IsInTransition &&
+                    perfect.CurrentPhase == 1 &&
+                    Mathf.Approximately(perfect.DamageWindowRemaining,
+                        BossGangcheolPerfectBehaviour.DamageWindowSecondsPerPhase) &&
+                    Mathf.Approximately(bossHealth.DamageTakenMultiplier, 1f),
+                "Gangcheol Perfect must advance to the next phase after transition immunity ends.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(targetObject);
             UnityEngine.Object.DestroyImmediate(bossObject);
         }
     }

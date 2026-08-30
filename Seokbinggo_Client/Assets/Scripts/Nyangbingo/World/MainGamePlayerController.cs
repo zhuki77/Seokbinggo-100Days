@@ -182,6 +182,7 @@ namespace Nyangbingo.World
         public float MiningProgress => CalculateMiningProgress(miningElapsedSeconds, miningRequiredSeconds);
         public bool IsDead => dead;
         public bool IsSwallowedByYeongno => swallowedByYeongno;
+        public event System.Action<bool> YeongnoSwallowEnded;
 
         public void ConfigureForScene(GameDataCatalog gameDataCatalog, MainGameBootstrap mainBootstrap,
             MainGameRuntimeServices services, Camera camera, CharacterArtCatalog artCatalog = null,
@@ -1177,11 +1178,11 @@ namespace Nyangbingo.World
                 : .5f;
             swallowWeakPointHits++;
             if (swallowWeakPointHits >= YeongnoSwallowWeakPointHits)
-                ReleaseYeongnoSwallow("영노의 약점을 부쉈습니다!");
+                ReleaseYeongnoSwallow("영노의 약점을 부쉈습니다!", escapedByBreakingWeakPoint: true);
             return true;
         }
 
-        private void ReleaseYeongnoSwallow(string message = null)
+        private void ReleaseYeongnoSwallow(string message = null, bool escapedByBreakingWeakPoint = false)
         {
             if (!swallowedByYeongno) return;
             swallowedByYeongno = false;
@@ -1190,6 +1191,7 @@ namespace Nyangbingo.World
             if (playerRenderer != null) playerRenderer.color = aliveRendererColor;
             interactionMessages?.ShowExternalMessage(
                 string.IsNullOrWhiteSpace(message) ? "영노 배에서 빠져나왔습니다." : message);
+            YeongnoSwallowEnded?.Invoke(escapedByBreakingWeakPoint);
         }
 
         private void HandleAttackKnockbackApplied(Health target, float knockbackStrength)

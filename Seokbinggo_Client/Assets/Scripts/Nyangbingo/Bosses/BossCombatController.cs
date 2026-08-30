@@ -1056,6 +1056,16 @@ namespace Nyangbingo.Bosses
 
         public void NotifyExternalMovement(Vector2 direction) => SetAnimationMovement(direction);
 
+        public bool TryBeginForcedSpecialTelegraph()
+        {
+            if (definition == null || telegraphing || specialActive || targetTransform == null ||
+                health == null || health.IsDead)
+                return false;
+            var aim = (Vector2)(targetTransform.position - transform.position);
+            BeginTelegraph(aim.sqrMagnitude > Mathf.Epsilon ? aim.normalized : Vector2.right);
+            return true;
+        }
+
         private Vector2 ResolveFacingDirection(Vector2 movement)
         {
             if (targetTransform == null) return movement;
