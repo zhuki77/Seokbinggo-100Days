@@ -12,6 +12,7 @@ namespace Nyangbingo.Yokai
     public interface IYokaiRewardPolicy
     {
         int ScaleTearAmount(int baseAmount);
+        int ScaleDropAmount(int baseAmount);
         float ScaleSignatureChance(float baseChance);
     }
 
@@ -101,7 +102,7 @@ namespace Nyangbingo.Yokai
             if (definition == null) return;
             foreach (var drop in definition.Drops)
                 if (drop.item != null && drop.amount > 0)
-                    Grant(drop.item, drop.amount);
+                    Grant(drop.item, ScaleDropAmount(drop.amount));
 
             var tearAmount = rewardPolicy != null
                 ? rewardPolicy.ScaleTearAmount(definition.TearDrop)
@@ -132,6 +133,9 @@ namespace Nyangbingo.Yokai
 
             GameEvents.RaiseYokaiKilled(definition);
         }
+
+        private int ScaleDropAmount(int baseAmount) =>
+            rewardPolicy == null ? baseAmount : rewardPolicy.ScaleDropAmount(baseAmount);
 
         private void Grant(ItemDefinition item, int amount)
         {

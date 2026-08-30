@@ -1,6 +1,7 @@
 using Nyangbingo.Data;
 using Nyangbingo.UI;
 using Nyangbingo.World;
+using Nyangbingo.Yokai;
 using UnityEditor;
 using UnityEngine;
 
@@ -62,6 +63,10 @@ public static class NyangbingoDayCurveExtensionRegressionTests
             melted += inventory.ApplyOutdoorIceMelt(.15f);
         Require(melted == 1 && inventory.Count(StorageTemperatureService.IceShardId) == 0,
             "outdoor ice melt must use day-curve-ext daily fraction");
+        var dropPolicy = new DayCurveRewardRules(day31.DropMultiplier);
+        Require(dropPolicy.ScaleDropAmount(1) == 1 &&
+                new DayCurveRewardRules(catalog.FindDayCurve(15).DropMultiplier).ScaleDropAmount(1) == 3,
+            "drop_mult must scale yokai loot amounts when above 1");
         Require(!GameShellController.ShouldEndDemoAtDay(31) &&
                 !GameShellController.ShouldEndDemoAtDay(100),
             "date alone must not end the demo after day 30");

@@ -1256,9 +1256,7 @@ namespace Nyangbingo.World
                             9);
             }
             var loot = yokaiObject.AddComponent<YokaiLoot>();
-            loot.ConfigureForRuntime(definition, rewards: raid && baekjungScheduler?.IsActive == true
-                ? baekjungRewardRules
-                : null);
+            loot.ConfigureForRuntime(definition, rewards: ResolveYokaiRewardPolicy(raid));
             var targetCounters = raidTarget as IYokaiCounterSource;
             var counters = placedObjectRuntime != null
                 ? new CounterAuraSensor(yokaiObject.transform,
@@ -1430,6 +1428,17 @@ namespace Nyangbingo.World
             var definition = baekjungScheduler?.ActiveDefinition;
             baekjungRewardRules = definition != null ? new BaekjungRewardRules(definition) : null;
             baekjungRewardRules?.RestoreTearRemainder(tearRemainder);
+        }
+
+        private IYokaiRewardPolicy ResolveYokaiRewardPolicy(bool raid)
+        {
+            DayCurveRewardRules dayCurvePolicy = null;
+            if (currentDayCurve != null && currentDayCurve.DropMultiplier > 1f + .0001f)
+                dayCurvePolicy = new DayCurveRewardRules(currentDayCurve.DropMultiplier);
+            var baekjungPolicy = raid && baekjungScheduler?.IsActive == true
+                ? baekjungRewardRules
+                : null;
+            return ChainedYokaiRewardPolicy.Create(dayCurvePolicy, baekjungPolicy);
         }
 
         private YokaiDefinition FindRaidYokai(YokaiKind kind) =>

@@ -27,6 +27,8 @@ namespace Nyangbingo.Bosses
             return grantedAmount;
         }
 
+        public int ScaleDropAmount(int baseAmount) => ScaleTearAmount(baseAmount);
+
         public float ScaleSignatureChance(float baseChance)
         {
             if (baseChance <= 0f) return 0f;
