@@ -58,8 +58,9 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 | day-curve.csv | 30 | **30** | ✅ |
 | seal-whitelist.csv | 23 | **23** | ✅ |
 | yokai-stats.csv | 7 | **7** | ✅ |
+| night-waves.csv | 15 | **삭제(v72)** | ✅ `day-curve`+침입 globals로 대체 |
 
-> 리포에 Notion `kit/data/` zip은 **없음**. 로컬 CSV는 v46 목표를 이미 충족. 검증: `Nyangbingo` → **Run V46 Data Completeness Tests**.
+> 리포에 Notion `kit/data/` zip은 **없음**. 로컬 CSV는 v46 핵심 행수를 충족. 검증: `Nyangbingo` → **Run V46 Data Completeness Tests**.
 
 ### 2-2. 모듈 20종 (명세서 ⑤)
 

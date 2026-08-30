@@ -4,7 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>v46 P0 CSV 행수·핵심 키 존재 여부를 로컬 CSV 기준으로 검증한다.</summary>
+/// <summary>v46 P0 CSV 행수·핵심 키 존재 여부를 로컬 CSV 기준으로 검증한다. v72 이후 night-waves.csv는 삭제된 것이 정상이다.</summary>
 public static class NyangbingoV46DataCompletenessTests
 {
     private static string CsvDirectory =>
@@ -21,7 +21,6 @@ public static class NyangbingoV46DataCompletenessTests
         ("drops.csv", 17),
         ("player-combat.csv", 18),
         ("yokai-stats.csv", 7),
-        ("night-waves.csv", 15),
         ("modules.csv", 11),
         ("day-curve.csv", 30),
         ("seal-whitelist.csv", 23)
@@ -60,6 +59,10 @@ public static class NyangbingoV46DataCompletenessTests
             }
             foreach (var requiredKey in RequiredGlobalKeys)
                 Require(keys.Contains(requiredKey), $"globals.csv missing key '{requiredKey}'");
+
+            var legacyNightWaves = Path.Combine(CsvDirectory, "night-waves.csv");
+            Require(!File.Exists(legacyNightWaves),
+                "night-waves.csv must stay deleted in v72 (wave night uses day-curve + invasion globals)");
 
             Debug.Log("[Nyangbingo] V46 data completeness tests passed.");
         }

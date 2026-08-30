@@ -301,9 +301,6 @@ public static class NyangbingoDataMenu
         }
     }
 
-    [MenuItem("Nyangbingo/Run V46 Data Completeness Tests")]
-    private static void RunV46DataCompletenessTests() => NyangbingoV46DataCompletenessTests.RunAll();
-
     [MenuItem("Nyangbingo/Reimport Items CSV")]
     private static void ReimportItems()
     {
