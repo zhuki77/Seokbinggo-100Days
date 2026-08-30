@@ -831,9 +831,8 @@ namespace Nyangbingo.UI
             {
                 if (target == Page.Crafting)
                 {
-                    var nextFilter = (CraftingStationFilter)(((int)craftingFilter + 1) % CraftingFilterCount);
-                    if (nextFilter == CraftingStationFilter.Furnace) furnaceSmeltingView = false;
-                    craftingFilter = nextFilter;
+                    craftingFilter = (CraftingStationFilter)(((int)craftingFilter + 1) % CraftingFilterCount);
+                    if (craftingFilter == CraftingStationFilter.Furnace) furnaceSmeltingView = false;
                     RebuildFilteredRecipes();
                     selectedIndex = FindFirstEntryForFilter();
                     message = string.Empty;
