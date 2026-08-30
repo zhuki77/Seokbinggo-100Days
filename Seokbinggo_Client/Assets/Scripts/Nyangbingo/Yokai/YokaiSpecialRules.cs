@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.Yokai
@@ -88,19 +89,31 @@ namespace Nyangbingo.Yokai
         private readonly Transform observedTransform;
         private readonly IReadOnlyList<CounterAura> auras;
         private readonly IYokaiCounterSource fallback;
+        private readonly DayNightService dayNightService;
 
-        public CounterAuraSensor(Transform observed, IReadOnlyList<CounterAura> auraList, IYokaiCounterSource fallbackSource = null)
+        public CounterAuraSensor(Transform observed, IReadOnlyList<CounterAura> auraList,
+            IYokaiCounterSource fallbackSource = null, DayNightService dayNight = null)
         {
             observedTransform = observed;
             auras = auraList;
             fallback = fallbackSource;
+            dayNightService = dayNight;
         }
 
         public bool IsInLanternRange => Find(CounterAuraKind.Lantern) != null || (fallback?.IsInLanternRange ?? false);
         public bool IsInSieveRange => Find(CounterAuraKind.Sieve) != null || (fallback?.IsInSieveRange ?? false);
         public bool IsInHaetaeRange => Find(CounterAuraKind.Haetae) != null;
         public bool IsInBellRopeRange => Find(CounterAuraKind.BellRope) != null;
-        public float FireDamageMultiplier => Value(CounterAuraKind.Haetae, aura => aura.EffectValue, 1f);
+        public float FireDamageMultiplier
+        {
+            get
+            {
+                var multiplier = Value(CounterAuraKind.Haetae, aura => aura.EffectValue, 1f);
+                if (dayNightService == null || !dayNightService.IsNight)
+                    multiplier *= Value(CounterAuraKind.Daebal, aura => aura.EffectValue, 1f);
+                return multiplier;
+            }
+        }
         public bool HasGroundLoot => fallback?.HasGroundLoot ?? false;
         public bool IsInventoryTheftBlocked => fallback?.IsInventoryTheftBlocked ?? false;
         public float SieveStopSeconds => Value(CounterAuraKind.Sieve, aura => aura.DurationSeconds, fallback?.SieveStopSeconds ?? 0f);

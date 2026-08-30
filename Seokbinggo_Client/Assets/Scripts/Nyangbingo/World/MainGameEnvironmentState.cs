@@ -23,7 +23,10 @@ namespace Nyangbingo.World
         public const string ClayPlasterDefinitionId = "clay_plaster";
         public const string DoorPaperDefinitionId = "munpungji";
         public const string ColdWaveCoreDefinitionId = "cold_wave_core";
+        public const string JukbuinDefinitionId = "jukbuin";
+        public const string NestBedDefinitionId = "nest_bed";
         public const int StrawInsulationPieceCap = 6;
+        private const float JukbuinNestRadiusSquared = 4f;
 
         private sealed class Entry
         {
@@ -635,14 +638,21 @@ namespace Nyangbingo.World
                     out var interiorCells, out var boundaryCells) || !isSealed)
                 return 1f;
 
-            var pieces = byObjectId.Values.Count(entry =>
-                entry.Record.definitionId == StrawInsulationDefinitionId &&
-                boundaryCells.Contains(entry.Cell));
+            var insulationDefinitionIds = byObjectId.Values
+                .Where(entry =>
+                    (entry.Record.definitionId == StrawInsulationDefinitionId ||
+                     entry.Record.definitionId == ClayPlasterDefinitionId) &&
+                    boundaryCells.Contains(entry.Cell))
+                .Select(entry => entry.Record.definitionId);
+            var globalSettings = gameDataCatalog != null
+                ? new GlobalSettings(gameDataCatalog.Globals)
+                : null;
+            var panelBonus = InsulationPanels.TotalFromDefinitions(insulationDefinitionIds, globalSettings);
             var hasIceCrystalCooler = byObjectId.Values.Any(entry =>
                 entry.Record.definitionId == CoolingSourceRuntime.IceCrystalCoolerId &&
                 interiorCells.Contains(entry.Cell));
             var multiplier = CalculateSealedRecoveryMultiplier(
-                pieces, strawInsulationBonusPerPiece, hasIceCrystalCooler);
+                panelBonus, hasIceCrystalCooler);
             var tileService = bootstrap?.TileService;
             var hasUnpaperedOpenDoor = tileService != null && boundaryCells.Any(cell =>
                 tileService.IsDoorOpen(cell) &&
@@ -666,6 +676,14 @@ namespace Nyangbingo.World
         {
             var insulationMultiplier = CalculateStrawInsulationRecoveryMultiplier(
                 attachedStrawPieces, strawBonusPerPiece);
+            return CalculateSealedRecoveryMultiplier(
+                Mathf.Clamp01(Mathf.Max(0f, insulationMultiplier - 1f)), hasIceCrystalCooler);
+        }
+
+        public static float CalculateSealedRecoveryMultiplier(
+            float insulationPanelBonus, bool hasIceCrystalCooler)
+        {
+            var insulationMultiplier = 1f + Mathf.Max(0f, insulationPanelBonus);
             return insulationMultiplier * (hasIceCrystalCooler ? 2f : 1f);
         }
 
@@ -677,6 +695,29 @@ namespace Nyangbingo.World
                 float.IsInfinity(sealedRecoveryMultiplier))
                 return 0f;
             return hasUnpaperedOpenDoor ? 0f : sealedRecoveryMultiplier;
+        }
+
+        public float ResolveJukbuinRegenMultiplier(Vector2 playerPosition)
+        {
+            if (!IsFinite(playerPosition.x) || !IsFinite(playerPosition.y)) return 1f;
+            Vector2? bedPosition = null;
+            foreach (var entry in byObjectId.Values)
+            {
+                if (entry.Record.definitionId != NestBedDefinitionId) continue;
+                if ((entry.Record.position - playerPosition).sqrMagnitude > JukbuinNestRadiusSquared)
+                    continue;
+                bedPosition = entry.Record.position;
+                break;
+            }
+            if (!bedPosition.HasValue) return 1f;
+            var hasJukbuin = byObjectId.Values.Any(entry =>
+                entry.Record.definitionId == JukbuinDefinitionId &&
+                (entry.Record.position - bedPosition.Value).sqrMagnitude <= JukbuinNestRadiusSquared);
+            if (!hasJukbuin) return 1f;
+            var definition = gameDataCatalog?.FindGlobal("jukbuin_regen_mult");
+            return definition != null && definition.TryGetFloat(out var multiplier) && multiplier > 0f
+                ? multiplier
+                : 1.5f;
         }
 
         public bool HasPlacedObjectWithin(string definitionId, Vector2 position, float radius)

@@ -11,12 +11,19 @@ namespace Nyangbingo.Crafting
         public RecipeDefinition Active => active;
         public float RemainingSeconds => remaining;
         public CraftingProcess(CraftingService crafting) { this.crafting = crafting; }
-        public bool TryStart(RecipeDefinition recipe, Nyangbingo.Core.CraftingStation station, RecipeBook book = null)
+        public bool TryStart(RecipeDefinition recipe, Nyangbingo.Core.CraftingStation station, RecipeBook book = null,
+            float durationMultiplier = 1f)
         {
             if (IsCrafting || recipe == null || recipe.DurationSeconds <= 0f || float.IsNaN(recipe.DurationSeconds) ||
                 float.IsInfinity(recipe.DurationSeconds) || !crafting.CanCraft(recipe, station, book)) return false;
             foreach (var ingredient in recipe.Ingredients) crafting.Inventory.TryRemove(ingredient.item.Id, ingredient.amount);
-            active = recipe; remaining = recipe.DurationSeconds; return true;
+            var multiplier = durationMultiplier <= 0f || float.IsNaN(durationMultiplier) ||
+                             float.IsInfinity(durationMultiplier)
+                ? 1f
+                : durationMultiplier;
+            active = recipe;
+            remaining = recipe.DurationSeconds * multiplier;
+            return true;
         }
         public bool Tick(float gameSeconds)
         {

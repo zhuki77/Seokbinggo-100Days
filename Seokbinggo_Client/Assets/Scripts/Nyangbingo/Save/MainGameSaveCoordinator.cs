@@ -197,6 +197,8 @@ namespace Nyangbingo.Save
             save.talismanHideRemaining = runtimeServices.Talismans?.HideRemaining ?? 0f;
             save.talismanFrostRemaining = runtimeServices.Talismans?.FrostRemaining ?? 0f;
             save.gimmickWeaponsGranted = runtimeServices.GimmickWeapons?.Export() ?? new List<string>();
+            save.artifactDailyUses = runtimeServices.ArtifactVerbs?.ExportDailyUses() ??
+                                     new List<ArtifactDailyUseRecord>();
             save.frostPendingCells = runtimeServices.FrostSpread?.ExportPendingCells() ?? new List<string>();
             save.coolingSources = environmentState.ExportCoolingSources();
             save.jangdokStorages = runtimeServices.JangdokStorage.Export();
@@ -478,6 +480,7 @@ namespace Nyangbingo.Save
                 !runtimeServices.HeatStage.Restore(save?.heatStage ?? 1)) return false;
 
             runtimeServices.GimmickWeapons?.Restore(save?.gimmickWeaponsGranted);
+            runtimeServices.ArtifactVerbs?.RestoreDailyUses(save?.artifactDailyUses);
             return true;
         }
 

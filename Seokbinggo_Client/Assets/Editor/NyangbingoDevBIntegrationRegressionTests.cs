@@ -1272,6 +1272,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 Mathf.Approximately(haetaeEffect, .5f),
             "An installed Haetae statue must halve fire damage in its eight-tile radius.");
         Require(MainGameTurretRuntime.TryGetPassiveCounterAuraConfiguration(
+                    MainGameTurretRuntime.DaebalItemId,
+                    out var daebalKind, out var daebalRadius, out var daebalEffect,
+                    out _, out _) &&
+                daebalKind == CounterAuraKind.Daebal &&
+                Mathf.Approximately(daebalRadius, 4f) &&
+                Mathf.Approximately(daebalEffect, .75f),
+            "An installed daebal must reduce daytime fire damage by 25% in a four-tile radius.");
+        Require(MainGameTurretRuntime.TryGetPassiveCounterAuraConfiguration(
                     MainGameTurretRuntime.BellRopeItemId,
                     out var bellKind, out var bellRadius, out _, out _, out var bellCooldown) &&
                 bellKind == CounterAuraKind.BellRope &&

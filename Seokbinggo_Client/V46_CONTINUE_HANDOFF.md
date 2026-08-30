@@ -41,25 +41,25 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 
 ## 2. Notion v46 대비 — 로컬 실측 갭 (2026-08-08)
 
-### 2-1. CSV 행수 (정본 문서 지도 vs `Assets/Data/CSV`)
+### 2-1. CSV 행수 (정본 문서 지도 vs `Assets/Data/CSV`, 2026-08-30 실측)
 
-| CSV | Notion v46 정본 | 로컬 실측(헤더 제외 대략) | 판정 |
-|-----|-----------------|---------------------------|------|
-| items.csv | 160 | 86 | ⬆️ 임포트 필요 |
-| crafting-tree.csv | 90 | 54 | ⬆️ |
-| bosses.csv | 10 | 4 | ⬆️ |
-| accessories.csv | 26 | *(파일 없음/미반영)* | ⬆️ |
-| globals.csv | 110~112 | 93 | ⬆️ |
-| modules.csv | 11 (석빙고 s1~s6 포함) | **11** (기존 5 + s1~s6 수동) | ✅ 임시 · kit zip 오면 대조 |
-| player-combat.csv | 18 | 7 | ⬆️ |
-| drops.csv | 17 | 9 | ⬆️ |
-| equipment.csv | 24 | 15 | ⬆️ |
-| night-waves.csv | 15 (v45 신설) | **15** (Notion 표로 재구성, 2026-08-08) | ✅ 임시 · kit zip 오면 대조 |
-| day-curve.csv | 30 | 30 | ✅ |
-| seal-whitelist.csv | 23 | 23 | ✅ |
-| yokai-stats.csv | 7 | 5 | ⬆️ 확인 |
+| CSV | Notion v46 정본 | 로컬 실측(헤더 제외) | 판정 |
+|-----|-----------------|----------------------|------|
+| items.csv | 160 | **163** | ✅ |
+| crafting-tree.csv | 90 | **90** | ✅ |
+| bosses.csv | 10 | **10** | ✅ |
+| accessories.csv | 26 | **26** | ✅ |
+| globals.csv | 110~112 | **253** | ✅ (v72 확장) |
+| modules.csv | 11 | **11** | ✅ |
+| player-combat.csv | 18 | **18** | ✅ |
+| drops.csv | 17 | **17** | ✅ |
+| equipment.csv | 44 | **44** | ✅ |
+| night-waves.csv | 15 | **15** | ✅ |
+| day-curve.csv | 30 | **30** | ✅ |
+| seal-whitelist.csv | 23 | **23** | ✅ |
+| yokai-stats.csv | 7 | **7** | ✅ |
 
-> 리포에 Notion이 말하는 `kit/data/` 폴더는 **없음**. Unity CSV는 `Seokbinggo_Client/Assets/Data/CSV/`만 존재.
+> 리포에 Notion `kit/data/` zip은 **없음**. 로컬 CSV는 v46 목표를 이미 충족. 검증: `Nyangbingo` → **Run V46 Data Completeness Tests**.
 
 ### 2-2. 모듈 20종 (명세서 ⑤)
 
@@ -67,10 +67,10 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 |------|------------|------|
 | `DayLight.intensityFor` / `assertInvariants` | A | ✅ `DayLight.cs` + Presentation 연동. globals `day_brightness_by_stage`·`heat_stage_period` |
 | `Seokbinggo.upgrade` (s1~s6) | A | ✅ `SeokbinggoUpgradeService` + Builtin/CSV materials. ice_core E 승급 |
-| `Insulation.total` (3티어 합산) | A | ✅ `InsulationPanels.Total` (상한 6·`insul_straw_bonus`). 체온 런타임 합산 배선은 후속 |
-| `Armor.effectiveDamage` (min 1) | A | 전투 경로 존재 가능 — globals `armor_def_by_tier` 미확인 |
-| `Furniture.applyModifier` (죽부인·대발) | A | 죽부인은 냥잠 배율만; **대발·반경 가구 효과 미흡** |
-| `Boss.dodgePhase` | A | 미확인/미완 |
+| `Insulation.total` (3티어 합산) | A | ✅ `InsulationPanels` + 밀폐 체온 회복 배선 |
+| `Armor.effectiveDamage` (min 1) | A | ✅ `Health.ApplyDamage` Direct 경로 min 1 |
+| `Furniture.applyModifier` (죽부인·대발) | A | ✅ 죽부인 HP 재생 ×1.5 · 대발 낮 화염 −25% 오라 |
+| `Boss.dodgePhase` | A | ✅ `BossDodgeRules` + `BossCombatController` 오프닝 딜 불가 |
 | `Yokai.clubCrack` | A | 기존 벽 DPS 경로 있을 수 있음 — v46 수치 재검증 필요 |
 | `Turret.canPlace` (슬롯=석빙고 단계) | A | ✅ Stage 캡 + `turret_damage_slot_cap`(3) |
 | `WaveNight.*` (조합·큰밤·파도·배율) | B | ✅ P1 |
@@ -92,14 +92,14 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 
 | 순번 | ID | 작업 | 상태 | 비고 |
 |------|-----|------|------|------|
-| 0 | **P0** | `kit/data` 21종 CSV 전량 → `Assets/Data/CSV` 재임포트 + SO/매니페스트 | ⏸ **보류** | zip 없이 진행. 나중에 전량 덮어쓰기 |
+| 0 | **P0** | `kit/data` 21종 CSV 전량 → `Assets/Data/CSV` 재임포트 + SO/매니페스트 | ✅ **로컬 충족** | kit zip 오면 대조·병합만 |
 | 0a | P0a | `night-waves.csv` 15행 + WaveNight globals 키 | ✅ 착수 | Notion v45 표로 재구성. 전량 kit와 합치면 덮어쓰기 |
 | 0b | P0b | `WaveNightRules` 순수 규칙 + Dev B 계약 | ✅ 착수 | 스폰 런타임 배선은 P1 |
 | 1 | **P1** | Encounter에 WaveNight 배선 (빈 슬롯만·HP-only·큰밤) | ✅ kit 없이 착수 | day≥31 · CSV 없으면 Builtin 15행 |
 | 2 | **P2** | 석빙고 s1~s6 + `Smithy.isUnlocked` + `turret_slot_cap` | ✅ 착수 | Builtin materials + CSV 수동 행. kit zip 오면 modules 덮어쓰기 |
 | 3 | **P3** | `DayLight.intensityFor` + `assertInvariants` | ✅ | Presentation 배선. `Nyangbingo/Run DayLight Regression Tests` |
 | 4 | **P4** | FrostSpread / Bedrock / EvolutionCraft / GimmickWeapon | ✅ | `Nyangbingo/Run P4 Regression Tests`. 기믹 아이템 CSV는 P0 |
-| 5 | **P5** | 열린 판단 ①~③ (아티팩트 스키마·AccessoryTwo·T4~T6 세트) | ✅ | `Nyangbingo/Run P5 Regression Tests`. 동사 **효과 구현**은 후속 |
+| 5 | **P5** | 열린 판단 ①~③ (아티팩트 스키마·AccessoryTwo·T4~T6 세트) | ✅ | `Nyangbingo/Run P5 Regression Tests`. **동사 런타임** `ArtifactVerbRuntime` 배선 완료(핵심 8종) |
 
 하드코딩 금지 4곳(명세서): 파도 108초(`wave_advance_sec`) · 방어 min1 · 터렛 슬롯 상한 · 낮 밝기 곡선 → **전부 globals**.
 
@@ -113,6 +113,7 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 ## 4. Unity 체크리스트 (지금 당장)
 
 ### 회귀
+- [ ] Nyangbingo → **Run V46 Data Completeness Tests** → Console `passed`
 - [ ] Nyangbingo → Run Dev B Integration Regression Tests → `27/27`
 - [ ] Nyangbingo → Run DayLight Regression Tests → Console `passed`
 - [ ] Nyangbingo → **Run P4 Regression Tests** → Console `passed`
@@ -123,7 +124,7 @@ Notion **v46 = 100일 정식판 개발 명세서**이고, 현재 로컬 `Assets/
 - [ ] `equipment.csv` 44행(갑옷 18+악세 6+아티팩트 20) · `accessories.csv` 26행
 - [ ] 장비 UI: 악세 1·2칸에 아티팩트/악세 장착
 - [ ] 한파 3피스 장착 시 체온 −40%·화염 −45% (StatSheet)
-- [ ] (후속) ArtifactEffect 20종 Apply 구현 · 채널 SO 등록
+- [ ] (후속) 나머지 아티팩트 동사(슬라이딩·삼키기 탈출·광맥 하이라이트 등) 전투/이동 훅
 
 ### P4 플레이 스모크
 - [ ] 이무기 격퇴 → `FrostSpread.AltarClears` 증가(세이브에 `altarClears` 반영)

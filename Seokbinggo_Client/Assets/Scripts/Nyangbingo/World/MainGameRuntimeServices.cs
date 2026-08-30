@@ -65,6 +65,7 @@ namespace Nyangbingo.World
         public SeokbinggoUpgradeService Seokbinggo { get; private set; }
         public FrostSpreadService FrostSpread { get; private set; }
         public GimmickWeaponProgress GimmickWeapons { get; private set; }
+        public ArtifactVerbRuntime ArtifactVerbs { get; private set; }
         public int RegisteredConsumerCount => registered.Count;
         public bool IsInitialized { get; private set; }
         private EquipmentAcquisitionBinding equipmentAcquisitionBinding;
@@ -234,9 +235,11 @@ namespace Nyangbingo.World
                 return false;
             }
             GimmickWeapons = new GimmickWeaponProgress(gameDataCatalog.FindItem);
+            ArtifactVerbs = new ArtifactVerbRuntime();
             FrostSpread.FirstFrostRevealed += HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd += HandleGimmickBaekjungSurvived;
             GameEvents.OnBossDefeated += HandleBossDefeated;
+            GameEvents.OnDayStart += HandleArtifactDayStart;
 
             Register(CraftingProcess);
             Register(UtilityService);
@@ -303,6 +306,10 @@ namespace Nyangbingo.World
             }
             PlayerHealthRecovery = new PlayerHealthRecoveryService(
                 PlayerInventory, health, regenDelay, regenRate, Mathf.RoundToInt(catnipHeal), mushroomHealing);
+            PlayerHealthRecovery.SetRegenMultiplierProvider(() =>
+                environmentState != null
+                    ? environmentState.ResolveJukbuinRegenMultiplier(health.transform.position)
+                    : 1f);
             DayHeatDamage = new DayHeatDamageService(
                 health, health.transform, bootstrap.TimeService, bootstrap.Session, HeatStage);
             if (Register(PlayerHealthRecovery) && Register(DayHeatDamage)) return true;
@@ -357,6 +364,13 @@ namespace Nyangbingo.World
                 MagpieCompanion = new MagpieCompanionRuntime(
                     gameDataCatalog, PlayerInventory, environmentState, worldDrops,
                     player, bootstrap.TimeService, bootstrap.SealSystem, characterArtCatalog);
+                MagpieCompanion.ConfigureArtifactRadius(() =>
+                {
+                    if (ArtifactVerbs == null || EquipmentSystem == null) return 1f;
+                    var context = ArtifactActivationContextFactory.Build(
+                        bootstrap.TileService, player.position, bootstrap.TimeService);
+                    return ArtifactVerbs.ResolveMagpieRadiusMultiplier(EquipmentSystem, context);
+                });
                 if (Register(MagpieCompanion)) return true;
                 MagpieCompanion.Dispose();
                 MagpieCompanion = null;
@@ -392,6 +406,7 @@ namespace Nyangbingo.World
                 FrostSpread.FirstFrostRevealed -= HandleFirstFrostRevealed;
             GameEvents.OnBaekjungEnd -= HandleGimmickBaekjungSurvived;
             GameEvents.OnBossDefeated -= HandleBossDefeated;
+            GameEvents.OnDayStart -= HandleArtifactDayStart;
             GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
             if (bootstrap != null && worldLoadedHooked)
             {
@@ -426,6 +441,7 @@ namespace Nyangbingo.World
             HeatStage = null;
             EquipmentColdPenalty = null;
             GimmickWeapons = null;
+            ArtifactVerbs = null;
             equipmentAcquisitionBinding?.Dispose();
             equipmentAcquisitionBinding = null;
             if (bootstrap?.TickDriver != null)
@@ -449,6 +465,8 @@ namespace Nyangbingo.World
         }
 
         private void HandleGimmickBaekjungSurvived() => GimmickWeapons?.NotifyBaekjungSurvived();
+
+        private void HandleArtifactDayStart() => ArtifactVerbs?.ResetDailyUses();
 
         private void HandleBossDefeated(BossDefinition definition)
         {

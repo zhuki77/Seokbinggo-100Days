@@ -248,6 +248,13 @@ namespace Nyangbingo.Save
     public struct SmeltingOutputRecord { public string stationId; public string itemId; public int amount; }
 
     [Serializable]
+    public struct ArtifactDailyUseRecord
+    {
+        public string equipmentId;
+        public int count;
+    }
+
+    [Serializable]
     public struct UtilityCooldownRecord { public string kind; public float remainingGameSeconds; }
 
     [Serializable]
@@ -303,6 +310,7 @@ namespace Nyangbingo.Save
         public float talismanHideRemaining;
         public float talismanFrostRemaining;
         public List<string> gimmickWeaponsGranted = new List<string>();
+        public List<ArtifactDailyUseRecord> artifactDailyUses = new List<ArtifactDailyUseRecord>();
         public List<string> frostPendingCells = new List<string>();
         /// <summary>진단·표시용 잔존. 승리 판정에는 쓰지 않는다(win_condition=final_boss_kill).</summary>
         public float sealPct;
@@ -365,6 +373,7 @@ namespace Nyangbingo.Save
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
             if (gimmickWeaponsGranted == null) gimmickWeaponsGranted = new List<string>();
+            if (artifactDailyUses == null) artifactDailyUses = new List<ArtifactDailyUseRecord>();
             if (frostClearedBossIds == null) frostClearedBossIds = new List<string>();
             if (frostPendingCells == null) frostPendingCells = new List<string>();
             if (bossRecords == null) bossRecords = new List<BossRecord>();

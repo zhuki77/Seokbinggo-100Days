@@ -82,6 +82,7 @@ namespace Nyangbingo.World
         public const string HaetaeStatueItemId = "haetae_statue";
         public const string BellRopeItemId = "bell_rope";
         public const string IronBellRopeItemId = "iron_bell_rope";
+        public const string DaebalItemId = "daebal";
         private const string FuelItemId = "coal";
         private const string FrostLanternFuelItemId = "frost_essence";
         private const string FrostLanternFuelSecondsKey = "frost_lantern_fuel_sec";
@@ -804,7 +805,10 @@ namespace Nyangbingo.World
             }
             RemoveLantern(record.objectId);
             RemovePassiveCounterAura(record.objectId);
-            ShowMessage($"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.");
+            var fullSalvage = AllowsFullSalvageRecovery();
+            ShowMessage(fullSalvage
+                ? $"{item.DisplayName} 회수 완료."
+                : $"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.");
             Debug.Log($"[Nyangbingo] Product placeable recovered: id={record.objectId}, " +
                       $"definition={record.definitionId}.");
             BuildStateChanged?.Invoke();
@@ -974,6 +978,11 @@ namespace Nyangbingo.World
                     radius = 8f;
                     effect = .5f;
                     return true;
+                case DaebalItemId:
+                    kind = CounterAuraKind.Daebal;
+                    radius = FindGlobalFloat("daebal_radius", 4f);
+                    effect = 1f - FindGlobalFloat("daebal_flame_cut", .25f);
+                    return true;
                 case BellRopeItemId:
                 case IronBellRopeItemId:
                     kind = CounterAuraKind.BellRope;
@@ -1003,6 +1012,19 @@ namespace Nyangbingo.World
                 ? record.remainingGameSeconds
                 : record.fuel * FuelSecondsPerUnit;
             return entry.RestoreFuel(seconds);
+        }
+
+        private bool AllowsFullSalvageRecovery()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                playerController == null)
+                return false;
+            var timeService = FindAnyObjectByType<DayNightService>();
+            var tileService = FindAnyObjectByType<MainGameBootstrap>()?.TileService;
+            var context = ArtifactActivationContextFactory.Build(
+                tileService, playerController.transform.position, timeService);
+            return runtimeServices.ArtifactVerbs.AllowsFullSalvage(
+                runtimeServices.EquipmentSystem, context);
         }
 
         private void RemoveLantern(string objectId)

@@ -197,7 +197,8 @@ namespace Nyangbingo.World
             placedObjectInteractions = GetComponentInParent<MainGameTurretRuntime>();
             if (placedObjectInteractions != null)
                 playerCounterAuraSensor = new CounterAuraSensor(
-                    transform, placedObjectInteractions.ActiveCounterAuras);
+                    transform, placedObjectInteractions.ActiveCounterAuras,
+                    dayNight: bootstrap?.TimeService);
             worldDecorationRenderer = GetComponentInParent<MainGameWorldDecorationRenderer>();
             tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             raidTarget = GetComponent<MainGameRaidTarget>();
@@ -356,6 +357,8 @@ namespace Nyangbingo.World
             health.Died += HandleDied;
             runtimeServices.PlayerTemperature.ReachedMaximum += HandleTemperatureMaximum;
             runtimeServices.DeathTearPouches.Changed += RefreshTearPouchVisuals;
+            GameEvents.OnDayStart += HandleArtifactContextChanged;
+            GameEvents.OnNightStart += HandleArtifactContextChanged;
             wireSnare = new WireSnareAbility(attack);
             RefreshEquipmentStats();
             RefreshCombatProfile();
@@ -464,7 +467,8 @@ namespace Nyangbingo.World
                 var handled = TryUseSelectedIceShard() ||
                       TryUseSelectedTalisman() ||
                       TryUseSelectedHealingItem() ||
-                      TryInteractClosestWorldTarget(includePlacedObjects: false);
+                      TryInteractClosestWorldTarget(includePlacedObjects: false) ||
+                      TryOpenRemoteJangdok();
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
                         "가까이 있는 상호작용 대상을 찾지 못했습니다.");
@@ -1758,12 +1762,31 @@ namespace Nyangbingo.World
 
         private void HandleRoomTemperatureChanged(int _) => RefreshEquipmentStats();
 
+        private void HandleArtifactContextChanged() => RefreshEquipmentStats();
+
         private void RefreshPlayerFireDamageMultiplier()
         {
             if (health == null) return;
             var auraMultiplier = playerCounterAuraSensor?.FireDamageMultiplier ?? 1f;
+            var artifactFire = runtimeServices?.ArtifactVerbs?.ResolveFireDamageModifier(
+                runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? 0f;
             health.SetFireDamageMultiplier(CalculateFireDamageMultiplier(
-                statSheet.FireDamageModifier, auraMultiplier));
+                statSheet.FireDamageModifier + artifactFire, auraMultiplier));
+        }
+
+        private ArtifactActivationContext BuildArtifactContext() =>
+            ArtifactActivationContextFactory.Build(
+                bootstrap?.TileService, transform.position, bootstrap?.TimeService);
+
+        private bool TryOpenRemoteJangdok()
+        {
+            if (runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null ||
+                storageUi == null || environmentState == null)
+                return false;
+            if (!runtimeServices.ArtifactVerbs.AllowsRemoteJangdok(
+                    runtimeServices.EquipmentSystem, BuildArtifactContext()))
+                return false;
+            return storageUi.TryOpenRemoteJangdok(environmentState);
         }
 
         public static float CalculateFireDamageMultiplier(
@@ -2244,7 +2267,9 @@ namespace Nyangbingo.World
 
         private void RefreshPlayerVisionLight()
         {
-            var bonus = CalculatePersonalVisionRadius(0f, statSheet.VisionRadiusBonus);
+            var artifactVision = runtimeServices?.ArtifactVerbs?.ResolveDeepVisionBonusTiles(
+                runtimeServices.EquipmentSystem, BuildArtifactContext()) ?? 0f;
+            var bonus = CalculatePersonalVisionRadius(0f, statSheet.VisionRadiusBonus + artifactVision);
             if (personalVisionLight != null)
             {
                 personalVisionLight.pointLightInnerRadius = bonus * .35f;
@@ -2284,6 +2309,8 @@ namespace Nyangbingo.World
             }
             if (runtimeServices?.DeathTearPouches != null)
                 runtimeServices.DeathTearPouches.Changed -= RefreshTearPouchVisuals;
+            GameEvents.OnDayStart -= HandleArtifactContextChanged;
+            GameEvents.OnNightStart -= HandleArtifactContextChanged;
             foreach (var visual in tearPouchVisuals.Values)
                 if (visual != null) Destroy(visual);
             tearPouchVisuals.Clear();

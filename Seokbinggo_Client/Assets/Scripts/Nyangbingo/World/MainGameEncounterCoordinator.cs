@@ -407,7 +407,7 @@ namespace Nyangbingo.World
             bossObject.AddComponent<RuntimeWorldDamagePopup>();
             health.ConfigureForRuntime(definition.HitPoints);
             var combat = bossObject.AddComponent<BossCombatController>();
-            if (!combat.ConfigureForRuntime(definition, raidTarget) || !runtimeServices.Register(combat))
+            if (!combat.ConfigureForRuntime(definition, raidTarget, gameDataCatalog) || !runtimeServices.Register(combat))
             {
                 Destroy(bossObject);
                 return null;

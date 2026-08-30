@@ -1,4 +1,5 @@
 using System;
+using Nyangbingo.Bosses;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
@@ -84,6 +85,25 @@ public static class NyangbingoP5RegressionTests
             sheet.Recalculate(armor);
             Require(Mathf.Approximately(sheet.TemperatureRiseModifier, -0.55f),
                 "ice heart + hanpa reaches -0.55 floor");
+
+            var verbs = new ArtifactVerbRuntime();
+            var gearForVerbs = new EquipmentSystem();
+            var oldKey = EquipmentDefinition.CreateRuntime("old_key", EquipmentSlot.AccessoryOne, true,
+                artifactVerbId: "OpenStorageAnywhere", usageLimit: 3);
+            Require(gearForVerbs.TryEquipAccessory(oldKey, 0), "old_key equip");
+            var context = new ArtifactActivationContext(false, true, true);
+            Require(verbs.AllowsRemoteJangdok(gearForVerbs, context), "remote jangdok first use");
+            Require(verbs.DailyUseCount("old_key") == 1, "old_key daily use tracked");
+            verbs.ResetDailyUses();
+            Require(verbs.DailyUseCount("old_key") == 0, "artifact daily reset");
+
+            var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+                "Assets/Data/SO/GameDataCatalog.asset");
+            Require(catalog != null && catalog.Bosses.Count >= 1, "catalog bosses loaded");
+            Require(BossDodgeRules.TryGetOpeningDodgeSeconds(
+                        catalog, catalog.Bosses[0].Id, out var dodgeSeconds) &&
+                    Mathf.Approximately(dodgeSeconds, 20f),
+                "first boss opening dodge is 20 seconds");
 
             Debug.Log("[Nyangbingo] P5 regression tests passed.");
         }
