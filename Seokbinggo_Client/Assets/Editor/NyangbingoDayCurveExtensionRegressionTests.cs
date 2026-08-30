@@ -1,5 +1,6 @@
 using System.Linq;
 using Nyangbingo.Bosses;
+using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.UI;
 using Nyangbingo.World;
@@ -108,8 +109,21 @@ public static class NyangbingoDayCurveExtensionRegressionTests
                 catalog.FindBoss("yeongno").ForcedDay == 90 &&
                 catalog.FindBoss("gangcheol_perfect").ForcedDay == 100 &&
                 catalog.FindBoss("jigwi").ForcedDay == 0 &&
-                catalog.FindBoss("samdugumi").ForcedDay == 0,
-            "day-curve-ext late anchors must map to forced-invasion bosses without summon items");
+                catalog.FindBoss("samdugumi").ForcedDay == 0 &&
+                catalog.FindBoss("eop_guryeongi").ForcedDay == 0,
+            "day-curve-ext must map 50/60/90/100 forced invasions and keep summon bosses at forcedDay=0");
+        var samdugumi = catalog.FindBoss("samdugumi");
+        var eopGuryeongi = catalog.FindBoss("eop_guryeongi");
+        Require(samdugumi != null && eopGuryeongi != null &&
+                samdugumi.SummonItem.Id == "samdugumi_summon" &&
+                eopGuryeongi.SummonItem.Id == "eop_summon" &&
+                samdugumi.SummonStation == CraftingStation.Smithy &&
+                eopGuryeongi.SummonStation == CraftingStation.Smithy &&
+                !samdugumi.RequiresDeepAltar && !eopGuryeongi.RequiresDeepAltar &&
+                samdugumi.RecommendedDay == "70" && eopGuryeongi.RecommendedDay == "80" &&
+                catalog.FindRecipe("samdugumi_summon") != null &&
+                catalog.FindRecipe("eop_summon") != null,
+            "day 70/80 summon bosses must expose smithy summon item chains");
         var clockRoot = new GameObject("DayCurveExtensionForcedBossClock");
         try
         {
@@ -121,6 +135,14 @@ public static class NyangbingoDayCurveExtensionRegressionTests
                 Require(clock.RestoreTimeState(day, 900f, true) &&
                         BossEncounterRules.ShouldStartForcedEncounter(boss, clock, false),
                     $"day {day} forced invasion must trigger on the anchor night");
+            }
+
+            foreach (var pair in new[] { ("samdugumi", 70), ("eop_guryeongi", 80) })
+            {
+                var boss = catalog.FindBoss(pair.Item1);
+                Require(clock.RestoreTimeState(pair.Item2, 900f, true) &&
+                        !BossEncounterRules.ShouldStartForcedEncounter(boss, clock, false),
+                    $"day {pair.Item2} summon boss must not auto-start as forced invasion");
             }
         }
         finally
