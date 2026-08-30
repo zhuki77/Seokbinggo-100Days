@@ -233,6 +233,10 @@ namespace Nyangbingo.Bosses
             }
             if (TryBeginImugiPhaseAttack()) return;
 
+            var sangunBehaviour = GetComponent<BossSangunBehaviour>();
+            if (sangunBehaviour != null && sangunBehaviour.TryOverrideCombatTick(deltaGameSeconds))
+                return;
+
             specialCooldownRemaining = Mathf.Max(0f, specialCooldownRemaining - deltaGameSeconds);
             var targetOffset = (Vector2)(targetTransform.position - transform.position);
             if (!IsFinite(targetOffset)) return;
@@ -1049,6 +1053,8 @@ namespace Nyangbingo.Bosses
             characterAnimator?.SetFacing(ResolveFacingDirection(direction));
             characterAnimator?.SetMoving(true);
         }
+
+        public void NotifyExternalMovement(Vector2 direction) => SetAnimationMovement(direction);
 
         private Vector2 ResolveFacingDirection(Vector2 movement)
         {

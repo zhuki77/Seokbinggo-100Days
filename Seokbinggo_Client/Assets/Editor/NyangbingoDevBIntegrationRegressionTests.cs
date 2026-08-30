@@ -26,7 +26,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         try
         {
             RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "51/51 tests");
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "52/52 tests");
         }
         catch (System.Exception exception)
         {
@@ -56,6 +56,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestImugiPhaseCombatContract();
         TestSamdugumiCounterCombatContract();
         TestEopGuryeongiModuleShutdownContract();
+        TestSangunRetreatCombatContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
         TestBossPausedYokaiVisibilityContract();
@@ -911,6 +912,60 @@ public static class NyangbingoDevBIntegrationRegressionTests
         }
         finally
         {
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+    }
+
+    private static void TestSangunRetreatCombatContract()
+    {
+        var sangunSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossSangunBehaviour.cs");
+        var combatSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossCombatController.cs");
+        var coordinatorSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(sangunSource.Contains("TryOverrideCombatTick") &&
+                sangunSource.Contains("IsRetreating") &&
+                combatSource.Contains("BossSangunBehaviour") &&
+                coordinatorSource.Contains("BossKind.Sangun"),
+            "Sangun must retreat when confronted and override default boss chase movement.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "sangun", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 80f),
+            "Sangun opening dodge must resolve to 80 seconds from boss_dodge_sec_curve.");
+
+        var bossObject = new GameObject("SangunRetreatCombatContract");
+        var playerObject = new GameObject("SangunRetreatCombatContractPlayer");
+        try
+        {
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(100);
+            bossObject.AddComponent<WorldMobPhysicsBody>();
+            var combat = bossObject.AddComponent<BossCombatController>();
+            var sangun = bossObject.AddComponent<BossSangunBehaviour>();
+            playerObject.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            playerObject.transform.position = new Vector3(3f, 0f, 0f);
+            bossObject.transform.position = Vector3.zero;
+            sangun.Configure(playerObject.transform);
+
+            playerObject.GetComponent<Rigidbody2D>().linearVelocity = new Vector2(4f, 0f);
+            sangun.Tick(.01f);
+            Require(!sangun.IsRetreating,
+                "Sangun must chase when the player flees instead of confronting.");
+
+            playerObject.GetComponent<Rigidbody2D>().linearVelocity = Vector2.zero;
+            sangun.Tick(.01f);
+            Require(sangun.TryOverrideCombatTick(.1f) &&
+                    sangun.IsRetreating &&
+                    Mathf.Approximately(bossHealth.DamageTakenMultiplier, 0f),
+                "Sangun must retreat from a confronting player and become immune to damage.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(playerObject);
             UnityEngine.Object.DestroyImmediate(bossObject);
         }
     }

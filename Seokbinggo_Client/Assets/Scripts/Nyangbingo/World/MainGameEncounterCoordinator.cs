@@ -645,6 +645,16 @@ namespace Nyangbingo.World
                     return null;
                 }
             }
+            else if (definition.Kind == BossKind.Sangun)
+            {
+                var sangun = bossObject.AddComponent<BossSangunBehaviour>();
+                sangun.Configure(raidTarget.transform);
+                if (!runtimeServices.Register(sangun))
+                {
+                    Destroy(bossObject);
+                    return null;
+                }
+            }
             activeBossCombat = combat;
             activeBossIsForcedInvasion = forcedInvasion;
             forcedBossSpawnPending = forcedInvasion;
