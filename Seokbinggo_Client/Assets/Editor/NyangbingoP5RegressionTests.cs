@@ -136,9 +136,9 @@ public static class NyangbingoP5RegressionTests
                 "Assets/Data/SO/GameDataCatalog.asset");
             Require(catalog != null && catalog.Bosses.Count >= 1, "catalog bosses loaded");
             Require(BossDodgeRules.TryGetOpeningDodgeSeconds(
-                        catalog, catalog.Bosses[0].Id, out var dodgeSeconds) &&
+                        catalog, "king_dokkaebi", out var dodgeSeconds) &&
                     Mathf.Approximately(dodgeSeconds, 20f),
-                "first boss opening dodge is 20 seconds");
+                "king_dokkaebi opening dodge is 20 seconds");
 
             Debug.Log("[Nyangbingo] P5 regression tests passed.");
         }
