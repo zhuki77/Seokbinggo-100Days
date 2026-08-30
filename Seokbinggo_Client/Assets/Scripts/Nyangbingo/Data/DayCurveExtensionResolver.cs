@@ -43,7 +43,10 @@ namespace Nyangbingo.Data
                 anchor.SpawnComposition,
                 anchor.SpawnMultiplier,
                 anchor.DropMultiplier,
-                anchor.EventId);
+                anchor.EventId,
+                anchor.VariantMultiplier,
+                anchor.HeatSeepPercent,
+                anchor.IceMeltDpsPerDay);
             ResolvedByDay[day] = resolved;
             return resolved;
         }

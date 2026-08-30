@@ -32,3 +32,6 @@ MonoBehaviour:
   spawnMultiplier: 1
   dropMultiplier: 1
   eventId: 
+  variantMultiplier: 2.5
+  heatSeepPercent: 90
+  iceMeltDpsPerDay: 0.15

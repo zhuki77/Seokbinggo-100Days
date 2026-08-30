@@ -146,7 +146,7 @@ namespace Nyangbingo.Yokai
         }
         public void ConfigureForRuntime(YokaiDefinition value, IYokaiTarget targetValue,
             IYokaiCounterSource counters = null, YokaiSpawnTrack instanceSpawnTrack = YokaiSpawnTrack.Raid,
-            bool gateByAggroRadius = false, bool startEngaged = true)
+            bool gateByAggroRadius = false, bool startEngaged = true, int? hitPointsOverride = null)
         {
             definition = value;
             target = targetValue;
@@ -178,7 +178,8 @@ namespace Nyangbingo.Yokai
             infiltrationRecorded = false;
             if (health != null)
             {
-                if (definition != null) health.ConfigureForRuntime(definition.HitPoints);
+                if (definition != null)
+                    health.ConfigureForRuntime(hitPointsOverride ?? definition.HitPoints);
                 health.SetDamageTakenMultiplier(1f);
             }
             ResetGameSecondsSample();

@@ -661,15 +661,20 @@ namespace Nyangbingo.World
             var hasIceCrystalCooler = byObjectId.Values.Any(entry =>
                 entry.Record.definitionId == CoolingSourceRuntime.IceCrystalCoolerId &&
                 interiorCells.Contains(entry.Cell));
-            var multiplier = CalculateSealedRecoveryMultiplier(
-                panelBonus, hasIceCrystalCooler);
             var tileService = bootstrap?.TileService;
             var hasUnpaperedOpenDoor = tileService != null && boundaryCells.Any(cell =>
                 tileService.IsDoorOpen(cell) &&
                 (!byCell.TryGetValue(cell, out var attachment) ||
                  attachment.Record.definitionId != DoorPaperDefinitionId));
-            return CalculateDoorAdjustedRecoveryMultiplier(
-                multiplier, hasUnpaperedOpenDoor);
+            var multiplier = CalculateDoorAdjustedRecoveryMultiplier(
+                CalculateSealedRecoveryMultiplier(panelBonus, hasIceCrystalCooler),
+                hasUnpaperedOpenDoor);
+            var day = bootstrap?.TimeService != null ? bootstrap.TimeService.Day : 0;
+            var dayCurve = day > 0 && gameDataCatalog != null
+                ? gameDataCatalog.FindDayCurve(day)
+                : null;
+            return DayCurveCombatRules.ApplyHeatSeepPenalty(
+                multiplier, gameDataCatalog, dayCurve);
         }
 
         public float ResolveCoolerRadiusTilesForRecovery(Vector2 position) =>

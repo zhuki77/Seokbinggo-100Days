@@ -1266,10 +1266,13 @@ namespace Nyangbingo.World
                 : targetCounters;
             var selectedTarget = ResolveSpawnTarget(position, out var usesAggroRadius);
             var suppressFirstStrike = SuppressesSurfaceFirstStrike();
+            var hitPoints = DayCurveCombatRules.ResolveYokaiHitPoints(
+                gameDataCatalog, currentDayCurve, definition.HitPoints);
             brain.ConfigureForRuntime(
                 definition, selectedTarget, counters, instanceSpawnTrack,
                 gateByAggroRadius: usesAggroRadius || suppressFirstStrike,
-                startEngaged: !usesAggroRadius && !suppressFirstStrike);
+                startEngaged: !usesAggroRadius && !suppressFirstStrike,
+                hitPointsOverride: hitPoints);
             if (definition.Kind == YokaiKind.Gangcheori)
             {
                 var breath = yokaiObject.AddComponent<GangcheoriBreathController>();
