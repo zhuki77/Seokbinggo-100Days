@@ -33,6 +33,7 @@ public static class NyangbingoV72ExpansionRegressionTests
         ValidateBosses(catalog);
         ValidateExpansionGate(catalog);
         ValidateDemoContract();
+        ValidateDayCurveExtensions(catalog);
 
         Debug.Log("[Nyangbingo] v72 expansion regression passed: catalog 168/95/253/44/18/10, " +
                   "boundary ice rock hardness 2, 31-day scope-B gate, ten surface bosses, " +
@@ -193,6 +194,16 @@ public static class NyangbingoV72ExpansionRegressionTests
                 !GameShellController.ShouldEndDemoAtDay(31) &&
                 !GameShellController.ShouldEndDemoAtDay(100),
             "Date alone must not open the result screen on day 31 or day 100.");
+    }
+
+    private static void ValidateDayCurveExtensions(GameDataCatalog catalog)
+    {
+        DayCurveExtensionResolver.ClearCache();
+        Require(catalog.DayCurveExtensions.Count == 15, "day-curve-ext anchor count mismatch");
+        var day31 = catalog.FindDayCurve(31);
+        var day100 = catalog.FindDayCurve(100);
+        Require(day31 != null && day100 != null && day31.NightYokaiCount == 8,
+            "post-demo nights must resolve extension day curves");
     }
 
     private static int ReadInt(GameDataCatalog catalog, string key)

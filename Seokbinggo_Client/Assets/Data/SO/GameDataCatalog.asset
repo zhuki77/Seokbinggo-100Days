@@ -389,6 +389,22 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b60a43bb5183df4489e2d4f30389fcad, type: 2}
   - {fileID: 11400000, guid: 4440a094580176f4592c10ea474d4c2d, type: 2}
   - {fileID: 11400000, guid: e2c9cc7d5b03ad648b2c0f0c5597652f, type: 2}
+  dayCurveExtensions:
+  - {fileID: 11400000, guid: 580080d07ef14e93bec304583056320c, type: 2}
+  - {fileID: 11400000, guid: b74eb8e54447413e842e52e263fe9cf2, type: 2}
+  - {fileID: 11400000, guid: 1324bc1ac01443af8d745464a99fc8ea, type: 2}
+  - {fileID: 11400000, guid: 380f5c047a564e02addd36a293113a7f, type: 2}
+  - {fileID: 11400000, guid: 17e551db2e634b5abcac16a55fcd3fee, type: 2}
+  - {fileID: 11400000, guid: 95a81dfe4e62410bab7da645f186105b, type: 2}
+  - {fileID: 11400000, guid: 4156c3e2f28342ecb029a7e09417e0bb, type: 2}
+  - {fileID: 11400000, guid: 2bece9a6199b4f2a87fc6ed863f36316, type: 2}
+  - {fileID: 11400000, guid: bff129613b984418a60243a3c0ae5413, type: 2}
+  - {fileID: 11400000, guid: 6829a8b08d92496bb9e68963a504c2c4, type: 2}
+  - {fileID: 11400000, guid: 7d33e09bf14e4ce68238514213bf6776, type: 2}
+  - {fileID: 11400000, guid: dbccd8e87e0148e5b96a33463254fe45, type: 2}
+  - {fileID: 11400000, guid: 7d17d3bebc0844b29c2e0eeab15ce374, type: 2}
+  - {fileID: 11400000, guid: d8f68a9d099b4bcc9864c2c25753455d, type: 2}
+  - {fileID: 11400000, guid: a69eaa37e0f84632a1fb6b578f55c1b2, type: 2}
   globals:
   - {fileID: 11400000, guid: 0f6e15b815d1e4a4385b0cad52c93029, type: 2}
   - {fileID: 11400000, guid: 66fe1b00b0b1f67428849a63f2abb9c7, type: 2}

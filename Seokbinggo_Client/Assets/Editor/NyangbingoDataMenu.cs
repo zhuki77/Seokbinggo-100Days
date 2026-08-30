@@ -38,6 +38,7 @@ public static class NyangbingoDataMenu
         var sealWhitelist = LoadAssets<SealWhitelistDefinition>(rootDirectory + "/SealWhitelist");
         var idMigrations = LoadAssets<IdMigrationDefinition>(rootDirectory + "/IdMigrations");
         var dayCurves = LoadAssets<DayCurveDefinition>(rootDirectory + "/DayCurves");
+        var dayCurveExtensions = LoadAssets<DayCurveDefinition>(rootDirectory + "/DayCurvesExt");
         var globals = LoadAssets<GlobalDefinition>(rootDirectory + "/Globals");
         var smelting = LoadAssets<SmeltingDefinition>(rootDirectory + "/Smelting");
         var equipment = LoadAssets<EquipmentDefinition>(rootDirectory + "/Equipment");
@@ -61,6 +62,7 @@ public static class NyangbingoDataMenu
             !ValidateAssetIds(sealWhitelist, value => value.Element, "seal whitelist") ||
             !ValidateAssetIds(idMigrations, value => value.Key, "ID migrations") ||
             !ValidateAssetIds(dayCurves, value => value.Id, "day curves") ||
+            !ValidateAssetIds(dayCurveExtensions, value => value.Id, "day curve extensions") ||
             !ValidateAssetIds(globals, value => value.Key, "globals") ||
             !ValidateAssetIds(smelting, value => value.Id, "smelting") ||
             !ValidateAssetIds(equipment, value => value.Id, "equipment") ||
@@ -88,6 +90,7 @@ public static class NyangbingoDataMenu
         SetObjectReferences(serialized.FindProperty("sealWhitelist"), sealWhitelist);
         SetObjectReferences(serialized.FindProperty("idMigrations"), idMigrations);
         SetObjectReferences(serialized.FindProperty("dayCurves"), dayCurves);
+        SetObjectReferences(serialized.FindProperty("dayCurveExtensions"), dayCurveExtensions);
         SetObjectReferences(serialized.FindProperty("globals"), globals);
         SetObjectReferences(serialized.FindProperty("smelting"), smelting);
         SetObjectReferences(serialized.FindProperty("equipment"), equipment);
@@ -112,7 +115,7 @@ public static class NyangbingoDataMenu
                   $"{modules.Length} modules, {mineralTiers.Length} mineral tiers, {smelting.Length} smelting, " +
                   $"{sealWhitelist.Length} seal rules, " +
                   $"{idMigrations.Length} ID migrations, " +
-                  $"{dayCurves.Length} day curves, " +
+                  $"{dayCurves.Length} day curves, {dayCurveExtensions.Length} day curve extensions, " +
                   $"{globals.Length} globals, " +
                   $"{equipment.Length} equipment, {utilities.Length} utilities, " +
                   $"{combatProfiles.Length} combat profiles, " +

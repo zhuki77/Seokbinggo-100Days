@@ -61,5 +61,33 @@ namespace Nyangbingo.Data
                 if (composition[i].kind == kind) return Math.Max(0, composition[i].amount);
             return 0;
         }
+
+        public void Configure(
+            int valueDay,
+            int valueHeatStage,
+            float valueDayFireDamagePerSecond,
+            int valueNightYokaiCount,
+            float valueYokaiWallDamage,
+            float valuePaceSealPercent,
+            int valuePaceMineralTier,
+            int valueMaxActive,
+            DayCurveSpawnAmount[] valueSpawnComposition,
+            float valueSpawnMultiplier,
+            float valueDropMultiplier,
+            string valueEventId)
+        {
+            day = valueDay;
+            heatStage = valueHeatStage;
+            dayFireDamagePerSecond = valueDayFireDamagePerSecond;
+            nightYokaiCount = valueNightYokaiCount;
+            yokaiWallDamage = valueYokaiWallDamage;
+            paceSealPercent = valuePaceSealPercent;
+            paceMineralTier = valuePaceMineralTier;
+            maxActive = valueMaxActive;
+            spawnComposition = valueSpawnComposition ?? Array.Empty<DayCurveSpawnAmount>();
+            spawnMultiplier = valueSpawnMultiplier;
+            dropMultiplier = valueDropMultiplier;
+            eventId = valueEventId ?? string.Empty;
+        }
     }
 }

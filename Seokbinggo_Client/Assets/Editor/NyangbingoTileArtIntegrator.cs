@@ -176,6 +176,8 @@ namespace Nyangbingo.Editor
                 ["wind_chime"] = "wind_chime.aseprite",
                 ["saekdong_cushion"] = "saekdong_cushion.aseprite",
                 ["roof"] = "roof.aseprite",
+                ["jukbuin"] = "Assets/Art/Items/jukbuin.aseprite",
+                ["daebal"] = "Assets/Art/Items/daebal.aseprite",
                 // Placement preview and placed-object fallback reuse the same delivered background-wall tile.
                 ["wallpaper"] = "Assets/Art/Tiles/t_bg_dirt.aseprite"
             };

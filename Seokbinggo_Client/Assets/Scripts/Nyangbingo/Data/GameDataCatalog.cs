@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Nyangbingo.Data
@@ -14,6 +15,7 @@ namespace Nyangbingo.Data
         [SerializeField] private SealWhitelistDefinition[] sealWhitelist = Array.Empty<SealWhitelistDefinition>();
         [SerializeField] private IdMigrationDefinition[] idMigrations = Array.Empty<IdMigrationDefinition>();
         [SerializeField] private DayCurveDefinition[] dayCurves = Array.Empty<DayCurveDefinition>();
+        [SerializeField] private DayCurveDefinition[] dayCurveExtensions = Array.Empty<DayCurveDefinition>();
         [SerializeField] private GlobalDefinition[] globals = Array.Empty<GlobalDefinition>();
         [SerializeField] private SmeltingDefinition[] smelting = Array.Empty<SmeltingDefinition>();
         [SerializeField] private EquipmentDefinition[] equipment = Array.Empty<EquipmentDefinition>();
@@ -37,6 +39,7 @@ namespace Nyangbingo.Data
         private Dictionary<string, SealWhitelistDefinition> sealWhitelistByElement;
         private Dictionary<string, IdMigrationDefinition> idMigrationsByKey;
         private Dictionary<string, DayCurveDefinition> dayCurvesByDay;
+        private List<DayCurveDefinition> sortedDayCurveExtensions;
         private Dictionary<string, GlobalDefinition> globalsByKey;
         private Dictionary<string, SmeltingDefinition> smeltingById;
         private Dictionary<string, EquipmentDefinition> equipmentById;
@@ -63,6 +66,8 @@ namespace Nyangbingo.Data
         public IReadOnlyList<IdMigrationDefinition> IdMigrations =>
             idMigrations ?? Array.Empty<IdMigrationDefinition>();
         public IReadOnlyList<DayCurveDefinition> DayCurves => dayCurves ?? Array.Empty<DayCurveDefinition>();
+        public IReadOnlyList<DayCurveDefinition> DayCurveExtensions =>
+            dayCurveExtensions ?? Array.Empty<DayCurveDefinition>();
         public IReadOnlyList<GlobalDefinition> Globals => globals ?? Array.Empty<GlobalDefinition>();
         public IReadOnlyList<SmeltingDefinition> Smelting => smelting ?? Array.Empty<SmeltingDefinition>();
         public IReadOnlyList<EquipmentDefinition> Equipment => equipment ?? Array.Empty<EquipmentDefinition>();
@@ -127,8 +132,26 @@ namespace Nyangbingo.Data
         {
             EnsureIndex();
             var key = day.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return indexesValid && day > 0 && dayCurvesByDay.TryGetValue(key, out var definition)
-                ? definition : null;
+            if (indexesValid && day > 0 && day <= 30 && dayCurvesByDay.TryGetValue(key, out var definition))
+                return definition;
+            return DayCurveExtensionResolver.Resolve(this, day);
+        }
+
+        internal DayCurveDefinition FindDayCurveExtensionAnchor(int day)
+        {
+            EnsureIndex();
+            if (!indexesValid || day <= 30 || sortedDayCurveExtensions == null ||
+                sortedDayCurveExtensions.Count == 0)
+                return null;
+
+            DayCurveDefinition anchor = null;
+            for (var index = 0; index < sortedDayCurveExtensions.Count; index++)
+            {
+                var candidate = sortedDayCurveExtensions[index];
+                if (candidate == null || candidate.Day > day) break;
+                anchor = candidate;
+            }
+            return anchor;
         }
 
         public GlobalDefinition FindGlobal(string key)
@@ -249,6 +272,7 @@ namespace Nyangbingo.Data
             sealWhitelistByElement = null;
             idMigrationsByKey = null;
             dayCurvesByDay = null;
+            sortedDayCurveExtensions = null;
             globalsByKey = null;
             smeltingById = null;
             equipmentById = null;
@@ -282,6 +306,10 @@ namespace Nyangbingo.Data
             indexesValid &= idMigrationsValid;
             dayCurvesByDay = BuildIndex(dayCurves, value => value.Id, out var dayCurvesValid);
             indexesValid &= dayCurvesValid;
+            sortedDayCurveExtensions = (dayCurveExtensions ?? Array.Empty<DayCurveDefinition>())
+                .Where(value => value != null)
+                .OrderBy(value => value.Day)
+                .ToList();
             globalsByKey = BuildIndex(globals, value => value.Key, out var globalsValid);
             indexesValid &= globalsValid;
             smeltingById = BuildIndex(smelting, value => value.Id, out var smeltingValid); indexesValid &= smeltingValid;
