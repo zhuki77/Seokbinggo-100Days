@@ -30,7 +30,7 @@ namespace Nyangbingo.UI
 
         private const string DebugShortcutHelpText =
             "보스·소환\n" +
-            "B  보스 선택  ·  C  선택 보스 소환 아이템 제작\n" +
+            "B  보스 선택 패널(다음 보스)  ·  C  선택 보스 소환 아이템 제작\n" +
             "F6  소환 재료 지급  ·  Shift+F6  제작대로 이동\n" +
             "Ctrl+F6  신규 아이템 아트 검증 지급\n" +
             "F7  소환 아이템 지급  ·  Shift+F7  깊은 제단 이동\n" +
@@ -68,6 +68,9 @@ namespace Nyangbingo.UI
         private GameShellController gameShell;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private GameObject debugShortcutHelpRoot;
+        private GameObject debugBossPickerRoot;
+        private Text debugBossPickerBody;
+        private bool debugBossPickerOpen;
         private float debugShortcutHelpPreviousTimeScale = 1f;
         private static bool debugShortcutHelpOpen;
         private static int debugShortcutHelpEscapeConsumedFrame = -1;
@@ -79,8 +82,11 @@ namespace Nyangbingo.UI
         public const int DebugShortcutHelpBodyFontSize = 6;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public static bool IsDebugShortcutHelpOpen => debugShortcutHelpOpen;
+        public static bool IsDebugBossPickerOpen => debugShortcutHelpInstance != null &&
+                                                     debugShortcutHelpInstance.debugBossPickerOpen;
 #else
         public static bool IsDebugShortcutHelpOpen => false;
+        public static bool IsDebugBossPickerOpen => false;
 #endif
 
         public static bool ConsumeEscapeIfDebugHelpOpen()
@@ -154,6 +160,7 @@ namespace Nyangbingo.UI
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             debugShortcutHelpInstance = this;
             BuildDebugShortcutHelp();
+            BuildDebugBossPicker();
 #endif
             initialized = true;
             RefreshStatus();
@@ -165,6 +172,11 @@ namespace Nyangbingo.UI
             if (!initialized) return;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (ConsumeEscapeIfDebugHelpOpen()) return;
+            if (debugBossPickerOpen && Input.GetKeyDown(KeyCode.Escape))
+            {
+                SetDebugBossPickerOpen(false);
+                return;
+            }
             if (Input.GetKeyDown(DebugShortcutHelpKey) &&
                 !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
@@ -183,7 +195,12 @@ namespace Nyangbingo.UI
             {
                 selectedIndex = (selectedIndex + 1) % BossIds.Length;
                 transientMessage = string.Empty;
+                SetDebugBossPickerOpen(true);
                 RefreshStatus();
+                var selected = SelectedBoss;
+                Debug.Log(selected != null
+                    ? $"[Nyangbingo] Boss test selection: {selected.Id} ({selectedIndex + 1}/{BossIds.Length})."
+                    : "[Nyangbingo] Boss test selection failed: boss definition missing.");
             }
             if (Input.GetKeyDown(KeyCode.C)) TryCraftSelectedSummonItem();
             if (Input.GetKeyDown(KeyCode.F6))
@@ -512,17 +529,106 @@ namespace Nyangbingo.UI
             if (encounterCoordinator?.BossManager?.IsBossActive == true)
             {
                 statusText.text = string.Empty;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                SetDebugBossPickerOpen(false);
+#endif
                 return;
             }
-            if (!string.IsNullOrEmpty(transientMessage)) { statusText.text = transientMessage; return; }
+            if (!string.IsNullOrEmpty(transientMessage))
+            {
+                statusText.text = transientMessage;
+                return;
+            }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            statusText.text = string.Empty;
+            statusText.text = BuildEditorBossSelectionStatusLine();
+            RefreshDebugBossPickerBody();
 #else
             statusText.text = string.Empty;
 #endif
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private string BuildEditorBossSelectionStatusLine()
+        {
+            var definition = SelectedBoss;
+            if (definition == null) return "[B] 보스 정의 없음";
+            return $"[B] {selectedIndex + 1}/{BossIds.Length} · {definition.DisplayName}";
+        }
+
+        private string BuildEditorBossPickerBodyText()
+        {
+            var definition = SelectedBoss;
+            if (definition == null) return "보스 데이터를 찾을 수 없습니다.";
+            var summonItem = definition.SummonItem != null
+                ? definition.SummonItem.DisplayName
+                : "(고정 내습 — 소환 아이템 없음)";
+            var station = definition.SummonStation != CraftingStation.None
+                ? StationLabel(definition.SummonStation)
+                : "-";
+            var nearby = NearbyCraftingStation != CraftingStation.None
+                ? StationLabel(NearbyCraftingStation)
+                : "없음";
+            var night = IsNight ? "밤" : "낮";
+            return
+                $"▶ {definition.DisplayName} ({definition.Id})\n" +
+                $"권장 {definition.RecommendedDay}일 · {night} · 근처 제작대 {nearby}\n" +
+                $"소환 아이템: {summonItem} · 제작 {station}\n" +
+                "B 다음 보스 · C 제작 · F6 재료 · F7 지급 · Esc 닫기";
+        }
+
+        private void RefreshDebugBossPickerBody()
+        {
+            if (debugBossPickerBody == null) return;
+            debugBossPickerBody.text = BuildEditorBossPickerBodyText();
+        }
+
+        private void BuildDebugBossPicker()
+        {
+            var canvas = statusText != null ? statusText.GetComponentInParent<Canvas>() : null;
+            if (canvas == null) return;
+
+            debugBossPickerRoot = new GameObject("DebugBossPicker", typeof(RectTransform), typeof(Image));
+            debugBossPickerRoot.transform.SetParent(canvas.transform, false);
+            var rootRect = (RectTransform)debugBossPickerRoot.transform;
+            rootRect.anchorMin = new Vector2(.5f, 1f);
+            rootRect.anchorMax = new Vector2(.5f, 1f);
+            rootRect.pivot = new Vector2(.5f, 1f);
+            rootRect.sizeDelta = new Vector2(248f, 92f);
+            rootRect.anchoredPosition = new Vector2(0f, -42f);
+            var backdrop = debugBossPickerRoot.GetComponent<Image>();
+            backdrop.color = new Color(.04f, .06f, .09f, .92f);
+            backdrop.raycastTarget = false;
+
+            var title = CreateDebugHelpText(debugBossPickerRoot.transform, "Title", 7,
+                TextAnchor.MiddleCenter, new Vector2(236f, 12f), new Vector2(0f, -8f));
+            title.text = $"보스 선택 ({selectedIndex + 1}/{BossIds.Length})";
+
+            debugBossPickerBody = CreateDebugHelpText(debugBossPickerRoot.transform, "Body", 6,
+                TextAnchor.UpperLeft, new Vector2(236f, 58f), new Vector2(0f, -34f));
+            debugBossPickerBody.lineSpacing = .9f;
+            debugBossPickerBody.horizontalOverflow = HorizontalWrapMode.Wrap;
+            debugBossPickerBody.verticalOverflow = VerticalWrapMode.Truncate;
+            RefreshDebugBossPickerBody();
+
+            debugBossPickerRoot.SetActive(false);
+            debugBossPickerOpen = false;
+        }
+
+        private void SetDebugBossPickerOpen(bool value)
+        {
+            if (debugBossPickerRoot == null) return;
+            if (value && debugShortcutHelpOpen)
+                SetDebugShortcutHelpOpen(false);
+            debugBossPickerOpen = value;
+            debugBossPickerRoot.SetActive(value);
+            if (value)
+            {
+                debugBossPickerRoot.transform.SetAsLastSibling();
+                RefreshDebugBossPickerBody();
+            }
+        }
+
         private void BuildDebugShortcutHelp()
         {
             var canvas = statusText != null ? statusText.GetComponentInParent<Canvas>() : null;
@@ -569,6 +675,7 @@ namespace Nyangbingo.UI
             if (debugShortcutHelpRoot == null) return;
             if (value)
             {
+                SetDebugBossPickerOpen(false);
                 debugShortcutHelpPreviousTimeScale = Time.timeScale;
                 Time.timeScale = 0f;
                 debugShortcutHelpRoot.transform.SetAsLastSibling();
@@ -618,6 +725,7 @@ namespace Nyangbingo.UI
                 Time.timeScale = debugShortcutHelpPreviousTimeScale;
                 debugShortcutHelpOpen = false;
             }
+            SetDebugBossPickerOpen(false);
             if (debugShortcutHelpInstance == this) debugShortcutHelpInstance = null;
 #endif
             if (runtimeServices?.PlayerInventory != null)
