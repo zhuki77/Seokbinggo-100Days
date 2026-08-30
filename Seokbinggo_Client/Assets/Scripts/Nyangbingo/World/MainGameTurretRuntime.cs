@@ -980,8 +980,8 @@ namespace Nyangbingo.World
                     return true;
                 case DaebalItemId:
                     kind = CounterAuraKind.Daebal;
-                    radius = FindGlobalFloat("daebal_radius", 4f);
-                    effect = 1f - FindGlobalFloat("daebal_flame_cut", .25f);
+                    radius = 4f;
+                    effect = .75f;
                     return true;
                 case BellRopeItemId:
                 case IronBellRopeItemId:
