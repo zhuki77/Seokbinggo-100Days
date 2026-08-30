@@ -7,7 +7,8 @@ using UnityEngine;
 /// <summary>v46 P0 CSV 행수·핵심 키 존재 여부를 로컬 CSV 기준으로 검증한다.</summary>
 public static class NyangbingoV46DataCompletenessTests
 {
-    private const string CsvDirectory = "Assets/Data/CSV";
+    private static string CsvDirectory =>
+        Path.Combine(Application.dataPath, "Data", "CSV");
 
     private static readonly (string file, int minimumRows)[] ExpectedRowCounts =
     {
@@ -43,13 +44,14 @@ public static class NyangbingoV46DataCompletenessTests
             {
                 var path = Path.Combine(CsvDirectory, expectation.file);
                 Require(File.Exists(path), $"missing CSV: {expectation.file}");
-                var rows = NyangbingoCsvUtility.ReadRows(path);
+                var mergeNote = string.Equals(expectation.file, "globals.csv", StringComparison.Ordinal);
+                var rows = NyangbingoCsvUtility.ReadRows(path, mergeNote);
                 Require(rows.Count >= expectation.minimumRows,
                     $"{expectation.file} has {rows.Count} rows (need >= {expectation.minimumRows})");
             }
 
             var globalsPath = Path.Combine(CsvDirectory, "globals.csv");
-            var globals = NyangbingoCsvUtility.ReadRows(globalsPath);
+            var globals = NyangbingoCsvUtility.ReadRows(globalsPath, mergeUnquotedTrailingNote: true);
             var keys = new HashSet<string>(StringComparer.Ordinal);
             foreach (var row in globals)
             {
