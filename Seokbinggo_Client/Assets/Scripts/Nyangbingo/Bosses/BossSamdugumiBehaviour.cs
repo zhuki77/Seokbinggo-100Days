@@ -27,6 +27,7 @@ namespace Nyangbingo.Bosses
         private SamdugumiCounterPhase phase = SamdugumiCounterPhase.Lantern;
         private int countersCleared;
         private bool allCountersCleared;
+        private bool applyingKnockbackCounterDamage;
 
         public SamdugumiCounterPhase CurrentPhase => phase;
         public int CountersCleared => countersCleared;
@@ -54,7 +55,15 @@ namespace Nyangbingo.Bosses
                 phase != SamdugumiCounterPhase.Knockback || knockbackTiles <= 0f ||
                 combat != null && combat.IsOpeningDodgeActive)
                 return;
-            health.ApplyResolvedDamage(KnockbackCounterDamage, DamageTag.Melee);
+            applyingKnockbackCounterDamage = true;
+            try
+            {
+                health.ApplyResolvedDamage(KnockbackCounterDamage, DamageTag.Melee);
+            }
+            finally
+            {
+                applyingKnockbackCounterDamage = false;
+            }
             AdvanceCounter();
         }
 
@@ -82,7 +91,8 @@ namespace Nyangbingo.Bosses
 
             if (phase == SamdugumiCounterPhase.Knockback)
             {
-                health.Heal(amount);
+                if (!applyingKnockbackCounterDamage)
+                    health.Heal(amount);
                 return;
             }
 
