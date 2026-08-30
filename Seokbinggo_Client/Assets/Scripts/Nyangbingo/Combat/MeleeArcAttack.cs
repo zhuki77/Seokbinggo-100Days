@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Nyangbingo.Bosses;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Yokai;
@@ -145,7 +146,12 @@ namespace Nyangbingo.Combat
                         hit.GetComponentInParent<YokaiBrain>()?.ApplyFrostSlow(
                             frostSlowFraction, frostSlowDuration);
                 }
-                health.TryApplyKnockback(toTarget.normalized * activeKnockback);
+                var knockbackDirection = toTarget.normalized * activeKnockback;
+                if (health.TryApplyKnockback(knockbackDirection))
+                {
+                    health.GetComponentInParent<BossSamdugumiBehaviour>()
+                        ?.NotifyKnockbackReceived(activeKnockback);
+                }
                 if (activeKnockback > 0f)
                     KnockbackApplied?.Invoke(health, activeKnockback);
                 if (combatProfile != null && LastHitCount >= combatProfile.MaxTargets) break;

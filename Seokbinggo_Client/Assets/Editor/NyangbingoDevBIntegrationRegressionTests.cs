@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using Nyangbingo.Bosses;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
@@ -25,7 +26,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         try
         {
             RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "49/49 tests");
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "51/51 tests");
         }
         catch (System.Exception exception)
         {
@@ -53,6 +54,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestMeleeArcAttackPhysicsQueryContract();
         TestWorldMobPhysicsContract();
         TestImugiPhaseCombatContract();
+        TestSamdugumiCounterCombatContract();
+        TestEopGuryeongiModuleShutdownContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
         TestBossPausedYokaiVisibilityContract();
@@ -778,6 +781,137 @@ public static class NyangbingoDevBIntegrationRegressionTests
         {
             UnityEngine.Object.DestroyImmediate(bossObject);
             UnityEngine.Object.DestroyImmediate(targetObject);
+        }
+    }
+
+    private static void TestSamdugumiCounterCombatContract()
+    {
+        var samdugumiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossSamdugumiBehaviour.cs");
+        var meleeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Combat/MeleeArcAttack.cs");
+        var coordinatorSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(samdugumiSource.Contains("SamdugumiCounterPhase.Lantern") &&
+                samdugumiSource.Contains("SamdugumiCounterPhase.Body") &&
+                samdugumiSource.Contains("SamdugumiCounterPhase.Knockback") &&
+                samdugumiSource.Contains("RequiredCounterBreaks = 3") &&
+                meleeSource.Contains("BossSamdugumiBehaviour") &&
+                coordinatorSource.Contains("BossKind.Samdugumi") &&
+                coordinatorSource.Contains("BossSamdugumiBehaviour"),
+            "Samdugumi must wire lantern/body/knockback counter phases through combat and spawn.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "samdugumi", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 90f),
+            "Samdugumi opening dodge must resolve to 90 seconds from boss_dodge_sec_curve.");
+
+        var bossObject = new GameObject("SamdugumiCounterCombatContract");
+        var auraObject = new GameObject("LanternAura");
+        try
+        {
+            auraObject.transform.SetParent(bossObject.transform, false);
+            var aura = auraObject.AddComponent<CounterAura>();
+            aura.ConfigureForRuntime(CounterAuraKind.Lantern, 4f, 1f, 0f, 0f);
+            var health = bossObject.AddComponent<Health>();
+            health.ConfigureForRuntime(200);
+            bossObject.AddComponent<BossCombatController>();
+            var behaviour = bossObject.AddComponent<BossSamdugumiBehaviour>();
+            auraObject.transform.position = bossObject.transform.position + Vector3.right * 10f;
+            behaviour.Configure(new[] { aura }, null);
+            behaviour.Tick(.01f);
+
+            health.ApplyDamage(10, DamageTag.Melee);
+            Require(health.Current == 200 && behaviour.CurrentPhase == SamdugumiCounterPhase.Lantern,
+                "Samdugumi must reject body damage during the lantern counter phase outside lantern range.");
+
+            behaviour.NotifyKnockbackReceived(2f);
+            Require(health.Current == 200 && behaviour.CurrentPhase == SamdugumiCounterPhase.Lantern,
+                "Samdugumi must reject knockback damage before the knockback counter phase.");
+
+            auraObject.transform.position = bossObject.transform.position;
+            behaviour.Tick(.01f);
+            health.ApplyDamage(8, DamageTag.Melee);
+            Require(health.Current == 192 &&
+                    behaviour.CurrentPhase == SamdugumiCounterPhase.Body &&
+                    behaviour.CountersCleared == 1,
+                "Samdugumi must advance to the body counter after a valid lantern-phase hit.");
+
+            health.ApplyDamage(5, DamageTag.Fire);
+            Require(health.Current == 192,
+                "Samdugumi must reject non-melee damage during the body counter phase.");
+
+            health.ApplyDamage(6, DamageTag.Melee);
+            Require(health.Current == 186 &&
+                    behaviour.CurrentPhase == SamdugumiCounterPhase.Knockback &&
+                    behaviour.CountersCleared == 2,
+                "Samdugumi must advance to knockback after a valid body-phase melee hit.");
+
+            behaviour.NotifyKnockbackReceived(2f);
+            Require(health.Current == 186 - BossSamdugumiBehaviour.KnockbackCounterDamage &&
+                    behaviour.AllCountersCleared,
+                "Samdugumi must clear all counters after a valid knockback-phase hit.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(auraObject);
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+    }
+
+    private static void TestEopGuryeongiModuleShutdownContract()
+    {
+        var eopSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossEopGuryeongiBehaviour.cs");
+        var turretSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+        var coordinatorSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(eopSource.Contains("RecoveryImmunitySeconds") &&
+                eopSource.Contains("ModuleShutdownIntervalSeconds") &&
+                turretSource.Contains("TrySuspendNextModuleForEop") &&
+                coordinatorSource.Contains("BossKind.EopGuryeongi") &&
+                coordinatorSource.Contains("TryGetBossSpawnPosition"),
+            "Eop must spawn inside the base, suspend modules, and become immune while recovering.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "eop_guryeongi", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 100f),
+            "Eop opening dodge must resolve to 100 seconds from boss_dodge_sec_curve.");
+
+        var eopDefinition = catalog.FindBoss("eop_guryeongi");
+        Require(eopDefinition != null &&
+                Mathf.Approximately(eopDefinition.WallDamageDefault, 0f) &&
+                Mathf.Approximately(eopDefinition.WallDamageIce, 0f) &&
+                Mathf.Approximately(eopDefinition.WallDamageIronWall, 0f),
+            "Eop must not damage walls per bosses.csv wall_dps values.");
+
+        var bossObject = new GameObject("EopRecoveryContract");
+        try
+        {
+            var health = bossObject.AddComponent<Health>();
+            health.ConfigureForRuntime(100);
+            bossObject.AddComponent<BossCombatController>();
+            var behaviour = bossObject.AddComponent<BossEopGuryeongiBehaviour>();
+            behaviour.Configure(null);
+            behaviour.Tick(BossEopGuryeongiBehaviour.ModuleShutdownIntervalSeconds);
+            Require(!behaviour.IsRecovering,
+                "Eop without installed modules must skip recovery when nothing can be suspended.");
+            behaviour.Tick(.01f);
+            Require(Mathf.Approximately(health.DamageTakenMultiplier, 1f),
+                "Eop must remain damageable when not recovering.");
+
+            behaviour.Tick(BossEopGuryeongiBehaviour.RecoveryImmunitySeconds);
+            Require(!behaviour.IsRecovering,
+                "Eop recovery immunity must expire after the configured duration.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(bossObject);
         }
     }
 

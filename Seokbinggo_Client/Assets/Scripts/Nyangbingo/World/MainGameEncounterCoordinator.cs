@@ -532,7 +532,7 @@ namespace Nyangbingo.World
         {
             if (definition == null) return null;
             var locomotion = WorldMobPhysicsBody.ForBoss(definition.Kind);
-            if (!TryGetSpawnPosition(locomotion, out var position)) return null;
+            if (!TryGetBossSpawnPosition(definition, locomotion, out var position)) return null;
             var bossObject = new GameObject($"Boss_{definition.Id}");
             bossObject.transform.SetParent(transform, false);
             bossObject.transform.localScale = Vector3.one * BossScale;
@@ -621,6 +621,30 @@ namespace Nyangbingo.World
             // Body and tail hurtboxes are created after the movement core. Reapply the player
             // collision policy so large composite creatures cannot be pushed by the player.
             physicsBody.IgnoreCollisionWith(raidTarget.transform);
+            placedObjectRuntime ??= GetComponent<MainGameTurretRuntime>();
+            if (definition.Kind == BossKind.Samdugumi)
+            {
+                var samdugumi = bossObject.AddComponent<BossSamdugumiBehaviour>();
+                var targetCounters = raidTarget as IYokaiCounterSource;
+                samdugumi.Configure(
+                    placedObjectRuntime != null ? placedObjectRuntime.ActiveCounterAuras : null,
+                    targetCounters);
+                if (!runtimeServices.Register(samdugumi))
+                {
+                    Destroy(bossObject);
+                    return null;
+                }
+            }
+            else if (definition.Kind == BossKind.EopGuryeongi)
+            {
+                var eop = bossObject.AddComponent<BossEopGuryeongiBehaviour>();
+                eop.Configure(placedObjectRuntime);
+                if (!runtimeServices.Register(eop))
+                {
+                    Destroy(bossObject);
+                    return null;
+                }
+            }
             activeBossCombat = combat;
             activeBossIsForcedInvasion = forcedInvasion;
             forcedBossSpawnPending = forcedInvasion;
@@ -1497,6 +1521,18 @@ namespace Nyangbingo.World
                 TryFillRegularSlots();
             }
             if (health != null) Destroy(health.gameObject);
+        }
+
+        private bool TryGetBossSpawnPosition(BossDefinition definition, WorldMobLocomotion locomotion,
+            out Vector3 position)
+        {
+            if (definition?.Kind == BossKind.EopGuryeongi && raidTarget != null)
+            {
+                position = raidTarget.transform.position;
+                return true;
+            }
+
+            return TryGetSpawnPosition(locomotion, out position);
         }
 
         private bool TryGetSpawnPosition(WorldMobLocomotion locomotion, out Vector3 position)

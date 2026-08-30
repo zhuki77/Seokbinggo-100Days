@@ -123,6 +123,8 @@ namespace Nyangbingo.World
         private readonly Dictionary<string, GameObject> passiveCounterAuraRoots =
             new Dictionary<string, GameObject>(StringComparer.Ordinal);
         private readonly List<CounterAura> activeCounterAuras = new List<CounterAura>();
+        private readonly HashSet<string> eopSuspendedObjectIds =
+            new HashSet<string>(StringComparer.Ordinal);
         private readonly List<SpriteRenderer> projectileRenderers = new List<SpriteRenderer>();
         private HomingProjectilePool projectilePool;
         private MainGameBossSummonUiController craftingStationUi;
@@ -159,6 +161,34 @@ namespace Nyangbingo.World
             }
         }
         public IReadOnlyList<CounterAura> ActiveCounterAuras => activeCounterAuras;
+
+        /// <summary>업구렁이 — 터렛·등불을 하나씩 연료 소진으로 정지한다.</summary>
+        public bool TrySuspendNextModuleForEop(out string objectId)
+        {
+            objectId = null;
+            foreach (var pair in turrets.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+            {
+                if (eopSuspendedObjectIds.Contains(pair.Key) || pair.Value?.Controller == null) continue;
+                pair.Value.Controller.RestoreFuelUnits(0);
+                eopSuspendedObjectIds.Add(pair.Key);
+                objectId = pair.Key;
+                return true;
+            }
+
+            foreach (var pair in lanterns.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+            {
+                if (eopSuspendedObjectIds.Contains(pair.Key) || pair.Value == null) continue;
+                pair.Value.FuelRemaining = 0f;
+                pair.Value.RefreshActiveState();
+                eopSuspendedObjectIds.Add(pair.Key);
+                objectId = pair.Key;
+                return true;
+            }
+
+            return false;
+        }
+
+        public void ClearEopModuleSuspensions() => eopSuspendedObjectIds.Clear();
         public bool IsPlacementPreviewActive => placementPreview != null;
         public bool IsPlacementPreviewValid => IsPlacementPreviewActive && placementValid;
         public bool IsBottomInteractionPromptVisible { get; private set; }

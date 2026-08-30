@@ -97,6 +97,7 @@ namespace Nyangbingo.Bosses
         private RuntimeCharacterSpriteAnimator characterAnimator;
 
         public BossDefinition Definition => definition;
+        public bool IsOpeningDodgeActive => openingDodgeRemaining > 0f;
         public bool IsTelegraphing => telegraphing;
         public bool IsSpecialActive => specialActive;
         public float SpecialCooldownRemaining => specialCooldownRemaining;
