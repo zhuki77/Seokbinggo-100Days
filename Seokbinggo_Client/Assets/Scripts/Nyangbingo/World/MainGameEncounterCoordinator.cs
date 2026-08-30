@@ -166,15 +166,29 @@ namespace Nyangbingo.World
         {
             if (Input.GetKeyDown(KeyCode.F8))
             {
-                var bossId = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
-                    ? "mother_bulgasari"
-                    : Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)
-                        ? "imugi_boss"
-                        : "king_dokkaebi";
+                var shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                var ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                var alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                var bossId = ctrl && shift
+                    ? "eop_guryeongi"
+                    : shift
+                        ? "samdugumi"
+                        : ctrl
+                            ? "mother_bulgasari"
+                            : alt
+                                ? "imugi_boss"
+                                : "king_dokkaebi";
                 TryStartEditorBossEncounter(bossId);
             }
             if (Input.GetKeyDown(KeyCode.J)) DefeatAllYokaiForEditorTest();
             if (Input.GetKeyDown(KeyCode.K)) DefeatActiveBossForEditorTest();
+            if (Input.GetKeyDown(KeyCode.F9))
+            {
+                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    TryJumpToNextSummonAnchorNightForEditorTest();
+                else
+                    TryJumpToNextForcedInvasionAnchorForEditorTest();
+            }
             if (Input.GetKeyDown(KeyCode.F12))
             {
                 var shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -276,9 +290,164 @@ namespace Nyangbingo.World
         {
             var health = bossManager != null ? bossManager.ActiveHealth : null;
             var definition = bossManager != null ? bossManager.ActiveDefinition : null;
-            if (health == null || health.IsDead || definition == null) return;
+            if (health == null && activeBossCombat != null)
+                health = activeBossCombat.GetComponent<Health>();
+            if (health == null || definition == null)
+            {
+                Debug.LogWarning("[Nyangbingo] K boss test defeat: no active boss.");
+                return;
+            }
+
+            if (health.IsDead)
+            {
+                Debug.LogWarning("[Nyangbingo] K boss test defeat: boss already dead.");
+                return;
+            }
+
             Debug.Log($"[Nyangbingo] K boss test defeat requested: {definition.Id}.");
-            health.ApplyDamage(int.MaxValue, DamageTag.Melee);
+            // Opening-dodge sets damageTakenMultiplier=0 for up to 120s; bypass for editor kills.
+            health.ApplyResolvedDamage(health.Current, DamageTag.Melee);
+        }
+
+        private static readonly int[] ForcedInvasionAnchorDays = { 50, 60, 90, 100 };
+        private static readonly int[] SummonAnchorDays = { 70, 80 };
+
+        public bool TryJumpToNextForcedInvasionAnchorForEditorTest()
+        {
+            if (!TryPrepareEditorAnchorNightJump(out var dayNight, out var currentDay, "F9 forced invasion anchor"))
+                return false;
+
+            var targetDay = ResolveNextAnchorDay(currentDay, dayNight.IsNight, ForcedInvasionAnchorDays);
+            var targetBoss = forcedBossDefinitions.FirstOrDefault(definition =>
+                definition != null && definition.ForcedDay == targetDay);
+            if (targetBoss == null)
+            {
+                Debug.LogError($"[Nyangbingo] F9 anchor day {targetDay} boss definition missing.");
+                return false;
+            }
+
+            ResetForcedBossBinding(targetDay);
+            if (!TryJumpToAnchorNightForEditorTest(dayNight, currentDay, targetDay, out var usedAtomicRestore))
+            {
+                Debug.LogError($"[Nyangbingo] F9 failed advancing to day {targetDay} night.");
+                return false;
+            }
+
+            if (usedAtomicRestore)
+                HandleNightStart();
+
+            for (var index = 0; index < forcedBossBindings.Count; index++)
+                forcedBossBindings[index].TryStartForCurrentNight();
+
+            var started = bossManager?.ActiveDefinition?.Id == targetBoss.Id;
+            Debug.Log(started
+                ? $"[Nyangbingo] F9 forced invasion anchor ready: day {targetDay}, " +
+                  $"boss={targetBoss.Id} ({targetBoss.DisplayName})."
+                : $"[Nyangbingo] F9 advanced to day {targetDay} night but forced boss did not start.");
+            return started;
+        }
+
+        public bool TryJumpToNextSummonAnchorNightForEditorTest()
+        {
+            if (!TryPrepareEditorAnchorNightJump(out var dayNight, out var currentDay, "Shift+F9 summon anchor"))
+                return false;
+
+            var targetDay = ResolveNextAnchorDay(currentDay, dayNight.IsNight, SummonAnchorDays);
+            var targetBoss = gameDataCatalog?.FindBoss(targetDay == 70 ? "samdugumi" : "eop_guryeongi");
+            if (targetBoss == null || targetBoss.ForcedDay > 0 || targetBoss.SummonItem == null)
+            {
+                Debug.LogError($"[Nyangbingo] Shift+F9 anchor day {targetDay} summon boss definition missing.");
+                return false;
+            }
+
+            if (!TryJumpToAnchorNightForEditorTest(dayNight, currentDay, targetDay, out var usedAtomicRestore))
+            {
+                Debug.LogError($"[Nyangbingo] Shift+F9 failed advancing to day {targetDay} night.");
+                return false;
+            }
+
+            if (usedAtomicRestore)
+                HandleNightStart();
+
+            Debug.Log($"[Nyangbingo] Shift+F9 summon anchor ready: day {targetDay}, " +
+                      $"boss={targetBoss.Id}. B→선택, F6 재료, C 제작, 인벤에서 E 소환.");
+            return true;
+        }
+
+        private bool TryPrepareEditorAnchorNightJump(
+            out DayNightService dayNight, out int currentDay, string shortcutLabel)
+        {
+            dayNight = null;
+            currentDay = 0;
+            if ((!initialized && !Initialize()) || bootstrap?.TimeService == null)
+            {
+                Debug.LogWarning($"[Nyangbingo] {shortcutLabel} requires initialized MainGame.");
+                return false;
+            }
+
+            if (!(bootstrap.TimeService is DayNightService resolvedDayNight))
+            {
+                Debug.LogError($"[Nyangbingo] {shortcutLabel} requires DayNightService time source.");
+                return false;
+            }
+
+            dayNight = resolvedDayNight;
+            currentDay = dayNight.Day;
+            if (bossManager?.IsBossActive == true)
+                DefeatActiveBossForEditorTest();
+            return true;
+        }
+
+        private static bool TryJumpToAnchorNightForEditorTest(
+            DayNightService dayNight, int currentDay, int targetDay, out bool usedAtomicRestore)
+        {
+            usedAtomicRestore = currentDay > targetDay || Mathf.Abs(targetDay - currentDay) > 1;
+            return TryAdvanceTimeToNightOfDay(dayNight, targetDay, usedAtomicRestore);
+        }
+
+        private static int ResolveNextAnchorDay(int currentDay, bool isNight, int[] anchorDays)
+        {
+            if (!isNight)
+            {
+                for (var index = 0; index < anchorDays.Length; index++)
+                    if (currentDay <= anchorDays[index])
+                        return anchorDays[index];
+            }
+            else
+            {
+                for (var index = 0; index < anchorDays.Length; index++)
+                    if (currentDay < anchorDays[index])
+                        return anchorDays[index];
+            }
+
+            return anchorDays[0];
+        }
+
+        private void ResetForcedBossBinding(int forcedDay)
+        {
+            for (var index = 0; index < forcedBossDefinitions.Count; index++)
+            {
+                if (forcedBossDefinitions[index]?.ForcedDay != forcedDay) continue;
+                forcedBossBindings[index].RestoreTriggered(false);
+            }
+        }
+
+        private static bool TryAdvanceTimeToNightOfDay(
+            DayNightService dayNight, int targetDay, bool useAtomicRestore)
+        {
+            const int maxSteps = 500;
+            if (useAtomicRestore)
+                return dayNight.RestoreTimeState(targetDay, dayNight.DayDurationSeconds, true);
+
+            var steps = 0;
+            while (steps++ < maxSteps && (dayNight.Day != targetDay || !dayNight.IsNight))
+            {
+                var seconds = dayNight.SecondsUntilNextTransition;
+                if (seconds <= 0f) return false;
+                dayNight.Tick(seconds + 0.001f);
+            }
+
+            return dayNight.Day == targetDay && dayNight.IsNight;
         }
 #endif
 
@@ -435,7 +604,9 @@ namespace Nyangbingo.World
                         characterArtCatalog?.FindSprite("imugi_post_tail"),
                         14);
             }
-            else if (definition.Kind == BossKind.Gangcheori)
+            else if (definition.Kind == BossKind.Gangcheori ||
+                     definition.Kind == BossKind.GangcheolBlaze ||
+                     definition.Kind == BossKind.GangcheolPerfect)
             {
                 var bodySprite = characterArtCatalog?.FindSprite("gangcheol_body");
                 if (bodySprite != null)
