@@ -1,3 +1,5 @@
+using System.Linq;
+using Nyangbingo.Bosses;
 using Nyangbingo.Data;
 using Nyangbingo.UI;
 using Nyangbingo.World;
@@ -98,6 +100,33 @@ public static class NyangbingoDayCurveExtensionRegressionTests
         Require(!GameShellController.ShouldEndDemoAtDay(31) &&
                 !GameShellController.ShouldEndDemoAtDay(100),
             "date alone must not end the demo after day 30");
+        Require(catalog.FindDayCurve(50) != null && catalog.FindDayCurve(60) != null &&
+                catalog.FindDayCurve(90) != null,
+            "extension anchors 50/60/90 must resolve through day-curve-ext");
+        Require(catalog.FindBoss("gangcheol_blaze").ForcedDay == 50 &&
+                catalog.FindBoss("sangun").ForcedDay == 60 &&
+                catalog.FindBoss("yeongno").ForcedDay == 90 &&
+                catalog.FindBoss("gangcheol_perfect").ForcedDay == 100 &&
+                catalog.FindBoss("jigwi").ForcedDay == 0 &&
+                catalog.FindBoss("samdugumi").ForcedDay == 0,
+            "day-curve-ext late anchors must map to forced-invasion bosses without summon items");
+        var clockRoot = new GameObject("DayCurveExtensionForcedBossClock");
+        try
+        {
+            var clock = clockRoot.AddComponent<DayNightService>();
+            Require(clock.ConfigureOfficialData(catalog), "forced boss clock setup failed");
+            foreach (var day in new[] { 50, 60, 90, 100 })
+            {
+                var boss = catalog.Bosses.Single(definition => definition.ForcedDay == day);
+                Require(clock.RestoreTimeState(day, 900f, true) &&
+                        BossEncounterRules.ShouldStartForcedEncounter(boss, clock, false),
+                    $"day {day} forced invasion must trigger on the anchor night");
+            }
+        }
+        finally
+        {
+            Object.DestroyImmediate(clockRoot);
+        }
 
         Debug.Log("[Nyangbingo] Day curve extension regression passed.");
     }

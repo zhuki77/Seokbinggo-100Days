@@ -435,7 +435,9 @@ namespace Nyangbingo.World
                         characterArtCatalog?.FindSprite("imugi_post_tail"),
                         14);
             }
-            else if (definition.Kind == BossKind.Gangcheori)
+            else if (definition.Kind == BossKind.Gangcheori ||
+                     definition.Kind == BossKind.GangcheolBlaze ||
+                     definition.Kind == BossKind.GangcheolPerfect)
             {
                 var bodySprite = characterArtCatalog?.FindSprite("gangcheol_body");
                 if (bodySprite != null)
