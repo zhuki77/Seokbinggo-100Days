@@ -2181,7 +2181,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Larger reward batches must fan across both sides with greater launch speed.");
         var source = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameWorldDropRuntime.cs");
-        Require(source.Contains("visual.transform.localPosition += Vector3.up * VisualSurfaceOffset"),
+        Require(source.Contains("ConfigureDropVisual(renderer, sprite, .42f)") &&
+                source.Contains("-bounds.min.y * scale + VisualSurfaceOffset"),
             "Delivered and placeholder item art must share the same surface-height correction.");
         Require(source.Contains("IgnoreCollisionWithExistingDrops(dropCollider)") &&
                 source.Contains("Physics2D.IgnoreCollision(newDropCollider, existingCollider, true)"),
@@ -2765,15 +2766,27 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
             var decorationSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/World/MainGameWorldDecorationRenderer.cs");
+            var tileServiceSource = System.IO.File.ReadAllText(
+                "Assets/Scripts/Nyangbingo/World/TileService.cs");
             Require(effectSource.Contains(
                         "miningProgressRenderer.transform.position = CellVisualAnchor(cell)") &&
-                    effectSource.Contains("miningEffect.transform.position = visualAnchor") &&
+                    effectSource.Contains("miningTargetRenderer.transform.position = CellVisualAnchor(cell)") &&
+                    effectSource.Contains("AlignMiningOverlayToCell(miningProgressRenderer, cell)") &&
+                    effectSource.Contains("PlayMiningCellEffect(miningEffect, cell") &&
+                    effectSource.Contains("PlayMiningCellEffect(miningBreakEffect, cell") &&
+                    effectSource.Contains("renderer.transform.position = CellVisualAnchor(cell)") &&
                     effectSource.Contains(
                         "playerTransform.GetComponentInChildren<RuntimeCharacterSpriteAnimator>()") &&
                     playerSource.Contains("new GameObject(\"Visual\")") &&
-                    playerSource.Contains("CalculateGroundedVisualLocalY"),
-                "Player art, claw effects, and mining cracks must follow the same grounded visual-anchor contract.");
+                    playerSource.Contains("CalculateGroundedVisualLocalY") &&
+                    playerSource.Contains("tileService.ResolveForegroundMiningDropWorldPosition(cell)") &&
+                    tileServiceSource.Contains("ResolveForegroundMiningDropWorldPosition(Vector3Int cell)") &&
+                    tileServiceSource.Contains("MainGameWorldDropRuntime.DropColliderRadius"),
+                "Player art, claw effects, mining cracks, drops, and target highlights must follow the grounded visual-anchor contract.");
             Require(environmentSource.Contains("new GameObject(\"Art\")") &&
+                    environmentSource.Contains("TrySnapFloorPlacedObjectToTerrain(entry)") &&
+                    environmentSource.Contains("SnapPlacedVisualRoot(visual, renderer, entry)") &&
+                    environmentSource.Contains("AlignPlacedFloorVisual(renderer, entry)") &&
                     environmentSource.Contains("AlignSpriteBoundsToCellBase(renderer, entry.Cell)") &&
                     placementSource.Contains("placementPreviewVisual") &&
                     placementSource.Contains("GetCellCenterWorld(placementCell)") &&
@@ -3657,7 +3670,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var droppedAmount = 0;
         var droppedPosition = Vector2.zero;
 
-        void CaptureDrop(ItemDefinition item, int amount, Vector2 position)
+        void CaptureDrop(ItemDefinition item, int amount, Vector2 position, Vector3Int? minedCell)
         {
             droppedItem = item;
             droppedAmount = amount;
@@ -3673,8 +3686,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 "A player-placed wallpaper could not be removed.");
             Require(droppedItem == wallpaper && droppedAmount == 1,
                 "Removing wallpaper must return exactly one wallpaper item as a world drop.");
-            Require(droppedPosition == new Vector2(.5f, .5f),
-                $"The recovered wallpaper must drop at the removed cell center (actual {droppedPosition}).");
+            Require(droppedPosition == new Vector2(.5f, MainGameWorldDropRuntime.DropColliderRadius),
+                $"The recovered wallpaper must drop on the removed cell floor (actual {droppedPosition}).");
             Require(!service.GetBackgroundState(Vector3Int.zero).HasWallpaper,
                 "Removing wallpaper did not restore the original background state.");
         }

@@ -1431,7 +1431,7 @@ namespace Nyangbingo.World
             if (item != null && totalAmount > 0)
             {
                 WorldItemDropRequest.Request(item, totalAmount,
-                    tileService.GetCellCenterWorld(cell));
+                    tileService.ResolveForegroundMiningDropWorldPosition(cell), cell);
                 Nyangbingo.Core.GameEvents.RaiseMiningResult(cell, item.DisplayName, totalAmount, critical);
             }
         }

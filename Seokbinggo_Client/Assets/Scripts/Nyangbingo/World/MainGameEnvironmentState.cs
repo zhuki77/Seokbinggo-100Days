@@ -156,7 +156,7 @@ namespace Nyangbingo.World
             if (IsInsulationAttachment(record.definitionId) &&
                 !CanPlaceInsulationAt(record.definitionId, cell))
                 return false;
-            if (byObjectId.ContainsKey(record.objectId) || byCell.ContainsKey(cell) ||
+            if (byObjectId.ContainsKey(record.objectId) ||
                 IsGlobalSingletonDefinition(record.definitionId) &&
                 byObjectId.Values.Any(existing =>
                     existing.Record.definitionId == record.definitionId))
@@ -169,10 +169,13 @@ namespace Nyangbingo.World
                 BarrierActive = barrierActive && boundaryPolicy.SealsPlacedElement(record.definitionId),
                 CoolingActive = coolingActive && !CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)
             };
+            if (!IsInsulationAttachment(record.definitionId))
+                TrySnapFloorPlacedObjectToTerrain(entry);
+            if (byCell.ContainsKey(entry.Cell)) return false;
             if (CoolingSourceRuntime.IsCoolingDefinition(record.definitionId) &&
                 !coolingSources.TryRegister(record.objectId, record.definitionId, coolingActive)) return false;
             byObjectId.Add(record.objectId, entry);
-            byCell.Add(cell, entry);
+            byCell.Add(entry.Cell, entry);
             CreateVisual(entry);
             RecomputeCoolingAndInvalidate();
             GameEvents.RaisePlacedObjectBuilt(record.definitionId);
@@ -748,8 +751,10 @@ namespace Nyangbingo.World
                     BarrierActive = boundaryPolicy.SealsPlacedElement(record.definitionId),
                     CoolingActive = false
                 };
+                if (!IsInsulationAttachment(record.definitionId))
+                    TrySnapFloorPlacedObjectToTerrain(entry);
                 restoredById.Add(record.objectId, entry);
-                restoredByCell.Add(cell, entry);
+                restoredByCell.Add(entry.Cell, entry);
 
                 if (!CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)) continue;
                 if (coolingStateById.TryGetValue(record.objectId, out var state))
@@ -858,7 +863,11 @@ namespace Nyangbingo.World
             else
                 RuntimePlaceholderVisual.Configure(
                     renderer, new Color(.55f, .85f, 1f), .75f, sortingOrder);
-            TileService?.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
+            if (IsInsulationAttachment(entry.Record.definitionId))
+                TileService?.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
+            else
+                AlignPlacedFloorVisual(renderer, entry);
+            SnapPlacedVisualRoot(visual, renderer, entry);
             visualsByObjectId.Add(entry.Record.objectId, visual);
             if (isDoor)
                 RefreshDoorVisual(entry.Record.objectId, entry.BarrierActive);
@@ -950,6 +959,57 @@ namespace Nyangbingo.World
         private Vector3Int CellFrom(Vector2 position) => TileService != null
             ? TileService.WorldToCell(position)
             : new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+
+        private bool TrySnapFloorPlacedObjectToTerrain(Entry entry)
+        {
+            var tileService = TileService;
+            if (tileService == null || entry == null) return false;
+            var columnX = Mathf.Clamp(
+                Mathf.FloorToInt(entry.Record.position.x), 0, tileService.Width - 1);
+            var preferredY = entry.Cell.y;
+            for (var y = preferredY + 4; y >= preferredY - 12; y--)
+            {
+                if (!TryResolveFloorPlacementCell(tileService, columnX, y, out var placementCell))
+                    continue;
+                var bounds = tileService.GetCellWorldBounds(placementCell);
+                entry.Cell = placementCell;
+                var record = entry.Record;
+                record.position = new Vector2(bounds.center.x, bounds.center.y);
+                entry.Record = record;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool TryResolveFloorPlacementCell(
+            TileService tileService, int columnX, int candidateY, out Vector3Int placementCell)
+        {
+            placementCell = new Vector3Int(columnX, candidateY, 0);
+            if (tileService == null || !tileService.InBounds(placementCell)) return false;
+            var head = placementCell + Vector3Int.up;
+            var ground = placementCell + Vector3Int.down;
+            if (!tileService.InBounds(head) || !tileService.InBounds(ground)) return false;
+            return tileService.GetTile(placementCell).IsAir &&
+                   tileService.GetTile(head).IsAir &&
+                   !tileService.GetTile(ground).IsAir;
+        }
+
+        private void AlignPlacedFloorVisual(SpriteRenderer renderer, Entry entry)
+        {
+            if (renderer == null || TileService == null) return;
+            TileService.AlignSpriteBoundsToCellBase(renderer, entry.Cell);
+        }
+
+        private static void SnapPlacedVisualRoot(GameObject root, SpriteRenderer renderer, Entry entry)
+        {
+            if (root == null || renderer == null || entry == null) return;
+            var alignedWorldPosition = renderer.transform.position;
+            root.transform.position = alignedWorldPosition;
+            renderer.transform.localPosition = Vector3.zero;
+            var record = entry.Record;
+            record.position = alignedWorldPosition;
+            entry.Record = record;
+        }
 
         private bool CanPlaceInsulationAt(string definitionId, Vector3Int cell,
             bool checkRuntimeOccupancy = true)

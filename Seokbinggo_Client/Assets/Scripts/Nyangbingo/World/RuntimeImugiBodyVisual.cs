@@ -19,11 +19,18 @@ namespace Nyangbingo.World
         }
 #endif
 
+        private static bool ShouldUseCropCache =>
+#if UNITY_EDITOR
+            Application.isPlaying;
+#else
+            true;
+#endif
+
         public static Sprite CropHorizontalHalf(Sprite source, bool rightHalf)
         {
             if (source == null) return null;
             var cache = rightHalf ? RightHalfCache : LeftHalfCache;
-            if (cache.TryGetValue(source, out var cached)) return cached;
+            if (ShouldUseCropCache && cache.TryGetValue(source, out var cached)) return cached;
 
             var sourceRect = source.rect;
             var halfWidth = Mathf.Floor(sourceRect.width * .5f);
@@ -34,9 +41,18 @@ namespace Nyangbingo.World
                 rightHalf ? sourceRect.width - halfWidth : halfWidth,
                 sourceRect.height);
             var sprite = CreateCroppedSprite(source, cropRect, rightHalf);
-            if (sprite == null) return source;
-            cache[source] = sprite;
+            if (sprite == null || !HasExpectedCropRect(sprite, cropRect)) return source;
+            if (ShouldUseCropCache) cache[source] = sprite;
             return sprite;
+        }
+
+        private static bool HasExpectedCropRect(Sprite sprite, Rect cropRect)
+        {
+            return sprite != null &&
+                   Mathf.Approximately(sprite.rect.x, cropRect.x) &&
+                   Mathf.Approximately(sprite.rect.y, cropRect.y) &&
+                   Mathf.Approximately(sprite.rect.width, cropRect.width) &&
+                   Mathf.Approximately(sprite.rect.height, cropRect.height);
         }
 
         private static Sprite CreateCroppedSprite(Sprite source, Rect cropRect, bool rightHalf)
@@ -53,13 +69,14 @@ namespace Nyangbingo.World
         private static Texture2D TryCreateReadableAtlasCopy(Texture texture)
         {
             if (texture == null) return null;
+            if (texture is not Texture2D source) return null;
 
-            if (texture is Texture2D readableTexture && readableTexture.isReadable)
-                return readableTexture;
+            if (source.isReadable)
+                return DuplicateTexturePixels(source);
 
-            var copy = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false)
+            var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
             {
-                filterMode = texture.filterMode,
+                filterMode = source.filterMode,
                 hideFlags = HideFlags.HideAndDontSave
             };
 
@@ -74,23 +91,23 @@ namespace Nyangbingo.World
                 Object.DestroyImmediate(copy);
             }
 
-            copy = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false)
+            copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
             {
-                filterMode = texture.filterMode,
+                filterMode = source.filterMode,
                 hideFlags = HideFlags.HideAndDontSave
             };
 
             var renderTarget = RenderTexture.GetTemporary(
-                texture.width,
-                texture.height,
+                source.width,
+                source.height,
                 0,
                 RenderTextureFormat.ARGB32);
             var previousTarget = RenderTexture.active;
             try
             {
-                Graphics.Blit(texture, renderTarget);
+                Graphics.Blit(source, renderTarget);
                 RenderTexture.active = renderTarget;
-                copy.ReadPixels(new Rect(0f, 0f, texture.width, texture.height), 0, 0);
+                copy.ReadPixels(new Rect(0f, 0f, source.width, source.height), 0, 0);
                 copy.Apply();
                 return copy;
             }
@@ -99,6 +116,18 @@ namespace Nyangbingo.World
                 RenderTexture.active = previousTarget;
                 RenderTexture.ReleaseTemporary(renderTarget);
             }
+        }
+
+        private static Texture2D DuplicateTexturePixels(Texture2D source)
+        {
+            var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
+            {
+                filterMode = source.filterMode,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            copy.SetPixels(source.GetPixels());
+            copy.Apply();
+            return copy;
         }
 
         private static Sprite CreateNamedSubSprite(
