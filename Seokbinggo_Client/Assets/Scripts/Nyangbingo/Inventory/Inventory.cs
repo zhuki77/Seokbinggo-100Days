@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.World;
@@ -400,7 +401,18 @@ namespace Nyangbingo.Inventory
     {
         private static readonly HashSet<string> AllowedItemIds = new HashSet<string>(StringComparer.Ordinal)
         {
-            "dokkaebi_club", "hapjukseon", "cheolseon", FanItemIds.Seolpungseon, "frostclaw_gauntlet", "lantern"
+            "dokkaebi_club", "hapjukseon", "cheolseon", FanItemIds.Seolpungseon,
+            FanItemIds.SeongeFan, FanItemIds.IceRootWhipfan, FanItemIds.ColdWaveFan,
+            BowCombatRules.StrawSlingId, BowCombatRules.GakgungId, BowCombatRules.SingijeonSondaeId,
+            BowCombatRules.SeongeGakgungId, BowCombatRules.IceRootBowId, BowCombatRules.ColdWaveSingijeonId,
+            "frostclaw_gauntlet",
+            EvolvedClawCombatRules.SangunClawId, EvolvedClawCombatRules.PerfectClawId, "lantern",
+            GimmickWeaponProgress.FirstFrostClawId,
+            GimmickWeaponProgress.BaekjungBundleId,
+            GimmickWeaponProgress.YeouijuClawId,
+            GimmickWeaponProgress.JigwiAshId,
+            GimmickWeaponProgress.SangunWhiskerId,
+            GimmickWeaponProgress.YeongnoToothId
         };
 
         private readonly Inventory inventory;

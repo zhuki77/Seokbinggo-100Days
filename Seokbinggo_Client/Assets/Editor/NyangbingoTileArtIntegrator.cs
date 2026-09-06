@@ -436,6 +436,12 @@ namespace Nyangbingo.Editor
                     isMagpie
                         ? idleFrames.Skip(1).Take(2).ToArray()
                         : FindAnimationFrames(artPath, "walk"));
+                SetSpriteArray(entry.FindPropertyRelative("jumpFrames"),
+                    FindAnimationFrames(artPath, "jump"));
+                SetSpriteArray(entry.FindPropertyRelative("fallFrames"),
+                    FindAnimationFrames(artPath, "fall"));
+                SetSpriteArray(entry.FindPropertyRelative("landFrames"),
+                    FindAnimationFrames(artPath, "up"));
                 SetSpriteArray(entry.FindPropertyRelative("attackFrames"),
                     isMagpie && idleFrames.Count > 3
                         ? new[] { idleFrames[3] }
@@ -997,11 +1003,13 @@ namespace Nyangbingo.Editor
             switch (id)
             {
                 case "player":
-                    RequireFrames(id, "idle", entry.IdleFrames, 2, failures);
-                    RequireFrames(id, "walk", entry.WalkFrames, 4, failures);
-                    RequireFrames(id, "attack", entry.AttackFrames, 2, failures);
-                    RequireFrames(id, "hit", entry.HitFrames, 1, failures);
-                    RequireFrames(id, "die", entry.DeathFrames, 2, failures);
+                    RequireFrames(id, "idle", entry.IdleFrames, 6, failures);
+                    RequireFrames(id, "walk", entry.WalkFrames, 6, failures);
+                    RequireFrames(id, "jump", entry.JumpFrames, 6, failures);
+                    RequireFrames(id, "fall", entry.FallFrames, 3, failures);
+                    RequireFrames(id, "up", entry.LandFrames, 5, failures);
+                    RequireFrames(id, "attack", entry.AttackFrames, 4, failures);
+                    RequireFrames(id, "die", entry.DeathFrames, 6, failures);
                     break;
                 case "club":
                     RequireFrames(id, "idle", entry.IdleFrames, 3, failures);

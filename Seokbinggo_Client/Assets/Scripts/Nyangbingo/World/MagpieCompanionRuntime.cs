@@ -30,7 +30,10 @@ namespace Nyangbingo.World
         private readonly int joinKillCount;
         private readonly float collectionRadius;
         private readonly float collectionIntervalSeconds;
+        private readonly bool guideFlyToGoal;
+        private readonly float guideReturnSeconds;
         private Func<float> collectionRadiusMultiplier;
+        private Func<Vector2?> guideGoalProvider;
         private readonly GameObject visualRoot;
         private readonly RuntimeCharacterSpriteAnimator visualAnimator;
 
@@ -39,6 +42,8 @@ namespace Nyangbingo.World
         private bool joined;
         private bool activeUntilNestRemoved;
         private float collectionElapsed;
+        private float guideElapsed;
+        private bool guideTowardGoal;
         private Transform collectionTarget;
         private Inventory.Inventory collectionDestination;
         private bool notifyPlayerAcquisition;
@@ -68,6 +73,8 @@ namespace Nyangbingo.World
             joinKillCount = ReadPositiveInt(catalog, "magpie_join_kills");
             collectionRadius = ReadPositiveFloat(catalog, "magpie_magnet_radius");
             collectionIntervalSeconds = ReadPositiveFloat(catalog, "magpie_magnet_interval");
+            guideFlyToGoal = MagpieGuideRules.IsFlyToGoalMode(catalog);
+            guideReturnSeconds = MagpieGuideRules.ResolveReturnSeconds(catalog);
             nestStorage = new Inventory.Inventory(catalog.FindItem, StorageSlotCount);
 
             var art = characterArtCatalog?.Find("magpie");
@@ -97,6 +104,9 @@ namespace Nyangbingo.World
         public void ConfigureArtifactRadius(Func<float> multiplierProvider) =>
             collectionRadiusMultiplier = multiplierProvider;
 
+        public void ConfigureGuideGoal(Func<Vector2?> goalProvider) =>
+            guideGoalProvider = goalProvider;
+
         public void Tick(float deltaGameSeconds)
         {
             if (disposed || !IsFinitePositive(deltaGameSeconds))
@@ -119,9 +129,10 @@ namespace Nyangbingo.World
 
             var returnToNest = timeService.IsNight && hasFunctionalNest;
             RefreshDayFollowSide();
+            TickGuidePhase(deltaGameSeconds, returnToNest);
             var restingTarget = returnToNest
                 ? nestPosition + NestPerchOffset
-                : (Vector2)player.position + ResolveDayFollowOffset();
+                : ResolveDayRestingTarget();
 
             if (collectionTarget == null)
             {
@@ -243,6 +254,32 @@ namespace Nyangbingo.World
             return new Vector2(
                 Mathf.Abs(DayFollowOffset.x) * dayFollowSide,
                 DayFollowOffset.y);
+        }
+
+        private void TickGuidePhase(float deltaGameSeconds, bool returnToNest)
+        {
+            if (!guideFlyToGoal || returnToNest || guideGoalProvider == null)
+            {
+                guideTowardGoal = false;
+                guideElapsed = 0f;
+                return;
+            }
+
+            guideElapsed += deltaGameSeconds;
+            if (guideElapsed < guideReturnSeconds) return;
+            guideElapsed %= guideReturnSeconds;
+            guideTowardGoal = !guideTowardGoal;
+        }
+
+        private Vector2 ResolveDayRestingTarget()
+        {
+            var playerPosition = (Vector2)player.position;
+            var followTarget = playerPosition + ResolveDayFollowOffset();
+            if (!guideFlyToGoal || !guideTowardGoal || guideGoalProvider == null)
+                return followTarget;
+            var goal = guideGoalProvider();
+            if (!goal.HasValue) return followTarget;
+            return MagpieGuideRules.ResolveLeadPoint(playerPosition, goal.Value);
         }
 
         private void RefreshDayFollowSide()

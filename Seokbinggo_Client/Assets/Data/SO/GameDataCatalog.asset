@@ -309,6 +309,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d7d021efc3ef8cc419d0a1db045e90a7, type: 2}
   - {fileID: 11400000, guid: dc70bffc9a949d74688ad8c8172e12b5, type: 2}
   - {fileID: 11400000, guid: 8dca07817a5df3e44a628c98f714189b, type: 2}
+  - {fileID: 11400000, guid: c1a2b3d4e5f60718293a4b5c6d7e8f01, type: 2}
+  - {fileID: 11400000, guid: d2b3c4e5f60718293a4b5c6d7e8f0213, type: 2}
+  - {fileID: 11400000, guid: e3c4d5e6f708193a4b5c6d7e8f031425, type: 2}
   sealWhitelist:
   - {fileID: 11400000, guid: 43c3e75d6fbe3cb409a40aab412849f4, type: 2}
   - {fileID: 11400000, guid: d004dcc5a9c94a849be19fb92e15cc7c, type: 2}

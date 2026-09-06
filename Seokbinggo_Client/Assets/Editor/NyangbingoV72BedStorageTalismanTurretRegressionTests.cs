@@ -21,7 +21,7 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
         var config = AssetDatabase.LoadAssetAtPath<WorldGenerationConfig>(ConfigPath);
         Require(catalog != null && config != null, "catalog or world config missing");
         Require(catalog.Items.Count == 170 && catalog.Recipes.Count == 97 &&
-                catalog.MineralTiers.Count == 15 && catalog.Globals.Count == 253 &&
+                catalog.MineralTiers.Count == 18 && catalog.Globals.Count == 253 &&
                 catalog.Talismans.Count == 5,
             "step7 catalog counts mismatch");
 
@@ -134,7 +134,10 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
         }
         Require(TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.OysterMushroom) == WorldTileTypes.Clay &&
                 TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Shiitake) == WorldTileTypes.IceShard &&
-                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Seogi) == WorldTileTypes.FrostEssence,
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Seogi) == WorldTileTypes.FrostEssence &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.SeongeOre) == WorldTileTypes.IceSteelOre &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.IceRoot) == WorldTileTypes.IceSteelOre &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.ColdWaveOre) == WorldTileTypes.FrostEssence,
             "mushroom pre-art visual fallback mismatch");
     }
 
@@ -206,12 +209,27 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
             "seokbinggo-stage turret slot/damage cap mismatch");
         Require(SeokbinggoRules.IsDamageTurret(SeokbinggoRules.EarlyTurretId) &&
                 SeokbinggoRules.IsDamageTurret(SeokbinggoRules.SingijeonTurretId) &&
+                SeokbinggoRules.IsDamageTurret(SeokbinggoRules.SeongeTurretId) &&
                 SeokbinggoRules.IsDamageTurret(SeokbinggoRules.ColdWaveTurretId) &&
-                SeokbinggoRules.IsUtilityTurret(SeokbinggoRules.SeongeTurretId),
+                SeokbinggoRules.IsDamageTurret(SeokbinggoRules.IceRootBatteryId) &&
+                SeokbinggoRules.IsDamageTurret(SeokbinggoRules.ColdWaveBatteryId) &&
+                SeokbinggoRules.IsUtilityTurret(UtilityTurretRules.ScarecrowId) &&
+                SeokbinggoRules.IsUtilityTurret(UtilityTurretRules.IceTrapId) &&
+                SeokbinggoRules.IsKnownTurret(UtilityTurretRules.GongTowerId) &&
+                !SeokbinggoRules.IsUtilityTurret(SeokbinggoRules.SeongeTurretId),
             "turret role classification mismatch");
         Require(catalog.FindRecipe(SeokbinggoRules.EarlyTurretId)?.Station == CraftingStation.Workbench &&
-                catalog.FindRecipe(SeokbinggoRules.SingijeonTurretId)?.Station == CraftingStation.Smithy,
+                catalog.FindRecipe(SeokbinggoRules.SingijeonTurretId)?.Station == CraftingStation.Smithy &&
+                catalog.FindRecipe(SeokbinggoRules.SeongeTurretId)?.Station == CraftingStation.Smithy &&
+                catalog.FindRecipe(SeokbinggoRules.ColdWaveBatteryId)?.Station == CraftingStation.Smithy,
             "early/late turret crafting station mismatch");
+        Require(DamageTurretRules.TryGetProfile(SeokbinggoRules.ColdWaveTurretId, out var coldWave) &&
+                Mathf.Approximately(coldWave.FireIntervalSeconds, 0.5f) &&
+                DamageTurretRules.TryGetProfile(SeokbinggoRules.IceRootBatteryId, out var iceRoot) &&
+                iceRoot.FreeFuelWhenConduitLinked &&
+                DamageTurretRules.TryGetProfile(SeokbinggoRules.ColdWaveBatteryId, out var battery) &&
+                battery.FanConeAttack,
+            "evolved damage turret profile mismatch");
     }
 
     private static void ValidateSaveRoundTrip()

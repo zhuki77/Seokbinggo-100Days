@@ -150,6 +150,32 @@ namespace Nyangbingo.Save
         public bool IsVisible => !state.dismissed && timeSource.Day <= lastVisibleDay && !AllCompleted;
         public event Action Changed;
 
+        /// <summary>온보딩 목표 배지와 동일한 다음 미완 목표 ID(workbench / insul_wall / furnace).</summary>
+        public bool TryGetNextIncompleteGoalId(out string goalId)
+        {
+            goalId = null;
+            if (disposed || !IsVisible) return false;
+            if (!WorkbenchCrafted)
+            {
+                goalId = WorkbenchId;
+                return true;
+            }
+
+            if (!InsulationWallPlaced)
+            {
+                goalId = InsulationWallId;
+                return true;
+            }
+
+            if (!FurnaceBuilt)
+            {
+                goalId = FurnaceId;
+                return true;
+            }
+
+            return false;
+        }
+
         public GoalBadgeProgress(ITimeSource source, int wallCount = 1,
             int visibleThroughDay = DefaultLastVisibleDay)
         {

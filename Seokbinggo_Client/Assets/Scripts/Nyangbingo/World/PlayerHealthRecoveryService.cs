@@ -27,6 +27,7 @@ namespace Nyangbingo.World
         private readonly float regenPerSecond;
         private readonly int catnipHealAmount;
         private readonly Dictionary<string, int> itemHealing = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Queue<int> pendingCatnipHeals = new Queue<int>();
         private float secondsSinceDamage;
         private float fractionalHealing;
         private Func<float> regenMultiplierProvider;
@@ -71,6 +72,12 @@ namespace Nyangbingo.World
 
         public void SetRegenMultiplierProvider(Func<float> provider) => regenMultiplierProvider = provider;
 
+        public void EnqueueCatnipHeal(int healHitPoints)
+        {
+            if (disposed || healHitPoints <= 0) return;
+            pendingCatnipHeals.Enqueue(healHitPoints);
+        }
+
         public void Tick(float deltaGameSeconds)
         {
             if (disposed || health.IsDead || deltaGameSeconds <= 0f ||
@@ -107,7 +114,10 @@ namespace Nyangbingo.World
             restoredHealth = 0;
             if (!CanUseHealingItem(itemId) ||
                 !inventory.TryRemoveOneWithStorageCondition(itemId, out var condition)) return false;
-            restoredHealth = health.Heal(Mathf.RoundToInt(BaseHealingFor(itemId) * Mathf.Clamp01(condition)));
+            var baseHeal = BaseHealingFor(itemId);
+            if (itemId == CatnipItemId && pendingCatnipHeals.Count > 0)
+                baseHeal = pendingCatnipHeals.Dequeue();
+            restoredHealth = health.Heal(Mathf.RoundToInt(baseHeal * Mathf.Clamp01(condition)));
             // 상해도가 0인 음식도 사라지지는 않지만 먹으면 회복 0인 소모품이다.
             return true;
         }

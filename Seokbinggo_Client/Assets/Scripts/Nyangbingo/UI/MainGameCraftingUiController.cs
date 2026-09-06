@@ -755,19 +755,82 @@ namespace Nyangbingo.UI
 
         private void BuildCodexGrid()
         {
-            if (codexGridRoot == null || codexCardButtons == null ||
-                codexCardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            if (codexGridRoot == null)
             {
                 Debug.LogError("[Nyangbingo] MainGameCraftingUiController: IntegratedCodexViewport 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            EnsureCodexCardBindings();
+            if (codexCardButtons == null ||
+                codexCardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: 도감 카드 슬롯을 17장으로 구성하지 못했습니다.");
                 return;
             }
             for (var index = 0; index < codexCardButtons.Length; index++)
             {
                 var capturedIndex = index;
                 RuntimeUiButtonArt.ApplyCodexCard(codexCardButtons[index], gameplayArtCatalog);
+                codexCardButtons[index].onClick.RemoveAllListeners();
                 codexCardButtons[index].onClick.AddListener(() => SelectCodexCard(capturedIndex));
             }
             codexGridRoot.SetActive(false);
+        }
+
+        private void EnsureCodexCardBindings()
+        {
+            var needed = YokaiCodexPresentationModel.ExpectedCardCount;
+            if (codexCardButtons != null && codexCardButtons.Length == needed &&
+                codexCardLabels != null && codexCardLabels.Length == needed &&
+                codexCardPortraits != null && codexCardPortraits.Length == needed)
+                return;
+
+            for (var index = codexGridRoot.transform.childCount - 1; index >= 0; index--)
+                Destroy(codexGridRoot.transform.GetChild(index).gameObject);
+
+            var grid = codexGridRoot.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                grid.cellSize = YokaiCodexPresentationModel.GridCardSize;
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = YokaiCodexPresentationModel.GridColumns;
+            }
+
+            codexCardButtons = new Button[needed];
+            codexCardLabels = new Text[needed];
+            codexCardPortraits = new Image[needed];
+            for (var index = 0; index < needed; index++)
+            {
+                var cardObject = new GameObject($"CodexCard_{index + 1:00}", typeof(RectTransform));
+                cardObject.transform.SetParent(codexGridRoot.transform, false);
+                var cardImage = cardObject.AddComponent<Image>();
+                cardImage.color = new Color(.17f, .21f, .25f, 1f);
+                codexCardButtons[index] = cardObject.AddComponent<Button>();
+                var portraitObject = new GameObject("Portrait", typeof(RectTransform));
+                portraitObject.transform.SetParent(cardObject.transform, false);
+                var portrait = portraitObject.AddComponent<Image>();
+                portrait.raycastTarget = false;
+                var portraitRect = portrait.rectTransform;
+                portraitRect.anchorMin = Vector2.zero;
+                portraitRect.anchorMax = Vector2.one;
+                portraitRect.offsetMin = new Vector2(4f, 18f);
+                portraitRect.offsetMax = new Vector2(-4f, -4f);
+                codexCardPortraits[index] = portrait;
+                var labelObject = new GameObject("Label", typeof(RectTransform));
+                labelObject.transform.SetParent(cardObject.transform, false);
+                var label = labelObject.AddComponent<Text>();
+                label.alignment = TextAnchor.LowerCenter;
+                label.fontSize = 11;
+                label.raycastTarget = false;
+                if (Resources.GetBuiltinResource<Font>("Arial.ttf") != null)
+                    label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                label.rectTransform.anchorMin = new Vector2(0f, 0f);
+                label.rectTransform.anchorMax = new Vector2(1f, 0f);
+                label.rectTransform.pivot = new Vector2(0.5f, 0f);
+                label.rectTransform.sizeDelta = new Vector2(0f, 18f);
+                label.rectTransform.anchoredPosition = Vector2.zero;
+                codexCardLabels[index] = label;
+            }
         }
 
         private void BuildCodexExpandedView()
@@ -2045,6 +2108,7 @@ namespace Nyangbingo.UI
 
         private void RebuildOwnedEquipment()
         {
+            runtimeServices?.PromoteInventoryEquipmentItems();
             activeSlotItems.Clear();
             var equippedActiveItemId = runtimeServices.ActiveSlot.EquippedItemId;
             foreach (var item in gameDataCatalog.Items)

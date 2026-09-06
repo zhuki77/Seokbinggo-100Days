@@ -1172,7 +1172,7 @@ namespace Nyangbingo.Debugging
             var frequencies = new[] { 8f, 10f, 6f, 45f, 25f, 8f, 18f, 12f, 10f, 12f, 4f, 10f };
             var hardnesses = new[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1 };
 
-            var valid = gameDataCatalog.MineralTiers.Count == ids.Length;
+            var valid = gameDataCatalog.MineralTiers.Count >= ids.Length;
             for (var i = 0; i < ids.Length; i++)
             {
                 var definition = gameDataCatalog.FindMineralTier(ids[i]);
@@ -1199,6 +1199,19 @@ namespace Nyangbingo.Debugging
                          Mathf.Approximately(definition.MiningSecondsForClawTier(3), tierThree[i]) &&
                          !definition.CanMineWithClawTier(0) && !definition.CanMineWithClawTier(4);
             }
+
+            var frostOres = new[] { "seonge_ore", "ice_root", "cold_wave_ore" };
+            for (var i = 0; i < frostOres.Length; i++)
+            {
+                var definition = gameDataCatalog.FindMineralTier(frostOres[i]);
+                valid &= definition != null &&
+                         definition.Resource == gameDataCatalog.FindItem(frostOres[i]) &&
+                         definition.Hardness == 2 &&
+                         Mathf.Approximately(definition.FrequencyPerHundredTiles, 0f) &&
+                         !definition.CanBreakWithClawTier(1) &&
+                         definition.CanBreakWithClawTier(2);
+            }
+            valid &= gameDataCatalog.MineralTiers.Count == 18;
 
             var worldConfig = WorldGenerationConfig.CreateDefault();
             var veinProfilesMatched = 0;
@@ -2793,8 +2806,10 @@ namespace Nyangbingo.Debugging
             var imugi = FindCard("imugi");
             var gaekgwi = FindCard("gaekgwi");
             var chief = FindCard("king_dokkaebi");
-            var imugiDuplicateRemoved = FindCard("imugi_boss") == null;
+            var imugiBoss = FindCard("imugi_boss");
+            var jigwi = FindCard("jigwi");
             var layoutMatches = model.Cards.Count == YokaiCodexPresentationModel.ExpectedCardCount &&
+                                model.Cards.Count == 17 &&
                                 YokaiCodexPresentationModel.GridColumns == 3 &&
                                 YokaiCodexPresentationModel.GridCardSize == new Vector2(72f, 96f) &&
                                 YokaiCodexPresentationModel.EnlargedCardSize == new Vector2(192f, 256f);
@@ -2802,6 +2817,8 @@ namespace Nyangbingo.Debugging
                                chief != null && chief.IsBoss && chief.KillCount == 3 && chief.FirstKillDay == 9 &&
                                gangcheol != null && gangcheol.KillCount == 1 &&
                                imugi != null && imugi.KillCount == 1 && imugi.FirstKillDay == 30 &&
+                               imugiBoss != null && imugiBoss.IsBoss && imugiBoss.KillCount == 1 &&
+                               jigwi != null && !jigwi.IsUnlocked &&
                                gaekgwi != null;
             var lockedHidden = yagwanggwi != null && !yagwanggwi.IsUnlocked && yagwanggwi.UsesInkSilhouette &&
                                yagwanggwi.DisplayName == "?" && yagwanggwi.SourceText == string.Empty;
@@ -2821,8 +2838,8 @@ namespace Nyangbingo.Debugging
                                   yagwanggwi.SourceText.Contains("동국세시기");
 
             if (layoutMatches && recordsMatch && lockedHidden && lockedEnlarged && unlockedFlipped &&
-                outsideReturnedToGrid && refreshUnlocked && imugiDuplicateRemoved)
-                Debug.Log("[Nyangbingo] Yokai codex v34 nine-card unlock, merge, enlarge, flip, and source presentation completed.");
+                outsideReturnedToGrid && refreshUnlocked)
+                Debug.Log("[Nyangbingo] Yokai codex 17-card unlock, merge, enlarge, flip, and source presentation completed.");
             else Debug.LogError("[Nyangbingo] Yokai codex presentation test failed.");
         }
 

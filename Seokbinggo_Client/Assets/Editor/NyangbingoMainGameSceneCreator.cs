@@ -598,7 +598,7 @@ public static class NyangbingoMainGameSceneCreator
         codexWindow.transform.SetParent(codexPanel.transform, false);
         var windowRect = codexWindow.GetComponent<RectTransform>();
         windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(.5f, .5f);
-        windowRect.sizeDelta = new Vector2(900f, 620f);
+        windowRect.sizeDelta = new Vector2(900f, 760f);
         var windowImage = codexWindow.AddComponent<Image>();
         windowImage.color = new Color(.08f, .11f, .14f, 1f);
 
@@ -611,7 +611,7 @@ public static class NyangbingoMainGameSceneCreator
         var gridRect = gridObject.GetComponent<RectTransform>();
         gridRect.anchorMin = gridRect.anchorMax = gridRect.pivot = new Vector2(0f, 1f);
         gridRect.anchoredPosition = new Vector2(40f, -100f);
-        gridRect.sizeDelta = new Vector2(250f, 430f);
+        gridRect.sizeDelta = new Vector2(250f, 640f);
         var codexGrid = gridObject.AddComponent<GridLayoutGroup>();
         codexGrid.cellSize = YokaiCodexPresentationModel.GridCardSize;
         codexGrid.spacing = new Vector2(10f, 10f);

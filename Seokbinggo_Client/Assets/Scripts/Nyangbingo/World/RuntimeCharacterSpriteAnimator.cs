@@ -12,6 +12,7 @@ namespace Nyangbingo.World
     {
         private const float FrameSeconds = .1f;
         private const float MovementThreshold = .000001f;
+        private const float HitFlashSeconds = .12f;
 
         private SpriteRenderer spriteRenderer;
         private CharacterArtCatalog.Entry entry;
@@ -24,11 +25,15 @@ namespace Nyangbingo.World
         private int frameIndex;
         private float frameRemaining;
         private float actionRemaining;
+        private float hitFlashRemaining;
+        private Color baseSpriteColor = Color.white;
         private bool holdFinalFrame;
         private bool deathLocked;
         private bool specialActionPlaying;
         private bool hasExplicitMovementState;
         private bool explicitlyMoving;
+        private bool airborne;
+        private bool airborneAscending;
         private bool configured;
 
         public SpriteRenderer Renderer => spriteRenderer;
@@ -54,6 +59,10 @@ namespace Nyangbingo.World
             configured = true;
             deathLocked = false;
             specialActionPlaying = false;
+            airborne = false;
+            airborneAscending = false;
+            hitFlashRemaining = 0f;
+            baseSpriteColor = spriteRenderer != null ? spriteRenderer.color : Color.white;
             if (health != null) health.Damaged += HandleDamaged;
             PlayLoop(entry.IdleFrames);
         }
@@ -73,10 +82,25 @@ namespace Nyangbingo.World
             explicitlyMoving = moving;
         }
 
+        /// <summary>지상/공중 이동 상태. ascending=true면 jump, false면 fall 클립.</summary>
+        public void SetLocomotion(bool onGround, bool ascending, bool moving)
+        {
+            hasExplicitMovementState = true;
+            explicitlyMoving = moving;
+            airborne = !onGround;
+            airborneAscending = ascending;
+        }
+
         public void PlayAttack()
         {
             if (specialActionPlaying) return;
             PlayAction(entry?.AttackFrames);
+        }
+
+        public void PlayLand()
+        {
+            if (specialActionPlaying || deathLocked) return;
+            PlayAction(entry?.LandFrames);
         }
 
         public void PlaySpecial()
@@ -109,6 +133,10 @@ namespace Nyangbingo.World
             if (!configured || entry == null) return;
             deathLocked = false;
             specialActionPlaying = false;
+            airborne = false;
+            airborneAscending = false;
+            hitFlashRemaining = 0f;
+            if (spriteRenderer != null) spriteRenderer.color = baseSpriteColor;
             PlayLoop(entry.IdleFrames);
         }
 
@@ -165,6 +193,7 @@ namespace Nyangbingo.World
             if (deathLocked)
             {
                 TickFrames(Time.deltaTime);
+                TickHitFlash(Time.deltaTime);
                 return;
             }
 
@@ -173,14 +202,27 @@ namespace Nyangbingo.World
                 actionRemaining = Mathf.Max(0f, actionRemaining - Time.deltaTime);
                 TickFrames(Time.deltaTime);
                 if (actionRemaining <= 0f) specialActionPlaying = false;
+                TickHitFlash(Time.deltaTime);
                 return;
             }
 
             var moving = hasExplicitMovementState ? explicitlyMoving : delta.sqrMagnitude > MovementThreshold;
-            var targetFrames = moving ? MovingFrames() : entry.IdleFrames;
+            var targetFrames = ResolveLocomotionFrames(moving);
             if (targetFrames == null || targetFrames.Count == 0) targetFrames = SingleFrame();
             if (!ReferenceEquals(activeFrames, targetFrames)) PlayLoop(targetFrames);
             TickFrames(Time.deltaTime);
+            TickHitFlash(Time.deltaTime);
+        }
+
+        private IReadOnlyList<Sprite> ResolveLocomotionFrames(bool moving)
+        {
+            if (airborne)
+            {
+                if (airborneAscending && entry.JumpFrames.Count > 0) return entry.JumpFrames;
+                if (!airborneAscending && entry.FallFrames.Count > 0) return entry.FallFrames;
+                if (entry.JumpFrames.Count > 0) return entry.JumpFrames;
+            }
+            return moving ? MovingFrames() : entry.IdleFrames;
         }
 
         private IReadOnlyList<Sprite> MovingFrames()
@@ -243,7 +285,26 @@ namespace Nyangbingo.World
 
         private void HandleDamaged(Nyangbingo.Core.DamageTag tag, int amount)
         {
-            if (amount > 0 && !specialActionPlaying) PlayAction(entry?.HitFrames);
+            if (amount <= 0 || specialActionPlaying || deathLocked) return;
+            if (entry?.HitFrames != null && entry.HitFrames.Count > 0)
+            {
+                PlayAction(entry.HitFrames);
+                return;
+            }
+
+            // hit 클립이 없으면 짧은 흰색 플래시로 피격 피드백한다.
+            if (spriteRenderer == null) return;
+            baseSpriteColor = spriteRenderer.color;
+            spriteRenderer.color = Color.white;
+            hitFlashRemaining = HitFlashSeconds;
+        }
+
+        private void TickHitFlash(float deltaTime)
+        {
+            if (hitFlashRemaining <= 0f || spriteRenderer == null) return;
+            hitFlashRemaining = Mathf.Max(0f, hitFlashRemaining - Mathf.Max(0f, deltaTime));
+            if (hitFlashRemaining <= 0f)
+                spriteRenderer.color = baseSpriteColor;
         }
 
         private void OnDestroy()

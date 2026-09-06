@@ -67,14 +67,14 @@ public static class NyangbingoV72DataRegressionTests
             "starting trait data");
         Require(catalog.FindCrop("zone10:catnip")?.HealHitPoints == 40,
             "zone10 crop data");
-        Require(NyangbingoCsvUtility.ReadRows("Assets/Data/CSV/content-status.csv").Count == 858,
+        Require(NyangbingoCsvUtility.ReadRows("Assets/Data/CSV/content-status.csv").Count == 861,
             "content-status editor reference row count");
         Require(catalog.Globals.Count == 253 && catalog.IdMigrations.Count == 28 &&
                 catalog.FindGlobal("wave_mult_target")?.Value == "hp_only",
             "v79 globals and ID migration contract");
         ValidateBossSemanticGuard();
 
-        Debug.Log("[Nyangbingo] v79 data regression passed: 10/70/5/17/4/10 + 858 rows + 253 globals + 28 migrations; " +
+        Debug.Log("[Nyangbingo] v79 data regression passed: 10/70/5/17/4/10 + 861 rows + 253 globals + 28 migrations; " +
                   "malformed boss combat columns rejected.");
     }
 

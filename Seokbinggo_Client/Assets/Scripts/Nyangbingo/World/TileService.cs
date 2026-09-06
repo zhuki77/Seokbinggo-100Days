@@ -232,6 +232,27 @@ namespace Nyangbingo.World
             return destroyed;
         }
 
+        public bool TryHealWall(Vector3Int cell, float amount, out float healed)
+        {
+            healed = 0f;
+            if (!IsFinite(amount) || amount <= 0f ||
+                !TryResolveWallMaterial(cell, out _) ||
+                !wallDamageTaken.TryGetValue(cell, out var currentDamage) ||
+                currentDamage <= 0f)
+                return false;
+
+            healed = Mathf.Min(amount, currentDamage);
+            currentDamage -= healed;
+            var maximum = ResolveWallHitPoints(cell);
+            if (currentDamage <= .0001f)
+                wallDamageTaken.Remove(cell);
+            else
+                wallDamageTaken[cell] = currentDamage;
+            GameEvents.RaiseWallDurabilityChanged(
+                cell, maximum - Mathf.Max(0f, currentDamage), maximum, false);
+            return healed > 0f;
+        }
+
         public float GetWallRemainingHitPoints(Vector3Int cell)
         {
             if (!TryResolveWallMaterial(cell, out _)) return 0f;

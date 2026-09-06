@@ -84,6 +84,9 @@ namespace Nyangbingo.Yokai
         private bool useAggroRadius;
         private bool isAggroed;
         private bool infiltrationRecorded;
+        private Vector2 forcedAggroPosition;
+        private float forcedAggroRemaining;
+        private bool hasForcedAggro;
         private SpriteRenderer[] pausedRenderers = System.Array.Empty<SpriteRenderer>();
         private Color[] pausedRendererColors = System.Array.Empty<Color>();
         public YokaiDefinition Definition => definition;
@@ -99,6 +102,8 @@ namespace Nyangbingo.Yokai
         public bool IsBossEncounterPaused => bossEncounterPaused;
         public bool UsesAggroRadius => useAggroRadius;
         public bool IsAggroed => isAggroed;
+        public bool HasForcedAggro => hasForcedAggro && forcedAggroRemaining > 0f;
+        public float ForcedAggroRemaining => HasForcedAggro ? forcedAggroRemaining : 0f;
         public bool HasRecordedInfiltration => infiltrationRecorded;
         public float GaekgwiCooldownRemaining => gaekgwiCooldownRemaining;
         public float GaekgwiTelegraphRemaining => gaekgwiTelegraphRemaining;
@@ -373,6 +378,20 @@ namespace Nyangbingo.Yokai
             return true;
         }
 
+        /// <summary>허수아비 등 — 지정 위치로 어그로를 duration 동안 고정한다(이미 고정 중이면 갱신만).</summary>
+        public bool TryForceAggroPosition(Vector2 worldPosition, float durationSeconds)
+        {
+            if (float.IsNaN(worldPosition.x) || float.IsInfinity(worldPosition.x) ||
+                float.IsNaN(worldPosition.y) || float.IsInfinity(worldPosition.y) ||
+                float.IsNaN(durationSeconds) || float.IsInfinity(durationSeconds) || durationSeconds <= 0f)
+                return false;
+            forcedAggroPosition = worldPosition;
+            forcedAggroRemaining = Mathf.Max(forcedAggroRemaining, durationSeconds);
+            hasForcedAggro = true;
+            isAggroed = true;
+            return true;
+        }
+
         private void Update()
         {
             TickFromGameClock();
@@ -417,6 +436,15 @@ namespace Nyangbingo.Yokai
             {
                 frostSlowRemaining = 0f;
                 frostSlowFraction = 0f;
+            }
+            if (hasForcedAggro)
+            {
+                forcedAggroRemaining = Mathf.Max(0f, forcedAggroRemaining - deltaSeconds);
+                if (forcedAggroRemaining <= .0001f)
+                {
+                    forcedAggroRemaining = 0f;
+                    hasForcedAggro = false;
+                }
             }
             if (state == State.DawnFlee)
             {
@@ -502,6 +530,11 @@ namespace Nyangbingo.Yokai
                 return;
             if (definition.Kind == YokaiKind.Gaekgwi && TickGaekgwiPattern(actionSeconds))
                 return;
+            if (HasForcedAggro)
+            {
+                TickForcedAggroChase(actionSeconds);
+                return;
+            }
             var targetPosition = target.TargetTransform.position;
             var currentPosition = transform.position;
             if (!IsFinite(currentPosition) || !IsFinite(targetPosition)) return;
@@ -633,6 +666,26 @@ namespace Nyangbingo.Yokai
                     MoveRetreat(-direction, actionSeconds, false);
                     break;
             }
+        }
+
+        private void TickForcedAggroChase(float actionSeconds)
+        {
+            if (actionSeconds <= 0f || !HasForcedAggro) return;
+            var decoyPosition = (Vector3)forcedAggroPosition;
+            var currentPosition = transform.position;
+            if (!IsFinite(currentPosition) || !IsFinite(decoyPosition)) return;
+            var targetOffset = decoyPosition - currentPosition;
+            var navigationOffset = physicsBody != null
+                ? (Vector3)physicsBody.NavigationOffset(targetOffset)
+                : targetOffset;
+            var navigationDistance = navigationOffset.magnitude;
+            if (navigationDistance <= 0.35f) return;
+            var direction = navigationDistance <= Mathf.Epsilon
+                ? Vector3.zero
+                : physicsBody != null
+                    ? (Vector3)physicsBody.NavigationDirection(targetOffset)
+                    : navigationOffset / navigationDistance;
+            MoveTowardAttackRange(direction, navigationDistance, 0.35f, actionSeconds);
         }
 
         private void MoveRetreat(Vector3 direction, float actionSeconds, bool dawnFlee)

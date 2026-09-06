@@ -16,6 +16,10 @@ namespace Nyangbingo.World
         public const string SingijeonTurretId = "singijeon_cart";
         public const string SeongeTurretId = "seonge_tower";
         public const string ColdWaveTurretId = "cold_wave_tower";
+        public const string IceRootBatteryId = "ice_root_battery";
+        public const string ColdWaveBatteryId = "cold_wave_battery";
+        public const string ScarecrowTurretId = UtilityTurretRules.ScarecrowId;
+        public const string IceTrapTurretId = UtilityTurretRules.IceTrapId;
         public const string ModuleIdPrefix = "seokbinggo_s";
         public const string IceCoreDefinitionId = "ice_core";
 
@@ -54,12 +58,10 @@ namespace Nyangbingo.World
         }
 
         public static bool IsDamageTurret(string definitionId) =>
-            string.Equals(definitionId, EarlyTurretId, StringComparison.Ordinal) ||
-            string.Equals(definitionId, SingijeonTurretId, StringComparison.Ordinal) ||
-            string.Equals(definitionId, ColdWaveTurretId, StringComparison.Ordinal);
+            DamageTurretRules.IsDamageTurretId(definitionId);
 
         public static bool IsUtilityTurret(string definitionId) =>
-            string.Equals(definitionId, SeongeTurretId, StringComparison.Ordinal);
+            UtilityTurretRules.IsUtilityTurretId(definitionId);
 
         public static bool IsKnownTurret(string definitionId) =>
             IsDamageTurret(definitionId) || IsUtilityTurret(definitionId);

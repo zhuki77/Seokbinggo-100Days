@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Nyangbingo.Bosses;
@@ -20,13 +21,23 @@ public static class NyangbingoDevBIntegrationRegressionTests
     private const BindingFlags InstanceMembers =
         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+    private static Rigidbody2D EnsureKinematicRigidbody2D(GameObject target)
+    {
+        var body = target.GetComponent<Rigidbody2D>();
+        if (body == null)
+            body = target.AddComponent<Rigidbody2D>();
+        body.bodyType = RigidbodyType2D.Kinematic;
+        body.gravityScale = 0f;
+        return body;
+    }
+
     [MenuItem("Nyangbingo/Run Dev B Integration Regression Tests")]
     public static void RunAll()
     {
         try
         {
             RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "54/54 tests");
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "64/64 tests");
         }
         catch (System.Exception exception)
         {
@@ -59,6 +70,17 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestSangunRetreatCombatContract();
         TestYeongnoSwallowCombatContract();
         TestGangcheolPerfectPhaseCombatContract();
+        TestJigwiEmberCombatContract();
+        TestGangcheolBlazeDoubleBreathCombatContract();
+        TestGimmickWeaponCombatHooksContract();
+        TestEvolvedClawCombatContract();
+        TestEvolvedFanCombatContract();
+        TestUtilityTurretFieldCombatContract();
+        TestBowAndExtendedUtilityTurretContract();
+        TestDamageTurretEvolutionContract();
+        TestT4T6ArmorEvolutionContract();
+        TestCodexSeventeenEntryPresentationContract();
+        TestMagpieGuideAndCropBandContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
         TestBossPausedYokaiVisibilityContract();
@@ -945,20 +967,21 @@ public static class NyangbingoDevBIntegrationRegressionTests
         {
             var bossHealth = bossObject.AddComponent<Health>();
             bossHealth.ConfigureForRuntime(100);
-            bossObject.AddComponent<WorldMobPhysicsBody>();
-            var combat = bossObject.AddComponent<BossCombatController>();
+            // TryOverrideCombatTick requires BossCombatController; WorldMobPhysicsBody is optional
+            // (retreat falls back to transform.position when physicsBody is null).
+            bossObject.AddComponent<BossCombatController>();
             var sangun = bossObject.AddComponent<BossSangunBehaviour>();
-            playerObject.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            var playerBody = EnsureKinematicRigidbody2D(playerObject);
             playerObject.transform.position = new Vector3(3f, 0f, 0f);
             bossObject.transform.position = Vector3.zero;
             sangun.Configure(playerObject.transform);
 
-            playerObject.GetComponent<Rigidbody2D>().linearVelocity = new Vector2(4f, 0f);
+            playerBody.linearVelocity = new Vector2(4f, 0f);
             sangun.Tick(.01f);
             Require(!sangun.IsRetreating,
                 "Sangun must chase when the player flees instead of confronting.");
 
-            playerObject.GetComponent<Rigidbody2D>().linearVelocity = Vector2.zero;
+            playerBody.linearVelocity = Vector2.zero;
             sangun.Tick(.01f);
             Require(sangun.TryOverrideCombatTick(.1f) &&
                     sangun.IsRetreating &&
@@ -1101,6 +1124,509 @@ public static class NyangbingoDevBIntegrationRegressionTests
             UnityEngine.Object.DestroyImmediate(targetObject);
             UnityEngine.Object.DestroyImmediate(bossObject);
         }
+    }
+
+    private static void TestJigwiEmberCombatContract()
+    {
+        var jigwiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossJigwiBehaviour.cs");
+        var coordinatorSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        Require(jigwiSource.Contains("EmberLifetimeSeconds") &&
+                jigwiSource.Contains("HasJigwiAshImmunity") &&
+                jigwiSource.Contains("SpecialStarted") &&
+                coordinatorSource.Contains("BossKind.Jigwi") &&
+                coordinatorSource.Contains("BossJigwiBehaviour"),
+            "Jigwi must ignite recent stand positions and respect jigwi_ash floor immunity.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "jigwi", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 60f),
+            "Jigwi opening dodge must resolve to 60 seconds from boss_dodge_sec_curve.");
+
+        var definition = AssetDatabase.LoadAssetAtPath<BossDefinition>(
+            "Assets/Data/SO/Bosses/jigwi.asset");
+        var bossObject = new GameObject("JigwiEmberCombatContract");
+        var targetObject = new GameObject("JigwiEmberCombatContractTarget");
+        try
+        {
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(200);
+            var player = targetObject.AddComponent<MainGamePlayerController>();
+            var targetHealth = targetObject.AddComponent<Health>();
+            targetHealth.ConfigureForRuntime(100);
+            var target = targetObject.AddComponent<MainGameRaidTarget>();
+            var combat = bossObject.AddComponent<BossCombatController>();
+            var jigwi = bossObject.AddComponent<BossJigwiBehaviour>();
+            Require(definition != null && combat.ConfigureForRuntime(definition, target),
+                "Jigwi must configure its ember combat runtime.");
+            jigwi.Configure(targetObject.transform, definition);
+            targetObject.transform.position = bossObject.transform.position;
+
+            jigwi.Tick(BossJigwiBehaviour.PositionSampleIntervalSeconds + .01f);
+            jigwi.Tick(BossJigwiBehaviour.PositionSampleIntervalSeconds + .01f);
+            Require(jigwi.ActiveEmberCount >= 1,
+                "Jigwi must leave heated floor embers when it stands still.");
+
+            SetField(player, "activeProfile", CombatProfileDefinition.CreateRuntime(
+                GimmickWeaponProgress.JigwiAshId, "B", true, 1f, 1f, 1f, 0f, 1f, 90f, false, false));
+            var beforeAsh = targetHealth.Current;
+            jigwi.Tick(BossJigwiBehaviour.EmberTickSeconds);
+            Require(targetHealth.Current == beforeAsh,
+                "jigwi_ash must prevent damage from Jigwi heated floor embers.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(targetObject);
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+    }
+
+    private static void TestGangcheolBlazeDoubleBreathCombatContract()
+    {
+        var combatSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossCombatController.cs");
+        Require(combatSource.Contains("GangcheolBlazePulseCount") &&
+                combatSource.Contains("TickGangcheolBlazePulse") &&
+                combatSource.Contains("BossKind.GangcheolBlaze"),
+            "Gangcheol Blaze must fire two consecutive fan breath pulses.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null &&
+                BossDodgeRules.TryGetOpeningDodgeSeconds(catalog, "gangcheol_blaze", out var dodgeSeconds) &&
+                Mathf.Approximately(dodgeSeconds, 70f),
+            "Gangcheol Blaze opening dodge must resolve to 70 seconds from boss_dodge_sec_curve.");
+
+        var definition = AssetDatabase.LoadAssetAtPath<BossDefinition>(
+            "Assets/Data/SO/Bosses/gangcheol_blaze.asset");
+        var bossObject = new GameObject("GangcheolBlazeDoubleBreathCombatContract");
+        var targetObject = new GameObject("GangcheolBlazeDoubleBreathCombatContractTarget");
+        try
+        {
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(definition != null ? definition.HitPoints : 1);
+            var targetBody = targetObject.AddComponent<Rigidbody2D>();
+            targetBody.bodyType = RigidbodyType2D.Kinematic;
+            var targetHealth = targetObject.AddComponent<Health>();
+            targetHealth.ConfigureForRuntime(100);
+            var target = targetObject.AddComponent<MainGameRaidTarget>();
+            var combat = bossObject.AddComponent<BossCombatController>();
+            Require(definition != null && combat.ConfigureForRuntime(definition, target),
+                "Gangcheol Blaze must configure its double-breath runtime.");
+            targetObject.transform.position = bossObject.transform.position;
+
+            combat.Tick(definition.SpecialCooldownSeconds);
+            Require(combat.IsTelegraphing,
+                "Gangcheol Blaze must telegraph its enlarged fan breath.");
+            combat.Tick(definition.TelegraphSeconds);
+            Require(combat.IsSpecialActive &&
+                    combat.RemainingGangcheolBlazePulses == 1,
+                "Gangcheol Blaze must begin a two-pulse special after telegraphing.");
+
+            var beforeSecondPulse = targetHealth.Current;
+            combat.Tick(.65f);
+            Require(!combat.IsSpecialActive &&
+                    combat.RemainingGangcheolBlazePulses == 0 &&
+                    targetHealth.Current < beforeSecondPulse,
+                "Gangcheol Blaze must apply both fan breath pulses before ending the special.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(targetObject);
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+    }
+
+    private static void TestGimmickWeaponCombatHooksContract()
+    {
+        var inventorySource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Inventory/Inventory.cs");
+        var rulesSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Inventory/GimmickWeaponCombatRules.cs");
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var sangunSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossSangunBehaviour.cs");
+        var combatSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Bosses/BossCombatController.cs");
+        Require(inventorySource.Contains("GimmickWeaponProgress.FirstFrostClawId") &&
+                inventorySource.Contains("GimmickWeaponProgress.YeongnoToothId") &&
+                rulesSource.Contains("CreateScaledProfile") &&
+                playerSource.Contains("GimmickWeaponCombatRules.IsGimmickWeaponId") &&
+                playerSource.Contains("GimmickWeaponProgress.YeongnoToothId") &&
+                sangunSource.Contains("GimmickWeaponProgress.SangunWhiskerId") &&
+                combatSource.Contains("ShouldSuppressImugiKnockback") &&
+                combatSource.Contains("GimmickWeaponProgress.YeouijuClawId"),
+            "Gimmick weapons must be equippable and wire boss-specific combat hooks.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        var baseProfile = catalog?.FindCombatProfile("iron_claw");
+        Require(baseProfile != null, "Gimmick weapon scaling must use the current claw profile as its base.");
+        var scaled = GimmickWeaponCombatRules.CreateScaledProfile(
+            GimmickWeaponProgress.YeouijuClawId, baseProfile, catalog);
+        Require(scaled != null &&
+                Mathf.Approximately(scaled.AttackDamage, GimmickWeapon.ScaleDamage(baseProfile.AttackDamage)),
+            "Gimmick weapons must scale outgoing damage by gimmick_weapon_bonus.");
+
+        var bossObject = new GameObject("GimmickWeaponSangunContract");
+        var playerObject = new GameObject("GimmickWeaponSangunContractPlayer");
+        try
+        {
+            var bossHealth = bossObject.AddComponent<Health>();
+            bossHealth.ConfigureForRuntime(100);
+            var sangun = bossObject.AddComponent<BossSangunBehaviour>();
+            var player = playerObject.AddComponent<MainGamePlayerController>();
+            playerObject.transform.position = new Vector3(3f, 0f, 0f);
+            bossObject.transform.position = Vector3.zero;
+            sangun.Configure(playerObject.transform);
+            SetField(player, "activeProfile", CombatProfileDefinition.CreateRuntime(
+                GimmickWeaponProgress.SangunWhiskerId, "B", true, 1f, 1f, 1f, 0f, 1f, 90f, false, false));
+
+            var playerBody = playerObject.GetComponent<Rigidbody2D>();
+            Require(playerBody != null,
+                "Gimmick weapon sangun contract must reuse MainGamePlayerController's Rigidbody2D.");
+            playerBody.bodyType = RigidbodyType2D.Kinematic;
+            playerBody.linearVelocity = Vector2.zero;
+            sangun.Tick(.01f);
+            Require(!sangun.IsRetreating,
+                "sangun_whisker must let the player confront Sangun without triggering retreat immunity.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(playerObject);
+            UnityEngine.Object.DestroyImmediate(bossObject);
+        }
+
+        var playerObject2 = new GameObject("GimmickWeaponYeongnoContractPlayer");
+        try
+        {
+            var player = playerObject2.AddComponent<MainGamePlayerController>();
+            SetField(player, "initialized", true);
+            SetField(player, "activeProfile", CombatProfileDefinition.CreateRuntime(
+                GimmickWeaponProgress.YeongnoToothId, "B", true, 1f, 1f, 1f, 0f, 1f, 90f, false, false));
+            Require(!player.TryBeginYeongnoSwallow(5, 3f, 1f),
+                "yeongno_tooth must block Yeongno swallow while equipped.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(playerObject2);
+        }
+    }
+
+    private static void TestEvolvedClawCombatContract()
+    {
+        var meleeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Combat/MeleeArcAttack.cs");
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var inventorySource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Inventory/Inventory.cs");
+        Require(meleeSource.Contains("StrikeSangunCombo") &&
+                meleeSource.Contains("EvolvedClawCombatRules.ResolveMaxTargets") &&
+                playerSource.Contains("EvolvedClawCombatRules.IsSangunClaw") &&
+                inventorySource.Contains("EvolvedClawCombatRules.SangunClawId") &&
+                inventorySource.Contains("EvolvedClawCombatRules.PerfectClawId"),
+            "Evolved claw weapons must support sangun 3-hit combo and perfect wide sweep targeting.");
+
+        EvolvedClawCombatRules.SplitSangunComboDamage(63, 0, out var firstDamage, out var firstKnockback, 1.5f);
+        EvolvedClawCombatRules.SplitSangunComboDamage(63, 2, out var finisherDamage, out var finisherKnockback, 1.5f);
+        Require(firstDamage == 21 && Mathf.Approximately(firstKnockback, 0f) &&
+                finisherDamage == 21 && Mathf.Approximately(finisherKnockback, 1.5f),
+            "Sangun claw must split combo damage evenly and apply knockback only on the finisher.");
+
+        var perfectProfile = CombatProfileDefinition.CreateRuntime(
+            EvolvedClawCombatRules.PerfectClawId, "6", true, 66f, 1.5f, 99f, 1.5f, 2.5f, 140f, false, true);
+        Require(EvolvedClawCombatRules.ResolveMaxTargets(perfectProfile) ==
+                EvolvedClawCombatRules.PerfectClawMaxTargets,
+            "Perfect claw must allow multi-target wide sweeps.");
+
+        var attackerObject = new GameObject("EvolvedClawCombatContractAttacker");
+        var targetObject = new GameObject("EvolvedClawCombatContractTarget");
+        try
+        {
+            attackerObject.AddComponent<Health>().ConfigureForRuntime(100);
+            var attack = attackerObject.AddComponent<MeleeArcAttack>();
+            var sangunProfile = CombatProfileDefinition.CreateRuntime(
+                EvolvedClawCombatRules.SangunClawId, "5", true, 63f, 1.5f, 94.5f, 1.5f, 2f, 120f, false, true);
+            Require(attack.ConfigureForRuntime(attackerObject.transform, ~0, sangunProfile),
+                "Sangun claw must configure its melee arc attack profile.");
+
+            var targetHealth = targetObject.AddComponent<Health>();
+            targetHealth.ConfigureForRuntime(100);
+            targetObject.AddComponent<CircleCollider2D>().radius = .5f;
+            targetObject.transform.position = attackerObject.transform.position + Vector3.right * 1.2f;
+
+            attack.StrikeSangunCombo(Vector2.right, sangunProfile);
+            Require(targetHealth.Current < 100,
+                "Sangun claw combo must apply its full split damage to a target in range.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(targetObject);
+            UnityEngine.Object.DestroyImmediate(attackerObject);
+        }
+    }
+
+    private static void TestEvolvedFanCombatContract()
+    {
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var inventorySource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Inventory/Inventory.cs");
+        var meleeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Combat/MeleeArcAttack.cs");
+        Require(playerSource.Contains("EvolvedFanCombatRules.IsFanAbilityWeapon") &&
+                playerSource.Contains("EvolvedFanCombatRules.ResolveAbilityKnockback") &&
+                inventorySource.Contains("FanItemIds.IceRootWhipfan") &&
+                inventorySource.Contains("FanItemIds.ColdWaveFan") &&
+                meleeSource.Contains("EvolvedFanCombatRules.ResolveDisplacement"),
+            "Evolved fans must be equippable and wire pull/AoE displacement rules.");
+
+        var pull = EvolvedFanCombatRules.ResolveDisplacement(Vector2.right, 1.5f,
+            CombatProfileDefinition.CreateRuntime(
+                FanItemIds.IceRootWhipfan, "5", true, 21f, 1.5f, 31.5f, 1.5f, 4f, 90f, false, false));
+        var push = EvolvedFanCombatRules.ResolveDisplacement(Vector2.right, 2f,
+            CombatProfileDefinition.CreateRuntime(
+                FanItemIds.ColdWaveFan, "6", true, 22f, 1.5f, 33f, 2f, 3f, 120f, true, false));
+        Require(Vector2.Distance(pull, Vector2.left * 1.5f) <= .0001f &&
+                Vector2.Distance(push, Vector2.right * 2f) <= .0001f,
+            "Ice-root whipfan must pull while cold-wave fan keeps outward knockback.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        var coldWave = catalog?.FindCombatProfile(FanItemIds.ColdWaveFan);
+        Require(coldWave != null && coldWave.MaxTargets == 3 &&
+                Mathf.Approximately(coldWave.RangeTiles, 3f),
+            "Cold-wave fan combat profile must keep its wide multi-target contract.");
+
+        Require(MainGamePlayerController.ResolveFanAbilityDamage(FanItemIds.IceRootWhipfan) ==
+                WireSnareAbility.CheolseonDamage &&
+                MainGamePlayerController.ResolveFanAbilityDamage(FanItemIds.Hapjukseon) ==
+                WireSnareAbility.HapjukseonDamage,
+            "Evolved fan abilities must keep the cheolseon damage tier except hapjukseon.");
+    }
+
+    private static void TestUtilityTurretFieldCombatContract()
+    {
+        var rulesSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/UtilityTurretRules.cs");
+        var turretSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+        var yokaiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
+        Require(rulesSource.Contains("ScarecrowAggroSeconds") &&
+                rulesSource.Contains("IceTrapFreezeFraction") &&
+                turretSource.Contains("TryRegisterUtilityTurret") &&
+                turretSource.Contains("TickUtilityTurretFields") &&
+                yokaiSource.Contains("TryForceAggroPosition") &&
+                yokaiSource.Contains("TickForcedAggroChase"),
+            "Scarecrow and ice-trap utility turrets must register field effects and forced aggro.");
+
+        Require(SeokbinggoRules.IsUtilityTurret(UtilityTurretRules.ScarecrowId) &&
+                SeokbinggoRules.IsUtilityTurret(UtilityTurretRules.IceTrapId) &&
+                SeokbinggoRules.IsUtilityTurret(UtilityTurretRules.ArrowSupplyId) &&
+                !SeokbinggoRules.IsDamageTurret(UtilityTurretRules.ScarecrowId),
+            "Utility turret ids must classify as utility, not damage.");
+
+        var yokaiObject = new GameObject("UtilityTurretFieldYokai");
+        try
+        {
+            var brain = yokaiObject.AddComponent<YokaiBrain>();
+            yokaiObject.transform.position = Vector3.right * 2f;
+            Require(brain.TryForceAggroPosition(Vector2.zero, UtilityTurretRules.ScarecrowAggroSeconds) &&
+                    brain.HasForcedAggro &&
+                    Mathf.Approximately(brain.ForcedAggroRemaining, UtilityTurretRules.ScarecrowAggroSeconds),
+                "Scarecrow aggro must lock a yokai onto the decoy position.");
+
+            Require(brain.ApplyFrostSlow(
+                        UtilityTurretRules.IceTrapFreezeFraction,
+                        UtilityTurretRules.IceTrapFreezeSeconds) &&
+                    Mathf.Approximately(brain.FrostSpeedMultiplier, 0f),
+                "Ice trap must fully freeze yokai movement via frost slow.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(yokaiObject);
+        }
+    }
+
+    private static void TestBowAndExtendedUtilityTurretContract()
+    {
+        var inventorySource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Inventory/Inventory.cs");
+        var meleeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Combat/MeleeArcAttack.cs");
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var turretSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+        var tileSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/TileService.cs");
+        Require(inventorySource.Contains("BowCombatRules.StrawSlingId") &&
+                inventorySource.Contains("BowCombatRules.ColdWaveSingijeonId") &&
+                meleeSource.Contains("BowCombatRules.ResolveHalfArcDegrees") &&
+                playerSource.Contains("BowCombatRules.TryConsumeAmmo") &&
+                turretSource.Contains("TickArrowSupply") &&
+                turretSource.Contains("TickPlasterDoll") &&
+                turretSource.Contains("TickGongTower") &&
+                tileSource.Contains("TryHealWall"),
+            "Bows must equip/consume stone ammo and remaining utility turrets must tick field effects.");
+
+        Require(Mathf.Approximately(BowCombatRules.ResolveHalfArcDegrees(0f),
+                    BowCombatRules.BeamHalfArcDegrees) &&
+                Mathf.Approximately(BowCombatRules.ResolveHalfArcDegrees(90f), 45f),
+            "Bow profiles with arc 0 must use a narrow beam half-arc.");
+
+        var stone = ItemDefinition.CreateRuntime(BowCombatRules.AmmoItemId, "돌", 99);
+        try
+        {
+            var inventory = new Inventory(id => id == stone.Id ? stone : null);
+            Require(!BowCombatRules.TryConsumeAmmo(inventory),
+                "Bow attacks must fail without stone ammo.");
+            inventory.TryAdd(BowCombatRules.AmmoItemId, 2);
+            Require(BowCombatRules.TryConsumeAmmo(inventory) &&
+                    inventory.Count(BowCombatRules.AmmoItemId) == 1,
+                "Bow attacks must consume one stone per shot.");
+
+            Require(UtilityTurretRules.UsesFuelSlot(UtilityTurretRules.ArrowSupplyId) &&
+                    UtilityTurretRules.HasCombatFieldEffect(UtilityTurretRules.PlasterDollId) &&
+                    UtilityTurretRules.HasCombatFieldEffect(UtilityTurretRules.GongTowerId) &&
+                    Mathf.Approximately(UtilityTurretRules.GongTowerRadiusTiles, 10f),
+                "Arrow supply/plaster doll/gong tower must keep their utility field contracts.");
+
+            var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+                "Assets/Data/SO/GameDataCatalog.asset");
+            var sling = catalog?.FindCombatProfile(BowCombatRules.StrawSlingId);
+            Require(sling != null && Mathf.Approximately(sling.ArcDegrees, 0f) &&
+                    sling.RangeTiles >= 6f,
+                "Straw sling combat profile must remain a long-range zero-arc bow.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(stone);
+        }
+    }
+
+    private static void TestDamageTurretEvolutionContract()
+    {
+        var turretSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+        Require(DamageTurretRules.IsDamageTurretId(SeokbinggoRules.SeongeTurretId) &&
+                DamageTurretRules.IsDamageTurretId(SeokbinggoRules.ColdWaveTurretId) &&
+                DamageTurretRules.IsDamageTurretId(SeokbinggoRules.IceRootBatteryId) &&
+                DamageTurretRules.IsDamageTurretId(SeokbinggoRules.ColdWaveBatteryId) &&
+                !UtilityTurretRules.IsUtilityTurretId(SeokbinggoRules.SeongeTurretId) &&
+                DamageTurretRules.TryGetProfile(SeokbinggoRules.ColdWaveTurretId, out var coldWave) &&
+                Mathf.Approximately(coldWave.FireIntervalSeconds, 0.5f) &&
+                coldWave.AppliesFrostSlow &&
+                DamageTurretRules.TryGetProfile(SeokbinggoRules.ColdWaveBatteryId, out var battery) &&
+                battery.FanConeAttack &&
+                battery.FreeFuelWhenConduitLinked &&
+                DamageTurretRules.IsConduitLinked(5) &&
+                !DamageTurretRules.IsConduitLinked(4) &&
+                turretSource.Contains("HandleDamageTurretFired") &&
+                turretSource.Contains("ApplyFanConeDamage") &&
+                turretSource.Contains("RefreshConduitPowerForEntry"),
+            "Evolved damage turrets must specialize fire rate, frost, fan cone, and conduit free fuel.");
+
+        var controller = new TurretController(null, () => Array.Empty<Health>(), 0.2f, 1f, 8f, 10, 270f);
+        controller.SetIgnoreFuelConsumption(true);
+        Require(controller.IsPowered && controller.IgnoresFuelConsumption,
+            "Conduit-linked turrets must stay powered without stored fuel.");
+    }
+
+    private static void TestT4T6ArmorEvolutionContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && catalog.IsValid, "GameDataCatalog must load for armor contract.");
+
+        for (var index = 0; index < ArmorSetRules.SeongePieceIds.Length; index++)
+        {
+            var id = ArmorSetRules.SeongePieceIds[index];
+            var piece = catalog.FindEquipment(id);
+            Require(piece != null && catalog.FindItem(id) != null && catalog.FindRecipe(id) != null &&
+                    !ArmorSetRules.IsKnownTopTierSet(piece.SetId),
+                $"T4 seonge armor '{id}' must exist with no top-tier set bonus.");
+        }
+        for (var index = 0; index < ArmorSetRules.IceRootPieceIds.Length; index++)
+        {
+            var id = ArmorSetRules.IceRootPieceIds[index];
+            var piece = catalog.FindEquipment(id);
+            Require(piece != null && catalog.FindItem(id) != null && catalog.FindRecipe(id) != null &&
+                    !ArmorSetRules.IsKnownTopTierSet(piece.SetId),
+                $"T5 ice_root armor '{id}' must exist with no top-tier set bonus.");
+        }
+
+        var helm = catalog.FindEquipment("cold_wave_helm");
+        var body = catalog.FindEquipment("cold_wave_armor");
+        var boots = catalog.FindEquipment("cold_wave_boots");
+        Require(helm != null && body != null && boots != null &&
+                ArmorSetRules.MatchesCanonicalBonuses(helm) &&
+                catalog.FindRecipe("cold_wave_helm") != null,
+            "T6 hanpa armor must exist with canonical set modifiers.");
+
+        var equipment = new EquipmentSystem();
+        Require(equipment.TryEquip(helm) && equipment.TryEquip(body) && equipment.TryEquip(boots),
+            "T6 cold_wave set must equip.");
+        var sheet = new StatSheet();
+        sheet.Recalculate(equipment);
+        Require(sheet.Defense == helm.Defense + body.Defense + boots.Defense &&
+                Mathf.Approximately(sheet.TemperatureRiseModifier, ArmorSetRules.HanpaTemperatureRise) &&
+                Mathf.Approximately(sheet.FireDamageModifier, ArmorSetRules.HanpaFireDamage),
+            "T6 full set must apply hanpa temperature/fire bonuses.");
+
+        var runtimeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameRuntimeServices.cs");
+        Require(runtimeSource.Contains("HandleEquipmentRecipeCrafted") &&
+                runtimeSource.Contains("PromoteInventoryEquipmentItems"),
+            "Crafted/inventory armor must promote into EquipmentCollection.");
+    }
+
+    private static void TestCodexSeventeenEntryPresentationContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && catalog.IsValid && catalog.CodexEntries.Count == 17,
+            "Codex catalog must expose 17 entries.");
+        Require(YokaiCodexPresentationModel.ExpectedCardCount == 17,
+            "Presentation model must show all 17 codex entries.");
+
+        var save = new SaveGame
+        {
+            dogam = new List<CodexRecord>
+            {
+                new CodexRecord { yokaiId = "club", kills = 1 }
+            },
+            bossRecords = new List<BossRecord>
+            {
+                new BossRecord { bossId = "jigwi", count = 2, firstDay = 40 },
+                new BossRecord { bossId = "gangcheol_perfect", count = 1, firstDay = 100 }
+            }
+        };
+        var model = new YokaiCodexPresentationModel(catalog, save);
+        Require(model.Cards.Count == 17, "Codex presentation must build 17 cards.");
+
+        YokaiCodexCard Find(string id)
+        {
+            for (var index = 0; index < model.Cards.Count; index++)
+                if (model.Cards[index].EntryId == id) return model.Cards[index];
+            return null;
+        }
+
+        var club = Find("club");
+        var jigwi = Find("jigwi");
+        var perfect = Find("gangcheol_perfect");
+        var locked = Find("sangun");
+        Require(club != null && club.IsUnlocked && !club.IsBoss &&
+                jigwi != null && jigwi.IsBoss && jigwi.KillCount == 2 && jigwi.FirstKillDay == 40 &&
+                perfect != null && perfect.IsBoss && perfect.IsUnlocked &&
+                locked != null && !locked.IsUnlocked && locked.DisplayName == "?",
+            "Codex unlock must bind yokai dogam and late boss records across all 17 entries.");
     }
 
     private static void TestBossPausedYokaiVisibilityContract()
@@ -1277,6 +1803,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 magpieSource.Contains("new GameObject(\"MagpieCompanion\")") &&
                 magpieSource.Contains("NestPerchOffset") &&
                 magpieSource.Contains("ResolveDayFollowOffset") &&
+                magpieSource.Contains("ConfigureGuideGoal") &&
+                magpieSource.Contains("ResolveDayRestingTarget") &&
+                magpieSource.Contains("MagpieGuideRules.IsFlyToGoalMode") &&
                 magpieSource.Contains("ToggleEditorTestOverride") &&
                 magpiePlayerSource.Contains("Input.GetKeyDown(KeyCode.M)"),
             "The v34 magpie must join at dawn and collect one world-drop stack through the official sealed-nest rules.");
@@ -1902,8 +2431,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var catalog = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(
             "Assets/Art/Characters/CharacterArtCatalog.asset");
         var playerEntry = catalog != null ? catalog.Find("player") : null;
-        Require(playerEntry != null && playerEntry.DeathFrames.Count == 2,
-            "The delivered Frostclaw art must bind both frames from the 'die' Aseprite tag.");
+        Require(playerEntry != null && playerEntry.DeathFrames.Count == 6,
+            "The delivered Frostclaw art must bind all six frames from the 'die' Aseprite tag.");
 
         var root = new GameObject("PlayerDeathAnimationContract", typeof(SpriteRenderer),
             typeof(RuntimeCharacterSpriteAnimator));
@@ -2023,8 +2552,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
                                                      new Vector3(0f, -.1f));
             Require(Mathf.Approximately(shortFrameRenderedCenter.y, .65f),
                 "Every claw frame must stay at the fixed hand-height origin regardless of its trimmed pivot.");
-            Require(playerSource.Contains(
-                        "attack.Strike(SnapAttackFeedbackDirection(facing))") &&
+            Require(playerSource.Contains("SnapAttackFeedbackDirection(facing)") &&
+                    (playerSource.Contains("attack.Strike(direction)") ||
+                     playerSource.Contains(
+                         "attack.Strike(SnapAttackFeedbackDirection(facing))")) &&
                     playerSource.Contains("var attackOrigin = playerOrigin;") &&
                     playerSource.Contains("AttackFeedbackOriginHeight") &&
                     !playerSource.Contains("MiningCellPickOffsets"),
@@ -2495,6 +3026,65 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 mapGeneratorSource.Contains("EnsureChestCellsHaveNoForeground(grid, structures.chests)") &&
                 mapGeneratorSource.Contains("protectedAir[position.x, position.y] = true"),
             "Chests and live natural resources must reserve occupied cells, while harvested catnip allows placement and cannot respawn through that block.");
+    }
+
+    private static void TestMagpieGuideAndCropBandContract()
+    {
+        Require(MagpieGuideRules.FlyToGoalMode == "fly_to_goal" &&
+                Mathf.Approximately(MagpieGuideRules.DefaultReturnSeconds, 6f) &&
+                MagpieGuideRules.ModeGlobalKey == "magpie_guide_mode" &&
+                MagpieGuideRules.ReturnSecondsGlobalKey == "magpie_guide_return_sec",
+            "Magpie guide globals must stay fly_to_goal with a 6-second return cycle.");
+
+        var lead = MagpieGuideRules.ResolveLeadPoint(Vector2.zero, new Vector2(20f, 0f));
+        Require(Mathf.Approximately(lead.x, MagpieGuideRules.GuideLeadTiles) &&
+                Mathf.Approximately(lead.y, 0f),
+            "Guide lead points must move a capped distance toward the goal without dialogue.");
+
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null, "GameDataCatalog.asset must exist for crop/magpie guide regression.");
+        Require(MagpieGuideRules.IsFlyToGoalMode(catalog) &&
+                Mathf.Approximately(MagpieGuideRules.ResolveReturnSeconds(catalog), 6f),
+            "Imported magpie_guide_* globals must enable fly_to_goal with return_sec=6.");
+        Require(CropRules.IsPlantableEnabled(catalog) &&
+                CropRules.CropDefinitionId("zone04") == "zone04:catnip",
+            "crop_plantable must be on and crop IDs must stay zone:crop.");
+
+        Require(catalog.Crops != null && catalog.Crops.Count == 10 &&
+                catalog.Zones != null && catalog.Zones.Count == 10,
+            "Crops and zones must each expose ten band rows.");
+        Require(CropRules.TryResolveZone(catalog, 300f, 300f, 300f, out var zone01) &&
+                zone01.Id == "zone01" &&
+                CropRules.TryResolveZone(catalog, 0f, 300f, 300f, out var zone10) &&
+                zone10.Id == "zone10",
+            "Zone bands must resolve from map-center dist_norm (near=zone01, edge=zone10).");
+        var zone04Crop = CropRules.FindCropForWorldX(catalog, 300f + 105f, 300f, 300f);
+        Require(zone04Crop != null && zone04Crop.ZoneId == "zone04" &&
+                zone04Crop.SpawnPerHundredTiles == 6 && zone04Crop.HealHitPoints == 30 &&
+                zone04Crop.Plantable,
+            "Zone04 catnip must keep density 6, heal 30, and plantable.");
+
+        var magpieSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MagpieCompanionRuntime.cs");
+        var runtimeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameRuntimeServices.cs");
+        var decorationSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameWorldDecorationRenderer.cs");
+        var playerSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
+        var recoverySource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/PlayerHealthRecoveryService.cs");
+        Require(magpieSource.Contains("ConfigureGuideGoal") &&
+                magpieSource.Contains("ResolveDayRestingTarget") &&
+                runtimeSource.Contains("ResolveMagpieGuideGoal") &&
+                runtimeSource.Contains("TryGetNextIncompleteGoalId") &&
+                decorationSource.Contains("CropRules.ResolveBandTargetCount") &&
+                decorationSource.Contains("TryPlantCatnip") &&
+                playerSource.Contains("TryPlantSelectedCatnip") &&
+                recoverySource.Contains("EnqueueCatnipHeal") &&
+                recoverySource.Contains("pendingCatnipHeals"),
+            "Magpie guide, zone crop spawn/plant, and band heal queue must stay wired.");
     }
 
     private static void TestWorldDropVisualSurfaceOffset()

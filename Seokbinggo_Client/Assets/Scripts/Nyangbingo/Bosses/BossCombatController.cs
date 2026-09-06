@@ -1,6 +1,7 @@
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
+using Nyangbingo.Inventory;
 using Nyangbingo.World;
 using Nyangbingo.Yokai;
 using UnityEngine;
@@ -46,6 +47,8 @@ namespace Nyangbingo.Bosses
         private const float ImugiLandingKnockbackTiles = 2f;
         private const int ImugiLakePulseCount = 2;
         private const float ImugiLakePulseIntervalSeconds = .5f;
+        private const int GangcheolBlazePulseCount = 2;
+        private const float GangcheolBlazePulseIntervalSeconds = .55f;
         private const float SpecialEffectFrameSeconds = .1f;
         private static readonly Vector2 GoblinChiefWarningWorldSize = new Vector2(1.8f, 1.1f);
 
@@ -92,6 +95,7 @@ namespace Nyangbingo.Bosses
         private bool imugiLakePhaseTriggered;
         private ImugiPhaseAttack imugiPhaseAttack;
         private int imugiLakePulsesRemaining;
+        private int gangcheolBlazePulsesRemaining;
         private float openingDodgeRemaining;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
@@ -101,6 +105,7 @@ namespace Nyangbingo.Bosses
         public bool IsTelegraphing => telegraphing;
         public bool IsSpecialActive => specialActive;
         public float SpecialCooldownRemaining => specialCooldownRemaining;
+        public int RemainingGangcheolBlazePulses => gangcheolBlazePulsesRemaining;
         public event System.Action Attacked;
         public event System.Action SpecialAnimationStarted;
         public event System.Action SpecialStarted;
@@ -206,6 +211,7 @@ namespace Nyangbingo.Bosses
             imugiLakePhaseTriggered = false;
             imugiPhaseAttack = ImugiPhaseAttack.None;
             imugiLakePulsesRemaining = 0;
+            gangcheolBlazePulsesRemaining = 0;
             specialEffectPlaybackRemaining = 0f;
             EnsureTelegraphRenderer();
             SetTelegraphVisible(false);
@@ -391,6 +397,20 @@ namespace Nyangbingo.Bosses
                 FinishSpecial();
                 return;
             }
+            if (definition.Kind == BossKind.GangcheolBlaze)
+            {
+                specialActive = true;
+                gangcheolBlazePulsesRemaining = GangcheolBlazePulseCount;
+                activeSpecialRemaining =
+                    Mathf.Max(0f, (GangcheolBlazePulseCount - 1) * GangcheolBlazePulseIntervalSeconds);
+                ApplySpecialHit();
+                gangcheolBlazePulsesRemaining--;
+                specialTickRemaining = GangcheolBlazePulseIntervalSeconds;
+                SetTelegraphColor(new Color(1f, .25f, .05f, .5f));
+                SetTelegraphVisible(true);
+                SetSpecialEffectVisible(true);
+                return;
+            }
             if (definition.Kind == BossKind.GoblinChief)
                 characterAnimator?.AlignActionImpactFrame(GoblinChiefSpecialImpactFrameIndex);
             if (definition.SpecialDurationSeconds <= .0001f || definition.SpecialTickSeconds <= .0001f)
@@ -427,6 +447,11 @@ namespace Nyangbingo.Bosses
             if (imugiPhaseAttack == ImugiPhaseAttack.LakePulse)
             {
                 TickImugiLakePulse(deltaGameSeconds);
+                return;
+            }
+            if (gangcheolBlazePulsesRemaining > 0)
+            {
+                TickGangcheolBlazePulse(deltaGameSeconds);
                 return;
             }
 
@@ -468,6 +493,19 @@ namespace Nyangbingo.Bosses
             if (imugiLakePulsesRemaining <= 0) FinishSpecial();
         }
 
+        private void TickGangcheolBlazePulse(float deltaGameSeconds)
+        {
+            activeSpecialRemaining = Mathf.Max(0f, activeSpecialRemaining - deltaGameSeconds);
+            specialTickRemaining -= deltaGameSeconds;
+            while (gangcheolBlazePulsesRemaining > 0 && specialTickRemaining <= .0001f)
+            {
+                ApplySpecialHit();
+                gangcheolBlazePulsesRemaining--;
+                specialTickRemaining += GangcheolBlazePulseIntervalSeconds;
+            }
+            if (gangcheolBlazePulsesRemaining <= 0) FinishSpecial();
+        }
+
         private void ApplyImugiLandingDischarge()
         {
             PlayImugiSpecialEffect();
@@ -477,8 +515,17 @@ namespace Nyangbingo.Bosses
             var direction = targetOffset.sqrMagnitude > Mathf.Epsilon
                 ? targetOffset.normalized
                 : Vector2.up;
-            TryApplySpecialDamage(ImugiPhaseDamage, DamageTag.Melee,
-                direction * ImugiLandingKnockbackTiles);
+            var knockback = ShouldSuppressImugiKnockback()
+                ? Vector2.zero
+                : direction * ImugiLandingKnockbackTiles;
+            TryApplySpecialDamage(ImugiPhaseDamage, DamageTag.Melee, knockback);
+        }
+
+        private bool ShouldSuppressImugiKnockback()
+        {
+            if (targetTransform == null) return false;
+            var player = targetTransform.GetComponent<MainGamePlayerController>();
+            return GimmickWeaponCombatRules.IsActiveProfile(player, GimmickWeaponProgress.YeouijuClawId);
         }
 
         private void ApplyImugiLakePulse()
@@ -515,6 +562,7 @@ namespace Nyangbingo.Bosses
             specialTickAnimationStarted = false;
             imugiPhaseAttack = ImugiPhaseAttack.None;
             imugiLakePulsesRemaining = 0;
+            gangcheolBlazePulsesRemaining = 0;
             SetTelegraphVisible(false);
             if (definition == null || definition.Kind != BossKind.Imugi ||
                 specialEffectPlaybackRemaining <= .0001f)

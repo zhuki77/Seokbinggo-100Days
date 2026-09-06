@@ -126,6 +126,7 @@ namespace Nyangbingo.World
         private CombatProfileDefinition lanternCarryProfile;
         private SpriteRenderer attackIndicator;
         private RuntimeCharacterSpriteAnimator characterAnimator;
+        private bool visualWasGrounded = true;
         private float attackIndicatorRemaining;
         private int attackIndicatorFrameIndex;
         private float attackIndicatorFrameRemaining;
@@ -490,6 +491,7 @@ namespace Nyangbingo.World
                 var handled = TryUseSelectedIceShard() ||
                       TryUseSelectedTalisman() ||
                       TryUseSelectedHealingItem() ||
+                      TryPlantSelectedCatnip() ||
                       TryInteractClosestWorldTarget(includePlacedObjects: false) ||
                       TryOpenRemoteJangdok();
                 if (!handled)
@@ -503,7 +505,11 @@ namespace Nyangbingo.World
                 Input.GetKeyDown(KeyCode.Space))
                 TryJump();
             characterAnimator?.SetFacing(horizontalFacing);
-            characterAnimator?.SetMoving(movementInput.sqrMagnitude > Mathf.Epsilon);
+            if (!visualWasGrounded && grounded)
+                characterAnimator?.PlayLand();
+            characterAnimator?.SetLocomotion(
+                grounded, verticalVelocity > 0.05f, movementInput.sqrMagnitude > Mathf.Epsilon);
+            visualWasGrounded = grounded;
 
             attackCooldown = Mathf.Max(0f, attackCooldown - Time.deltaTime);
             wireSnare.Tick(Time.deltaTime);
@@ -911,7 +917,14 @@ namespace Nyangbingo.World
         {
             if (!AllowsPlayerBasicAttack(activeProfile))
                 return false;
-            attack.Strike(SnapAttackFeedbackDirection(facing));
+            if (BowCombatRules.IsBowProfile(activeProfile) &&
+                !BowCombatRules.TryConsumeAmmo(runtimeServices?.PlayerInventory))
+                return false;
+            var direction = SnapAttackFeedbackDirection(facing);
+            if (EvolvedClawCombatRules.IsSangunClaw(activeProfile))
+                attack.StrikeSangunCombo(direction, activeProfile);
+            else
+                attack.Strike(direction);
             characterAnimator?.PlayAttack();
             ShowAttackFeedback();
             attackCooldown = 1f / activeProfile.AttacksPerSecond;
@@ -1093,12 +1106,13 @@ namespace Nyangbingo.World
             profile.Id != HapjukseonId;
 
         public static bool IsBowCombatProfile(CombatProfileDefinition profile) =>
-            profile != null && !string.IsNullOrWhiteSpace(profile.Id) &&
-            profile.Id.IndexOf("bow", StringComparison.OrdinalIgnoreCase) >= 0;
+            BowCombatRules.IsBowProfile(profile);
 
         public bool TryBeginYeongnoSwallow(int tickDamage, float durationSeconds, float tickInterval)
         {
             if (!initialized || dead || tickDamage <= 0 || durationSeconds <= 0f || tickInterval <= 0f)
+                return false;
+            if (GimmickWeaponCombatRules.IsActiveProfile(this, GimmickWeaponProgress.YeongnoToothId))
                 return false;
             if (TryArtifactEscapeSwallow())
                 return false;
@@ -1873,13 +1887,13 @@ namespace Nyangbingo.World
         private void TryFanAbility()
         {
             if (activeProfile == null ||
-                (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId &&
-                 activeProfile.Id != SeolpungseonId)) return;
+                !EvolvedFanCombatRules.IsFanAbilityWeapon(activeProfile.Id)) return;
             if (activeProfile.Id == SeolpungseonId)
                 attack.ConfigureFrostSlow(SeolpungseonFrostSlowFraction, SeolpungseonFrostSlowDurationSeconds);
             else
                 attack.ConfigureFrostSlow(0f, 0f);
-            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id)))
+            var knockback = EvolvedFanCombatRules.ResolveAbilityKnockback(activeProfile);
+            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id), knockback))
             {
                 if (activeProfile.Id == SeolpungseonId)
                     attack.ConfigureFrostSlow(0f, 0f);
@@ -1888,7 +1902,10 @@ namespace Nyangbingo.World
         }
 
         public static int ResolveFanAbilityDamage(string combatProfileId) =>
-            combatProfileId == CheolseonId || combatProfileId == SeolpungseonId
+            combatProfileId == CheolseonId || combatProfileId == SeolpungseonId ||
+            combatProfileId == FanItemIds.SeongeFan ||
+            combatProfileId == FanItemIds.IceRootWhipfan ||
+            combatProfileId == FanItemIds.ColdWaveFan
                 ? WireSnareAbility.CheolseonDamage
                 : WireSnareAbility.HapjukseonDamage;
 
@@ -2045,10 +2062,23 @@ namespace Nyangbingo.World
                     ? IronClawId
                     : BareClawId;
             var profileId = runtimeServices?.ActiveSlot?.ResolveCombatProfileId(clawProfileId) ?? clawProfileId;
-            var profile = profileId == LanternId
-                ? lanternCarryProfile ??= CombatProfileDefinition.CreateRuntime(
-                    LanternId, "U0", false, 0, 0f, 0f, 0f, 1.5f, 90f, false, false)
-                : catalog != null ? catalog.FindCombatProfile(profileId) : null;
+            CombatProfileDefinition profile;
+            if (profileId == LanternId)
+            {
+                profile = lanternCarryProfile ??= CombatProfileDefinition.CreateRuntime(
+                    LanternId, "U0", false, 0, 0f, 0f, 0f, 1.5f, 90f, false, false);
+            }
+            else if (GimmickWeaponCombatRules.IsGimmickWeaponId(profileId) && catalog != null)
+            {
+                var baseProfile = catalog.FindCombatProfile(clawProfileId);
+                profile = baseProfile != null
+                    ? GimmickWeaponCombatRules.CreateScaledProfile(profileId, baseProfile, catalog)
+                    : catalog.FindCombatProfile(profileId);
+            }
+            else
+            {
+                profile = catalog != null ? catalog.FindCombatProfile(profileId) : null;
+            }
             if (profile == null || !attack.ConfigureForRuntime(transform, ~0, profile)) return;
             var slowFraction = 0f;
             var slowDefinition = profileId == IceSteelClawId ? catalog?.FindGlobal(IceSteelClawSlowKey) : null;
@@ -2316,7 +2346,31 @@ namespace Nyangbingo.World
                 return true;
             }
 
+            // 캣닢은 HP가 가득일 때 심기로 넘긴다.
+            if (itemId == PlayerHealthRecoveryService.CatnipItemId)
+                return false;
+
             interactionMessages?.ShowExternalMessage("HP가 가득 찼거나 회복 아이템을 사용할 수 없습니다.");
+            return true;
+        }
+
+        private bool TryPlantSelectedCatnip()
+        {
+            tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
+            if (tilePalette?.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId ||
+                worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null)
+                return false;
+
+            var origin = (Vector2)transform.position;
+            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
+            // 수확 가능한 캣닢이 있으면 심기보다 E 상호작용(채집)을 우선한다.
+            if (worldDecorationRenderer.TryFindCatnipInRange(origin, CatnipHarvestRadius, aim, out _))
+                return false;
+            if (!worldDecorationRenderer.TryPlantCatnip(
+                    origin, CatnipHarvestRadius, aim, runtimeServices.PlayerInventory, out var message))
+                return false;
+
+            interactionMessages?.ShowExternalMessage(message);
             return true;
         }
 

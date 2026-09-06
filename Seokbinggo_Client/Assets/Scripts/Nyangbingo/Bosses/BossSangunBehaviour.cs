@@ -1,5 +1,6 @@
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
+using Nyangbingo.Inventory;
 using Nyangbingo.World;
 using UnityEngine;
 
@@ -79,6 +80,10 @@ namespace Nyangbingo.Bosses
                             Vector2.Dot(velocity.normalized, toPlayer.normalized) > 0.35f;
             var isFacingBoss = Vector2.Dot(playerFacing, toPlayer.normalized) >= ConfrontFacingDotThreshold;
             isRetreating = isFacingBoss && !isFleeing;
+            if (playerController != null &&
+                GimmickWeaponCombatRules.IsActiveProfile(
+                    playerController, GimmickWeaponProgress.SangunWhiskerId))
+                isRetreating = false;
         }
     }
 }

@@ -839,6 +839,9 @@ namespace Nyangbingo.World
             WorldTileTypes.OysterMushroom => WorldTileTypes.Clay,
             WorldTileTypes.Shiitake => WorldTileTypes.IceShard,
             WorldTileTypes.Seogi => WorldTileTypes.FrostEssence,
+            WorldTileTypes.SeongeOre => WorldTileTypes.IceSteelOre,
+            WorldTileTypes.IceRoot => WorldTileTypes.IceSteelOre,
+            WorldTileTypes.ColdWaveOre => WorldTileTypes.FrostEssence,
             _ => null
         };
 
@@ -871,6 +874,7 @@ namespace Nyangbingo.World
                 WorldTileTypes.Shiitake,
                 WorldTileTypes.StoneDeep, WorldTileTypes.IceSteelOre, WorldTileTypes.FrostEssence,
                 WorldTileTypes.Seogi,
+                WorldTileTypes.SeongeOre, WorldTileTypes.IceRoot, WorldTileTypes.ColdWaveOre,
                 WorldTileTypes.Bedrock, WorldTileTypes.RuinWall, WorldTileTypes.IceLake, WorldTileTypes.IceAltar,
                 WorldTileTypes.BackgroundDirt, WorldTileTypes.BackgroundStone, WorldTileTypes.BackgroundDeep,
                 WorldTileTypes.Wallpaper

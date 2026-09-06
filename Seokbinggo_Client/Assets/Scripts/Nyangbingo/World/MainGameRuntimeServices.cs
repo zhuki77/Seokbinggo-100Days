@@ -270,6 +270,7 @@ namespace Nyangbingo.World
                     worldLoadedHooked = true;
                 }
                 GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled;
+                GameEvents.OnRecipeCrafted += HandleEquipmentRecipeCrafted;
                 YokaiCodexBinding.CodexEntryChanged += HandleCodexEntryChanged;
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
                           $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·등불·부적·모듈유지 Tick 소비자 8개 등록 완료.");
@@ -385,6 +386,7 @@ namespace Nyangbingo.World
                         bootstrap.TileService, player.position, bootstrap.TimeService);
                     return ArtifactVerbs.ResolveMagpieRadiusMultiplier(EquipmentSystem, context);
                 });
+                MagpieCompanion.ConfigureGuideGoal(() => ResolveMagpieGuideGoal(player.position));
                 if (Register(MagpieCompanion)) return true;
                 MagpieCompanion.Dispose();
                 MagpieCompanion = null;
@@ -396,6 +398,27 @@ namespace Nyangbingo.World
                 MagpieCompanion = null;
                 return false;
             }
+        }
+
+        private Vector2? ResolveMagpieGuideGoal(Vector2 origin)
+        {
+            var saveCoordinator = FindAnyObjectByType<MainGameSaveCoordinator>();
+            var badges = saveCoordinator != null ? saveCoordinator.ProgressTracker?.GoalBadges : null;
+            if (badges == null || !badges.TryGetNextIncompleteGoalId(out var goalId))
+                return null;
+
+            if (environmentState != null &&
+                environmentState.TryGetNearestPlacedObjectPosition(goalId, origin, out var placed))
+                return placed;
+
+            var session = bootstrap?.Session;
+            if (session != null && session.HasWorld)
+            {
+                var spawn = session.LastResult.spawnPoint;
+                return new Vector2(spawn.x + .5f, spawn.y + .5f);
+            }
+
+            return origin;
         }
 
         /// <summary>스폰 시 생기는 AI·전투 소비자를 동일한 session.TickDriver에 연결한다.</summary>
@@ -422,6 +445,7 @@ namespace Nyangbingo.World
             GameEvents.OnBossDefeated -= HandleBossDefeated;
             GameEvents.OnDayStart -= HandleArtifactDayStart;
             GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
+            GameEvents.OnRecipeCrafted -= HandleEquipmentRecipeCrafted;
             YokaiCodexBinding.CodexEntryChanged -= HandleCodexEntryChanged;
             if (bootstrap != null && worldLoadedHooked)
             {
@@ -506,6 +530,51 @@ namespace Nyangbingo.World
             if (RecipeBook.IsUnlocked(recipe)) return;
             RecipeBook.Unlock(recipe.Id);
             Debug.Log($"[Nyangbingo] 강철이 최초 처치로 제작법을 해금했습니다: {recipe.Output.item.DisplayName}.");
+        }
+
+        /// <summary>갑옷·악세 제작 산출물을 인벤에서 EquipmentCollection으로 승격한다.</summary>
+        private void HandleEquipmentRecipeCrafted(RecipeDefinition recipe)
+        {
+            var item = recipe?.Output.item;
+            if (item == null || PlayerInventory == null || EquipmentCollection == null || gameDataCatalog == null)
+                return;
+            var equipment = gameDataCatalog.FindEquipment(item.Id);
+            if (equipment == null) return;
+            var amount = Mathf.Max(1, recipe.Output.amount);
+            for (var index = 0; index < amount; index++)
+            {
+                if (EquipmentCollection.Contains(equipment.Id))
+                {
+                    // 이미 보유 시 인벤 잔여분만 남긴다(진화 소모 전 중복 방지).
+                    break;
+                }
+                if (!PlayerInventory.TryRemove(item.Id, 1)) break;
+                EquipmentAcquisition.Request(equipment);
+            }
+        }
+
+        /// <summary>인벤에 남은 장비 아이템을 장비 보유 목록으로 옮긴다(구 세이브·상자 외 경로).</summary>
+        public int PromoteInventoryEquipmentItems()
+        {
+            if (!IsInitialized || PlayerInventory == null || EquipmentCollection == null || gameDataCatalog == null)
+                return 0;
+            var promoted = 0;
+            for (var slotIndex = 0; slotIndex < PlayerInventory.Slots.Count; slotIndex++)
+            {
+                var slot = PlayerInventory.Slots[slotIndex];
+                if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0) continue;
+                var equipment = gameDataCatalog.FindEquipment(slot.itemId);
+                if (equipment == null || EquipmentCollection.Contains(equipment.Id)) continue;
+                if (!PlayerInventory.TryRemove(slot.itemId, 1)) continue;
+                if (!EquipmentCollection.TryAdd(equipment))
+                {
+                    PlayerInventory.TryAdd(slot.itemId, 1);
+                    continue;
+                }
+                promoted++;
+                slotIndex--;
+            }
+            return promoted;
         }
 
         private void HandleCodexEntryChanged(YokaiDefinition definition, bool isFirstEntry)

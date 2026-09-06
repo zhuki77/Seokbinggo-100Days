@@ -58,6 +58,9 @@ namespace Nyangbingo.World
             public Vector3Int SupportCell;
             public SpriteRenderer Renderer;
             public int HarvestedDay;
+            public int RespawnDays;
+            public int HealHitPoints;
+            public bool Planted;
         }
 
         private sealed class HempPatch
@@ -261,15 +264,50 @@ namespace Nyangbingo.World
 
         private void PlaceCatnipPatches(WorldGenerationResult result, System.Random random)
         {
-            var spawnDensity = ReadPositiveGlobal("catnip_spawn_per_100tiles", 6f);
-            var width = result.tiles.GetLength(0);
-            var targetCount = Mathf.Max(1, Mathf.RoundToInt(width * spawnDensity / 100f));
+            var catalog = bootstrap?.GameDataCatalog;
             var occupied = new HashSet<Vector3Int>();
-            for (var index = 0; index < targetCount; index++)
+            var width = result.tiles.GetLength(0);
+            var centerX = width * .5f;
+            var halfWidth = width * .5f;
+            var placedCount = 0;
+
+            if (catalog != null && catalog.Crops.Count > 0)
+            {
+                for (var cropIndex = 0; cropIndex < catalog.Crops.Count; cropIndex++)
+                {
+                    var crop = catalog.Crops[cropIndex];
+                    if (crop == null ||
+                        !string.Equals(crop.CropId, CropRules.CatnipCropId, StringComparison.Ordinal))
+                        continue;
+                    var zone = catalog.FindZone(crop.ZoneId);
+                    if (zone == null) continue;
+                    var targetCount = CropRules.ResolveBandTargetCount(zone, crop, halfWidth);
+                    for (var index = 0; index < targetCount; index++)
+                    {
+                        var preferRuins = ((placedCount + index) & 1) == 0;
+                        if (!TryFindCatnipSupport(result, random, preferRuins, occupied, zone, centerX,
+                                halfWidth, out var support) &&
+                            !TryFindCatnipSupport(result, random, !preferRuins, occupied, zone, centerX,
+                                halfWidth, out support))
+                            continue;
+                        occupied.Add(support);
+                        CreateCatnipPatch($"catnip_{placedCount:00}", support, random.Next(2) == 0, crop);
+                        placedCount++;
+                    }
+                }
+
+                if (placedCount > 0) return;
+            }
+
+            var spawnDensity = ReadPositiveGlobal("catnip_spawn_per_100tiles", 6f);
+            var targetCountLegacy = Mathf.Max(1, Mathf.RoundToInt(width * spawnDensity / 100f));
+            for (var index = 0; index < targetCountLegacy; index++)
             {
                 var preferRuins = (index & 1) == 0;
-                if (!TryFindCatnipSupport(result, random, preferRuins, occupied, out var support) &&
-                    !TryFindCatnipSupport(result, random, !preferRuins, occupied, out support))
+                if (!TryFindCatnipSupport(result, random, preferRuins, occupied, null, centerX, halfWidth,
+                        out var support) &&
+                    !TryFindCatnipSupport(result, random, !preferRuins, occupied, null, centerX, halfWidth,
+                        out support))
                     continue;
                 occupied.Add(support);
                 CreateCatnipPatch($"catnip_{index:00}", support, random.Next(2) == 0);
@@ -277,7 +315,8 @@ namespace Nyangbingo.World
         }
 
         private bool TryFindCatnipSupport(WorldGenerationResult result, System.Random random, bool ruins,
-            ISet<Vector3Int> occupied, out Vector3Int support)
+            ISet<Vector3Int> occupied, ZoneDefinition zone, float centerX, float halfWidth,
+            out Vector3Int support)
         {
             support = default;
             var tiles = result.tiles;
@@ -287,6 +326,9 @@ namespace Nyangbingo.World
             for (var attempt = 0; attempt < attempts; attempt++)
             {
                 var x = random.Next(2, width - 2);
+                if (zone != null &&
+                    !CropRules.IsWorldXInZoneBand(x, zone, centerX, halfWidth))
+                    continue;
                 if (Mathf.Abs(x - result.spawnPoint.x) <= 5 || Mathf.Abs(x - result.altarPosition.x) <= 3)
                     continue;
                 if (ruins)
@@ -339,7 +381,8 @@ namespace Nyangbingo.World
             return false;
         }
 
-        private void CreateCatnipPatch(string id, Vector3Int supportCell, bool flipX)
+        private void CreateCatnipPatch(string id, Vector3Int supportCell, bool flipX,
+            CropDefinition crop = null, int harvestedDay = 0, bool planted = false)
         {
             var visual = new GameObject($"Catnip_{id}");
             visual.transform.SetParent(decorationRoot, false);
@@ -354,9 +397,13 @@ namespace Nyangbingo.World
             {
                 Id = id,
                 SupportCell = supportCell,
-                Renderer = renderer
+                Renderer = renderer,
+                HarvestedDay = Mathf.Max(0, harvestedDay),
+                RespawnDays = crop != null && crop.RespawnDays > 0 ? crop.RespawnDays : 0,
+                HealHitPoints = crop != null && crop.HealHitPoints > 0 ? crop.HealHitPoints : 0,
+                Planted = planted
             });
-            visual.SetActive(HasSolidRuntimeSupport(supportCell));
+            visual.SetActive(HasSolidRuntimeSupport(supportCell) && harvestedDay <= 0);
         }
 
         private bool HasSolidRuntimeSupport(Vector3Int supportCell) =>
@@ -458,8 +505,89 @@ namespace Nyangbingo.World
                 return false;
             nearest.HarvestedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
             if (nearest.Renderer != null) nearest.Renderer.gameObject.SetActive(false);
+            if (nearest.HealHitPoints > 0)
+                runtimeServices?.PlayerHealthRecovery?.EnqueueCatnipHeal(nearest.HealHitPoints);
             harvested = 1;
             return true;
+        }
+
+        public bool TryPlantCatnip(Vector2 playerPosition, float radius, Vector2 preferNear,
+            Nyangbingo.Inventory.Inventory inventory, out string message)
+        {
+            message = string.Empty;
+            var catalog = bootstrap?.GameDataCatalog;
+            if (inventory == null || radius <= 0f || catalog == null ||
+                !CropRules.IsPlantableEnabled(catalog) ||
+                !inventory.Has(PlayerHealthRecoveryService.CatnipItemId, 1))
+                return false;
+
+            if (!TryResolvePlantSupport(playerPosition, radius, preferNear, out var support))
+            {
+                message = "심을 수 있는 땅을 찾지 못했습니다.";
+                return false;
+            }
+
+            var session = bootstrap?.Session;
+            if (session == null || !session.HasWorld) return false;
+            var width = session.LastResult.tiles != null ? session.LastResult.tiles.GetLength(0) : 0;
+            if (width <= 0) return false;
+            var centerX = width * .5f;
+            var halfWidth = width * .5f;
+            var crop = CropRules.FindCropForWorldX(catalog, support.x + .5f, centerX, halfWidth);
+            if (crop != null && !crop.Plantable)
+            {
+                message = "이 밴드에서는 심을 수 없습니다.";
+                return false;
+            }
+
+            if (!inventory.TryRemove(PlayerHealthRecoveryService.CatnipItemId, 1))
+                return false;
+
+            var plantedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
+            var id = $"catnip_planted_{support.x}_{support.y}_{catnipPatches.Count:00}";
+            CreateCatnipPatch(id, support, false, crop, harvestedDay: plantedDay, planted: true);
+            message = $"캣닢 심기 · {Mathf.Max(1, crop?.RespawnDays ?? 2)}일 뒤 수확";
+            return true;
+        }
+
+        private bool TryResolvePlantSupport(Vector2 playerPosition, float radius, Vector2 preferNear,
+            out Vector3Int support)
+        {
+            support = default;
+            var tileService = bootstrap?.TileService;
+            if (tileService == null || radius <= 0f) return false;
+            var reachSq = radius * radius;
+            var aimCell = tileService.WorldToCell(preferNear);
+            var candidates = new[]
+            {
+                aimCell + Vector3Int.down,
+                aimCell,
+                tileService.WorldToCell(playerPosition) + Vector3Int.down
+            };
+            var bestDistance = float.PositiveInfinity;
+            for (var index = 0; index < candidates.Length; index++)
+            {
+                var candidate = candidates[index];
+                var plantCell = candidate + Vector3Int.up;
+                if (tileService.GetTile(candidate).IsAir || !tileService.GetTile(plantCell).IsAir)
+                    continue;
+                if (IsCatnipSupportOccupied(candidate)) continue;
+                var center = tileService.GetCellCenterWorld(plantCell);
+                if (((Vector2)center - playerPosition).sqrMagnitude > reachSq) continue;
+                var aimDistance = ((Vector2)center - preferNear).sqrMagnitude;
+                if (aimDistance > bestDistance) continue;
+                support = candidate;
+                bestDistance = aimDistance;
+            }
+
+            return bestDistance < float.PositiveInfinity;
+        }
+
+        private bool IsCatnipSupportOccupied(Vector3Int supportCell)
+        {
+            foreach (var patch in catnipPatches.Values)
+                if (patch.SupportCell == supportCell) return true;
+            return false;
         }
 
         public bool TryFindCatnipInRange(Vector2 playerPosition, float radius, out Vector2 position) =>
@@ -605,12 +733,19 @@ namespace Nyangbingo.World
         {
             var records = new List<CatnipPatchStateRecord>();
             foreach (var patch in catnipPatches.Values)
-                if (patch.HarvestedDay > 0)
-                    records.Add(new CatnipPatchStateRecord
-                    {
-                        patchId = patch.Id,
-                        harvestedDay = patch.HarvestedDay
-                    });
+            {
+                if (patch.HarvestedDay <= 0 && !patch.Planted) continue;
+                records.Add(new CatnipPatchStateRecord
+                {
+                    patchId = patch.Id,
+                    harvestedDay = patch.HarvestedDay,
+                    supportX = patch.SupportCell.x,
+                    supportY = patch.SupportCell.y,
+                    planted = patch.Planted,
+                    respawnDays = patch.RespawnDays,
+                    healHitPoints = patch.HealHitPoints
+                });
+            }
             records.Sort((left, right) => string.CompareOrdinal(left.patchId, right.patchId));
             return records;
         }
@@ -660,14 +795,44 @@ namespace Nyangbingo.World
         public bool RestoreCatnipPatches(IEnumerable<CatnipPatchStateRecord> records)
         {
             if (records == null) return false;
-            var restored = new Dictionary<string, int>(StringComparer.Ordinal);
+            var restored = new Dictionary<string, CatnipPatchStateRecord>(StringComparer.Ordinal);
             foreach (var record in records)
-                if (string.IsNullOrWhiteSpace(record.patchId) || record.harvestedDay <= 0 ||
-                    !catnipPatches.ContainsKey(record.patchId) ||
-                    !restored.TryAdd(record.patchId, record.harvestedDay))
+            {
+                if (string.IsNullOrWhiteSpace(record.patchId) ||
+                    record.harvestedDay < 0 ||
+                    !restored.TryAdd(record.patchId, record))
                     return false;
+            }
+
+            foreach (var pair in restored)
+            {
+                var record = pair.Value;
+                if (catnipPatches.ContainsKey(record.patchId)) continue;
+                if (!record.planted || record.harvestedDay < 0) return false;
+                if (decorationRoot == null) return false;
+                var support = new Vector3Int(record.supportX, record.supportY, 0);
+                CreateCatnipPatch(record.patchId, support, false, crop: null,
+                    harvestedDay: record.harvestedDay, planted: true);
+                if (catnipPatches.TryGetValue(record.patchId, out var planted))
+                {
+                    planted.RespawnDays = Mathf.Max(0, record.respawnDays);
+                    planted.HealHitPoints = Mathf.Max(0, record.healHitPoints);
+                }
+            }
+
             foreach (var patch in catnipPatches.Values)
-                patch.HarvestedDay = restored.TryGetValue(patch.Id, out var day) ? day : 0;
+            {
+                if (restored.TryGetValue(patch.Id, out var record))
+                {
+                    patch.HarvestedDay = record.harvestedDay;
+                    if (record.respawnDays > 0) patch.RespawnDays = record.respawnDays;
+                    if (record.healHitPoints > 0) patch.HealHitPoints = record.healHitPoints;
+                    patch.Planted |= record.planted;
+                }
+                else if (!patch.Planted)
+                    patch.HarvestedDay = 0;
+            }
+
             RefreshCatnipAvailability();
             return true;
         }
@@ -852,9 +1017,10 @@ namespace Nyangbingo.World
         private void RefreshCatnipAvailability()
         {
             var currentDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
-            var respawnDays = Mathf.Max(1, Mathf.RoundToInt(ReadPositiveGlobal("catnip_respawn_days", 2f)));
+            var fallbackRespawn = Mathf.Max(1, Mathf.RoundToInt(ReadPositiveGlobal("catnip_respawn_days", 2f)));
             foreach (var patch in catnipPatches.Values)
             {
+                var respawnDays = patch.RespawnDays > 0 ? patch.RespawnDays : fallbackRespawn;
                 if (patch.HarvestedDay > 0 && currentDay - patch.HarvestedDay >= respawnDays)
                     patch.HarvestedDay = 0;
                 if (patch.Renderer != null)

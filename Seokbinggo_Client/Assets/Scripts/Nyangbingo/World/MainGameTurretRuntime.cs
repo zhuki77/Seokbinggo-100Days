@@ -25,8 +25,10 @@ namespace Nyangbingo.World
         private sealed class TurretEntry
         {
             public string ObjectId;
+            public string DefinitionId;
             public Transform Origin;
             public TurretController Controller;
+            public DamageTurretRules.Profile Profile;
             public Action<Health, int> FireHandler;
         }
 
@@ -80,6 +82,15 @@ namespace Nyangbingo.World
             }
         }
 
+        private sealed class UtilityTurretEntry
+        {
+            public string ObjectId;
+            public string DefinitionId;
+            public Vector2 Position;
+            public float FuelRemaining;
+            public float PulseCooldown;
+        }
+
         private const string TurretItemId = "dokkaebi_fire_tower";
         public const string LanternItemId = "lantern";
         public const string FrostLanternItemId = "frost_lantern";
@@ -118,6 +129,8 @@ namespace Nyangbingo.World
 
         private readonly Dictionary<string, TurretEntry> turrets =
             new Dictionary<string, TurretEntry>(StringComparer.Ordinal);
+        private readonly Dictionary<string, UtilityTurretEntry> utilityTurrets =
+            new Dictionary<string, UtilityTurretEntry>(StringComparer.Ordinal);
         private readonly Dictionary<string, LanternEntry> lanterns =
             new Dictionary<string, LanternEntry>(StringComparer.Ordinal);
         private readonly Dictionary<string, GameObject> passiveCounterAuraRoots =
@@ -145,7 +158,7 @@ namespace Nyangbingo.World
                                         environmentState != null && gameplayArtCatalog != null &&
                                         buildingArtCatalog != null && playerController != null &&
                                         interactionStatusText != null;
-        public int ActiveTurretCount => turrets.Count;
+        public int ActiveTurretCount => turrets.Count + utilityTurrets.Count;
         public int ActiveDamageTurretCount
         {
             get
@@ -154,12 +167,12 @@ namespace Nyangbingo.World
                 foreach (var pair in turrets)
                 {
                     if (pair.Value?.Controller == null) continue;
-                    // Turret map currently only holds damage towers (dokkaebi_fire_tower).
                     count++;
                 }
                 return count;
             }
         }
+        public int ActiveUtilityTurretCount => utilityTurrets.Count;
         public IReadOnlyList<CounterAura> ActiveCounterAuras => activeCounterAuras;
 
         /// <summary>업구렁이 — 터렛·등불을 하나씩 연료 소진으로 정지한다.</summary>
@@ -208,9 +221,7 @@ namespace Nyangbingo.World
         public bool CanPlaceByTurretSlots(string definitionId, out string reason)
         {
             reason = null;
-            if (string.IsNullOrEmpty(definitionId) ||
-                (!SeokbinggoRules.IsDamageTurret(definitionId) &&
-                 !string.Equals(definitionId, TurretItemId, StringComparison.Ordinal)))
+            if (string.IsNullOrEmpty(definitionId) || !SeokbinggoRules.IsKnownTurret(definitionId))
                 return true;
 
             var stage = runtimeServices?.Seokbinggo?.Stage ?? 0;
@@ -323,8 +334,10 @@ namespace Nyangbingo.World
 
         public void Tick(float deltaGameSeconds)
         {
+            RefreshDamageTurretConduitPower();
             foreach (var entry in turrets.Values) entry.Controller.Tick(deltaGameSeconds);
             foreach (var entry in lanterns.Values) entry.Tick(deltaGameSeconds);
+            TickUtilityTurretFields(deltaGameSeconds);
             projectilePool?.Tick(deltaGameSeconds);
             RefreshProjectileVisuals();
         }
@@ -472,9 +485,10 @@ namespace Nyangbingo.World
             {
                 var hasFuelRecord = save.turretFuel.Any(value =>
                     string.Equals(value.objectId, record.objectId, StringComparison.Ordinal));
-                if (string.Equals(record.definitionId, TurretItemId, StringComparison.Ordinal))
+                if (SeokbinggoRules.IsDamageTurret(record.definitionId))
                 {
-                    if (!TryRegisterPlacedTurret(record.objectId, 0, out var entry)) return false;
+                    if (!TryRegisterPlacedTurret(record.objectId, record.definitionId, 0, out var entry))
+                        return false;
                     if (hasFuelRecord && !WorldSaveAdapter.RestoreTurretFuel(save, record.objectId, entry.Controller))
                         return false;
                 }
@@ -644,9 +658,16 @@ namespace Nyangbingo.World
                 else ShowMessage(waypointMessage);
                 return true;
             }
-            if (record.definitionId == TurretItemId && turrets.TryGetValue(record.objectId, out var turret))
+            if (SeokbinggoRules.IsDamageTurret(record.definitionId) &&
+                turrets.TryGetValue(record.objectId, out var turret))
             {
                 TryRefuelTurret(turret);
+                return true;
+            }
+            if (UtilityTurretRules.UsesFuelSlot(record.definitionId) &&
+                utilityTurrets.TryGetValue(record.objectId, out var arrowSupply))
+            {
+                TryRefuelArrowSupply(arrowSupply);
                 return true;
             }
             if (IsInstalledLanternDefinition(record.definitionId) &&
@@ -700,9 +721,16 @@ namespace Nyangbingo.World
 
         private void TryRefuelTurret(TurretEntry entry)
         {
+            if (entry?.Controller == null) return;
+            if (entry.Controller.IgnoresFuelConsumption)
+            {
+                ShowMessage($"{ItemName(entry.DefinitionId)} · 도관 연결 · 연료 무소모");
+                return;
+            }
             if (!runtimeServices.PlayerInventory.TryRemove(FuelItemId, 1))
             {
-                ShowMessage($"도깨비불 등탑 · 연료 {entry.Controller.FuelRemaining:0}초 · 석탄 없음");
+                ShowMessage(
+                    $"{ItemName(entry.DefinitionId)} · 연료 {entry.Controller.FuelRemaining:0}초 · 석탄 없음");
                 return;
             }
             if (!entry.Controller.AddFuel(1))
@@ -711,7 +739,7 @@ namespace Nyangbingo.World
                 ShowMessage("등탑에 연료를 넣지 못했습니다.");
                 return;
             }
-            ShowMessage($"석탄 1개 투입 · 등탑 연료 {entry.Controller.FuelRemaining:0}초");
+            ShowMessage($"석탄 1개 투입 · {ItemName(entry.DefinitionId)} 연료 {entry.Controller.FuelRemaining:0}초");
             Debug.Log($"[Nyangbingo] Turret refueled: id={entry.ObjectId}, " +
                       $"fuel={entry.Controller.FuelRemaining:0.0}.");
             BuildStateChanged?.Invoke();
@@ -842,6 +870,7 @@ namespace Nyangbingo.World
                 entry.Controller.Fired -= entry.FireHandler;
                 turrets.Remove(record.objectId);
             }
+            utilityTurrets.Remove(record.objectId);
             RemoveLantern(record.objectId);
             RemovePassiveCounterAura(record.objectId);
             runtimeServices?.ModuleHoldover?.Clear(record.objectId);
@@ -899,15 +928,28 @@ namespace Nyangbingo.World
             interactionStatusText.raycastTarget = false;
         }
 
-        private bool TryRegisterPlacedTurret(string objectId, int initialFuelUnits, out TurretEntry entry)
+        private bool TryRegisterPlacedTurret(string objectId, string definitionId, int initialFuelUnits,
+            out TurretEntry entry)
         {
             entry = null;
-            if (turrets.ContainsKey(objectId) || !environmentState.TryGetVisual(objectId, out var visual)) return false;
+            if (turrets.ContainsKey(objectId) ||
+                !DamageTurretRules.TryGetProfile(definitionId, out var profile) ||
+                !environmentState.TryGetVisual(objectId, out var visual))
+                return false;
             var controller = new TurretController(visual.transform, FindHostileTargets,
-                RetargetSeconds, FireSeconds, AttackRange, AttackDamage, FuelSecondsPerUnit);
-            var created = new TurretEntry { ObjectId = objectId, Origin = visual.transform, Controller = controller };
-            created.FireHandler = (target, damage) => LaunchProjectile(created, target, damage);
+                profile.RetargetSeconds, profile.FireIntervalSeconds, profile.RangeTiles, profile.Damage,
+                FuelSecondsPerUnit);
+            var created = new TurretEntry
+            {
+                ObjectId = objectId,
+                DefinitionId = definitionId,
+                Origin = visual.transform,
+                Controller = controller,
+                Profile = profile
+            };
+            created.FireHandler = (target, damage) => HandleDamageTurretFired(created, target, damage);
             controller.Fired += created.FireHandler;
+            RefreshConduitPowerForEntry(created);
             if (initialFuelUnits > 0 && !controller.AddFuel(initialFuelUnits))
             {
                 controller.Fired -= created.FireHandler;
@@ -966,8 +1008,10 @@ namespace Nyangbingo.World
 
         private bool TryRegisterPlacedObjectRuntime(PlacedObjectRecord record)
         {
-            if (record.definitionId == TurretItemId)
-                return TryRegisterPlacedTurret(record.objectId, 0, out _);
+            if (SeokbinggoRules.IsDamageTurret(record.definitionId))
+                return TryRegisterPlacedTurret(record.objectId, record.definitionId, 0, out _);
+            if (SeokbinggoRules.IsUtilityTurret(record.definitionId))
+                return TryRegisterUtilityTurret(record);
             if (IsInstalledLanternDefinition(record.definitionId))
                 return TryRegisterPlacedLantern(
                     record.objectId, record.definitionId, out _);
@@ -976,6 +1020,164 @@ namespace Nyangbingo.World
                 return TryRegisterPlacedCounterAura(record.objectId, record.definitionId);
             return record.definitionId != JangdokStorageRuntime.DefinitionId ||
                    runtimeServices.JangdokStorage.TryRegister(record.objectId);
+        }
+
+        private void RefreshDamageTurretConduitPower()
+        {
+            foreach (var entry in turrets.Values)
+                RefreshConduitPowerForEntry(entry);
+        }
+
+        private void RefreshConduitPowerForEntry(TurretEntry entry)
+        {
+            if (entry?.Controller == null) return;
+            var linked = entry.Profile.FreeFuelWhenConduitLinked &&
+                         DamageTurretRules.IsConduitLinked(runtimeServices?.Seokbinggo?.Stage ?? 0);
+            entry.Controller.SetIgnoreFuelConsumption(linked);
+        }
+
+        private bool TryRegisterUtilityTurret(PlacedObjectRecord record)
+        {
+            if (string.IsNullOrWhiteSpace(record.objectId) ||
+                utilityTurrets.ContainsKey(record.objectId))
+                return false;
+            utilityTurrets[record.objectId] = new UtilityTurretEntry
+            {
+                ObjectId = record.objectId,
+                DefinitionId = record.definitionId,
+                Position = record.position,
+                FuelRemaining = 0f,
+                PulseCooldown = 0f
+            };
+            return true;
+        }
+
+        private void TickUtilityTurretFields(float deltaGameSeconds)
+        {
+            if (utilityTurrets.Count == 0 || deltaGameSeconds <= 0f) return;
+            var yokai = FindObjectsByType<YokaiBrain>();
+            var hasYokai = yokai != null && yokai.Length > 0;
+            foreach (var entry in utilityTurrets.Values)
+            {
+                if (entry == null) continue;
+                entry.PulseCooldown = Mathf.Max(0f, entry.PulseCooldown - deltaGameSeconds);
+                if (string.Equals(entry.DefinitionId, UtilityTurretRules.ScarecrowId, StringComparison.Ordinal))
+                {
+                    if (hasYokai) ApplyScarecrowAggro(entry.Position, yokai);
+                }
+                else if (string.Equals(entry.DefinitionId, UtilityTurretRules.IceTrapId, StringComparison.Ordinal))
+                {
+                    if (hasYokai) ApplyIceTrapFreeze(entry.Position, yokai);
+                }
+                else if (string.Equals(entry.DefinitionId, UtilityTurretRules.ArrowSupplyId, StringComparison.Ordinal))
+                    TickArrowSupply(entry, deltaGameSeconds);
+                else if (string.Equals(entry.DefinitionId, UtilityTurretRules.PlasterDollId, StringComparison.Ordinal))
+                    TickPlasterDoll(entry);
+                else if (string.Equals(entry.DefinitionId, UtilityTurretRules.GongTowerId, StringComparison.Ordinal))
+                {
+                    if (hasYokai) TickGongTower(entry, yokai);
+                }
+            }
+        }
+
+        private void TickArrowSupply(UtilityTurretEntry entry, float deltaGameSeconds)
+        {
+            if (entry.FuelRemaining <= 0f) return;
+            entry.FuelRemaining = Mathf.Max(0f, entry.FuelRemaining - deltaGameSeconds);
+            if (entry.PulseCooldown > 0f) return;
+            if (playerController == null || runtimeServices?.PlayerInventory == null) return;
+            if (!UtilityTurretRules.IsInsideRadius(
+                    entry.Position, playerController.transform.position,
+                    UtilityTurretRules.ArrowSupplyRadiusTiles))
+                return;
+            if (!runtimeServices.PlayerInventory.TryAdd(
+                    BowCombatRules.AmmoItemId, UtilityTurretRules.ArrowSupplyAmmoPerPulse))
+                return;
+            entry.PulseCooldown = UtilityTurretRules.ArrowSupplyIntervalSeconds;
+        }
+
+        private void TickPlasterDoll(UtilityTurretEntry entry)
+        {
+            if (entry.PulseCooldown > 0f) return;
+            var tileService = FindAnyObjectByType<MainGameBootstrap>()?.TileService;
+            if (tileService == null) return;
+            var healedAny = false;
+            var centerCell = tileService.WorldToCell(entry.Position);
+            var radius = Mathf.CeilToInt(UtilityTurretRules.PlasterDollRadiusTiles);
+            for (var y = -radius; y <= radius; y++)
+            for (var x = -radius; x <= radius; x++)
+            {
+                var cell = new Vector3Int(centerCell.x + x, centerCell.y + y, 0);
+                var world = (Vector2)tileService.GetCellWorldBounds(cell).center;
+                if (!UtilityTurretRules.IsInsideRadius(
+                        entry.Position, world, UtilityTurretRules.PlasterDollRadiusTiles))
+                    continue;
+                if (tileService.TryHealWall(cell, UtilityTurretRules.PlasterDollHealAmount, out _))
+                    healedAny = true;
+            }
+            if (healedAny)
+                entry.PulseCooldown = UtilityTurretRules.PlasterDollHealIntervalSeconds;
+        }
+
+        private static void TickGongTower(UtilityTurretEntry entry, YokaiBrain[] yokai)
+        {
+            if (entry.PulseCooldown > 0f) return;
+            var attracted = false;
+            for (var index = 0; index < yokai.Length; index++)
+            {
+                var brain = yokai[index];
+                if (brain == null || brain.Definition == null) continue;
+                if (!UtilityTurretRules.IsInsideRadius(
+                        entry.Position, brain.transform.position, UtilityTurretRules.GongTowerRadiusTiles))
+                    continue;
+                if (brain.TryForceAggroPosition(entry.Position, UtilityTurretRules.GongTowerAggroSeconds))
+                    attracted = true;
+            }
+            if (attracted)
+                entry.PulseCooldown = UtilityTurretRules.GongTowerPulseIntervalSeconds;
+        }
+
+        private bool TryRefuelArrowSupply(UtilityTurretEntry entry)
+        {
+            var fuelId = UtilityTurretRules.ArrowSupplyFuelItemId;
+            if (!runtimeServices.PlayerInventory.TryRemove(fuelId, 1))
+            {
+                ShowMessage(
+                    $"{ItemName(entry.DefinitionId)} · 연료 {entry.FuelRemaining:0}초 · {ItemName(fuelId)} 없음");
+                return true;
+            }
+            entry.FuelRemaining += UtilityTurretRules.ArrowSupplyFuelSecondsPerUnit;
+            ShowMessage(
+                $"{ItemName(fuelId)} 1개 투입 · 화살 보급대 연료 {entry.FuelRemaining:0}초");
+            BuildStateChanged?.Invoke();
+            return true;
+        }
+
+        private static void ApplyScarecrowAggro(Vector2 scarecrowPosition, YokaiBrain[] yokai)
+        {
+            for (var index = 0; index < yokai.Length; index++)
+            {
+                var brain = yokai[index];
+                if (brain == null || brain.Definition == null) continue;
+                if (!UtilityTurretRules.IsInsideRadius(
+                        scarecrowPosition, brain.transform.position, UtilityTurretRules.ScarecrowRadiusTiles))
+                    continue;
+                brain.TryForceAggroPosition(scarecrowPosition, UtilityTurretRules.ScarecrowAggroSeconds);
+            }
+        }
+
+        private static void ApplyIceTrapFreeze(Vector2 trapPosition, YokaiBrain[] yokai)
+        {
+            for (var index = 0; index < yokai.Length; index++)
+            {
+                var brain = yokai[index];
+                if (brain == null || brain.Definition == null) continue;
+                if (!UtilityTurretRules.IsInsideRadius(
+                        trapPosition, brain.transform.position, UtilityTurretRules.IceTrapRadiusTiles))
+                    continue;
+                brain.ApplyFrostSlow(
+                    UtilityTurretRules.IceTrapFreezeFraction, UtilityTurretRules.IceTrapFreezeSeconds);
+            }
         }
 
         public static bool IsInstalledLanternDefinition(string definitionId) =>
@@ -1158,11 +1360,59 @@ namespace Nyangbingo.World
             return hostile;
         }
 
+        private void HandleDamageTurretFired(TurretEntry turret, Health target, int damage)
+        {
+            if (turret?.Origin == null || target == null) return;
+            if (turret.Profile.FanConeAttack)
+            {
+                ApplyFanConeDamage(turret, target, damage);
+                return;
+            }
+            LaunchProjectile(turret, target, damage);
+        }
+
+        private void ApplyFanConeDamage(TurretEntry turret, Health primaryTarget, int damage)
+        {
+            var origin = (Vector2)turret.Origin.position;
+            var aim = (Vector2)primaryTarget.transform.position - origin;
+            if (aim.sqrMagnitude <= 0.0001f) aim = Vector2.right;
+            var halfAngle = DamageTurretRules.ColdWaveBatteryFanDegrees * 0.5f;
+            var range = turret.Profile.RangeTiles;
+            var hostiles = FindHostileTargets();
+            for (var index = 0; index < hostiles.Count; index++)
+            {
+                var health = hostiles[index];
+                if (health == null || health.IsDead) continue;
+                var toTarget = (Vector2)health.transform.position - origin;
+                var distance = toTarget.magnitude;
+                if (distance > range || distance <= 0.0001f) continue;
+                if (Vector2.Angle(aim, toTarget) > halfAngle) continue;
+                var before = health.Current;
+                health.ApplyDamage(damage, turret.Profile.DamageTag);
+                if (health.Current < before) GameEvents.RaiseYokaiDamaged();
+                if (turret.Profile.AppliesFrostSlow)
+                    ApplyTurretFrostSlow(health);
+            }
+        }
+
         private void LaunchProjectile(TurretEntry turret, Health target, int damage)
         {
             if (turret?.Origin == null || target == null || projectilePool == null) return;
             var origin = (Vector2)turret.Origin.position + Vector2.up * .5f;
-            projectilePool.Spawn(origin, target, damage, DamageTag.Fire, ProjectileSpeed, ProjectileHitDistance);
+            System.Action<Health> onHit = null;
+            if (turret.Profile.AppliesFrostSlow)
+                onHit = ApplyTurretFrostSlow;
+            projectilePool.Spawn(origin, target, damage, turret.Profile.DamageTag, ProjectileSpeed,
+                ProjectileHitDistance, onHit);
+        }
+
+        private static void ApplyTurretFrostSlow(Health health)
+        {
+            if (health == null) return;
+            var brain = health.GetComponent<YokaiBrain>();
+            brain?.ApplyFrostSlow(
+                DamageTurretRules.SeongeFrostSlowFraction,
+                DamageTurretRules.SeongeFrostSlowSeconds);
         }
 
         private void RefreshProjectileVisuals()

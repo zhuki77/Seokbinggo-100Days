@@ -40,7 +40,7 @@ namespace Nyangbingo.Combat
         public bool ConfigureForRuntime(Transform attackOrigin, LayerMask layers, CombatProfileDefinition profile)
         {
             if (profile == null || profile.RangeTiles <= 0f || float.IsNaN(profile.RangeTiles) ||
-                float.IsInfinity(profile.RangeTiles) || profile.ArcDegrees < 1f || profile.ArcDegrees > 180f ||
+                float.IsInfinity(profile.RangeTiles) || profile.ArcDegrees < 0f || profile.ArcDegrees > 180f ||
                 float.IsNaN(profile.ArcDegrees) || float.IsInfinity(profile.ArcDegrees)) return false;
             origin = attackOrigin;
             targetLayers = layers;
@@ -62,7 +62,7 @@ namespace Nyangbingo.Combat
 
         public void Strike(Vector2 direction)
         {
-            StrikeInternal(direction, false, 0, 0f);
+            StrikeInternal(direction, false, 0, 0f, null);
         }
 
         public void Strike(Vector2 direction, int overrideDamage, float overrideKnockback)
@@ -70,10 +70,32 @@ namespace Nyangbingo.Combat
             StrikeInternal(direction, true, Mathf.Max(0, overrideDamage),
                 float.IsNaN(overrideKnockback) || float.IsInfinity(overrideKnockback)
                     ? 0f
-                    : Mathf.Max(0f, overrideKnockback));
+                    : Mathf.Max(0f, overrideKnockback), null);
         }
 
-        private void StrikeInternal(Vector2 direction, bool useOverride, int overrideDamage, float overrideKnockback)
+        public void StrikeSangunCombo(Vector2 direction, CombatProfileDefinition profile)
+        {
+            LastHitCount = 0;
+            if (profile == null || !EvolvedClawCombatRules.IsSangunClaw(profile))
+            {
+                Strike(direction);
+                return;
+            }
+
+            var totalDamage = Mathf.Max(1, Mathf.RoundToInt(profile.AttackDamage));
+            var comboHits = 0;
+            for (var hitIndex = 0; hitIndex < EvolvedClawCombatRules.SangunComboHitCount; hitIndex++)
+            {
+                EvolvedClawCombatRules.SplitSangunComboDamage(
+                    totalDamage, hitIndex, out var hitDamage, out var hitKnockback, profile.KnockbackTiles);
+                StrikeInternal(direction, true, hitDamage, hitKnockback, profile);
+                comboHits += LastHitCount;
+            }
+            LastHitCount = comboHits;
+        }
+
+        private void StrikeInternal(Vector2 direction, bool useOverride, int overrideDamage, float overrideKnockback,
+            CombatProfileDefinition profileOverride)
         {
             LastHitCount = 0;
             if (float.IsNaN(direction.x) || float.IsInfinity(direction.x) ||
@@ -81,6 +103,7 @@ namespace Nyangbingo.Combat
                 direction.sqrMagnitude <= Mathf.Epsilon) return;
             if (!useOverride && combatProfile != null && !combatProfile.HasBasicAttack) return;
             direction.Normalize();
+            var activeProfile = profileOverride ?? combatProfile;
             Vector2 center = origin == null ? (Vector2)transform.position : (Vector2)origin.position;
             if (range <= 0f || float.IsNaN(range) || float.IsInfinity(range)) return;
             var activeHeight = range;
@@ -106,9 +129,8 @@ namespace Nyangbingo.Combat
                     activeKnockback = Mathf.Max(0f, clawProfile.Knockback);
             }
             if (float.IsNaN(activeHeight) || float.IsInfinity(activeHeight)) activeHeight = range;
-            var activeArc = float.IsNaN(arcDegrees) || float.IsInfinity(arcDegrees)
-                ? 100f
-                : Mathf.Clamp(arcDegrees, 1f, 180f);
+            var activeArcHalf = BowCombatRules.ResolveHalfArcDegrees(
+                float.IsNaN(arcDegrees) || float.IsInfinity(arcDegrees) ? 100f : arcDegrees);
             var queryCenter = center + direction * (range * .5f);
             var querySize = new Vector2(range, activeHeight);
             var queryAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
@@ -124,6 +146,8 @@ namespace Nyangbingo.Combat
             Physics2D.SyncTransforms();
             var overlapHits = Physics2D.OverlapBoxAll(queryCenter, querySize, queryAngle, effectiveTargetLayers);
 
+            var effectiveMaxTargets = EvolvedClawCombatRules.ResolveMaxTargets(activeProfile);
+
             foreach (var hit in overlapHits)
             {
                 if (hit == null) continue;
@@ -134,7 +158,7 @@ namespace Nyangbingo.Combat
                     toTarget = (Vector2)hit.bounds.center - center;
                 if (toTarget.sqrMagnitude <= Mathf.Epsilon) toTarget = direction;
                 if (!attackOriginInsideTarget &&
-                    Vector2.Angle(direction, toTarget) > activeArc * .5f) continue;
+                    Vector2.Angle(direction, toTarget) > activeArcHalf) continue;
                 var health = hit.GetComponentInParent<Health>();
                 if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
                 var healthBeforeDamage = health.Current;
@@ -146,7 +170,8 @@ namespace Nyangbingo.Combat
                         hit.GetComponentInParent<YokaiBrain>()?.ApplyFrostSlow(
                             frostSlowFraction, frostSlowDuration);
                 }
-                var knockbackDirection = toTarget.normalized * activeKnockback;
+                var knockbackDirection = EvolvedFanCombatRules.ResolveDisplacement(
+                    toTarget, activeKnockback, activeProfile);
                 if (health.TryApplyKnockback(knockbackDirection))
                 {
                     health.GetComponentInParent<BossSamdugumiBehaviour>()
@@ -154,7 +179,7 @@ namespace Nyangbingo.Combat
                 }
                 if (activeKnockback > 0f)
                     KnockbackApplied?.Invoke(health, activeKnockback);
-                if (combatProfile != null && LastHitCount >= combatProfile.MaxTargets) break;
+                if (activeProfile != null && damagedTargets.Count >= effectiveMaxTargets) break;
             }
             LastHitCount = damagedTargets.Count;
         }
@@ -180,12 +205,18 @@ namespace Nyangbingo.Combat
 
         public bool TryUse(Vector2 direction) => TryUse(direction, CheolseonDamage);
 
-        public bool TryUse(Vector2 direction, int damage)
+        public bool TryUse(Vector2 direction, int damage) =>
+            TryUse(direction, damage, Knockback);
+
+        public bool TryUse(Vector2 direction, int damage, float knockbackTiles)
         {
             if (attack == null || !IsReady || float.IsNaN(direction.x) || float.IsInfinity(direction.x) ||
                 float.IsNaN(direction.y) || float.IsInfinity(direction.y) ||
                 direction.sqrMagnitude <= Mathf.Epsilon) return false;
-            attack.Strike(direction, Mathf.Max(0, damage), Knockback);
+            var knockback = float.IsNaN(knockbackTiles) || float.IsInfinity(knockbackTiles)
+                ? Knockback
+                : Mathf.Max(0f, knockbackTiles);
+            attack.Strike(direction, Mathf.Max(0, damage), knockback);
             remainingCooldown = CooldownSeconds;
             return true;
         }
@@ -209,9 +240,11 @@ namespace Nyangbingo.Combat
         private float retargetRemaining;
         private float fireRemaining;
         private float fuelRemaining;
+        private bool ignoreFuelConsumption;
         public Health CurrentTarget { get; private set; }
         public float FuelRemaining => fuelRemaining;
-        public bool IsPowered => fuelRemaining > 0f;
+        public bool IsPowered => ignoreFuelConsumption || fuelRemaining > 0f;
+        public bool IgnoresFuelConsumption => ignoreFuelConsumption;
         public event System.Action<Health, int> Fired;
 
         public TurretController(Transform origin, System.Func<IReadOnlyList<Health>> targets, float retargetInterval,
@@ -231,6 +264,8 @@ namespace Nyangbingo.Combat
                 ? 0f
                 : Mathf.Max(0f, secondsPerFuelUnit);
         }
+
+        public void SetIgnoreFuelConsumption(bool ignore) => ignoreFuelConsumption = ignore;
 
         public bool AddFuel(int units)
         {
@@ -269,8 +304,11 @@ namespace Nyangbingo.Combat
         {
             if (gameSeconds <= 0f || float.IsNaN(gameSeconds) || float.IsInfinity(gameSeconds) ||
                 !IsPowered || turretTransform == null) return;
-            var activeSeconds = Mathf.Min(gameSeconds, fuelRemaining);
-            fuelRemaining = Mathf.Max(0f, fuelRemaining - activeSeconds);
+            var activeSeconds = ignoreFuelConsumption
+                ? gameSeconds
+                : Mathf.Min(gameSeconds, fuelRemaining);
+            if (!ignoreFuelConsumption)
+                fuelRemaining = Mathf.Max(0f, fuelRemaining - activeSeconds);
 
             retargetRemaining -= activeSeconds;
             if (!IsValidTarget(CurrentTarget) || retargetRemaining <= .0001f)
@@ -316,10 +354,12 @@ namespace Nyangbingo.Combat
         private DamageTag damageTag;
         private float speed;
         private float arrivalDistance;
+        private System.Action<Health> onHit;
         public Vector2 Position { get; private set; }
         public bool IsActive { get; private set; }
 
-        public void Activate(Vector2 startPosition, Health targetHealth, int attackDamage, DamageTag tag, float moveSpeed, float hitDistance)
+        public void Activate(Vector2 startPosition, Health targetHealth, int attackDamage, DamageTag tag,
+            float moveSpeed, float hitDistance, System.Action<Health> hitCallback = null)
         {
             Position = startPosition;
             target = targetHealth;
@@ -327,12 +367,17 @@ namespace Nyangbingo.Combat
             damageTag = tag;
             speed = moveSpeed;
             arrivalDistance = hitDistance;
+            onHit = hitCallback;
             IsActive = target != null && !target.IsDead &&
                        !float.IsNaN(startPosition.x) && !float.IsInfinity(startPosition.x) &&
                        !float.IsNaN(startPosition.y) && !float.IsInfinity(startPosition.y) &&
                        moveSpeed > 0f && !float.IsNaN(moveSpeed) && !float.IsInfinity(moveSpeed) &&
                        hitDistance >= 0f && !float.IsNaN(hitDistance) && !float.IsInfinity(hitDistance);
-            if (!IsActive) target = null;
+            if (!IsActive)
+            {
+                target = null;
+                onHit = null;
+            }
         }
 
         public bool Tick(float gameSeconds)
@@ -358,8 +403,10 @@ namespace Nyangbingo.Combat
             {
                 Position = targetPosition;
                 var healthBeforeDamage = target.Current;
+                var hitTarget = target;
                 target.ApplyDamage(damage, damageTag);
                 if (target.Current < healthBeforeDamage) GameEvents.RaiseYokaiDamaged();
+                onHit?.Invoke(hitTarget);
                 Deactivate();
                 return true;
             }
@@ -372,6 +419,7 @@ namespace Nyangbingo.Combat
         {
             IsActive = false;
             target = null;
+            onHit = null;
         }
     }
 
@@ -387,7 +435,8 @@ namespace Nyangbingo.Combat
             for (var i = 0; i < Mathf.Max(0, initialCapacity); i++) projectiles.Add(new HomingProjectile());
         }
 
-        public HomingProjectile Spawn(Vector2 startPosition, Health target, int damage, DamageTag tag, float speed, float arrivalDistance)
+        public HomingProjectile Spawn(Vector2 startPosition, Health target, int damage, DamageTag tag, float speed,
+            float arrivalDistance, System.Action<Health> hitCallback = null)
         {
             HomingProjectile projectile = null;
             foreach (var candidate in projectiles)
@@ -401,7 +450,7 @@ namespace Nyangbingo.Combat
                 projectile = new HomingProjectile();
                 projectiles.Add(projectile);
             }
-            projectile.Activate(startPosition, target, damage, tag, speed, arrivalDistance);
+            projectile.Activate(startPosition, target, damage, tag, speed, arrivalDistance, hitCallback);
             return projectile;
         }
 
