@@ -3085,6 +3085,46 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 recoverySource.Contains("EnqueueCatnipHeal") &&
                 recoverySource.Contains("pendingCatnipHeals"),
             "Magpie guide, zone crop spawn/plant, and band heal queue must stay wired.");
+
+        var mushroomHeal = catalog.FindGlobal(GlobalKeys.MushroomHeal);
+        Require(mushroomHeal != null && mushroomHeal.Value == "15/30/50",
+            "mushroom_heal must keep oyster/shiitake/seogi amounts 15/30/50.");
+        Require(PlayerHealthRecoveryService.IsSupportedHealingItemId(
+                    StorageTemperatureService.OysterMushroomId) &&
+                PlayerHealthRecoveryService.IsSupportedHealingItemId(
+                    StorageTemperatureService.ShiitakeId) &&
+                PlayerHealthRecoveryService.IsSupportedHealingItemId(
+                    StorageTemperatureService.SeogiId) &&
+                runtimeSource.Contains("TryReadMushroomHealing") &&
+                recoverySource.Contains("extraHealingItems"),
+            "Underground mushrooms must remain wired as inventory healing items.");
+
+        var healHost = new GameObject("MushroomHealContract");
+        try
+        {
+            var health = healHost.AddComponent<Health>();
+            health.ConfigureForRuntime(100);
+            var healInventory = new Inventory(id => ItemDefinition.CreateRuntime(id, id, 99));
+            Require(healInventory.TryAdd(StorageTemperatureService.OysterMushroomId, 1),
+                "Test inventory must accept oyster mushroom.");
+            var recovery = new PlayerHealthRecoveryService(
+                healInventory, health, 3f, 1f, 25,
+                new Dictionary<string, int>(StringComparer.Ordinal)
+                {
+                    [StorageTemperatureService.OysterMushroomId] = 15,
+                    [StorageTemperatureService.ShiitakeId] = 30,
+                    [StorageTemperatureService.SeogiId] = 50
+                });
+            health.ApplyDamage(40, DamageTag.Melee);
+            Require(recovery.TryUseHealingItem(StorageTemperatureService.OysterMushroomId, out var restored) &&
+                    restored == 15 && health.Current == 75,
+                "Oyster mushroom must heal 15 from mushroom_heal table.");
+            recovery.Dispose();
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(healHost);
+        }
     }
 
     private static void TestWorldDropVisualSurfaceOffset()

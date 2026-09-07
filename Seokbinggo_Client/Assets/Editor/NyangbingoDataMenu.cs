@@ -696,6 +696,23 @@ public static class NyangbingoDataMenu
     }
 
     [MenuItem("Nyangbingo/Reimport Mineral Tiers CSV")]
+    private static void ReimportMineralTiersFromMenu()
+    {
+        ReimportMineralTiers();
+        RebuildGameDataCatalog();
+        try
+        {
+            NyangbingoDataBuildGate.WriteCurrentManifest();
+            NyangbingoEditorVerifyLog.Pass("Reimport Mineral Tiers CSV",
+                "Mineral tier SO·catalog·freshness manifest 갱신 완료");
+        }
+        catch (System.Exception exception)
+        {
+            NyangbingoEditorVerifyLog.Fail("Reimport Mineral Tiers CSV",
+                "임포트는 끝났지만 manifest 기록 실패 — " + exception.Message);
+        }
+    }
+
     private static void ReimportMineralTiers()
     {
         const string csvPath = "Assets/Data/CSV/mineral-tiers.csv";

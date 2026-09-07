@@ -296,22 +296,22 @@ MonoBehaviour:
   mineralTiers:
   - {fileID: 11400000, guid: 9fbf615412cacca44ad9bc9890e0f147, type: 2}
   - {fileID: 11400000, guid: b634af7e9c7dae8469fe450a903e6b22, type: 2}
+  - {fileID: 11400000, guid: e3c4d5e6f708193a4b5c6d7e8f031425, type: 2}
   - {fileID: 11400000, guid: d3a41a696186c87439670872a06234f1, type: 2}
   - {fileID: 11400000, guid: f70420806ff8c6b439a0360cd53bd26a, type: 2}
   - {fileID: 11400000, guid: 1ed626c644e76d94d9dafb8b292b5d94, type: 2}
   - {fileID: 11400000, guid: ce7ff05c3f9add543b3e7f63eda89c1f, type: 2}
+  - {fileID: 11400000, guid: d2b3c4e5f60718293a4b5c6d7e8f0213, type: 2}
   - {fileID: 11400000, guid: dadc1820f4985c943913df5a80c157bd, type: 2}
   - {fileID: 11400000, guid: 8423b011463673345a7394f4a9867f32, type: 2}
   - {fileID: 11400000, guid: 976924a5bd1cb744e8157d904ecc1107, type: 2}
   - {fileID: 11400000, guid: ee6267c110f5c2e4e820b31ccd94ca82, type: 2}
   - {fileID: 11400000, guid: 85f24e089ca0bc745a83bb8bfc03c710, type: 2}
   - {fileID: 11400000, guid: b1ccead2f1121ec4aae4a899c3066e9d, type: 2}
+  - {fileID: 11400000, guid: c1a2b3d4e5f60718293a4b5c6d7e8f01, type: 2}
   - {fileID: 11400000, guid: d7d021efc3ef8cc419d0a1db045e90a7, type: 2}
   - {fileID: 11400000, guid: dc70bffc9a949d74688ad8c8172e12b5, type: 2}
   - {fileID: 11400000, guid: 8dca07817a5df3e44a628c98f714189b, type: 2}
-  - {fileID: 11400000, guid: c1a2b3d4e5f60718293a4b5c6d7e8f01, type: 2}
-  - {fileID: 11400000, guid: d2b3c4e5f60718293a4b5c6d7e8f0213, type: 2}
-  - {fileID: 11400000, guid: e3c4d5e6f708193a4b5c6d7e8f031425, type: 2}
   sealWhitelist:
   - {fileID: 11400000, guid: 43c3e75d6fbe3cb409a40aab412849f4, type: 2}
   - {fileID: 11400000, guid: d004dcc5a9c94a849be19fb92e15cc7c, type: 2}
