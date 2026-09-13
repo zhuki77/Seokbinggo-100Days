@@ -822,8 +822,9 @@ namespace Nyangbingo.UI
                 label.alignment = TextAnchor.LowerCenter;
                 label.fontSize = 11;
                 label.raycastTarget = false;
-                if (Resources.GetBuiltinResource<Font>("Arial.ttf") != null)
-                    label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                var builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (builtinFont != null)
+                    label.font = builtinFont;
                 label.rectTransform.anchorMin = new Vector2(0f, 0f);
                 label.rectTransform.anchorMax = new Vector2(1f, 0f);
                 label.rectTransform.pivot = new Vector2(0.5f, 0f);

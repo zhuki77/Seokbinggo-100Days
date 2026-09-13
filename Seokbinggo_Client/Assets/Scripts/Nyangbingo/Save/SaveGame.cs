@@ -276,8 +276,8 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 26;
-        /// <summary>v72: schema 26은 서리 확산의 고유 제단 보스 처치 목록을 추가하며 schema 23부터 순차 이관한다.</summary>
+        public const int CurrentSchemaVersion = 27;
+        /// <summary>v72: schema 27은 시작 특성 id를 추가하며 schema 23부터 순차 이관한다.</summary>
         public const int MinimumCompatibleSchemaVersion = 23;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
@@ -314,6 +314,8 @@ namespace Nyangbingo.Save
         public float talismanStrideRemaining;
         public float talismanHideRemaining;
         public float talismanFrostRemaining;
+        /// <summary>시작 특성 id 1개. 비어 있으면 미선택(구 세이브·선택 전).</summary>
+        public string selectedTraitId = string.Empty;
         public List<string> gimmickWeaponsGranted = new List<string>();
         public List<ArtifactDailyUseRecord> artifactDailyUses = new List<ArtifactDailyUseRecord>();
         public List<string> frostPendingCells = new List<string>();
@@ -459,6 +461,8 @@ namespace Nyangbingo.Save
                 talismanHideRemaining, TalismanRuntime.HideDurationSeconds);
             talismanFrostRemaining = NormalizeDuration(
                 talismanFrostRemaining, TalismanRuntime.FrostDurationSeconds);
+            if (selectedTraitId == null) selectedTraitId = string.Empty;
+            if (!TraitRules.IsKnownId(selectedTraitId)) selectedTraitId = string.Empty;
             gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
             var uniqueFrostBossIds = new HashSet<string>(StringComparer.Ordinal);
             frostClearedBossIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) || !uniqueFrostBossIds.Add(id));

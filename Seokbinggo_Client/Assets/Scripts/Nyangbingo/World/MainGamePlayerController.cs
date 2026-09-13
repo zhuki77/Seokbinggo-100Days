@@ -259,6 +259,8 @@ namespace Nyangbingo.World
                 return false;
             }
             runtimeServices.Talismans?.BindPlayer(transform);
+            attack.SetOutgoingDamageAdjuster((health, damage) =>
+                runtimeServices?.Traits?.AdjustMeleeDamage(health, damage) ?? damage);
 
             var physics = PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var legacyPhysics)
                 ? legacyPhysics
@@ -1661,7 +1663,8 @@ namespace Nyangbingo.World
             var criticalDefinition = clawTier == 2 ? catalog?.FindGlobal(IronClawMiningCriticalKey) : null;
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
-            var criticalChance = CalculateMiningCriticalChance(baseCriticalChance,
+            var criticalChance = CalculateMiningCriticalChance(
+                baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
                 statSheet.MiningCriticalChance);
             var critical = item != null && amount > 0 && UnityEngine.Random.value < criticalChance;
             if (critical)
@@ -1690,7 +1693,9 @@ namespace Nyangbingo.World
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
             var critical = UnityEngine.Random.value <
-                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+                           CalculateMiningCriticalChance(
+                               baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
+                               statSheet.MiningCriticalChance);
             if (critical)
             {
                 amount++;
@@ -1713,7 +1718,9 @@ namespace Nyangbingo.World
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
             var critical = UnityEngine.Random.value <
-                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+                           CalculateMiningCriticalChance(
+                               baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
+                               statSheet.MiningCriticalChance);
             if (critical)
             {
                 amount++;
@@ -1736,7 +1743,9 @@ namespace Nyangbingo.World
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
             var critical = UnityEngine.Random.value <
-                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+                           CalculateMiningCriticalChance(
+                               baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
+                               statSheet.MiningCriticalChance);
             if (critical)
             {
                 amount++;

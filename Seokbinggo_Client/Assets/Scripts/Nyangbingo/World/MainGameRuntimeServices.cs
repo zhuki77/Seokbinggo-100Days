@@ -64,6 +64,7 @@ namespace Nyangbingo.World
         public StorageTemperatureService StorageTemperature { get; private set; }
         public OutdoorIceMeltService OutdoorIceMelt { get; private set; }
         public TalismanRuntime Talismans { get; private set; }
+        public TraitRuntime Traits { get; private set; }
         public SeokbinggoUpgradeService Seokbinggo { get; private set; }
         public FrostSpreadService FrostSpread { get; private set; }
         public GimmickWeaponProgress GimmickWeapons { get; private set; }
@@ -198,16 +199,19 @@ namespace Nyangbingo.World
             try
             {
                 Talismans = new TalismanRuntime(gameDataCatalog, PlayerInventory, environmentState);
+                Traits = new TraitRuntime(gameDataCatalog, PlayerInventory);
             }
             catch (System.Exception exception)
             {
-                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: v72 talisman data is invalid: " +
+                Debug.LogError($"[Nyangbingo] MainGameRuntimeServices: v72 talisman/trait data is invalid: " +
                                exception.Message);
                 return false;
             }
             PlayerTemperature = new PlayerTemperatureState(gameDataCatalog, bootstrap.TimeService,
                 bootstrap.SealSystem, EquipmentSystem, environmentState, bootstrap.Session,
                 RoomTemperature, HeatStage, () => Talismans?.SuppressesHypothermia == true);
+            PlayerTemperature.ConfigureDayTemperatureRiseMultiplier(
+                () => Traits?.DayTemperatureRiseMultiplier ?? 1f);
             DeathTearPouches = new DeathTearPouchRuntime(PlayerInventory, bootstrap.TimeService);
             var jangdokDefinition = gameDataCatalog.FindGlobal(GlobalKeys.JangdokStorageSlots);
             if (jangdokDefinition == null || !jangdokDefinition.TryGetInt(out var jangdokSlots) ||
@@ -474,6 +478,7 @@ namespace Nyangbingo.World
             OutdoorIceMelt = null;
             JangdokStorage = null;
             Talismans = null;
+            Traits = null;
             Seokbinggo = null;
             FrostSpread = null;
             Invasion?.Dispose();

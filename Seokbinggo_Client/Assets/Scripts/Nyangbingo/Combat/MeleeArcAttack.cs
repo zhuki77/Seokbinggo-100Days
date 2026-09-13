@@ -19,10 +19,14 @@ namespace Nyangbingo.Combat
         [SerializeField] private ClawProfile clawProfile;
         private float frostSlowFraction;
         private float frostSlowDuration;
+        private System.Func<Health, int, int> outgoingDamageAdjuster;
         public CombatProfileDefinition CombatProfile => combatProfile;
         public bool HitsWalls => combatProfile == null || combatProfile.HitsWalls;
         public int LastHitCount { get; private set; }
         public event System.Action<Health, float> KnockbackApplied;
+
+        public void SetOutgoingDamageAdjuster(System.Func<Health, int, int> adjuster) =>
+            outgoingDamageAdjuster = adjuster;
 
         public void ConfigureForRuntime(Transform attackOrigin, LayerMask layers, float attackRange, float attackArc, int attackDamage, float attackKnockback)
         {
@@ -162,7 +166,10 @@ namespace Nyangbingo.Combat
                 var health = hit.GetComponentInParent<Health>();
                 if (health == null || health == attackerHealth || !damagedTargets.Add(health)) continue;
                 var healthBeforeDamage = health.Current;
-                if (activeDamage > 0) health.ApplyDamage(activeDamage, DamageTag.Melee);
+                var dealtDamage = outgoingDamageAdjuster != null
+                    ? Mathf.Max(0, outgoingDamageAdjuster(health, activeDamage))
+                    : activeDamage;
+                if (dealtDamage > 0) health.ApplyDamage(dealtDamage, DamageTag.Melee);
                 if (health.Current < healthBeforeDamage)
                 {
                     GameEvents.RaiseYokaiDamaged();

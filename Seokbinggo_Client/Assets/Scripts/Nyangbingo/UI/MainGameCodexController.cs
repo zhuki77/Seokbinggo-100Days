@@ -60,13 +60,28 @@ namespace Nyangbingo.UI
 
         private void Start()
         {
-            if (saveCoordinator == null || !saveCoordinator.Initialize() || saveCoordinator.ProgressTracker == null ||
-                panel == null || detailText == null || cardButtons == null || cardTexts == null ||
-                cardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount ||
-                cardTexts.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            if (saveCoordinator == null || !saveCoordinator.Initialize() ||
+                saveCoordinator.ProgressTracker == null)
             {
-                Debug.LogError("[Nyangbingo] MainGameCodexController: 도감 데이터 또는 8장 카드 UI 배선이 올바르지 않습니다.");
+                Debug.LogError("[Nyangbingo] MainGameCodexController: 도감 진행 데이터가 올바르지 않습니다.");
                 enabled = false;
+                return;
+            }
+
+            var expected = YokaiCodexPresentationModel.ExpectedCardCount;
+            var hasLegacyGrid = panel != null && detailText != null &&
+                                cardButtons != null && cardTexts != null &&
+                                cardButtons.Length == expected &&
+                                cardTexts.Length == expected;
+            if (!hasLegacyGrid)
+            {
+                // 씬에 남은 구 8칸 배선은 무시. 통합 제작 UI가 17칸 격자를 런타임 생성한다.
+                unifiedPanelMode = true;
+                if (panel != null) panel.SetActive(false);
+                enabled = false;
+                Debug.Log(
+                    $"[Nyangbingo] MainGameCodexController: 레거시 격자({cardButtons?.Length ?? 0}장) 비활성 — " +
+                    $"통합 도감 UI가 {expected}장을 담당합니다.");
                 return;
             }
 
@@ -84,7 +99,8 @@ namespace Nyangbingo.UI
             }
             panel.SetActive(false);
             RefreshView();
-            Debug.Log("[Nyangbingo] MainGameCodexController: 3열 8장 격자와 192x256 확대·뒤집기 도감 연결 완료.");
+            Debug.Log(
+                $"[Nyangbingo] MainGameCodexController: 격자 {expected}장과 192x256 확대·뒤집기 도감 연결 완료.");
         }
 
         private void Update()

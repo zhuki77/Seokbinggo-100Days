@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Nyangbingo.UI
 {
-    public enum GameShellScreen { Gameplay, Pause, Settings, Result, Confirmation }
+    public enum GameShellScreen { Gameplay, Pause, Settings, Result, Confirmation, TraitSelect }
     public enum GameShellConfirmation { None, ReturnToTitle }
 
     public sealed class DemoResultState
@@ -38,6 +38,7 @@ namespace Nyangbingo.UI
         [SerializeField] private GameObject resultCanvas;
         [SerializeField] private GameObject settingsPanel;
         [SerializeField] private GameObject confirmationPanel;
+        [SerializeField] private GameObject traitSelectPanel;
 
         private SaveGame activeSave;
         private float resumeTimeScale = 1f;
@@ -51,6 +52,7 @@ namespace Nyangbingo.UI
         public bool IsOfficialDemo => activeSave != null && activeSave.isOfficialDemo;
 
         public event Action TitleRequested;
+        public event Action TraitSelectOpened;
 
         private void Awake()
         {
@@ -66,12 +68,20 @@ namespace Nyangbingo.UI
             ApplyViewState();
         }
 
-        public void ConfigureViews(GameObject pause, GameObject result, GameObject settings, GameObject confirmation)
+        public void ConfigureTraitSelectPanel(GameObject traitSelect)
+        {
+            traitSelectPanel = traitSelect;
+            ApplyViewState();
+        }
+
+        public void ConfigureViews(GameObject pause, GameObject result, GameObject settings, GameObject confirmation,
+            GameObject traitSelect = null)
         {
             pauseCanvas = pause;
             resultCanvas = result;
             settingsPanel = settings;
             confirmationPanel = confirmation;
+            if (traitSelect != null) traitSelectPanel = traitSelect;
             ApplyViewState();
         }
 
@@ -80,6 +90,23 @@ namespace Nyangbingo.UI
             activeSave = currentSave ?? activeSave ?? new SaveGame { day = 1 };
             ActiveSaveSlot = MainGameLaunchRequest.SaveSlot;
             ShowGameplay(false);
+        }
+
+        public bool OpenTraitSelect()
+        {
+            if (Screen != GameShellScreen.Gameplay && Screen != GameShellScreen.TraitSelect) return false;
+            resumeTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
+            Time.timeScale = 0f;
+            SetScreen(GameShellScreen.TraitSelect);
+            TraitSelectOpened?.Invoke();
+            return true;
+        }
+
+        public bool CompleteTraitSelect()
+        {
+            if (Screen != GameShellScreen.TraitSelect) return false;
+            ShowGameplay(true);
+            return true;
         }
 
         public static float ResolveTimeScaleAfterLoading(GameShellScreen screen) =>
@@ -252,6 +279,7 @@ namespace Nyangbingo.UI
             if (resultCanvas != null) resultCanvas.SetActive(Screen == GameShellScreen.Result);
             if (settingsPanel != null) settingsPanel.SetActive(Screen == GameShellScreen.Settings);
             if (confirmationPanel != null) confirmationPanel.SetActive(Screen == GameShellScreen.Confirmation);
+            if (traitSelectPanel != null) traitSelectPanel.SetActive(Screen == GameShellScreen.TraitSelect);
         }
     }
 }

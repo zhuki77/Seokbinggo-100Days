@@ -196,6 +196,7 @@ namespace Nyangbingo.Save
             save.talismanStrideRemaining = runtimeServices.Talismans?.StrideRemaining ?? 0f;
             save.talismanHideRemaining = runtimeServices.Talismans?.HideRemaining ?? 0f;
             save.talismanFrostRemaining = runtimeServices.Talismans?.FrostRemaining ?? 0f;
+            save.selectedTraitId = runtimeServices.Traits?.SelectedTraitId ?? string.Empty;
             save.gimmickWeaponsGranted = runtimeServices.GimmickWeapons?.Export() ?? new List<string>();
             save.artifactDailyUses = runtimeServices.ArtifactVerbs?.ExportDailyUses() ??
                                      new List<ArtifactDailyUseRecord>();
@@ -344,6 +345,8 @@ namespace Nyangbingo.Save
                         save.talismanStrideRemaining,
                         save.talismanHideRemaining,
                         save.talismanFrostRemaining)) &&
+                RestoreStage("starting trait", () => runtimeServices.Traits != null &&
+                    runtimeServices.Traits.Restore(save.selectedTraitId, rangedItemAlreadyGranted: true)) &&
                 RestoreStage("death tear pouches", () =>
                     runtimeServices.DeathTearPouches.Restore(save.deathTearPouches)) &&
                 RestoreStage("world drops", () => RestoreWorldDrops(save.worldDrops)) &&

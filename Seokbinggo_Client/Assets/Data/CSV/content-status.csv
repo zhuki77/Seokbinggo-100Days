@@ -358,11 +358,11 @@ globals.csv,key,altar_surface,추가예정,,
 globals.csv,key,altar_summon_daytime,추가예정,,
 globals.csv,key,crop_table,구현됨,,
 globals.csv,key,crop_plantable,구현됨,,
-globals.csv,key,trait_select_at_start,추가예정,,
-globals.csv,key,trait_table,추가예정,,
-globals.csv,key,shell_screen_count,추가예정,,
+globals.csv,key,trait_select_at_start,구현됨,,
+globals.csv,key,trait_table,구현됨,,
+globals.csv,key,shell_screen_count,구현됨,,
 globals.csv,key,opening_illust_pages,추가예정,,
-globals.csv,key,trait_melee_boss_exempt,추가예정,,
+globals.csv,key,trait_melee_boss_exempt,구현됨,,
 globals.csv,key,sky_gangcheol_trail,추가예정,,
 globals.csv,key,sky_gangcheol_trail_period_sec,추가예정,,
 globals.csv,key,yokai_path_target,추가예정,,
@@ -416,8 +416,8 @@ globals.csv,key,terrain_implemented,추가예정,,
 globals.csv,key,base_vicinity_radius,추가예정,,
 globals.csv,key,yokai_aggro_default,추가예정,,
 globals.csv,key,yokai_aggro_max,추가예정,,
-globals.csv,key,talisman_table,추가예정,,
-globals.csv,key,talisman_count,추가예정,,
+globals.csv,key,talisman_table,구현됨,,
+globals.csv,key,talisman_count,구현됨,,
 globals.csv,key,boss_arena_layer,추가예정,,
 globals.csv,key,altar_count,추가예정,,
 globals.csv,key,win_condition,추가예정,,
@@ -739,11 +739,11 @@ seal-whitelist.csv,element,배경벽(벽지),구현됨,,
 smelting.csv,id,smelt_iron,구현됨,,
 smelting.csv,id,smelt_copper,구현됨,,
 smelting.csv,id,smelt_icesteel,구현됨,,
-talismans.csv,id,tal_return,추가예정,v70,v63 신설
-talismans.csv,id,tal_stride,추가예정,v70,v63 신설
-talismans.csv,id,tal_waypoint,추가예정,v70,v63 신설
-talismans.csv,id,tal_hide,추가예정,v70,v63 신설
-talismans.csv,id,tal_frost,추가예정,v70,v63 신설
+talismans.csv,id,tal_return,구현됨,v70,v63 신설
+talismans.csv,id,tal_stride,구현됨,v70,v63 신설
+talismans.csv,id,tal_waypoint,구현됨,v70,v63 신설
+talismans.csv,id,tal_hide,구현됨,v70,v63 신설
+talismans.csv,id,tal_frost,구현됨,v70,v63 신설
 terrain-spawn.csv,terrain_id,surface_line:club,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,surface_line:bulgasari,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,surface_line:yakwang,추가예정,v70,v63 신설
@@ -814,10 +814,10 @@ terrain-spawn.csv,terrain_id,base_inside:eoduksini,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,base_inside:gaekgwi,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,base_inside:gangcheol,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,base_inside:imugi,추가예정,v70,v63 신설
-traits.csv,id,trait_melee,추가예정,,
-traits.csv,id,trait_ranged,추가예정,,
-traits.csv,id,trait_labor,추가예정,,
-traits.csv,id,trait_cool,추가예정,,
+traits.csv,id,trait_melee,구현됨,,
+traits.csv,id,trait_ranged,구현됨,,
+traits.csv,id,trait_labor,구현됨,,
+traits.csv,id,trait_cool,구현됨,,
 utilities.csv,id,hapjukseon,구현됨,,
 utilities.csv,id,bell_rope,구현됨,,
 yokai-stats.csv,id,club,수정예정,v70,v63~ 대개편 대상

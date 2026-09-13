@@ -37,7 +37,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         try
         {
             RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "64/64 tests");
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "65/65 tests");
         }
         catch (System.Exception exception)
         {
@@ -81,6 +81,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestT4T6ArmorEvolutionContract();
         TestCodexSeventeenEntryPresentationContract();
         TestMagpieGuideAndCropBandContract();
+        TestStartingTraitContract();
         TestWorldDropVisualSurfaceOffset();
         TestTreeVegetationVisualOffset();
         TestBossPausedYokaiVisibilityContract();
@@ -3125,6 +3126,66 @@ public static class NyangbingoDevBIntegrationRegressionTests
         {
             UnityEngine.Object.DestroyImmediate(healHost);
         }
+    }
+
+    private static void TestStartingTraitContract()
+    {
+        Require(TraitRules.AllIds.Length == 4 &&
+                TraitRules.MeleeYokaiDamageMultiplier == 1.1f &&
+                Mathf.Approximately(TraitRules.LaborMiningCriticalBonus, .05f) &&
+                Mathf.Approximately(TraitRules.CoolDayTemperatureRiseMultiplier, .9f) &&
+                TraitRules.RangedStartItemId == "straw_sling",
+            "Starting trait constants must match approved traits.csv / globals.");
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && TraitRules.ShouldSelectAtStart(catalog) &&
+                TraitRules.MeleeBossExempt(catalog),
+            "trait_select_at_start and trait_melee_boss_exempt must stay enabled.");
+        for (var i = 0; i < TraitRules.AllIds.Length; i++)
+            Require(catalog.FindTrait(TraitRules.AllIds[i]) != null,
+                $"Trait definition '{TraitRules.AllIds[i]}' must exist in the catalog.");
+
+        var host = new GameObject("StartingTraitContract");
+        try
+        {
+            var health = host.AddComponent<Health>();
+            health.ConfigureForRuntime(100);
+            Require(TraitRules.AdjustMeleeDamage(TraitRules.MeleeId, catalog, health, 10) == 10,
+                "Melee trait must not boost non-yokai targets.");
+            var yokai = host.AddComponent<YokaiBrain>();
+            Require(TraitRules.AdjustMeleeDamage(TraitRules.MeleeId, catalog, health, 10) == 11,
+                "Melee trait must apply +10% to yokai.");
+            UnityEngine.Object.DestroyImmediate(yokai);
+            host.AddComponent<BossCombatController>();
+            Require(TraitRules.AdjustMeleeDamage(TraitRules.MeleeId, catalog, health, 10) == 10,
+                "Melee trait must exempt bosses.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(host);
+        }
+
+        var inventory = new Inventory(id => ItemDefinition.CreateRuntime(id, id, 99));
+        var traits = new TraitRuntime(catalog, inventory);
+        Require(traits.NeedsSelection && traits.TrySelect(TraitRules.RangedId, out _) &&
+                inventory.Has(TraitRules.RangedStartItemId, 1) &&
+                !traits.TrySelect(TraitRules.MeleeId, out _),
+            "Ranged trait must grant straw_sling once and block reselection.");
+        Require(SaveGame.CurrentSchemaVersion >= 27,
+            "Save schema must persist selectedTraitId.");
+
+        var shellSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/GameShellController.cs");
+        var uiSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        var meleeSource = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/Combat/MeleeArcAttack.cs");
+        Require(shellSource.Contains("TraitSelect") &&
+                uiSource.Contains("BuildTraitSelectView") &&
+                uiSource.Contains("HandleTraitSelected") &&
+                meleeSource.Contains("SetOutgoingDamageAdjuster") &&
+                meleeSource.Contains("outgoingDamageAdjuster"),
+            "Trait select shell screen and melee damage adjuster must stay wired.");
     }
 
     private static void TestWorldDropVisualSurfaceOffset()
