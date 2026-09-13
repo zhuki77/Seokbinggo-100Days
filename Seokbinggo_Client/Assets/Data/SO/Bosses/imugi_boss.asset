@@ -36,6 +36,8 @@ MonoBehaviour:
     amount: 8
   - item: {fileID: 11400000, guid: 926572cda191fce4f884b4bf6bd8a4c7, type: 2}
     amount: 1
+  - item: {fileID: 11400000, guid: ee748d96739811547beff5f8e6165b05, type: 2}
+    amount: 1
   wallDamageDefault: 40
   wallDamageIce: 40
   wallDamageIronWall: 40

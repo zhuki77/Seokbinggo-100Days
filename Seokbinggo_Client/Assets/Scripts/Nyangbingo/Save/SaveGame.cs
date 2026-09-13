@@ -916,7 +916,8 @@ namespace Nyangbingo.Save
             FirstKillDay = Math.Max(0, firstKillDay);
             DisplayName = IsUnlocked ? displayName : "?";
             AppearanceHint = IsUnlocked ? appearanceHint : string.Empty;
-            SourceText = IsUnlocked ? sourceText : string.Empty;
+            SourceText = IsUnlocked ? sourceText ?? string.Empty : string.Empty;
+            HasReadableBackText = IsUnlocked && !string.IsNullOrWhiteSpace(SourceText);
         }
 
         public string EntryId { get; }
@@ -928,6 +929,7 @@ namespace Nyangbingo.Save
         public string DisplayName { get; }
         public string AppearanceHint { get; }
         public string SourceText { get; }
+        public bool HasReadableBackText { get; }
     }
 
     public sealed class YokaiCodexPresentationModel
@@ -1013,7 +1015,7 @@ namespace Nyangbingo.Save
                 selectedEntryId = null;
                 backVisible = false;
             }
-            else if (!SelectedCard.IsUnlocked) backVisible = false;
+            else if (!SelectedCard.IsUnlocked || !SelectedCard.HasReadableBackText) backVisible = false;
         }
 
         public bool TryTapCard(string entryId)
@@ -1033,7 +1035,7 @@ namespace Nyangbingo.Save
         public bool TryFlipSelected()
         {
             var selected = SelectedCard;
-            if (selected == null || !selected.IsUnlocked) return false;
+            if (selected == null || !selected.IsUnlocked || !selected.HasReadableBackText) return false;
             backVisible = !backVisible;
             return true;
         }
@@ -1049,9 +1051,9 @@ namespace Nyangbingo.Save
         {
             if (string.IsNullOrWhiteSpace(entryId) || !entryIds.Add(entryId))
                 throw new InvalidOperationException($"Yokai codex contains an invalid or duplicate entry ID '{entryId}'.");
-            if (string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(sourceText))
-                throw new InvalidOperationException($"Yokai codex entry '{entryId}' is missing display or source text.");
-            cards.Add(new YokaiCodexCard(entryId, isBoss, displayName, appearanceHint, sourceText,
+            if (string.IsNullOrWhiteSpace(displayName))
+                throw new InvalidOperationException($"Yokai codex entry '{entryId}' is missing display text.");
+            cards.Add(new YokaiCodexCard(entryId, isBoss, displayName, appearanceHint, sourceText ?? string.Empty,
                 killCount, firstKillDay));
         }
 
@@ -1062,15 +1064,18 @@ namespace Nyangbingo.Save
 
         private static string ResolveSourceText(CodexEntryDefinition entry)
         {
-            if (!string.IsNullOrWhiteSpace(entry.Source) &&
+            if (IsReadableCodexLore(entry.CardBackText)) return entry.CardBackText.Trim();
+            if (IsReadableCodexLore(entry.Source) &&
                 entry.Source.IndexOf("미확인", StringComparison.Ordinal) < 0)
-                return entry.Source;
-            if (!string.IsNullOrWhiteSpace(entry.CardBackText) &&
-                entry.CardBackText.IndexOf("작성 대기", StringComparison.Ordinal) < 0)
-                return entry.CardBackText;
-            if (!string.IsNullOrWhiteSpace(entry.Source)) return entry.Source;
-            if (!string.IsNullOrWhiteSpace(entry.CardBackText)) return entry.CardBackText;
-            return "출처 미확인";
+                return entry.Source.Trim();
+            return string.Empty;
+        }
+
+        private static bool IsReadableCodexLore(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            var trimmed = text.TrimStart();
+            return trimmed.IndexOf("[작성 대기", StringComparison.Ordinal) != 0;
         }
 
         private void ResolveUnlock(CodexEntryDefinition entry, bool isBoss,

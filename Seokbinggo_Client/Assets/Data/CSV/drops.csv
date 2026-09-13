@@ -5,10 +5,10 @@ yakwang,yokai,야광귀,2,2,stolen_bundle,훔친 보따리,1.00,steal_success,,�
 eoduksini,yokai,어둑시니,4,0,shadow_shard,그림자 조각,0.40,none,,서리발톱 장갑(x5)
 gangcheol,yokai,강철이(정예몹·v34),4,0,gangcheol_scale,강철이 역린,1.00,none,drought_heart:1,서리발톱 장갑·한파 코어(가뭄 심장) 재료 — 심층 정예 파밍
 gaekgwi,yokai,객귀(백중 중간보스),2,0,,,0.00,none,,시그니처 없음 — 눈물 2 확정(야광귀 1 제외분 등가 상쇄·v32)
-king_dokkaebi,boss,도깨비 대장(보스),3,0,dokkaebi_fire_essence,도깨비불 정수+조각x2,1.00,none,club_shard:2,도깨비불 등탑(터렛)
-mother_bulgasari,boss,어미 불가사리(보스),4,0,iron_forge_core,무쇠 용광심+비늘x4,1.00,none,iron_scale:4,신기전 화차(터렛)
+king_dokkaebi,boss,도깨비 대장(보스),3,0,dokkaebi_fire_essence,도깨비불 정수+조각x2,1.00,none,"club_shard:2,ssireum_knot:1",도깨비불 등탑(터렛)·씨름 샅바 매듭(데모 악세)
+mother_bulgasari,boss,어미 불가사리(보스),4,0,iron_forge_core,무쇠 용광심+비늘x4,1.00,none,"iron_scale:4,iron_appetite:1",신기전 화차(터렛)·무쇠 식성(데모 악세)
 imugi,yokai,이무기(최종보스·v34),8,0,yeouiju,여의주,1.00,none,,여의주=빙정 냉각로(엔드 냉각 재료)
-imugi_boss,boss,이무기(보스),8,0,yeouiju,여의주,1.00,none,,빙정 냉각로(엔드 냉각)
+imugi_boss,boss,이무기(보스),8,0,yeouiju,여의주,1.00,none,yeouiju_shard:1,빙정 냉각로(엔드 냉각)·여의주 파편(데모 악세)
 jigwi,boss,지귀(보스),6,0,jigwi_ember_mat,지귀의 잉걸,1.00,none,,성에 등탑(터렛 T4) 유일 재료
 gangcheol_blaze,boss,불볕 강철이(보스),6,0,blaze_yeokrin,불볕 역린,1.00,none,,한파 코어 2호기 유일 재료
 sangun,boss,산군(보스),6,0,sangun_talon,산군의 발톱,1.00,none,,산군 발톱(T5) 유일 재료

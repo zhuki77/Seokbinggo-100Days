@@ -118,6 +118,7 @@ namespace Nyangbingo.UI
         [SerializeField] private Image playerVitalsArt;
         [SerializeField] private Image playerHealthFill;
         [SerializeField] private Image playerTemperatureFill;
+        private Image hypothermiaStatusIcon;
         private RuntimePixelGlyphPresenter playerHealthGlyphs;
         private RuntimePixelGlyphPresenter playerTemperatureGlyphs;
         [SerializeField] private Image tearBalanceArt;
@@ -440,8 +441,30 @@ namespace Nyangbingo.UI
 
             if (saveIndicatorArt != null) saveIndicatorArt.enabled = false;
 
+            EnsureHypothermiaStatusIcon();
             hudSaveManager = FindAnyObjectByType<SaveManager>();
             if (hudSaveManager != null) hudSaveManager.Saved += HandleSaved;
+        }
+
+        private void EnsureHypothermiaStatusIcon()
+        {
+            if (hypothermiaStatusIcon != null || playerTemperatureFill == null) return;
+            var parent = playerTemperatureFill.rectTransform.parent as RectTransform;
+            if (parent == null) return;
+            var iconObject = new GameObject("HypothermiaStatusIcon", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image));
+            iconObject.transform.SetParent(parent, false);
+            var rect = iconObject.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, .5f);
+            rect.pivot = new Vector2(0f, .5f);
+            rect.anchoredPosition = new Vector2(4f, 0f);
+            rect.sizeDelta = new Vector2(7f, 7f);
+            hypothermiaStatusIcon = iconObject.GetComponent<Image>();
+            hypothermiaStatusIcon.raycastTarget = false;
+            hypothermiaStatusIcon.sprite = Sprite.Create(Texture2D.whiteTexture,
+                new Rect(0f, 0f, 1f, 1f), new Vector2(.5f, .5f), 1f);
+            hypothermiaStatusIcon.color = new Color(.35f, .78f, 1f, .95f);
+            hypothermiaStatusIcon.enabled = false;
         }
 
         private void BuildSealFeedbackHud()
@@ -614,6 +637,7 @@ namespace Nyangbingo.UI
                 : VitalsTemperatureColor(temperatureBucket);
             playerTemperatureFill.rectTransform.sizeDelta = new Vector2(42f * temperatureRatio, 2.5f);
             playerTemperatureFill.enabled = temperatureRatio > 0f || hypothermiaBlink;
+            RefreshHypothermiaStatusIcon();
 
             var tearFrames = gameplayArtCatalog?.YokaiTearBalanceFrames;
             var tearBalance = inventory?.Count(DeathTearPouchRuntime.TearItemId) ?? 0;
@@ -962,6 +986,28 @@ namespace Nyangbingo.UI
             var roomService = runtimeServices.RoomTemperature;
             var celsius = roomService.Resolve(playerController.transform.position);
             return RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius);
+        }
+
+        private void RefreshHypothermiaStatusIcon()
+        {
+            EnsureHypothermiaStatusIcon();
+            if (hypothermiaStatusIcon == null) return;
+            var temperature = runtimeServices?.PlayerTemperature;
+            var show = temperature != null &&
+                       RoomTempPresentation.ShouldShowHypothermiaStatusIcon(
+                           temperature.CurrentRoomTemperature);
+            hypothermiaStatusIcon.enabled = show;
+            if (!show) return;
+            var emphasize = temperature.IsHypothermiaDamageImminent ||
+                            RoomTempPresentation.ShouldEmphasizeHypothermiaStatusIcon(
+                                temperature.Current, temperature.HypothermiaDamageAtTemperature);
+            var pulse = emphasize && IsSunsetWarningBrightPhase(Time.unscaledTime);
+            hypothermiaStatusIcon.rectTransform.localScale = emphasize
+                ? (pulse ? Vector3.one * 1.35f : Vector3.one * 1.15f)
+                : Vector3.one;
+            hypothermiaStatusIcon.color = emphasize
+                ? new Color(.55f, .9f, 1f, 1f)
+                : new Color(.35f, .78f, 1f, .95f);
         }
 
         private void RefreshInvasionAnnouncement()

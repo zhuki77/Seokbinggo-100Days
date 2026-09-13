@@ -2039,7 +2039,7 @@ namespace Nyangbingo.UI
                 ? new Color(.16f, .11f, .075f, 1f)
                 : new Color(.12f, .16f, .19f, 1f);
             codexExpandedFrontText.gameObject.SetActive(!codexModel.IsBackVisible);
-            codexExpandedBackText.gameObject.SetActive(codexModel.IsBackVisible);
+            codexExpandedBackText.gameObject.SetActive(codexModel.IsBackVisible && selected.HasReadableBackText);
             codexExpandedFrontText.text = $"{(selected.IsBoss ? "보스" : "요괴")} · 처치 {selected.KillCount}" +
                                           (selected.FirstKillDay > 0
                                               ? $"\n최초 처치 {selected.FirstKillDay}일"
@@ -2047,10 +2047,13 @@ namespace Nyangbingo.UI
                                           (string.IsNullOrWhiteSpace(selected.AppearanceHint)
                                               ? string.Empty
                                               : $"\n{selected.AppearanceHint}");
-            codexExpandedBackText.text = selected.SourceText;
-            codexExpandedHintText.text = codexModel.IsBackVisible
-                ? "카드 클릭 · 앞면 보기    |    바깥 클릭 · 격자"
-                : "카드 클릭 · 전승 보기    |    바깥 클릭 · 격자";
+            codexExpandedBackText.text = selected.HasReadableBackText ? selected.SourceText : string.Empty;
+            if (!selected.HasReadableBackText)
+                codexExpandedHintText.text = "바깥 클릭 · 격자로 돌아가기";
+            else
+                codexExpandedHintText.text = codexModel.IsBackVisible
+                    ? "카드 클릭 · 앞면 보기    |    바깥 클릭 · 격자"
+                    : "카드 클릭 · 전승 보기    |    바깥 클릭 · 격자";
         }
 
         private void ResolveCharacterArtCatalog()

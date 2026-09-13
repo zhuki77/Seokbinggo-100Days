@@ -37,7 +37,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         try
         {
             RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "65/65 tests");
+            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "67/67 tests");
         }
         catch (System.Exception exception)
         {
@@ -80,6 +80,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         TestDamageTurretEvolutionContract();
         TestT4T6ArmorEvolutionContract();
         TestCodexSeventeenEntryPresentationContract();
+        TestCodexPendingLoreDisplayGuardContract();
+        TestDemoBossAccessoryDropContract();
         TestMagpieGuideAndCropBandContract();
         TestStartingTraitContract();
         TestWorldDropVisualSurfaceOffset();
@@ -341,7 +343,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 RoomTempPresentation.ResolveBand(0) == RoomTempPresentation.Band.Warm &&
                 RoomTempPresentation.ResolveBand(-7) == RoomTempPresentation.Band.Chilled &&
                 RoomTempPresentation.ResolveBand(-11) == RoomTempPresentation.Band.Frozen &&
-                RoomTempPresentation.ShouldWarnHypothermia(-10),
+                RoomTempPresentation.ShouldWarnHypothermia(-10) &&
+                RoomTempPresentation.ShouldShowHypothermiaStatusIcon(-10) &&
+                !RoomTempPresentation.ShouldShowHypothermiaStatusIcon(-9) &&
+                RoomTempPresentation.ShouldEmphasizeHypothermiaStatusIcon(8f, 0f) &&
+                !RoomTempPresentation.ShouldEmphasizeHypothermiaStatusIcon(20f, 0f),
             "Room temperature presentation must use signed Celsius and frozen-band warnings.");
         var hudSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameHudController.cs");
@@ -350,6 +356,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(hudSource.Contains("RoomTempPresentation.FormatCelsius") &&
                 hudSource.Contains("InvasionScheduleRules.AnnouncementBannerText") &&
                 hudSource.Contains("RaiseHypothermiaEntered") &&
+                hudSource.Contains("EnsureHypothermiaStatusIcon") &&
+                hudSource.Contains("RefreshHypothermiaStatusIcon") &&
                 audioSource.Contains("InvasionAnnounced") &&
                 audioSource.Contains("HypothermiaEntered") &&
                 audioSource.Contains("FrostMineralRevealed"),
@@ -1628,6 +1636,87 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 perfect != null && perfect.IsBoss && perfect.IsUnlocked &&
                 locked != null && !locked.IsUnlocked && locked.DisplayName == "?",
             "Codex unlock must bind yokai dogam and late boss records across all 17 entries.");
+    }
+
+    private static void TestCodexPendingLoreDisplayGuardContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && catalog.IsValid, "Game data catalog is required for codex lore guards.");
+        var save = new SaveGame
+        {
+            dogam = new List<CodexRecord>
+            {
+                new CodexRecord { yokaiId = "imugi", kills = 1 }
+            },
+            bossRecords = new List<BossRecord>
+            {
+                new BossRecord { bossId = "imugi_boss", count = 1, firstDay = 30 },
+                new BossRecord { bossId = "sangun", count = 1, firstDay = 60 },
+                new BossRecord { bossId = "eop_guryeongi", count = 1, firstDay = 80 },
+                new BossRecord { bossId = "yeongno", count = 1, firstDay = 90 }
+            }
+        };
+        var model = new YokaiCodexPresentationModel(catalog, save);
+        YokaiCodexCard Find(string id)
+        {
+            for (var index = 0; index < model.Cards.Count; index++)
+                if (model.Cards[index].EntryId == id) return model.Cards[index];
+            return null;
+        }
+
+        var pendingIds = new[] { "imugi", "imugi_boss", "sangun", "eop_guryeongi", "yeongno" };
+        for (var index = 0; index < pendingIds.Length; index++)
+        {
+            var card = Find(pendingIds[index]);
+            Require(card != null && card.IsUnlocked && !card.HasReadableBackText &&
+                    string.IsNullOrWhiteSpace(card.SourceText),
+                $"Pending lore card '{pendingIds[index]}' must stay front-only without placeholder back text.");
+            Require(model.TryTapCard(pendingIds[index]) && !model.IsBackVisible && !model.TryFlipSelected(),
+                $"Pending lore card '{pendingIds[index]}' must refuse flip to an empty back.");
+        }
+
+        var clubSave = new SaveGame
+        {
+            dogam = new List<CodexRecord> { new CodexRecord { yokaiId = "club", kills = 1 } }
+        };
+        var clubModel = new YokaiCodexPresentationModel(catalog, clubSave);
+        YokaiCodexCard club = null;
+        for (var index = 0; index < clubModel.Cards.Count; index++)
+            if (clubModel.Cards[index].EntryId == "club") club = clubModel.Cards[index];
+        Require(club != null && club.IsUnlocked && club.HasReadableBackText &&
+                clubModel.TryTapCard("club") && clubModel.TryFlipSelected() && clubModel.IsBackVisible,
+            "Completed lore cards must still flip to readable back text.");
+    }
+
+    private static void TestDemoBossAccessoryDropContract()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(
+            "Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && catalog.IsValid, "Game data catalog is required for demo accessory drops.");
+        Require(HasGuaranteedDrop(catalog.FindBoss("king_dokkaebi"), "ssireum_knot", 1) &&
+                HasGuaranteedDrop(catalog.FindBoss("mother_bulgasari"), "iron_appetite", 1) &&
+                HasGuaranteedDrop(catalog.FindBoss("imugi_boss"), "yeouiju_shard", 1),
+            "Demo bosses must guarantee their accessory drops (ssireum_knot / iron_appetite / yeouiju_shard).");
+        Require(catalog.FindItem("ssireum_knot") != null &&
+                catalog.FindItem("iron_appetite") != null &&
+                catalog.FindItem("yeouiju_shard") != null &&
+                catalog.FindEquipment("ssireum_knot") != null &&
+                catalog.FindEquipment("iron_appetite") != null &&
+                catalog.FindEquipment("yeouiju_shard") != null,
+            "Demo boss accessories must exist as item and equipment definitions.");
+    }
+
+    private static bool HasGuaranteedDrop(BossDefinition boss, string itemId, int amount)
+    {
+        if (boss == null || boss.GuaranteedDrops == null || string.IsNullOrWhiteSpace(itemId) || amount <= 0)
+            return false;
+        for (var index = 0; index < boss.GuaranteedDrops.Length; index++)
+        {
+            var drop = boss.GuaranteedDrops[index];
+            if (drop.item != null && drop.item.Id == itemId && drop.amount == amount) return true;
+        }
+        return false;
     }
 
     private static void TestBossPausedYokaiVisibilityContract()

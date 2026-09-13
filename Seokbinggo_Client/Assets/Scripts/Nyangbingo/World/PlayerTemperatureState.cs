@@ -92,6 +92,7 @@ namespace Nyangbingo.World
         public float Normalized => maximum <= minimum ? 0f : Mathf.InverseLerp(minimum, maximum, Current);
         public bool IsHeatstroke => Current > heatstrokeThreshold;
         public float RecoveryMultiplier => recoveryMultiplier;
+        public float HypothermiaDamageAtTemperature => hypothermiaDamageAtTemperature;
         public event Action<float> Changed;
         public event Action ReachedMaximum;
         public event Action<int> RoomTemperatureChanged;
@@ -99,6 +100,8 @@ namespace Nyangbingo.World
         public int CurrentRoomTemperature { get; private set; }
         public bool IsHypothermia => trackedTransform != null && roomTemperature != null &&
                                      CurrentRoomTemperature <= hypothermiaRoomTemp;
+        public bool IsHypothermiaDamageImminent =>
+            IsHypothermia && Current <= hypothermiaDamageAtTemperature + 10f;
 
         public void SetTrackedTransform(Transform value) => trackedTransform = value;
 
