@@ -1,30 +1,38 @@
-# 개발 B 잔여 — 짧은 포인터 (2026-09-14)
+# 개발 B 잔여 — 인수 포인터 (2026-09-14)
 
-상세 **개발 A 인수**는 → [`DEV_A_CONTINUE_HANDOFF.md`](./DEV_A_CONTINUE_HANDOFF.md)
+개발 A 인수 → [`DEV_A_CONTINUE_HANDOFF.md`](./DEV_A_CONTINUE_HANDOFF.md)  
+기준 브랜치: **`main` @ `63bbe32`** · repo `zhuki77/Seokbinggo-100Days`  
+status: 구현됨 **410** / 추가예정 **231** / 수정예정 **220** (`content-status.csv`)
 
-## 지금 우선순위
+## 이번에 마감한 것 (이어받을 분 기준 · 재작업 불필요)
 
-1. ~~악세사리 9종 (상자 6 + 데모 보스 3)~~ **마감** — 상자 6 런타임 유지 + 보스 3 드롭 배선
-2. ~~지난 전달서 3건 (D-카운터 · 엔딩 · 난이도 자리)~~ **마감** — status만 `구현됨` 정합
-3. **스모크** — `Nyangbingo` → `Run Dev B Integration Regression Tests` (**67/67**)
-4. 표시 층 v82
-   - ~~B-c 저체온 아이콘~~ / ~~B-d 도감 빈 문구 가드~~ **마감**
-   - B-a / B-b 🟡 오너 승인 대기
-   - B-e 🔴 설계 논의 — 할 일 없음
-
-## 기획 답 — `seokbinggo_s1`~`s6`
-
-인벤토리 아이템 아님 → **`modules.csv`만**. `items.csv`에 넣지 않음.
-
-## B 잔여 (한줄)
-
-| 우선 | 내용 |
+| 묶음 | 내용 |
 |------|------|
-| 오너 | `day-curve-ext` 55~100 · B-a/B-b 승인 |
-| 대개편 | 후기 악세 17 · globals/terrain-spawn/crafting-tree 등 v70 버킷 |
-| 스모크 | Play 스모크 + 회귀 67/67 |
+| 악세 9 | 상자 6 런타임 유지 + 데모 보스 3 드롭 (`ssireum_knot` / `iron_appetite` / `yeouiju_shard`) |
+| 지난 3건 | D-카운터 off · 이무기 결과 화면 · 난이도 비활성 자리 — status `구현됨` |
+| 표시층 🟢 | **B-c** 저체온 아이콘 · **B-d** 도감 `[작성 대기` 뒷면 가드 |
+| 그 전 B | frost T4–T6 · 작물/까치 · 특성 4 · mineral freshness · 후기 보스 등 |
 
-## 참고 커밋 계열
+회귀: **`Nyangbingo` → Run Dev B Integration Regression Tests → 67/67** (목표)
 
-- `e1b02bf` frost·작물·까치 · `f06cfe9` freshness · `907b99c` 특성
-- `c1d9f19` A/B 문서 분리 · `28759b0` v82 백로그
+## 넘길 잔여 (우선순위)
+
+1. **Play 스모크** — 회귀 67/67 재실행 + 보스 악세 드롭·저체온 아이콘·도감 가드 수동 확인  
+2. **오너 대기** — `day-curve-ext` 55~100 수치 · 표시층 **B-a**(폭염 강조) / **B-b**(침대 스킵 팝업)  
+3. **설계 대기** — **B-e** 3일차 이후 목표 안내 (지금 할 일 없음)  
+4. **v70 대개편 버킷** — 후기 악세 17 · globals · terrain-spawn · crafting-tree · day-curve 1~30 등  
+5. **소량** — early 보스 잔여 · yokai-stats · opening 일러(아트는 A)
+
+## 기획 확정 답
+
+`seokbinggo_s1`~`s6` = **모듈만** (`modules.csv`). `items.csv`에 넣지 않음.
+
+## 커밋 계열
+
+`e1b02bf` → `f06cfe9` → `907b99c` → `c1d9f19` → `28759b0` → **`63bbe32`** (악세 드롭·B-c/B-d)
+
+## 인수 직후 주의
+
+- `git pull` 후 컴파일 → 회귀 67/67  
+- MineralTiers EOL / Title / TimeManager / packages-lock / `.cursor` / unity-mcp **커밋하지 말 것**  
+- 하드코딩 금지(파도·방어 min1·터렛 캡·낮 밝기 = globals) · melee 특성은 보스 제외
