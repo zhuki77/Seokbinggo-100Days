@@ -23,7 +23,7 @@ Unity: `Seokbinggo_Client`
 
 1. `git pull origin main`  
 2. Unity 컴파일  
-3. (선택) `Nyangbingo` → **Run Dev B Integration Regression Tests** → **65/65** (깨뜨리지 말 것)  
+3. (선택) `Nyangbingo` → **Run Dev B Integration Regression Tests** → 로그의 **`N/N`** (개수 자동 · 깨뜨리지 말 것)  
 4. Play 스모크 (아래 §4)
 
 ---

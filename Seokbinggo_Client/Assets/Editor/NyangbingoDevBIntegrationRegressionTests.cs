@@ -36,8 +36,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
     {
         try
         {
-            RunAllCore();
-            NyangbingoEditorVerifyLog.Pass("Run Dev B Integration Regression Tests", "67/67 tests");
+            var ran = RunAllCore();
+            NyangbingoEditorVerifyLog.Pass(
+                "Run Dev B Integration Regression Tests",
+                $"{ran}/{ran} tests");
         }
         catch (System.Exception exception)
         {
@@ -46,76 +48,86 @@ public static class NyangbingoDevBIntegrationRegressionTests
         }
     }
 
-    private static void RunAllCore()
+    private static int ranTests;
+
+    private static void Run(Action test)
     {
-        TestIceStorageSealCoreLifecycle();
-        TestV29InventoryLayoutContract();
-        TestV29InventoryArtBindings();
-        TestTilePaletteContract();
-        TestWallpaperCoolingDurationMultiplier();
-        TestWallpaperRemovalDropContract();
-        TestDayNightCountdownFormatting();
-        TestBossHealthArtMapping();
-        TestNarrativeFreeProductHudContract();
-        TestWorldCellCoordinateContract();
-        TestDemoSafeSpawnRestorePolicy();
-        TestLatestProductFlowContracts();
-        TestPlayerPhysicsIntegrationContract();
-        TestSurfaceCameraCompositionContract();
-        TestMeleeArcAttackPhysicsQueryContract();
-        TestWorldMobPhysicsContract();
-        TestImugiPhaseCombatContract();
-        TestSamdugumiCounterCombatContract();
-        TestEopGuryeongiModuleShutdownContract();
-        TestSangunRetreatCombatContract();
-        TestYeongnoSwallowCombatContract();
-        TestGangcheolPerfectPhaseCombatContract();
-        TestJigwiEmberCombatContract();
-        TestGangcheolBlazeDoubleBreathCombatContract();
-        TestGimmickWeaponCombatHooksContract();
-        TestEvolvedClawCombatContract();
-        TestEvolvedFanCombatContract();
-        TestUtilityTurretFieldCombatContract();
-        TestBowAndExtendedUtilityTurretContract();
-        TestDamageTurretEvolutionContract();
-        TestT4T6ArmorEvolutionContract();
-        TestCodexSeventeenEntryPresentationContract();
-        TestCodexPendingLoreDisplayGuardContract();
-        TestDemoBossAccessoryDropContract();
-        TestMagpieGuideAndCropBandContract();
-        TestStartingTraitContract();
-        TestWorldDropVisualSurfaceOffset();
-        TestTreeVegetationVisualOffset();
-        TestBossPausedYokaiVisibilityContract();
-        TestPlayerDeathAnimationContract();
-        TestDeliveredShellGlyphArtContract();
-        TestCraftAndPlacementActionsRemainIndependent();
-        TestRecipeProgressionUnlockContract();
-        TestMissingTileEdgeOverlayRemainsDisabled();
-        TestDetailedDynamicSaveSchema();
-        TestResidentEliteContract();
-        TestSealPaceWallDamageContract();
-        TestDestructibleWallHealthContract();
-        TestStrawInsulationContract();
-        TestInstalledCounterAuraContract();
-        TestColdWaveCoreContract();
-        TestIceCrystalCoolerRecoveryContract();
-        TestFrostLanternRuntimeContract();
-        TestDoorAndDoorPaperContract();
-        TestChestLootInterfaceContract();
-        TestProductAudioMixerContract();
-        TestAudioSettingsPersistenceContract();
-        TestWindowsBuildSeparationContract();
-        TestQuickSlotConsumableContract();
-        TestMultiHitDefenseContract();
-        TestForcedInvasionSpawnCapContract();
-        TestBaekjungWaveCompositionContract();
-        TestBUiV71InvasionAndCraftingContract();
-        TestV79EndingUiContract();
-        TestUndergroundTemperatureRecoveryContract();
-        TestPlayerFireMitigationContract();
-        TestPlayerVisionBonusContract();
-        TestYagwangRuntimeTheftContract();
+        test();
+        ranTests++;
+    }
+
+    private static int RunAllCore()
+    {
+        ranTests = 0;
+        Run(TestIceStorageSealCoreLifecycle);
+        Run(TestV29InventoryLayoutContract);
+        Run(TestV29InventoryArtBindings);
+        Run(TestTilePaletteContract);
+        Run(TestWallpaperCoolingDurationMultiplier);
+        Run(TestWallpaperRemovalDropContract);
+        Run(TestDayNightCountdownFormatting);
+        Run(TestBossHealthArtMapping);
+        Run(TestNarrativeFreeProductHudContract);
+        Run(TestWorldCellCoordinateContract);
+        Run(TestDemoSafeSpawnRestorePolicy);
+        Run(TestLatestProductFlowContracts);
+        Run(TestPlayerPhysicsIntegrationContract);
+        Run(TestSurfaceCameraCompositionContract);
+        Run(TestMeleeArcAttackPhysicsQueryContract);
+        Run(TestWorldMobPhysicsContract);
+        Run(TestImugiPhaseCombatContract);
+        Run(TestSamdugumiCounterCombatContract);
+        Run(TestEopGuryeongiModuleShutdownContract);
+        Run(TestSangunRetreatCombatContract);
+        Run(TestYeongnoSwallowCombatContract);
+        Run(TestGangcheolPerfectPhaseCombatContract);
+        Run(TestJigwiEmberCombatContract);
+        Run(TestGangcheolBlazeDoubleBreathCombatContract);
+        Run(TestGimmickWeaponCombatHooksContract);
+        Run(TestEvolvedClawCombatContract);
+        Run(TestEvolvedFanCombatContract);
+        Run(TestUtilityTurretFieldCombatContract);
+        Run(TestBowAndExtendedUtilityTurretContract);
+        Run(TestDamageTurretEvolutionContract);
+        Run(TestT4T6ArmorEvolutionContract);
+        Run(TestCodexSeventeenEntryPresentationContract);
+        Run(TestCodexPendingLoreDisplayGuardContract);
+        Run(TestDemoBossAccessoryDropContract);
+        Run(TestMagpieGuideAndCropBandContract);
+        Run(TestStartingTraitContract);
+        Run(TestWorldDropVisualSurfaceOffset);
+        Run(TestTreeVegetationVisualOffset);
+        Run(TestBossPausedYokaiVisibilityContract);
+        Run(TestPlayerDeathAnimationContract);
+        Run(TestDeliveredShellGlyphArtContract);
+        Run(TestCraftAndPlacementActionsRemainIndependent);
+        Run(TestRecipeProgressionUnlockContract);
+        Run(TestMissingTileEdgeOverlayRemainsDisabled);
+        Run(TestDetailedDynamicSaveSchema);
+        Run(TestResidentEliteContract);
+        Run(TestSealPaceWallDamageContract);
+        Run(TestDestructibleWallHealthContract);
+        Run(TestStrawInsulationContract);
+        Run(TestInstalledCounterAuraContract);
+        Run(TestColdWaveCoreContract);
+        Run(TestIceCrystalCoolerRecoveryContract);
+        Run(TestFrostLanternRuntimeContract);
+        Run(TestDoorAndDoorPaperContract);
+        Run(TestChestLootInterfaceContract);
+        Run(TestProductAudioMixerContract);
+        Run(TestAudioSettingsPersistenceContract);
+        Run(TestWindowsBuildSeparationContract);
+        Run(TestQuickSlotConsumableContract);
+        Run(TestMultiHitDefenseContract);
+        Run(TestForcedInvasionSpawnCapContract);
+        Run(TestBaekjungWaveCompositionContract);
+        Run(TestBUiV71InvasionAndCraftingContract);
+        Run(TestV79EndingUiContract);
+        Run(TestUndergroundTemperatureRecoveryContract);
+        Run(TestPlayerFireMitigationContract);
+        Run(TestPlayerVisionBonusContract);
+        Run(TestYagwangRuntimeTheftContract);
+        return ranTests;
     }
 
     private static void TestChestLootInterfaceContract()

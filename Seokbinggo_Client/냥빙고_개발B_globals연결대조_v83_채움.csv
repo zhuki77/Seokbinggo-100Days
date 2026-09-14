@@ -1,0 +1,56 @@
+key,value,status,기획_1차분류,분류_이유,답,근거,globals_note
+baekjung_sig_mult,2,수정예정,하드코딩?,BaekjungWaveSpawner 존재 — 배율이 코드에 박혔을 가능성,하드코딩,DayEvents/baekjung.asset signatureMultiplier=2 · BaekjungRewardRules.cs,백중날 시그니처 드랍 배율
+baekjung_spawn_cap,12,수정예정,하드코딩?,BaekjungWaveSpawner 존재 — 배율이 코드에 박혔을 가능성,하드코딩,baekjung.asset maxActive=12 · day-curve.csv day15,백중날 밤 한정 스폰 상한(공식값x3)
+baekjung_spawn_mult,3,수정예정,하드코딩?,BaekjungWaveSpawner 존재 — 배율이 코드에 박혔을 가능성,하드코딩,day-curve.csv spawn_mult=3.0 · FindGlobal 없음,백중날 스폰 배율
+baekjung_tears_mult,1.5,수정예정,하드코딩?,BaekjungWaveSpawner 존재 — 배율이 코드에 박혔을 가능성,하드코딩,baekjung.asset tearMultiplier=1.5 · BaekjungRewardRules.cs,백중날 요괴 눈물 배율
+baekjung_wave_size,4,수정예정,하드코딩?,BaekjungWaveSpawner 존재 — 배율이 코드에 박혔을 가능성,하드코딩,웨이브3·합12 균등분할 BaekjungWaveSpawner.cs · 키 미읽음,백중 웨이브 1회 스폰 수 — 4마리 x 3웨이브(GDD 6-10)
+bedrock_depth,140,수정예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,없음,키 미읽음 · 주석만 140 인용·asset은 bedrockThickness=5 환산값,경계암 하단 = 맵 끝(surface_y 20 + 140 = 160 검증)
+layer_norm_deep_end,1.000,추가예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,없음,FindGlobal/사용 없음,심층 T3 하단 (구 d=135) — 그 아래 경계암
+layer_norm_mid_end,0.667,추가예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,없음,FindGlobal/사용 없음,중층 T2 하단 (구 d=90)
+layer_norm_upper_end,0.333,추가예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,없음,FindGlobal/사용 없음,상층 T1 하단 (구 d=45)
+layer_t1_depth,45,수정예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,하드코딩,WorldGenerationConfig.asset upperLayerThickness=45,상층 T1 하단 깊이(지표 기준) — balance 검증치 강제: 중층 왕복 145초=계단굴착 90타일=수직45. 변경 금지
+map_height_default,160,추가예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,하드코딩,WorldGenerationConfig.asset mapHeight=160,기본값(GDD 9장 400x160)
+map_size_user_adjustable,1,추가예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,하드코딩,TitleUiController 맵가로 슬라이더 · 키 미읽음,맵 크기는 유저 조절 대상 — 세계 스케일 값은 전부 비율로 둔다(오너 지시)
+surface_y,20,수정예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,하드코딩,WorldGenerationConfig surfaceBaseHeightRatio=0.86875 (=160-20) · cs 주석,지표 평균선(맵 상단 기준) — 1D 펄린 진폭 +-6. 위 20타일은 하늘·지상 건설 여유(밀폐 창 RY12 상단 d=-7 수용)
+underground_depth_tiles,135,추가예정,하드코딩?,WorldGenerationConfig 주석에 같은 값이 인용됨 — 에셋에 숫자로 있을 가능성,하드코딩,WorldGenerationConfig UndergroundDepthMinTiles=135 상수 · 키 미읽음,현 맵의 지하 깊이(지표 d=0 ~ 경계암 상단). 비율 키의 분모 — 맵이 바뀌면 이 값만 바뀐다
+boss_night_spawn,discard,수정예정,확인 필요,,하드코딩,MainGameEncounterCoordinator discardRegularForCurrentNight,보스 소환 시 그날 밤 잔여 일반 스폰 폐기·격퇴/도주 후에도 재개 없음(v23) — 보스 밤은 보스가 주인공. 눈물 수급은 보스 확정 동봉이 대체(6-9)
+dev_speed_mult,8,수정예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,개발빌드 전용 시연 배속 토글 — 지상 노출 중 사용 금지(시연 대본). 구 냥잠 타임스케일 파이프라인 승계(v31.1)
+invasion_boss_in_cap,1,수정예정,확인 필요,,하드코딩,MainGameEncounterCoordinator ResolveRegularSpawnCap,내습 보스(30일차 이무기 고정)는 밤 스폰 상한에 포함한다(v24 — GDD 6-7 검증 소싱: 8마리 = 일반 7 + 이무기 1). 소환 보스(boss_night_spawn=discard)와 다른 규칙이니 혼동 
+multi_hit_defense,first_tick,수정예정,확인 필요,,하드코딩,BossCombatController specialDefenseApplied 첫틱,다단 히트기 방어 적용(v23) — 첫 틱에만 방어력 차감(최소1 보장·6-12) 나머지 틱은 방어 무시. 풀히트 시 '총피해-방어1회'와 수학적으로 동일하고 중도 이탈 시 자연스럽다
+opening_illust_pages,3,추가예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,오너 승인 2026-08-06 — 오프닝 **정적 일러 페이지 3장**. ⚠️ **컷신 시스템이 아니다** — 전환·연출 코드 없이 넘기는 정지 화면이라 GDD 2장 「컷신·대사·NPC 대화 없음」과 양립한다. 인게
+portable_lantern_fuel_rule,active_slot_only,수정예정,확인 필요,,하드코딩,Inventory IsLit 활성슬롯만 연료 · 키 미읽음,활성 슬롯에 든 동안만 연료 소모 — 석탄 1=270초(설치와 동일 타이머 재사용)
+safe_threshold,40,수정예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,이하 안전
+sky_gangcheol_trail,1,추가예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,🔗 **개연성 ①** — 백일폭염의 원인(강철이)을 하늘에 보인다. 배경 4층(9장 v17.5)의 하늘 레이어에 **강철이 실루엣이 주기적으로 지나간다**. ⚠️ 구 정본은 강철이가 **18일차~ 심층 상주**(지하
+sky_gangcheol_trail_period_sec,90,추가예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,"강철이 실루엣이 하늘을 가로지르는 주기. 낮 900초에 **10회** — 자주 보여 원인으로 각인되되, 매번 보이면 배경 소음이 된다. ⚠️ **낮에만**(밤 하늘엔 안 나온다 — 2장 v21 '밤에 태양이 보인다'"
+wall_breach_rule,path_first,추가예정,확인 필요,,하드코딩,YokaiBrain 경로우선 · 키 미읽음,진입 가능한 경로가 있으면 그 길을 쓴다. 없을 때만 벽을 친다(오너 §8)
+wall_repair_not_penalty,1,추가예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,침공 후 복구가 주 페널티가 되지 않게 한다(오너 §8) — 위 규칙으로 파손이 1~3블록에 머문다
+win_modules,5,수정예정,확인 필요,,없음,키 미읽음 · FindGlobal 없음,핵심 모듈 수
+yokai_path_target,ice_core,추가예정,확인 필요,,하드코딩,MainGameEncounterCoordinator IceCoreRaidTarget · 키 미읽음,🔗 **개연성 ②** — 요괴 경로 목표를 **얼음 저장고(코어)**로 고정한다. 벽은 *가는 길에 있어서* 부순다. ⚠️ 구 정본은 요괴가 **벽 공격형**이라 화면상 '집을 부순다'로만 읽혔다 — GDD 2장이 
+zone_count,10,추가예정,확인 필요,,하드코딩,WorldV72Rules DefaultZoneCount=10 · 키 미읽음,가로축 밴드 수 = 보스 10종(zones.csv). 밴드 폭 20타일. **발명 아님** — 순서는 bosses.csv recommended_day 그대로
+large_cavern_count_max,8,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_count_min,5,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_enabled,1,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,없음,enable 플래그 없음·CarveLargeCaverns 항상,중간층 대공동 생성 — 정본에 개념 자체가 없던 신규 지형(개발 신설)
+large_cavern_h,20,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_margin_from_altar,28,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_margin_from_spawn,32,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_min_depth_below_crust,8,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_min_edge_gap,40,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+large_cavern_w,30,추가예정,읽음?,유니티 WorldGenerationConfig.asset 실측에서 역등재한 값,하드코딩,WorldGenerationConfig.asset + MapGenerator · FindGlobal 없음,⬅️ 개발 확정 등재(v64) — 중간층 대공동. 유니티 WorldGenerationConfig.asset 실측(8/11 커밋 e7fef4a)
+gear_cold_tolerance,straw:0/iron:-5/icesteel:-10,추가예정,A 잔여,장비 저온 페널티 — 개발 A 과제로 이미 지정,없음,키 미읽음 · FindGlobal 없음,착용 세트가 견디는 실온 하한. 얼음강철은 전 구간 정상
+gear_temp_rule,wear_lower_bound|station_band,추가예정,A 잔여,장비 저온 페널티 — 개발 A 과제로 이미 지정,없음,키 미읽음 · FindGlobal 없음,착용=견디는 하한 / 설치=적정 구간. 두 규칙이 다르다
+armor_def_by_tier,3/6/10/13/16/19,추가예정,불필요?,equipment.csv 방어 합 요약,불필요,equipment.csv 요약·코드 미읽음,티어별 갑옷 방어 합(v40) — 상한 19: 최강 접촉 24 대비 실피해 5 유지. 28이면 최소1 보장 발동 = 무적
+boss_contact_by_tier,18/20/22/24,추가예정,불필요?,bosses.csv 접촉 피해 요약,불필요,bosses.csv 요약·코드 미읽음,T3~T6 보스 접촉 피해(오너 승인 2026-07-27) — 이무기 18 앵커에서 연장
+crafting_material_format,item_id:count,수정예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,명명 규칙·코드 미읽음,crafting-tree/bosses/chests의 재료 표기 규칙(v24) — 콤마 구분. id는 items.csv가 유일 정본
+difficulty_knobs,day_fire_dmg_by_stage|terrain_spawn_weight|hypothermia_fall_per_sec,추가예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,문서용 손잡이·코드 미읽음,구현 시 쓸 손잡이 3개 — 전부 기존 값이라 **신규 시스템 0**. 배율만 곱한다
+item_id_rule,snake_case,수정예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,명명 규칙·코드 미읽음,아이템 id 명명(v24) — 일반 명사는 의미 영어(iron_ore·stone·lantern) 한국 고유 문화어는 로마자 음차(hapjukseon·haetae_statue·yeouiju). 전부 snake_case
+muldanji_mat,점토2+돌2,수정예정,불필요?,crafting-tree.csv 물단지 재료와 같은 값,불필요,crafting-tree 요약·코드 미읽음,물단지 재료(v20 balance 확정) — 전부 상층 T1·맨발톱·채굴 4.4초. 구 '얼음 조각1+흙2'는 항아리와 게이트가 같아 캡슐이 사장됐다. 점토2+흙2는 점토 미장과 레시피 충돌이라 돌2
+smelt_icesteel_ratio,2:1,수정예정,불필요?,smelting.csv smelt_icesteel과 같은 값,불필요,smelting.csv 요약·코드 미읽음,얼음강철 원석 2+석탄 2=주괴 1(용광로 45초 배치 4)
+smelt_iron_ratio,2:1,수정예정,불필요?,smelting.csv smelt_iron과 같은 값,불필요,smelting.csv 요약·코드 미읽음,철·구리 광석 2+석탄 1=주괴 1(화로 20초 배치 6)
+team_art,2,수정예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,인원 표·코드 미읽음,아트 2명(오너확정)
+team_design,1,수정예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,인원 표·코드 미읽음,기획 1명=오너(확정)
+team_dev,2,수정예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,인원 표·코드 미읽음,개발 2명 — A(월드 상태)·B(표시·사운드+애매한 것). v71에 C 합류로 3명이었다가 v82(2026-09-10 오너 확정)에 C가 B로 통합돼 다시 2명. 이관된 미완 과제 0
+tile_px,16,수정예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,아트 정합·코드 미읽음,타일 16x16(아트 정합)
+yokai_body_size_table,yokai-stats.csv:body_tiles,추가예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,표 참조·코드 미읽음,요괴 몸집 = 통과에 필요한 개구부 세로 칸수. HP 구간에서 유도(<500=1 / <2000=2 / 그이상=3) — 발명 0
+zone_table,zones.csv,추가예정,불필요?,명명 규칙·인원·표 참조 — 코드가 읽을 이유 없음,불필요,zones.csv 참조·코드 미읽음,가로축 밴드·제단 배치 정본 표 (v55 신설)
+altar_summon_daytime,night_only,추가예정,⛔ 착수 금지,[가안 — 판단⑤] 오너 결정 전,하드코딩,MainGameBossSummonUiController 밤에만 · 키 미읽음(가안),"[가안 — 판단⑤] **낮 소환 불가 유지.** GDD 5장 9번(소환템은 밤에만 활성)을 안 고친다. 낮에는 제단까지 **가는 것**이 콘텐츠고, 싸우는 것은 밤이다 — 제단이 전진 야영지가 된다. 정본 수정 0"
+altar_surface,position_only,추가예정,⛔ 착수 금지,[가안 — 판단⑤] 오너 결정 전,없음,키 미읽음 · FindGlobal 없음,"[가안 — 판단⑤] **위치만 가로축.** 보스 등장 일차는 그대로 두고, 그 보스가 '자기 밴드의 지상 제단'에서 나온다. → 6-8 눈물 원장·31~100일 밤 조합표 **불변**(내습 4종의 고정 일차가 유지되"
