@@ -138,3 +138,4 @@ MonoBehaviour:
   onboardingSearchRadius: 18
   onboardingRequiredDirt: 8
   onboardingRequiredStone: 12
+  startingLandmarkRadius: 48

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
@@ -109,11 +109,11 @@ namespace Nyangbingo.World
         public bool TryUseCatnip(out int restoredHealth)
             => TryUseHealingItem(CatnipItemId, out restoredHealth);
 
-        public bool TryUseHealingItem(string itemId, out int restoredHealth)
+        public bool TryUseHealingItem(string itemId, out int restoredHealth, int sourceSlot = -1)
         {
             restoredHealth = 0;
             if (!CanUseHealingItem(itemId) ||
-                !inventory.TryRemoveOneWithStorageCondition(itemId, out var condition)) return false;
+                !inventory.TryRemoveOneWithStorageCondition(itemId, out var condition, sourceSlot)) return false;
             var baseHeal = BaseHealingFor(itemId);
             if (itemId == CatnipItemId && pendingCatnipHeals.Count > 0)
                 baseHeal = pendingCatnipHeals.Dequeue();

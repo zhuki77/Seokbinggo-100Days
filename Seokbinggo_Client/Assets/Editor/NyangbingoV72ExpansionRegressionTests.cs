@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Bosses;
@@ -207,9 +207,10 @@ public static class NyangbingoV72ExpansionRegressionTests
         Require(bRecipe != null && bRecipe.MvpScope == ItemMvpScope.B &&
                 !ExpansionProgressionRules.IsScopeAvailable(ItemMvpScope.B, 30) &&
                 ExpansionProgressionRules.IsScopeAvailable(ItemMvpScope.B, 31) &&
-                !MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 30) &&
+                MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 1) &&
+                MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 30) &&
                 MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 31),
-            "scope-B day 31 progression gate mismatch");
+            "B recipes must be visible from day 1 while the separate boss-use date gate is retained");
     }
 
     private static void ValidateDemoContract()

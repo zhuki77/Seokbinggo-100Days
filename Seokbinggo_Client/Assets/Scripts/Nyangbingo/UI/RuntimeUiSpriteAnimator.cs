@@ -50,7 +50,7 @@ namespace Nyangbingo.UI
         private enum PlaybackPhase { Hidden, Opening, Holding, Closing }
 
         [Min(.01f)] [SerializeField] private float frameSeconds = .08f;
-        [Min(.1f)] [SerializeField] private float holdSeconds = 1.2f;
+        public const float DayLabelHoldSeconds = 3f;
         private Sprite[] frames = Array.Empty<Sprite>();
         private Image image;
         private PlaybackPhase phase;
@@ -62,6 +62,7 @@ namespace Nyangbingo.UI
         public bool IsAnimating => phase != PlaybackPhase.Hidden;
         public bool IsFullyOpen => phase == PlaybackPhase.Holding;
         public event Action PresentationCompleted;
+        public event Action<bool> ContentVisibilityChanged;
 
         public void ConfigureForRuntime(IReadOnlyList<Sprite> sourceFrames, int initialDaysRemaining)
         {
@@ -91,7 +92,7 @@ namespace Nyangbingo.UI
             else
             {
                 phase = PlaybackPhase.Holding;
-                remaining = holdSeconds;
+                remaining = DayLabelHoldSeconds;
             }
             ApplyFrame();
         }
@@ -105,16 +106,18 @@ namespace Nyangbingo.UI
                 if (phase == PlaybackPhase.Opening)
                 {
                     if (frameIndex < frames.Length - 1) frameIndex++;
-                    else
+                    if (frameIndex == frames.Length - 1)
                     {
                         phase = PlaybackPhase.Holding;
-                        remaining += holdSeconds;
+                        ApplyFrame();
+                        remaining += DayLabelHoldSeconds;
                         continue;
                     }
                 }
                 else if (phase == PlaybackPhase.Holding)
                 {
                     phase = PlaybackPhase.Closing;
+                    if (frameIndex > 0) frameIndex--;
                 }
                 else if (frameIndex > 0)
                 {
@@ -123,6 +126,7 @@ namespace Nyangbingo.UI
                 else
                 {
                     phase = PlaybackPhase.Hidden;
+                    ContentVisibilityChanged?.Invoke(false);
                     if (image != null) image.enabled = false;
                     PresentationCompleted?.Invoke();
                     continue;
@@ -134,6 +138,7 @@ namespace Nyangbingo.UI
 
         private void ApplyFrame()
         {
+            ContentVisibilityChanged?.Invoke(IsFullyOpen && frames.Length > 0);
             if (image == null || frames.Length == 0)
             {
                 if (image != null) image.enabled = false;
@@ -151,6 +156,84 @@ namespace Nyangbingo.UI
     /// Renders the delivered D-day and clock glyphs without falling back to a system font.
     /// Catalog order is D, dash, colon, then digits zero through nine.
     /// </summary>
+    public sealed class RuntimeArtNumberLabel
+    {
+        private readonly Text source;
+        private readonly Text prefix;
+        private readonly Text suffix;
+        private readonly RectTransform root;
+        private readonly RectTransform numberRect;
+        private readonly RuntimePixelGlyphPresenter numbers;
+        private readonly string before;
+        private readonly string after;
+        private string displayed;
+
+        public RuntimeArtNumberLabel(Text template, IReadOnlyList<Sprite> glyphs,
+            string leadingText, string trailingText, float numberScale)
+        {
+            source = template;
+            before = leadingText;
+            after = trailingText;
+            root = new GameObject("ArtNumberLabel", typeof(RectTransform)).GetComponent<RectTransform>();
+            root.SetParent(template.transform, false);
+            root.anchorMin = root.anchorMax = root.pivot = new Vector2(.5f, .5f);
+            root.anchoredPosition = Vector2.zero;
+            prefix = CreateText("Prefix", before);
+            numberRect = new GameObject("Number", typeof(RectTransform)).GetComponent<RectTransform>();
+            numberRect.SetParent(root, false);
+            numbers = numberRect.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
+            numbers.ConfigureForRuntime(glyphs, numberScale);
+            suffix = CreateText("Suffix", after);
+            root.gameObject.SetActive(false);
+            source.text = string.Empty;
+            source.enabled = false;
+        }
+
+        private Text CreateText(string name, string value)
+        {
+            var label = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text))
+                .GetComponent<Text>();
+            label.transform.SetParent(root, false);
+            label.font = source.font;
+            label.fontSize = source.fontSize;
+            label.fontStyle = source.fontStyle;
+            label.color = source.color;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
+            label.raycastTarget = false;
+            label.text = value;
+            return label;
+        }
+
+        public void SetValue(int value, bool visible)
+        {
+            var text = value.ToString();
+            if (displayed != text)
+            {
+                displayed = text;
+                numbers.SetText(text);
+                var leftWidth = prefix.preferredWidth;
+                var rightWidth = suffix.preferredWidth;
+                var total = leftWidth + numbers.RenderedWidth + rightWidth;
+                Place(prefix.rectTransform, -total * .5f + leftWidth * .5f, leftWidth);
+                Place(numberRect, -total * .5f + leftWidth + numbers.RenderedWidth * .5f,
+                    numbers.RenderedWidth);
+                Place(suffix.rectTransform, total * .5f - rightWidth * .5f, rightWidth);
+            }
+            source.text = string.Empty;
+            source.enabled = false;
+            root.gameObject.SetActive(visible);
+        }
+
+        private void Place(RectTransform rect, float x, float width)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = new Vector2(x, 0f);
+            rect.sizeDelta = new Vector2(width, source.rectTransform.sizeDelta.y);
+        }
+    }
+
     public sealed class RuntimePixelGlyphPresenter : MonoBehaviour
     {
         public const int ExpectedGlyphCount = 13;

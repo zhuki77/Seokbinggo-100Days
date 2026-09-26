@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
@@ -940,6 +940,52 @@ namespace Nyangbingo.World
             return true;
         }
 
+        private MiningWorldTargetKind ResolveMiningWorldTarget(TileService tileService, out Vector3Int cell)
+        {
+            cell = default;
+            var hasMouse = TryGetInteractionAimWorld(out var mouseAim);
+            var aim = hasMouse ? mouseAim : (Vector2)transform.position;
+            var origin = (Vector2)transform.position;
+            var facingDir = SnapAttackFeedbackDirection(facing);
+            Vector2? mouseWorld = hasMouse ? mouseAim : (Vector2?)null;
+            var bestAimDist = float.PositiveInfinity;
+            var bestKind = MiningWorldTargetKind.None;
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveTreeMiningTarget(origin, facingDir, miningReach,
+                    out _, out var treeCell))
+            {
+                ConsiderMiningTarget(CellAimPoint(treeCell), aim, MiningWorldTargetKind.Tree, ref bestAimDist, ref bestKind);
+                if (bestKind == MiningWorldTargetKind.Tree) cell = treeCell;
+            }
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveRebarMiningTarget(origin, facingDir, miningReach,
+                    out _, out var rebarCell))
+            {
+                ConsiderMiningTarget(CellAimPoint(rebarCell), aim, MiningWorldTargetKind.Rebar, ref bestAimDist, ref bestKind);
+                if (bestKind == MiningWorldTargetKind.Rebar) cell = rebarCell;
+            }
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveHempMiningTarget(origin, mouseWorld, facingDir, miningReach,
+                    out _, out var hempCell))
+            {
+                ConsiderMiningTarget(CellAimPoint(hempCell), aim, MiningWorldTargetKind.Hemp, ref bestAimDist, ref bestKind);
+                if (bestKind == MiningWorldTargetKind.Hemp) cell = hempCell;
+            }
+            if (environmentState != null &&
+                environmentState.TryResolvePlacedObjectMiningTarget(origin, mouseWorld, miningReach,
+                    out _, out var placedCell))
+            {
+                ConsiderMiningTarget(aim, aim, MiningWorldTargetKind.PlacedObject, ref bestAimDist, ref bestKind);
+                if (bestKind == MiningWorldTargetKind.PlacedObject) cell = placedCell;
+            }
+            if (TryResolveMiningCell(tileService, out var tileCell))
+            {
+                ConsiderMiningTarget(CellAimPoint(tileCell), aim, MiningWorldTargetKind.Tile, ref bestAimDist, ref bestKind);
+                if (bestKind == MiningWorldTargetKind.Tile) cell = tileCell;
+            }
+            return bestKind;
+        }
+
         private void TickMining()
         {
             var tileService = bootstrap?.TileService;
@@ -952,43 +998,7 @@ namespace Nyangbingo.World
                 return;
             }
             var clawTier = ResolveMiningClawTier();
-            var hasMouse = TryGetInteractionAimWorld(out var mouseAim);
-            var aim = hasMouse ? mouseAim : (Vector2)transform.position;
-            Vector2? mouseWorld = hasMouse ? mouseAim : null;
-            var origin = (Vector2)transform.position;
-            var facingDir = SnapAttackFeedbackDirection(facing);
-            var bestAimDist = float.PositiveInfinity;
-            var bestKind = MiningWorldTargetKind.None;
-            var bestTileCell = default(Vector3Int);
-
-            if (worldDecorationRenderer != null &&
-                worldDecorationRenderer.TryResolveTreeMiningTarget(origin, facingDir, miningReach,
-                    out _, out var treeCell))
-                ConsiderMiningTarget(CellAimPoint(treeCell), aim, MiningWorldTargetKind.Tree, ref bestAimDist,
-                    ref bestKind);
-            if (worldDecorationRenderer != null &&
-                worldDecorationRenderer.TryResolveRebarMiningTarget(origin, facingDir, miningReach,
-                    out _, out var rebarCell))
-                ConsiderMiningTarget(CellAimPoint(rebarCell), aim, MiningWorldTargetKind.Rebar, ref bestAimDist,
-                    ref bestKind);
-            if (worldDecorationRenderer != null &&
-                worldDecorationRenderer.TryResolveHempMiningTarget(origin, mouseWorld, facingDir, miningReach,
-                    out _, out var hempCell))
-                ConsiderMiningTarget(CellAimPoint(hempCell), aim, MiningWorldTargetKind.Hemp, ref bestAimDist,
-                    ref bestKind);
-            if (environmentState != null &&
-                environmentState.TryResolvePlacedObjectMiningTarget(origin, mouseWorld, miningReach,
-                    out _))
-                // 커서가 설치물 위면 조준 거리를 0으로 둬 주변 지형보다 항상 우선한다.
-                ConsiderMiningTarget(aim, aim, MiningWorldTargetKind.PlacedObject,
-                    ref bestAimDist, ref bestKind);
-            if (TryResolveMiningCell(tileService, out var tileCell))
-            {
-                ConsiderMiningTarget(CellAimPoint(tileCell), aim, MiningWorldTargetKind.Tile, ref bestAimDist,
-                    ref bestKind);
-                if (bestKind == MiningWorldTargetKind.Tile)
-                    bestTileCell = tileCell;
-            }
+            var bestKind = ResolveMiningWorldTarget(tileService, out var bestTileCell);
 
             switch (bestKind)
             {
@@ -1787,33 +1797,18 @@ namespace Nyangbingo.World
                 return;
             }
 
-            // 설치물 스프라이트/칸 위면 주변 지형 하이라이트로 새지 않게 설치물 칸을 우선한다.
-            if (environmentState != null &&
-                TryGetInteractionAimWorld(out var mouseAim) &&
-                environmentState.TryResolvePlacedObjectMiningTarget(
-                    transform.position, mouseAim, miningReach, out _, out var placedCell))
-            {
-                var reclaimable = ResolvePlacedObjectMiningSeconds(ResolveMiningClawTier()) > 0f;
-                if (miningTargetVisible && miningTargetCell == placedCell &&
-                    miningTargetMineable == reclaimable)
-                    return;
-                miningTargetVisible = true;
-                miningTargetCell = placedCell;
-                miningTargetMineable = reclaimable;
-                GameEvents.RaiseMiningTargetChanged(placedCell, true, reclaimable);
-                return;
-            }
-
-            if (!TryResolveMiningCell(tileService, out var cell))
+            var kind = ResolveMiningWorldTarget(tileService, out var cell);
+            if (kind == MiningWorldTargetKind.None)
             {
                 HideMiningTargetFeedback();
                 return;
             }
-
-            var tile = tileService.GetTile(cell);
             var clawTier = ResolveMiningClawTier();
-            var mineable = !tile.IsAir && clawTier >= tile.hardness &&
-                           ResolveTileMiningSeconds(catalog, tile.elementType, clawTier) > 0f;
+            var tile = tileService.GetTile(cell);
+            var mineable = kind == MiningWorldTargetKind.Tile
+                ? !tile.IsAir && clawTier >= tile.hardness &&
+                  ResolveTileMiningSeconds(catalog, tile.elementType, clawTier) > 0f
+                : ResolvePlacedObjectMiningSeconds(clawTier) > 0f;
             if (miningTargetVisible && miningTargetCell == cell &&
                 miningTargetMineable == mineable)
                 return;
@@ -2351,7 +2346,7 @@ namespace Nyangbingo.World
                 return false;
 
             var recovery = runtimeServices.PlayerHealthRecovery;
-            if (recovery != null && recovery.TryUseHealingItem(itemId, out var restoredHealth))
+            if (recovery != null && recovery.TryUseHealingItem(itemId, out var restoredHealth, tilePalette.SelectedSlotIndex))
             {
                 var name = catalog?.FindItem(itemId)?.DisplayName ?? itemId;
                 interactionMessages?.ShowExternalMessage($"{name} 사용 · HP +{restoredHealth}");
@@ -2393,7 +2388,7 @@ namespace Nyangbingo.World
             if (!TalismanRuntime.IsConsumableId(itemId)) return false;
             var talismans = runtimeServices?.Talismans;
             var message = string.Empty;
-            if (talismans != null && talismans.TryUse(itemId, out message))
+            if (talismans != null && talismans.TryUse(itemId, out message, tilePalette.SelectedSlotIndex))
             {
                 interactionMessages?.ShowExternalMessage(message);
                 return true;
@@ -2420,7 +2415,9 @@ namespace Nyangbingo.World
                 return true;
             }
 
-            if (!inventory.TryRemove(IceShardItemId, 1))
+            var sourceSlot = tilePalette.SelectedSlotIndex;
+            var original = sourceSlot >= 0 && sourceSlot < inventory.Capacity ? inventory.Slots[sourceSlot] : default;
+            if (sourceSlot < 0 || !inventory.TryRemove(IceShardItemId, 1, sourceSlot))
             {
                 interactionMessages?.ShowExternalMessage("얼음 조각이 없습니다.");
                 return true;
@@ -2434,7 +2431,7 @@ namespace Nyangbingo.World
                 return true;
             }
 
-            inventory.TryAdd(IceShardItemId, 1);
+            inventory.TryRefundOneToSlot(sourceSlot, original);
             interactionMessages?.ShowExternalMessage(
                 "현재는 얼음 조각을 사용할 수 없습니다.");
             return true;

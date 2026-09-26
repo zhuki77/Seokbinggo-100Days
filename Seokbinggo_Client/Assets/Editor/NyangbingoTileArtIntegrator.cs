@@ -787,7 +787,11 @@ namespace Nyangbingo.Editor
             {
                 var path = ResolveArtPath(BuildingArtFolder, file);
                 ConfigureAsepriteImporter(path, failures);
-                var frames = FindLongestAnimationFrames(path);
+                var frames = file == "door.aseprite"
+                    ? FindNamedSpriteFrames(path, "Frame_0", "Frame_1", "Frame_2", "Frame_3", "Frame_4", "Frame_5")
+                    : FindLongestAnimationFrames(path);
+                if (file == "door.aseprite" && frames.Count != 6)
+                    failures.Add($"{file}: 개폐 프레임은 0~5 전체가 필요합니다 (현재 {frames.Count}).");
                 if (frames.Count == 0) failures.Add($"{file}: Sprite 프레임이 없습니다.");
                 else framesByFile[file] = frames;
             }
@@ -909,6 +913,10 @@ namespace Nyangbingo.Editor
         public static bool IsBuildingArtCurrent(BuildingArtCatalog catalog)
         {
             if (catalog == null) return false;
+            var doorFrames = catalog.Find("door")?.Frames;
+            if (doorFrames == null || doorFrames.Count != 6) return false;
+            for (var index = 0; index < 6; index++)
+                if (doorFrames[index] == null || doorFrames[index].name != $"Frame_{index}") return false;
             foreach (var pair in BuildingArtFiles)
             {
                 var sprite = catalog.Find(pair.Key)?.Sprite;

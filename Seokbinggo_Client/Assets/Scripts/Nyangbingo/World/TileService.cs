@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Core;
@@ -62,7 +62,7 @@ namespace Nyangbingo.World
             { WorldTileTypes.Dirt, 1 }, { WorldTileTypes.Clay, 1 }, { WorldTileTypes.Coal, 1 },
             // The inventory "stone" item is the upper-layer T1 block. Player-placed stone must
             // remain removable with the default claw just like the natural block it came from.
-            { WorldTileTypes.Stone, 1 }, { WorldTileTypes.StoneMid, 2 }, { WorldTileTypes.IronOre, 2 },
+            { WorldTileTypes.Stone, 1 }, { WorldTileTypes.StoneMid, 1 }, { WorldTileTypes.IronOre, 2 },
             { WorldTileTypes.CopperOre, 2 }, { WorldTileTypes.IceShard, 2 }, { WorldTileTypes.RuinWall, 2 },
             { WorldTileTypes.StoneDeep, 3 }, { WorldTileTypes.IceSteelOre, 3 }, { WorldTileTypes.FrostEssence, 3 },
             // Product insulation boundaries are foreground tiles, not floor-standing objects.
@@ -532,19 +532,19 @@ namespace Nyangbingo.World
         /// 전경 타일 설치. 배경 필드는 그대로 두고 전경만 덮는다.
         /// A-25: PlacementHardness에 등록된 재설치 가능 ID만 허용(기반암·제단·배경 ID 제외).
         /// </summary>
-        public bool TryPlaceForeground(Vector3Int cell, string elementType, Nyangbingo.Inventory.Inventory consumeFrom = null, int hardnessOverride = -1)
+        public bool TryPlaceForeground(Vector3Int cell, string elementType, Nyangbingo.Inventory.Inventory consumeFrom = null, int hardnessOverride = -1, int sourceSlot = -1)
         {
             if (string.IsNullOrEmpty(elementType) || !InBounds(cell)) return false;
             elementType = TileIdAlias.ToCanonical(elementType);
             if (!SupportsForegroundPlacement(elementType)) return false;
 
             if (string.Equals(elementType, DoorElementType, StringComparison.Ordinal))
-                return TryPlaceDoorFootprint(cell, consumeFrom, hardnessOverride);
+                return TryPlaceDoorFootprint(cell, consumeFrom, hardnessOverride, sourceSlot);
 
             var current = tiles[cell.x, cell.y];
             if (!current.IsAir || IsForegroundPlacementBlocked(cell)) return false;
 
-            if (consumeFrom != null && !consumeFrom.TryRemove(elementType, 1)) return false;
+            if (consumeFrom != null && !consumeFrom.TryRemove(elementType, 1, sourceSlot)) return false;
 
             wallDamageTaken.Remove(cell);
             WriteForegroundCell(cell, elementType, hardnessOverride);
@@ -595,7 +595,7 @@ namespace Nyangbingo.World
         }
 
         /// <summary>인벤 소비 없이 전경 복구(열린 단열 문 닫기).</summary>
-        public bool TryRestoreForeground(Vector3Int cell, string elementType, int hardnessOverride = -1)
+        public bool TryRestoreForeground(Vector3Int cell, string elementType, int hardnessOverride = -1, int sourceSlot = -1)
         {
             if (string.IsNullOrEmpty(elementType) || !InBounds(cell)) return false;
             elementType = TileIdAlias.ToCanonical(elementType);
@@ -671,10 +671,10 @@ namespace Nyangbingo.World
         }
 
         private bool TryPlaceDoorFootprint(Vector3Int baseCell, Nyangbingo.Inventory.Inventory consumeFrom,
-            int hardnessOverride)
+            int hardnessOverride, int sourceSlot = -1)
         {
             if (!CanPlaceDoorFootprint(baseCell)) return false;
-            if (consumeFrom != null && !consumeFrom.TryRemove(DoorElementType, 1)) return false;
+            if (consumeFrom != null && !consumeFrom.TryRemove(DoorElementType, 1, sourceSlot)) return false;
 
             wallDamageTaken.Remove(baseCell);
             wallDamageTaken.Remove(baseCell + Vector3Int.up);
@@ -687,7 +687,7 @@ namespace Nyangbingo.World
             return true;
         }
 
-        private bool TryRestoreDoorFootprint(Vector3Int baseCell, int hardnessOverride)
+        private bool TryRestoreDoorFootprint(Vector3Int baseCell, int hardnessOverride, int sourceSlot = -1)
         {
             if (!CanPlaceDoorFootprint(baseCell)) return false;
             WriteForegroundCell(baseCell, DoorElementType, hardnessOverride);
@@ -805,7 +805,7 @@ namespace Nyangbingo.World
         /// <summary>
         /// A-16: 빈 배경 칸에 벽지(또는 허용된 배경 ID)를 설치한다. 충돌 없음, 밀폐 경계 아님.
         /// </summary>
-        public bool TryPlaceBackground(Vector3Int cell, string backgroundElementType, Nyangbingo.Inventory.Inventory consumeFrom = null)
+        public bool TryPlaceBackground(Vector3Int cell, string backgroundElementType, Nyangbingo.Inventory.Inventory consumeFrom = null, int sourceSlot = -1)
         {
             if (string.IsNullOrEmpty(backgroundElementType) || !InBounds(cell)) return false;
             backgroundElementType = TileIdAlias.ToCanonical(backgroundElementType);
@@ -814,7 +814,7 @@ namespace Nyangbingo.World
             var current = tiles[cell.x, cell.y];
             if (current.HasBackground) return false; // 빈 배경 칸에만 설치.
 
-            if (consumeFrom != null && !consumeFrom.TryRemove(backgroundElementType, 1)) return false;
+            if (consumeFrom != null && !consumeFrom.TryRemove(backgroundElementType, 1, sourceSlot)) return false;
 
             current.backgroundElementType = backgroundElementType;
             tiles[cell.x, cell.y] = current;
@@ -862,8 +862,8 @@ namespace Nyangbingo.World
             TryPlaceBackground(cell, WorldTileTypes.Wallpaper, consumeFrom: null);
 
         /// <summary>벽지 설치 + 인벤토리 원자 소비(성공 시 1개).</summary>
-        public bool TryPlaceWallpaper(Vector3Int cell, Nyangbingo.Inventory.Inventory consumeFrom) =>
-            TryPlaceBackground(cell, WorldTileTypes.Wallpaper, consumeFrom);
+        public bool TryPlaceWallpaper(Vector3Int cell, Nyangbingo.Inventory.Inventory consumeFrom, int sourceSlot = -1) =>
+            TryPlaceBackground(cell, WorldTileTypes.Wallpaper, consumeFrom, sourceSlot);
 
         public bool TryRemoveWallpaper(Vector3Int cell) => TryRemoveBackground(cell);
 

@@ -56,6 +56,8 @@ namespace Nyangbingo.World
         public MapGenerator Generator => generator;
         public int Seed => seed;
         public WorldGenerationResult LastResult { get; private set; }
+        // 장식 배치는 채굴 diff가 아닌 최초 지형을 기준으로 재현해야 저장 ID가 유지된다.
+        public WorldGenerationResult DecorationBaseline { get; private set; }
         public bool HasWorld => tileService != null;
 
         /// <summary>
@@ -76,6 +78,13 @@ namespace Nyangbingo.World
         /// 이 이벤트도 발행되지 않는다(A-06/A-08의 "부분 교체 금지" 원칙과 동일하게 대칭 보장).
         /// </summary>
         public event Action WorldLoaded;
+
+        private static WorldGenerationResult CaptureDecorationBaseline(WorldGenerationResult result)
+        {
+            result.tiles = (TileData[,])result.tiles.Clone();
+            return result;
+        }
+
 
         public WorldSessionController(WorldGenerationConfig config, TilemapRenderer renderer, GameDataCatalog catalog)
         {
@@ -148,21 +157,25 @@ namespace Nyangbingo.World
         /// (Try/Catch로) 실패를 명확히 인지하고 처리하게 한다.
         /// </summary>
         /// <exception cref="InvalidOperationException">최대 재시도 후에도 월드 생성 검증에 실패한 경우.</exception>
-        public WorldGenerationResult StartNewWorld(int requestedSeed)
+        public WorldGenerationResult StartNewWorld(int requestedSeed, bool requireStartingLandmarks = true)
         {
             generator = new MapGenerator(config, catalog);
-            var result = generator.GenerateDetailed(requestedSeed);
+            var result = requireStartingLandmarks
+                ? generator.GenerateForNewGame(requestedSeed)
+                : generator.GenerateDetailed(requestedSeed);
 
             if (!result.passedValidation)
             {
                 throw new InvalidOperationException(
                     $"[Nyangbingo] WorldSessionController: seed {requestedSeed} 기준 {result.rerollAttempts}회 재시도(최종 seed " +
-                    $"{result.acceptedSeed})까지도 월드 생성 검증(스폰 접근성/온보딩 자원/심층 연결/제단 도달성)에 실패했습니다. " +
+                    $"{result.acceptedSeed})까지도 월드 생성 검증(스폰 접근성/온보딩 자원/심층 연결/제단 도달성/주변 잔해·동굴)에 실패했습니다. " +
                     "WorldGenerationConfig 값 또는 시드를 확인하세요 — 이 월드는 라이브 상태로 시작되지 않습니다.");
             }
 
             seed = result.acceptedSeed; // 리롤이 있었을 수 있으므로 항상 확정 시드를 세이브 기준으로 삼는다.
             LastResult = result;
+
+            DecorationBaseline = CaptureDecorationBaseline(result);
 
             renderer.RenderWorld(result.tiles);
             RebuildLiveSystems(result.tiles);
@@ -218,6 +231,7 @@ namespace Nyangbingo.World
             // 그리지 않는다. RestoreTileChanges 내부의 보호 타일/알려진 tileId/좌표 검증(TileService.cs) 중
             // 하나라도 실패하면 이 인스턴스와 result.tiles는 그냥 버려지고, 기존 라이브 상태·화면은 손끝 하나
             // 닿지 않는다.
+            var decorationBaseline = CaptureDecorationBaseline(result);
             var loadedTileService = new TileService(result.tiles, null, catalog, result.acceptedSeed);
             var chestCells = new HashSet<Vector3Int>();
             if (result.chests != null)
@@ -258,6 +272,7 @@ namespace Nyangbingo.World
             chestProgress = loadedChestProgress;
             seed = result.acceptedSeed;
             LastResult = result;
+            DecorationBaseline = decorationBaseline;
 
             // 3) 타일맵 렌더러 갱신 — diff가 이미 반영된 배열을 한 번에 SetTilesBlock으로 그린다.
             renderer.RenderWorld(result.tiles);

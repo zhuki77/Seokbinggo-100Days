@@ -12,6 +12,9 @@ namespace Nyangbingo.World
         private SpriteRenderer spriteRenderer;
         private int frameIndex;
         private float remaining;
+        private bool loop = true;
+        private Action completed;
+        private Action frameChanged;
 
         public void Configure(IReadOnlyList<Sprite> animationFrames, float secondsPerFrame = .1f)
         {
@@ -20,7 +23,20 @@ namespace Nyangbingo.World
             spriteRenderer = GetComponent<SpriteRenderer>();
             frameIndex = 0;
             remaining = frameSeconds;
+            loop = true;
+            completed = null;
+            frameChanged = null;
             if (spriteRenderer != null && frames.Length > 0) spriteRenderer.sprite = frames[0];
+        }
+
+        public void PlayOnce(IReadOnlyList<Sprite> animationFrames, Action onCompleted = null,
+            Action onFrameChanged = null, float secondsPerFrame = .1f)
+        {
+            Configure(animationFrames, secondsPerFrame);
+            loop = false;
+            completed = onCompleted;
+            frameChanged = onFrameChanged;
+            frameChanged?.Invoke();
         }
 
         private void Awake()
@@ -32,12 +48,22 @@ namespace Nyangbingo.World
 
         private void Update()
         {
-            if (spriteRenderer == null || frames.Length <= 1) return;
+            if (spriteRenderer == null || frames.Length == 0 || (loop && frames.Length == 1)) return;
             remaining -= Time.deltaTime;
             while (remaining <= 0f)
             {
+                if (!loop && frameIndex == frames.Length - 1)
+                {
+                    var callback = completed;
+                    frames = Array.Empty<Sprite>();
+                    completed = null;
+                    frameChanged = null;
+                    callback?.Invoke();
+                    return;
+                }
                 frameIndex = (frameIndex + 1) % frames.Length;
                 spriteRenderer.sprite = frames[frameIndex];
+                frameChanged?.Invoke();
                 remaining += frameSeconds;
             }
         }

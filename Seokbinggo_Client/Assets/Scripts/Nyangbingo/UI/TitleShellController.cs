@@ -68,7 +68,7 @@ namespace Nyangbingo.UI
         }
 
         public static string FormatTitleHeatStage(int heatStage) =>
-            HeatStagePresentation.FormatBadge(heatStage);
+            $"폭염 {HeatStagePresentation.FormatBadge(heatStage)}단계";
 
         public bool TryContinue()
         {

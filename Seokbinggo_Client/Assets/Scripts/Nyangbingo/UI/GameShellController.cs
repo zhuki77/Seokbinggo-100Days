@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Nyangbingo.UI
 {
     public enum GameShellScreen { Gameplay, Pause, Settings, Result, Confirmation, TraitSelect }
-    public enum GameShellConfirmation { None, ReturnToTitle }
+    public enum GameShellConfirmation { None, ReturnToTitle, Rest }
 
     public sealed class DemoResultState
     {
@@ -40,6 +40,7 @@ namespace Nyangbingo.UI
         [SerializeField] private GameObject confirmationPanel;
         [SerializeField] private GameObject traitSelectPanel;
 
+        private Action pendingRest;
         private SaveGame activeSave;
         private float resumeTimeScale = 1f;
         private bool isMobile;
@@ -167,8 +168,26 @@ namespace Nyangbingo.UI
             return true;
         }
 
+        public bool RequestRest(Action onConfirmed)
+        {
+            if (Screen != GameShellScreen.Gameplay || onConfirmed == null) return false;
+            resumeTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
+            Time.timeScale = 0f;
+            pendingRest = onConfirmed;
+            OpenConfirmation(GameShellConfirmation.Rest);
+            return true;
+        }
+
         public bool Confirm()
         {
+            if (PendingConfirmation == GameShellConfirmation.Rest)
+            {
+                var rest = pendingRest;
+                ClearConfirmation();
+                ShowGameplay(true);
+                rest?.Invoke();
+                return true;
+            }
             if (PendingConfirmation != GameShellConfirmation.ReturnToTitle) return false;
             ClearConfirmation();
             TitleRequested?.Invoke();
@@ -178,8 +197,10 @@ namespace Nyangbingo.UI
         public bool CancelConfirmation()
         {
             if (Screen != GameShellScreen.Confirmation) return false;
+            var wasRest = PendingConfirmation == GameShellConfirmation.Rest;
             ClearConfirmation();
-            SetScreen(GameShellScreen.Pause);
+            if (wasRest) ShowGameplay(true);
+            else SetScreen(GameShellScreen.Pause);
             return true;
         }
 
@@ -263,6 +284,7 @@ namespace Nyangbingo.UI
         private void ClearConfirmation()
         {
             PendingConfirmation = GameShellConfirmation.None;
+            pendingRest = null;
         }
 
         private void SetScreen(GameShellScreen screen)

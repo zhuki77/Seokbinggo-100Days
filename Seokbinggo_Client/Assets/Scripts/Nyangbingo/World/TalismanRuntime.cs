@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
 using Nyangbingo.Inventory;
@@ -52,7 +52,7 @@ namespace Nyangbingo.World
         public static bool IsConsumableId(string itemId) =>
             itemId == ReturnId || itemId == StrideId || itemId == HideId || itemId == FrostId;
 
-        public bool TryUse(string itemId, out string message)
+        public bool TryUse(string itemId, out string message, int sourceSlot = -1)
         {
             message = string.Empty;
             if (!IsConsumableId(itemId) || catalog.FindTalisman(itemId) == null || player == null)
@@ -65,7 +65,7 @@ namespace Nyangbingo.World
                     message = "귀환할 얼음 저장고 코어가 없습니다.";
                     return false;
                 }
-                if (!inventory.TryRemove(itemId, 1))
+                if (!inventory.TryRemove(itemId, 1, sourceSlot))
                 {
                     message = "귀환부가 없습니다.";
                     return false;
@@ -75,7 +75,7 @@ namespace Nyangbingo.World
                 Changed?.Invoke();
                 return true;
             }
-            if (!inventory.TryRemove(itemId, 1))
+            if (!inventory.TryRemove(itemId, 1, sourceSlot))
             {
                 message = "사용할 부적이 없습니다.";
                 return false;

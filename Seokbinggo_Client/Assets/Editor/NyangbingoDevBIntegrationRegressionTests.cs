@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -527,7 +527,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
         Require(playerSource.Contains("TryUseSelectedIceShard() ||") &&
                 playerSource.Contains("tilePalette.SelectedItemId != IceShardItemId") &&
-                playerSource.Contains("inventory.TryRemove(IceShardItemId, 1)") &&
+                playerSource.Contains("inventory.TryRemove(IceShardItemId, 1, sourceSlot)") &&
                 playerSource.Contains("iceShardTemperatureRelief"),
             "Selecting an ice shard in the quick slot and pressing E must consume it for immediate cooling.");
     }
@@ -2521,7 +2521,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("EventTriggerType.PointerEnter") &&
                 shellSource.Contains("checkmark.rectTransform.sizeDelta = offSize") &&
                 shellSource.Contains("pauseHoverIndicator.gameObject.SetActive") &&
-                shellSource.Contains("saveManager.DeleteAll()") &&
+                !shellSource.Contains("saveManager.Delete(") &&
+                !shellSource.Contains("saveManager.DeleteAll()") &&
+                shellSource.Contains("saveManager.ArchiveBeforeNewGame(") &&
                 shellSource.Contains("CreateFreshInitialSave()") &&
                 shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
                 shellSource.Contains("!SceneTransitionRequest.IsTransitionActive") &&
@@ -3111,7 +3113,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MapGenerator.cs");
         Require(playerSource.Contains("TryUseSelectedHealingItem() ||") &&
                 playerSource.Contains("PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId)") &&
-                playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth)") &&
+                playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth, tilePalette.SelectedSlotIndex)") &&
                 playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: false)") &&
                 playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
@@ -3717,10 +3719,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
             var animatorSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
             Require(animatorSource.Contains("characterAnimator?.SetMoving(true)") &&
-                    animatorSource.Contains("physicsBody.NavigationFacingDirection") &&
+                    animatorSource.Contains("physicsBody.LastMoveDisplacement") &&
                     animatorSource.Contains("characterAnimator?.SetFacing(facingMovement)") &&
                     !animatorSource.Contains("ResolveStableGroundFacing"),
-                "Physics-driven yokai movement must keep animation active and face the selected route segment instead of collision displacement.");
+                "Physics-driven yokai movement must face its applied movement, including retreat after chasing.");
             var physicsSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/World/WorldMobPhysicsBody.cs");
             Require(physicsSource.Contains("NavigationReversalHoldSeconds") &&
@@ -3948,7 +3950,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     tileServiceSource.Contains("MainGameWorldDropRuntime.DropColliderRadius"),
                 "Player art, claw effects, mining cracks, drops, and target highlights must follow the grounded visual-anchor contract.");
             Require(environmentSource.Contains("new GameObject(\"Art\")") &&
-                    environmentSource.Contains("TrySnapFloorPlacedObjectToTerrain(entry)") &&
+                    !environmentSource.Contains("TrySnapFloorPlacedObjectToTerrain(entry)") &&
                     environmentSource.Contains("SnapPlacedVisualRoot(visual, renderer, entry)") &&
                     environmentSource.Contains("AlignPlacedFloorVisual(renderer, entry)") &&
                     environmentSource.Contains("AlignSpriteBoundsToCellBase(renderer, entry.Cell)") &&
@@ -4549,9 +4551,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var shellUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(craftingUiSource.Contains("$\"{index + 1} · {UnifiedTabLabel(index)}\"") &&
-                craftingUiSource.Contains("craftingFilter = (CraftingStationFilter)") &&
-                craftingUiSource.Contains("CraftingFilterCount") &&
-                craftingUiSource.Contains("2 제작 탭(제작대/화로/얼음 모루)") &&
+                !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Foundry,
+                    MainGameCraftingUiController.CraftingStationFilter.Furnace) &&
+                !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Smithy,
+                    MainGameCraftingUiController.CraftingStationFilter.IceAnvil) &&
+                !MainGameCraftingUiController.IsRecipeVisibleAtStation(CraftingStation.IceAnvil,
+                    CraftingStation.Workbench) &&
                 MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Workbench,
                     MainGameCraftingUiController.CraftingStationFilter.Workbench) &&
                 MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Furnace,
@@ -4562,7 +4567,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     MainGameCraftingUiController.CraftingStationFilter.Workbench) &&
                 shellUiSource.Contains("!MainGameCraftingUiController.BlocksGameplayInput") &&
                 shellUiSource.Contains("!MainGameCraftingUiController.ConsumedEscapeThisFrame"),
-            "Number key 2 must cycle the three crafting station filters, " +
+            "Crafting stations must keep their recipes separate, " +
             "and Escape must close any 1-4 panel without opening pause in the same frame.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&

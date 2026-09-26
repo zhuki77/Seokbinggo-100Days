@@ -24,6 +24,7 @@ namespace Nyangbingo.Save
         private void SaveAtDawn()
         {
             if (saveManager == null || snapshotProvider == null) return;
+            if (snapshotProvider is MainGameSaveCoordinator coordinator && coordinator.IsRestoring) return;
             var snapshot = snapshotProvider.CaptureSnapshot();
             if (snapshot != null) saveManager.SaveAtDawn(slot, snapshot);
         }

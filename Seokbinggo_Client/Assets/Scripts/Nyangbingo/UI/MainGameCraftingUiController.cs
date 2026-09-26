@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,10 +26,13 @@ namespace Nyangbingo.UI
         {
             Workbench = 0,
             Furnace = 1,
-            IceAnvil = 2
+            IceAnvil = 2,
+            Foundry = 3,
+            Smithy = 4,
+            None = 5
         }
 
-        public const int CraftingFilterCount = 3;
+        public const int CraftingFilterCount = 6;
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
@@ -113,9 +116,10 @@ namespace Nyangbingo.UI
         private bool initialized;
         private bool open;
         private CraftingStationFilter craftingFilter = CraftingStationFilter.Workbench;
-        private bool furnaceSmeltingView = true;
+        private CraftingStation openedStation = CraftingStation.None;
+        private bool furnaceSmeltingView;
         private bool IsShowingSmeltingList =>
-            page == Page.Crafting && craftingFilter == CraftingStationFilter.Furnace && furnaceSmeltingView;
+            page == Page.Crafting && IsSmeltingStation(openedStation) && furnaceSmeltingView;
         private YokaiCodexPresentationModel codexModel;
         private CharacterArtCatalog characterArtCatalog;
         private static int openControllerCount;
@@ -276,15 +280,23 @@ namespace Nyangbingo.UI
             if (!open) return;
             if (page != Page.Codex)
             {
-                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) SelectRelative(-1);
-                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) SelectRelative(1);
+                if (page == Page.Crafting && !IsShowingSmeltingList)
+                {
+                    if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) SelectRelative(-1);
+                    if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) SelectRelative(1);
+                }
+                else
+                {
+                    if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) SubmitNavigation(-1);
+                    if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) SubmitNavigation(1);
+                }
                 if (page == Page.Gathering &&
                     (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)))
                     SelectRelative(-InventoryGridColumns);
                 if (page == Page.Gathering &&
                     (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)))
                     SelectRelative(InventoryGridColumns);
-                if (page == Page.Crafting && craftingFilter == CraftingStationFilter.Furnace &&
+                if (page == Page.Crafting && IsSmeltingStation(openedStation) &&
                     Input.GetKeyDown(KeyCode.Q))
                     TryToggleFurnaceCraftingSmeltingView();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.Q)) ToggleActiveSlotFromEquipmentPage();
@@ -306,17 +318,16 @@ namespace Nyangbingo.UI
         }
 
         public static bool ShouldShowRecipe(RecipeDefinition recipe, bool hideScopeB) =>
-            recipe != null && (!hideScopeB || recipe.MvpScope != ItemMvpScope.B);
+            recipe != null;
 
         public static bool ShouldShowRecipe(RecipeDefinition recipe, bool hideScopeB, int currentDay) =>
-            recipe != null && (!hideScopeB || ExpansionProgressionRules.IsScopeAvailable(recipe.MvpScope,
-                currentDay));
+            recipe != null;
 
         private bool RebuildVisibleRecipes()
         {
             visibleRecipes.Clear();
-            var hideScopeB = ExpansionProgressionRules.ShouldHideScopeB(
-                gameDataCatalog.FindGlobal("crafting_b_ui")?.Value, CurrentDay);
+            // A/B describes content scope, not an in-game recipe date lock.
+            const bool hideScopeB = false;
             visibleRecipes.AddRange(gameDataCatalog.Recipes
                 .Where(recipe => ShouldShowRecipe(recipe, hideScopeB, CurrentDay))
                 .OrderBy(recipe => recipe.Station)
@@ -334,37 +345,24 @@ namespace Nyangbingo.UI
 
         public static bool IsRecipeVisibleAtStation(CraftingStation requiredStation,
             CraftingStation nearbyStation) =>
-            requiredStation == CraftingStation.None || requiredStation == nearbyStation;
+            requiredStation == nearbyStation;
 
         public static bool IsSmithyRecipeAllowed(CraftingStation recipeStation, bool smithyUnlocked) =>
             recipeStation != CraftingStation.Smithy || smithyUnlocked;
 
-        public static bool RecipeMatchesFilter(CraftingStation station, CraftingStationFilter filter)
-        {
-            switch (filter)
-            {
-                case CraftingStationFilter.Workbench:
-                    return station == CraftingStation.None || station == CraftingStation.Workbench;
-                case CraftingStationFilter.Furnace:
-                    return station == CraftingStation.Furnace || station == CraftingStation.Foundry;
-                case CraftingStationFilter.IceAnvil:
-                    return station == CraftingStation.IceAnvil || station == CraftingStation.Smithy;
-                default: return false;
-            }
-        }
+        public static bool RecipeMatchesFilter(CraftingStation station, CraftingStationFilter filter) =>
+            FilterForStation(station) == filter;
 
         public static CraftingStationFilter FilterForStation(CraftingStation station)
         {
             switch (station)
             {
-                case CraftingStation.Furnace:
-                case CraftingStation.Foundry:
-                    return CraftingStationFilter.Furnace;
-                case CraftingStation.IceAnvil:
-                case CraftingStation.Smithy:
-                    return CraftingStationFilter.IceAnvil;
-                default:
-                    return CraftingStationFilter.Workbench;
+                case CraftingStation.Workbench: return CraftingStationFilter.Workbench;
+                case CraftingStation.Furnace: return CraftingStationFilter.Furnace;
+                case CraftingStation.Foundry: return CraftingStationFilter.Foundry;
+                case CraftingStation.IceAnvil: return CraftingStationFilter.IceAnvil;
+                case CraftingStation.Smithy: return CraftingStationFilter.Smithy;
+                default: return CraftingStationFilter.None;
             }
         }
 
@@ -372,16 +370,18 @@ namespace Nyangbingo.UI
         {
             switch (filter)
             {
+                case CraftingStationFilter.Workbench: return "제작대";
                 case CraftingStationFilter.Furnace: return "화로";
+                case CraftingStationFilter.Foundry: return "용광로";
                 case CraftingStationFilter.IceAnvil: return "얼음 모루";
-                default: return "제작대";
+                case CraftingStationFilter.Smithy: return "대장간";
+                default: return "손 제작";
             }
         }
 
         private string CraftingFilterTitlePrefix() =>
-            craftingFilter == CraftingStationFilter.Furnace
-                ? furnaceSmeltingView ? "화로 · 제련" : "화로 · 제작"
-                : CraftingFilterLabel(craftingFilter);
+            StationLabel(openedStation) + (IsSmeltingStation(openedStation)
+                ? furnaceSmeltingView ? " · 제련" : " · 제작" : string.Empty);
 
         public bool TryOpenForStation(CraftingStation station)
         {
@@ -389,8 +389,9 @@ namespace Nyangbingo.UI
                 shell != null && shell.Screen != GameShellScreen.Gameplay || Time.timeScale <= 0f) return false;
 
             OpenPage(Page.Crafting);
+            openedStation = station;
             craftingFilter = FilterForStation(station);
-            furnaceSmeltingView = IsSmeltingStation(station);
+            furnaceSmeltingView = false;
             RebuildFilteredRecipes();
             selectedIndex = FindFirstEntryForFilter();
             Refresh();
@@ -466,7 +467,7 @@ namespace Nyangbingo.UI
 
         public bool TryToggleFurnaceCraftingSmeltingView()
         {
-            if (page != Page.Crafting || craftingFilter != CraftingStationFilter.Furnace) return false;
+            if (page != Page.Crafting || !IsSmeltingStation(openedStation)) return false;
             furnaceSmeltingView = !furnaceSmeltingView;
             RebuildFilteredRecipes();
             selectedIndex = FindFirstEntryForFilter();
@@ -893,18 +894,6 @@ namespace Nyangbingo.UI
         {
             if (open && page == target)
             {
-                if (target == Page.Crafting)
-                {
-                    craftingFilter = (CraftingStationFilter)(((int)craftingFilter + 1) % CraftingFilterCount);
-                    if (craftingFilter == CraftingStationFilter.Furnace) furnaceSmeltingView = false;
-                    RebuildFilteredRecipes();
-                    selectedIndex = FindFirstEntryForFilter();
-                    message = string.Empty;
-                    Refresh();
-                    ResetDetailsScroll();
-                    ResetCraftingListScroll();
-                    return;
-                }
                 SetOpen(false);
                 return;
             }
@@ -922,7 +911,10 @@ namespace Nyangbingo.UI
             storageObjectId = string.Empty;
             chestProgress = null;
             chestId = string.Empty;
-            craftingFilter = CraftingStationFilter.Workbench;
+            if (!open)
+                openedStation = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+            craftingFilter = FilterForStation(openedStation);
+            furnaceSmeltingView = false;
             selectedIndex = 0;
             if (page == Page.Crafting) RebuildFilteredRecipes();
             message = string.Empty;
@@ -948,6 +940,22 @@ namespace Nyangbingo.UI
             craftingListScrollRect.verticalNormalizedPosition = 1f;
         }
 
+        private void EnsureSelectedRecipeVisible()
+        {
+            if (page != Page.Crafting || IsShowingSmeltingList || craftingListScrollRect == null ||
+                selectedIndex < 0 || selectedIndex >= craftingListButtons.Length) return;
+            var row = craftingListButtons[selectedIndex];
+            if (row == null || !row.gameObject.activeInHierarchy) return;
+            Canvas.ForceUpdateCanvases();
+            var viewport = craftingListScrollRect.viewport;
+            var content = craftingListScrollRect.content;
+            var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, row.transform);
+            var offset = bounds.max.y > viewport.rect.yMax ? viewport.rect.yMax - bounds.max.y
+                : bounds.min.y < viewport.rect.yMin ? viewport.rect.yMin - bounds.min.y : 0f;
+            craftingListScrollRect.StopMovement();
+            content.anchoredPosition += new Vector2(0f, offset);
+        }
+
         private void SelectRelative(int delta)
         {
             var count = CurrentEntryCount();
@@ -956,6 +964,7 @@ namespace Nyangbingo.UI
             message = string.Empty;
             Refresh();
             ResetDetailsScroll();
+            EnsureSelectedRecipeVisible();
         }
 
         private void SelectInventorySlot(int index)
@@ -966,6 +975,11 @@ namespace Nyangbingo.UI
             if (swapRequested && selectedIndex >= 0 && selectedIndex != index)
             {
                 var sourceIndex = selectedIndex;
+                if (!runtimeServices.PlayerInventory.CanSwapSlots(sourceIndex, index))
+                {
+                    ShowMessage("이 아이템은 퀵슬롯으로 이동할 수 없습니다.");
+                    return;
+                }
                 if (runtimeServices.PlayerInventory.TrySwapSlots(sourceIndex, index))
                 {
                     selectedIndex = index;
@@ -1014,6 +1028,10 @@ namespace Nyangbingo.UI
         private void RebuildFilteredRecipes()
         {
             filteredRecipes.Clear();
+            smeltingRecipes.Clear();
+            smeltingRecipes.AddRange(gameDataCatalog.Smelting.Where(definition => definition != null &&
+                (openedStation == CraftingStation.Foundry && definition.StationKind == SmeltingStationKind.Foundry ||
+                 openedStation == CraftingStation.Furnace && definition.StationKind == SmeltingStationKind.Furnace)));
             if (IsShowingSmeltingList)
             {
                 selectedIndex = smeltingRecipes.Count > 0
@@ -1026,7 +1044,7 @@ namespace Nyangbingo.UI
             {
                 var recipe = visibleRecipes[index];
                 if (recipe == null) continue;
-                if (!RecipeMatchesFilter(recipe.Station, craftingFilter)) continue;
+                if (!IsRecipeVisibleAtStation(recipe.Station, openedStation)) continue;
                 if (!IsSmithyRecipeAllowed(recipe.Station, smithyUnlocked)) continue;
                 if (RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook))
                     filteredRecipes.Add(recipe);
@@ -1057,7 +1075,7 @@ namespace Nyangbingo.UI
             if (PlayerHealthRecoveryService.IsSupportedHealingItemId(item.Id))
             {
                 var recovery = runtimeServices?.PlayerHealthRecovery;
-                if (recovery != null && recovery.TryUseHealingItem(item.Id, out var restoredHealth))
+                if (recovery != null && recovery.TryUseHealingItem(item.Id, out var restoredHealth, selectedIndex))
                 {
                     ShowMessage($"{item.DisplayName} 사용 · HP +{restoredHealth}");
                     Refresh();
@@ -1070,7 +1088,7 @@ namespace Nyangbingo.UI
             {
                 var talismanMessage = string.Empty;
                 if (runtimeServices?.Talismans != null &&
-                    runtimeServices.Talismans.TryUse(item.Id, out talismanMessage))
+                    runtimeServices.Talismans.TryUse(item.Id, out talismanMessage, selectedIndex))
                 {
                     ShowMessage(talismanMessage);
                     Refresh();
@@ -1093,11 +1111,11 @@ namespace Nyangbingo.UI
             }
             if (!IsInventoryPlaceable(item)) return;
             if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
-            if (tilePalette != null && tilePalette.TryBeginPlacement(item.Id))
+            if (tilePalette != null && tilePalette.TryBeginPlacement(item.Id, selectedIndex))
                 SetOpen(false);
             else if (!MainGameTilePaletteController.SupportsPalettePlacement(item.Id) &&
                      turretRuntime != null &&
-                     turretRuntime.BeginPlacementPreview(item.Id))
+                     turretRuntime.BeginPlacementPreview(item.Id, selectedIndex))
                 SetOpen(false);
             else
                 ShowMessage("설치 미리보기를 시작할 수 없습니다.");
@@ -1407,7 +1425,7 @@ namespace Nyangbingo.UI
             var recipe = CurrentRecipe();
             if (recipe == null)
             {
-                titleText.text = $"제작 · {CraftingFilterTitlePrefix()} · 해금된 제작법 없음";
+                titleText.text = $"{CraftingFilterTitlePrefix()} · 해금된 제작법 없음";
                 detailsText.text = "탭별 제작 목록입니다. 실행은 해당 설비 근처에서 가능합니다.";
                 primaryButton.interactable = false;
                 return;
@@ -1428,7 +1446,7 @@ namespace Nyangbingo.UI
                 collectButton.interactable = true;
             }
             titleText.text =
-                $"제작 · {CraftingFilterTitlePrefix()} {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
+                $"{CraftingFilterTitlePrefix()} {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
             var stationOk = recipe.Station == CraftingStation.None || recipe.Station == NearbyStation();
             var canCraft = !runtimeServices.CraftingProcess.IsCrafting && stationOk &&
                            RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook) &&
@@ -1607,7 +1625,7 @@ namespace Nyangbingo.UI
             var definition = CurrentSmelting();
             if (definition == null)
             {
-                titleText.text = $"제작 · {CraftingFilterTitlePrefix()} · 표시 가능한 제련법 없음";
+                titleText.text = $"{CraftingFilterTitlePrefix()} · 표시 가능한 제련법 없음";
                 detailsText.text = string.Empty;
                 primaryButton.interactable = collectButton.interactable = false;
                 return;
@@ -1620,7 +1638,7 @@ namespace Nyangbingo.UI
                 : runtimeServices.Furnace;
             var stationOk = NearbyStation() == requiredStation;
             titleText.text =
-                $"제작 · {CraftingFilterTitlePrefix()} {selectedIndex + 1}/{smeltingRecipes.Count} · {definition.Output.item.DisplayName}";
+                $"{CraftingFilterTitlePrefix()} {selectedIndex + 1}/{smeltingRecipes.Count} · {definition.Output.item.DisplayName}";
             primaryButton.interactable = stationOk;
             collectButton.interactable = station.Completed.Count > 0;
             detailsText.text =
@@ -1641,8 +1659,7 @@ namespace Nyangbingo.UI
 
         public static bool IsProductPlaceableRecipe(RecipeDefinition recipe, int currentDay = 1)
         {
-            if (recipe?.Output.item == null ||
-                !ExpansionProgressionRules.IsScopeAvailable(recipe.MvpScope, currentDay)) return false;
+            if (recipe?.Output.item == null) return false;
             return recipe.Output.item.Category == ItemCategory.Placeable ||
                    recipe.Output.item.Category == ItemCategory.Station ||
                    recipe.Type == RecipeType.ColdSource || recipe.Type == RecipeType.Cooling ||
@@ -1655,7 +1672,7 @@ namespace Nyangbingo.UI
         public static bool IsInventoryItemPlaceable(ItemDefinition item,
             IEnumerable<RecipeDefinition> recipes, int currentDay = 1)
         {
-            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, currentDay)) return false;
+            if (item == null) return false;
             if (MainGameTilePaletteController.SupportsPalettePlacement(item.Id)) return true;
             if (recipes == null) return false;
             return recipes.Any(recipe => recipe?.Output.item != null &&
@@ -1688,8 +1705,8 @@ namespace Nyangbingo.UI
             var isCatnip = selectedItem?.Id == PlayerHealthRecoveryService.CatnipItemId;
             var canUseCatnip = isCatnip && runtimeServices.PlayerHealthRecovery?.CanUseCatnip == true;
             titleText.text = selectedItem == null
-                ? $"소지품 10×5 · {inventory.Capacity}슬롯"
-                : $"소지품 10×5 · {selectedItem.DisplayName} ×{inventory.Count(selectedItem.Id)}";
+                ? string.Empty
+                : $"{selectedItem.DisplayName} ×{inventory.Slots[selectedIndex].amount}";
             primaryButton.GetComponentInChildren<Text>().text = isCatnip
                 ? canUseCatnip ? "E · 캣닢 사용 (HP +25)" : "HP가 가득 찼습니다"
                 : summonBoss != null
@@ -1736,6 +1753,19 @@ namespace Nyangbingo.UI
                 var slot = inventory.Slots[index];
                 var item = string.IsNullOrEmpty(slot.itemId) ? null : gameDataCatalog.FindItem(slot.itemId);
                 label.text = item == null ? string.Empty : slot.amount.ToString();
+                label.gameObject.SetActive(true);
+                label.enabled = true;
+                label.alignment = TextAnchor.LowerRight;
+                label.fontSize = 8;
+                label.resizeTextForBestFit = false;
+                label.raycastTarget = false;
+                label.color = Color.white;
+                label.transform.SetAsLastSibling();
+                var countRect = label.rectTransform;
+                countRect.anchorMin = Vector2.zero;
+                countRect.anchorMax = Vector2.one;
+                countRect.offsetMin = new Vector2(1f, 1f);
+                countRect.offsetMax = new Vector2(-2f, -1f);
                 if (icon != null)
                 {
                     icon.sprite = item != null ? itemArtCatalog?.FindSprite(item.Id) : null;
@@ -1779,7 +1809,7 @@ namespace Nyangbingo.UI
                     collectButton.interactable = runtimeServices.PlayerInventory.Has(
                         PortableLanternRuntime.FuelItemId, 1);
                 }
-                titleText.text = $"장비 {selectedIndex + 1}/{CurrentEquipmentEntryCount()} · {activeSlotItem.DisplayName}";
+                titleText.text = $"보유 장비 {selectedIndex + 1}/{CurrentEquipmentEntryCount()} · {activeSlotItem.DisplayName}";
                 primaryButton.GetComponentInChildren<Text>().text = activeEquipped ? "E · 해제" : "E · 장착";
                 primaryButton.interactable = true;
                 detailsText.text =
@@ -1800,7 +1830,7 @@ namespace Nyangbingo.UI
             var equipment = CurrentEquipment();
             if (equipment == null)
             {
-                titleText.text = "장비 · 보유 장비 없음";
+                titleText.text = "보유 장비 없음";
                 detailsText.text = BuildEquippedSummary();
                 primaryButton.GetComponentInChildren<Text>().text = "장착";
                 primaryButton.interactable = false;
@@ -1809,7 +1839,7 @@ namespace Nyangbingo.UI
             var equippedSlot = FindEquippedSlot(equipment);
             var equipped = equippedSlot.HasValue;
             var item = gameDataCatalog.FindItem(equipment.Id);
-            titleText.text = $"장비 {selectedIndex + 1}/{CurrentEquipmentEntryCount()} · {item?.DisplayName ?? equipment.Id}";
+            titleText.text = $"보유 장비 {selectedIndex + 1}/{CurrentEquipmentEntryCount()} · {item?.DisplayName ?? equipment.Id}";
             primaryButton.GetComponentInChildren<Text>().text = equipped ? "E · 해제" : "E · 장착";
             primaryButton.interactable = true;
             detailsText.text =
@@ -1954,11 +1984,11 @@ namespace Nyangbingo.UI
         private void RefreshCodex()
         {
             collectButton.gameObject.SetActive(false);
-            titleText.text = "요괴 도감 · 카드 선택";
+            titleText.text = "도감";
             detailsText.text = string.Empty;
             if (codexModel == null)
             {
-                titleText.text = "도감 · 진행 데이터를 불러올 수 없음";
+                titleText.text = "진행 데이터를 불러올 수 없음";
                 if (codexExpandedBackdrop != null) codexExpandedBackdrop.SetActive(false);
                 for (var index = 0; index < codexCardButtons.Length; index++)
                     if (codexCardButtons[index] != null) codexCardButtons[index].interactable = false;
@@ -2005,7 +2035,7 @@ namespace Nyangbingo.UI
 
             if (codexModel.Cards.Count == 0)
             {
-                titleText.text = "도감 · 표시할 항목 없음";
+                titleText.text = "표시할 항목 없음";
                 if (codexExpandedBackdrop != null) codexExpandedBackdrop.SetActive(false);
                 return;
             }
@@ -2212,7 +2242,9 @@ namespace Nyangbingo.UI
         private void HandleEquipmentAdded(EquipmentDefinition _) => Refresh();
 
         private CraftingStation NearbyStation() => stationSource != null
-            ? stationSource.NearbyCraftingStation
+            ? openedStation != CraftingStation.None &&
+              stationSource.TryGetNearbyCraftingStationPosition(openedStation, out _)
+                ? openedStation : stationSource.NearbyCraftingStation
             : CraftingStation.None;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -2300,12 +2332,35 @@ namespace Nyangbingo.UI
         }
 #endif
 
+        private void SubmitNavigation(int direction)
+        {
+            var button = direction < 0 ? previousButton : nextButton;
+            if (button == null || !button.gameObject.activeInHierarchy)
+            {
+                // Inventory grid navigation has no previous/next buttons.
+                SelectRelative(direction);
+                return;
+            }
+            if (!button.IsInteractable()) return;
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem == null)
+            {
+                button.onClick.Invoke();
+                return;
+            }
+            // Button's submit path invokes the existing click handler once, then plays
+            // its Pressed transition and restores the state using unscaled time.
+            button.OnSubmit(new UnityEngine.EventSystems.BaseEventData(eventSystem));
+        }
+
         private string DefaultHelpText()
         {
             if (page == Page.Crafting)
-                return craftingFilter == CraftingStationFilter.Furnace
-                    ? "2 제작 탭 · Q 제련↔제작 전환 · ESC 닫기 · A/D·←/→ 선택 · E 실행"
-                    : "2 제작 탭(제작대/화로/얼음 모루) · ESC 닫기 · A/D·←/→ 선택 · E 실행";
+                return IsSmeltingStation(openedStation)
+                    ? furnaceSmeltingView
+                        ? "Q 제작 목록으로 전환 · A/D·←/→ 선택 · E 제련 · ESC 닫기"
+                        : "Q 제련 목록으로 전환 · W/S·↑/↓ 선택 · E 제작 · ESC 닫기"
+                    : "2 제작 탭 · ESC 닫기 · W/S·↑/↓ 선택 · E 실행";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             return "1~4 탭 · ESC 닫기 · A/D·←/→ 선택 · E 실행";
 #else

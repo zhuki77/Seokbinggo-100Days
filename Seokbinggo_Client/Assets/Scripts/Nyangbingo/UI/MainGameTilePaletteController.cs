@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
@@ -135,7 +135,9 @@ namespace Nyangbingo.UI
             wasActive && !isActive && !foregroundActive &&
             !IsDirectUseHotbarItem(selectedItemId);
 
-        public bool TryBeginPlacement(string itemId)
+        private int foregroundSourceSlot = -1;
+
+        public bool TryBeginPlacement(string itemId, int sourceSlot = -1)
         {
             if (!initialized || string.IsNullOrEmpty(itemId) ||
                 runtimeServices?.PlayerInventory == null ||
@@ -143,8 +145,22 @@ namespace Nyangbingo.UI
 
             var item = gameDataCatalog?.FindItem(itemId);
             var currentDay = bootstrap?.TimeService?.Day ?? 1;
-            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, currentDay)) return false;
+            if (item == null) return false;
 
+            var slots = runtimeServices.PlayerInventory.Slots;
+            if (sourceSlot == -1)
+            {
+                sourceSlot = selectedSlotIndex;
+                if (sourceSlot < 0 || sourceSlot >= slots.Count || slots[sourceSlot].itemId != itemId)
+                {
+                    sourceSlot = -1;
+                    for (var index = 0; index < slots.Count; index++)
+                        if (slots[index].itemId == itemId && slots[index].amount > 0) { sourceSlot = index; break; }
+                }
+            }
+            if (sourceSlot < 0 || sourceSlot >= slots.Count || slots[sourceSlot].itemId != itemId ||
+                slots[sourceSlot].amount <= 0) return false;
+            foregroundSourceSlot = sourceSlot;
             selectedItemId = itemId;
             placementRuntime?.CancelPlacementPreview();
             if (SupportsPalettePlacement(itemId))
@@ -155,7 +171,7 @@ namespace Nyangbingo.UI
             {
                 if (!MainGameCraftingUiController.IsInventoryItemPlaceable(
                         item, gameDataCatalog.Recipes, currentDay) ||
-                    placementRuntime == null || !placementRuntime.BeginPlacementPreview(itemId))
+                    placementRuntime == null || !placementRuntime.BeginPlacementPreview(itemId, sourceSlot))
                 {
                     ClearSelectedSlot();
                     RefreshSlotVisuals();
@@ -164,16 +180,7 @@ namespace Nyangbingo.UI
                 CancelForegroundPlacement(clearSelection: false);
             }
 
-            if (selectedSlotIndex < 0 || selectedSlotIndex >= paletteItemIds.Count ||
-                !string.Equals(paletteItemIds[selectedSlotIndex], itemId, StringComparison.Ordinal))
-            {
-                for (var index = 0; index < paletteItemIds.Count; index++)
-                {
-                    if (!string.Equals(paletteItemIds[index], itemId, StringComparison.Ordinal)) continue;
-                    selectedSlotIndex = index;
-                    break;
-                }
-            }
+            selectedSlotIndex = sourceSlot;
 
             productPlacementWasActive = placementRuntime?.IsPlacementPreviewActive == true;
             RefreshSlotVisuals();
@@ -206,7 +213,7 @@ namespace Nyangbingo.UI
                 return true;
             }
 
-            if (TryBeginPlacement(itemId))
+            if (TryBeginPlacement(itemId, slotIndex))
             {
                 selectedSlotIndex = slotIndex;
                 RefreshSlotVisuals();
@@ -330,7 +337,9 @@ namespace Nyangbingo.UI
             if (!pointerOverUi && Input.GetMouseButtonDown(1))
             {
                 if (TryRemoveHoveredWallpaper()) return;
-                CancelForegroundPlacement();
+                // Match placeable cancellation: keep the highlighted slot and wheel origin,
+                // but clear the active item so the preview is not restarted next frame.
+                SelectEmptySlot(selectedSlotIndex);
                 return;
             }
             if (!pointerOverUi && Input.GetMouseButtonDown(0)) ConfirmForegroundPlacement();
@@ -366,14 +375,12 @@ namespace Nyangbingo.UI
                 !string.IsNullOrEmpty(selectedItemId) &&
                 !string.Equals(paletteItemIds[selectedSlotIndex], selectedItemId, StringComparison.Ordinal))
             {
-                ClearSelectedSlot();
-                placementRuntime?.CancelPlacementPreview();
-                CancelForegroundPlacement(clearSelection: false);
+                SelectEmptySlot(selectedSlotIndex);
             }
 
             if (!string.IsNullOrEmpty(foregroundPlacementItemId) &&
-                runtimeServices.PlayerInventory.Count(foregroundPlacementItemId) <= 0)
-                CancelForegroundPlacement();
+                !HasForegroundSourceItem())
+                SelectEmptySlot(selectedSlotIndex);
         }
 
         private void RefreshHotbarSlotIds()
@@ -504,6 +511,7 @@ namespace Nyangbingo.UI
         private void SelectEmptySlot(int slotIndex)
         {
             placementRuntime?.CancelPlacementPreview();
+            productPlacementWasActive = false;
             CancelForegroundPlacement(clearSelection: false);
             selectedSlotIndex = slotIndex;
             selectedItemId = string.Empty;
@@ -514,6 +522,7 @@ namespace Nyangbingo.UI
         private void SelectDirectUseSlot(int slotIndex, string itemId)
         {
             placementRuntime?.CancelPlacementPreview();
+            productPlacementWasActive = false;
             CancelForegroundPlacement(clearSelection: false);
             selectedSlotIndex = slotIndex;
             selectedItemId = itemId;
@@ -537,7 +546,7 @@ namespace Nyangbingo.UI
                     productPlacementWasActive, productPlacementActive,
                     IsForegroundPlacementActive, selectedItemId))
             {
-                ClearSelectedSlot();
+                if (selectedSlotIndex >= 0) SelectEmptySlot(selectedSlotIndex);
                 RefreshSlotVisuals();
             }
             productPlacementWasActive = productPlacementActive;
@@ -596,25 +605,33 @@ namespace Nyangbingo.UI
                                                foregroundPlacementCell) == true
                                            : tileService.CanPlaceForeground(foregroundPlacementCell,
                                                foregroundPlacementItemId)) &&
-                                       runtimeServices.PlayerInventory.Count(foregroundPlacementItemId) > 0;
+                                       HasForegroundSourceItem();
             foregroundPreview.color = foregroundPlacementValid
                 ? new Color(.35f, 1f, .75f, .65f)
                 : new Color(1f, .25f, .25f, .65f);
         }
 
+        private bool HasForegroundSourceItem()
+        {
+            var inventory = runtimeServices?.PlayerInventory;
+            return inventory != null && foregroundSourceSlot >= 0 && foregroundSourceSlot < inventory.Capacity &&
+                   inventory.Slots[foregroundSourceSlot].itemId == foregroundPlacementItemId &&
+                   inventory.Slots[foregroundSourceSlot].amount > 0;
+        }
+
         private void ConfirmForegroundPlacement()
         {
-            if (!foregroundPlacementValid) return;
+            if (!foregroundPlacementValid || foregroundSourceSlot < 0) return;
             var tileService = bootstrap?.TileService;
             if (tileService == null) return;
             var placed = IsWallpaper(foregroundPlacementItemId)
-                ? tileService.TryPlaceWallpaper(foregroundPlacementCell, runtimeServices.PlayerInventory)
+                ? tileService.TryPlaceWallpaper(foregroundPlacementCell, runtimeServices.PlayerInventory, foregroundSourceSlot)
                 : tileService.TryPlaceForeground(foregroundPlacementCell, foregroundPlacementItemId,
-                    runtimeServices.PlayerInventory);
+                    runtimeServices.PlayerInventory, sourceSlot: foregroundSourceSlot);
             if (!placed) return;
             RefreshSlotVisuals();
-            if (runtimeServices.PlayerInventory.Count(foregroundPlacementItemId) <= 0)
-                CancelForegroundPlacement();
+            if (!HasForegroundSourceItem())
+                SelectEmptySlot(selectedSlotIndex);
             else UpdateForegroundPreview();
         }
 
