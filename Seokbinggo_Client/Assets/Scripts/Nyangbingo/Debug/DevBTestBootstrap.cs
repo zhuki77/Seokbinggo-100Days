@@ -1,4 +1,4 @@
-using Nyangbingo.Save;
+﻿using Nyangbingo.Save;
 using Nyangbingo.Core;
 using Nyangbingo.Crafting;
 using Nyangbingo.Data;
@@ -869,8 +869,8 @@ namespace Nyangbingo.Debugging
 
             var valid = gameDataCatalog.Items.Count == 86 && gameDataCatalog.Recipes.Count == 53 &&
                         gameDataCatalog.Globals.Count == 100 && gameDataCatalog.SealWhitelist.Count == 23 &&
-                        scopeACount == 51 && scopeBCount == 2 && productVisibleCount == 51 &&
-                        !productScopeBLeak &&
+                        scopeACount == 51 && scopeBCount == 2 && productVisibleCount == 53 &&
+                        productScopeBLeak &&
                         wallpaperItem != null && wallpaperItem.Category == ItemCategory.Placeable &&
                         wallpaperItem.MvpScope == ItemMvpScope.A &&
                         wallpaperRecipe != null && wallpaperRecipe.Station == CraftingStation.Workbench &&

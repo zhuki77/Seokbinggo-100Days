@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -3718,9 +3718,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var shellUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
         Require(craftingUiSource.Contains("$\"{index + 1} · {UnifiedTabLabel(index)}\"") &&
-                craftingUiSource.Contains("craftingFilter = (CraftingStationFilter)") &&
-                craftingUiSource.Contains("CraftingFilterCount") &&
-                craftingUiSource.Contains("2 제작 탭(제작대/화로/얼음 모루)") &&
+                !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Foundry,
+                    MainGameCraftingUiController.CraftingStationFilter.Furnace) &&
+                !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Smithy,
+                    MainGameCraftingUiController.CraftingStationFilter.IceAnvil) &&
+                !MainGameCraftingUiController.IsRecipeVisibleAtStation(CraftingStation.IceAnvil,
+                    CraftingStation.Workbench) &&
                 MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Workbench,
                     MainGameCraftingUiController.CraftingStationFilter.Workbench) &&
                 MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Furnace,
@@ -3731,7 +3734,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     MainGameCraftingUiController.CraftingStationFilter.Workbench) &&
                 shellUiSource.Contains("!MainGameCraftingUiController.BlocksGameplayInput") &&
                 shellUiSource.Contains("!MainGameCraftingUiController.ConsumedEscapeThisFrame"),
-            "Number key 2 must cycle the three crafting station filters, " +
+            "Crafting stations must keep their recipes separate, " +
             "and Escape must close any 1-4 panel without opening pause in the same frame.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&
