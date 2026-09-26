@@ -115,6 +115,10 @@ namespace Nyangbingo.World
         [Min(1)][SerializeField] private int onboardingRequiredDirt = 8;   // recipes.csv workbench: dirt:8
         [Min(1)][SerializeField] private int onboardingRequiredStone = 12; // recipes.csv workbench: stone:12
 
+        [Header("새 게임 출발점 주변 지형 보장 (기존 저장 재생성에는 미적용)")]
+        [Min(1)][SerializeField] private int startingLandmarkRadius = 48;
+        public int StartingLandmarkRadius => Mathf.Max(1, startingLandmarkRadius);
+
         public int MapWidth => mapWidth;
         public int MapHeight => mapHeight;
 

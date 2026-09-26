@@ -73,7 +73,12 @@ namespace Nyangbingo.World
         private void Start()
         {
             if (startWorldOnStart && !IsWorldReady)
-                StartNewWorld(ConsumeStartupSeed());
+            {
+                // Continue/demo creates a temporary baseline before restoring the saved world.
+                // Do not delay or reject that baseline with new-game-only landmark selection.
+                var requireLandmarks = freshWorldRequested;
+                StartNewWorld(ConsumeStartupSeed(), requireLandmarks);
+            }
         }
 
         public static void RequestFreshWorldForNextScene(int previousSeed, int mapWidth = 0)
@@ -141,13 +146,13 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool StartNewWorld(int seed)
+        public bool StartNewWorld(int seed, bool requireStartingLandmarks = true)
         {
             if (!InitializeServices()) return false;
 
             try
             {
-                session.StartNewWorld(seed);
+                session.StartNewWorld(seed, requireStartingLandmarks);
                 return true;
             }
             catch (InvalidOperationException exception)

@@ -157,16 +157,18 @@ namespace Nyangbingo.World
         /// (Try/Catch로) 실패를 명확히 인지하고 처리하게 한다.
         /// </summary>
         /// <exception cref="InvalidOperationException">최대 재시도 후에도 월드 생성 검증에 실패한 경우.</exception>
-        public WorldGenerationResult StartNewWorld(int requestedSeed)
+        public WorldGenerationResult StartNewWorld(int requestedSeed, bool requireStartingLandmarks = true)
         {
             generator = new MapGenerator(config, catalog);
-            var result = generator.GenerateDetailed(requestedSeed);
+            var result = requireStartingLandmarks
+                ? generator.GenerateForNewGame(requestedSeed)
+                : generator.GenerateDetailed(requestedSeed);
 
             if (!result.passedValidation)
             {
                 throw new InvalidOperationException(
                     $"[Nyangbingo] WorldSessionController: seed {requestedSeed} 기준 {result.rerollAttempts}회 재시도(최종 seed " +
-                    $"{result.acceptedSeed})까지도 월드 생성 검증(스폰 접근성/온보딩 자원/심층 연결/제단 도달성)에 실패했습니다. " +
+                    $"{result.acceptedSeed})까지도 월드 생성 검증(스폰 접근성/온보딩 자원/심층 연결/제단 도달성/주변 잔해·동굴)에 실패했습니다. " +
                     "WorldGenerationConfig 값 또는 시드를 확인하세요 — 이 월드는 라이브 상태로 시작되지 않습니다.");
             }
 

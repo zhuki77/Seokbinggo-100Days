@@ -404,6 +404,13 @@ namespace Nyangbingo.World
 
         /// <summary>타일 배열뿐 아니라 스폰/제단/상자 배치까지 전부 담은 상세 결과를 반환한다.</summary>
         public WorldGenerationResult GenerateDetailed(int seed)
+            => GenerateDetailed(seed, false);
+
+        /// <summary>새 게임에만 주변 지형 조건을 적용한다. 저장된 시드의 지형 재생성은 바꾸지 않는다.</summary>
+        public WorldGenerationResult GenerateForNewGame(int seed)
+            => GenerateDetailed(seed, true);
+
+        private WorldGenerationResult GenerateDetailed(int seed, bool requireStartingLandmarks)
         {
             var attempt = 0;
             WorldGenerationResult result;
@@ -416,7 +423,8 @@ namespace Nyangbingo.World
                 result.requestedSeed = seed;
                 result.rerollAttempts = attempt;
 
-                var passed = ValidateWorld(result, config);
+                var passed = ValidateWorld(result, config) &&
+                             (!requireStartingLandmarks || HasStartingLandmarks(result, config));
                 result.passedValidation = passed;
 
                 if (passed || attempt >= config.MaxRerollAttempts)
@@ -435,6 +443,48 @@ namespace Nyangbingo.World
 
             CacheResult(result);
             return result;
+        }
+
+        public static bool HasStartingLandmarks(WorldGenerationResult result, WorldGenerationConfig config)
+        {
+            if (config == null || result.tiles == null || result.surfaceHeights == null) return false;
+            var grid = result.tiles;
+            var spawn = result.spawnPoint;
+            var radius = config.StartingLandmarkRadius;
+            var hasRuin = false;
+            var hasCave = false;
+            var minX = Mathf.Max(0, spawn.x - radius);
+            var maxX = Mathf.Min(result.width - 1, spawn.x + radius);
+            for (var x = minX; x <= maxX; x++)
+            for (var y = Mathf.Max(0, spawn.y - radius);
+                 y <= Mathf.Min(result.height - 1, spawn.y + radius); y++)
+            {
+                if (Mathf.Abs(x - spawn.x) + Mathf.Abs(y - spawn.y) > radius) continue;
+                if (!hasRuin && grid[x, y].elementType == WorldTileTypes.RuinWall &&
+                    y >= result.surfaceHeights[x])
+                {
+                    // Keep the exposed-remnant check local; no spawn connectivity search.
+                    foreach (var offset in FourNeighbors)
+                    {
+                        var neighbor = new Vector2Int(x, y) + offset;
+                        if (InBounds(neighbor, result.width, result.height) &&
+                            grid[neighbor.x, neighbor.y].IsAir)
+                        {
+                            hasRuin = true;
+                            break;
+                        }
+                    }
+                }
+                // Nearby underground air is sufficient, regardless of chamber dimensions
+                // or connectivity. The guaranteed shallow spawn shaft alone does not count.
+                var isSpawnEntrance = x == Mathf.Clamp(spawn.x - 1, 1, result.width - 2) &&
+                                      y >= config.GetSpawnEntranceOfficialBottom(result.surfaceHeights[x]);
+                if (!hasCave && !isSpawnEntrance && grid[x, y].IsAir &&
+                    y <= result.surfaceHeights[x] - config.CaveSurfaceCrustThickness)
+                    hasCave = true;
+                if (hasRuin && hasCave) return true;
+            }
+            return false;
         }
 
         private void CacheResult(WorldGenerationResult result)
@@ -580,7 +630,8 @@ namespace Nyangbingo.World
                         WorldLayer.Bedrock => TileData.CreateNaturalWithBackground(WorldTileTypes.Bedrock, 3, WorldTileTypes.BackgroundDeep),
                         WorldLayer.Upper => TileData.CreateNaturalWithBackground(
                             WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt),
-                        WorldLayer.Middle => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
+                        // T1 must reach middle-layer ore before crafting the T2 claw.
+                        WorldLayer.Middle => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneMid, 1, WorldTileTypes.BackgroundStone),
                         _ => TileData.CreateNaturalWithBackground(WorldTileTypes.StoneDeep, boundaryHardness,
                             WorldTileTypes.BackgroundDeep)
                     };
@@ -1125,7 +1176,7 @@ namespace Nyangbingo.World
                 WorldLayer.Upper => TileData.CreateNaturalWithBackground(
                     WorldTileTypes.Dirt, 1, WorldTileTypes.BackgroundDirt),
                 WorldLayer.Middle => TileData.CreateNaturalWithBackground(
-                    WorldTileTypes.StoneMid, 2, WorldTileTypes.BackgroundStone),
+                    WorldTileTypes.StoneMid, 1, WorldTileTypes.BackgroundStone),
                 WorldLayer.Deep => TileData.CreateNaturalWithBackground(
                     WorldTileTypes.StoneDeep, boundaryHardness, WorldTileTypes.BackgroundDeep),
                 WorldLayer.Bedrock => TileData.CreateNaturalWithBackground(
