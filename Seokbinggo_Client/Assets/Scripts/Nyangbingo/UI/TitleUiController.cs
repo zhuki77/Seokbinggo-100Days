@@ -33,7 +33,7 @@ namespace Nyangbingo.UI
         [SerializeField] private CharacterArtCatalog characterArtCatalog;
 
         private Text titleDayCounterText;
-        private RuntimePixelGlyphPresenter titleDayCounterGlyphs;
+        private RuntimeArtNumberLabel titleHeatStageLabel;
         private GameObject titlePlayerArtRoot;
         private Slider mapWidthSlider;
         private Text mapWidthLabel;
@@ -140,7 +140,8 @@ namespace Nyangbingo.UI
         private void RefreshTitleControls()
         {
             var badge = TitleShellController.FormatTitleHeatStage(shell.Title.DisplayedHeatStage);
-            if (titleDayCounterGlyphs != null) titleDayCounterGlyphs.SetText(badge);
+            if (titleHeatStageLabel != null)
+                titleHeatStageLabel.SetValue(shell.Title.DisplayedHeatStage, true);
             else if (titleDayCounterText != null) titleDayCounterText.text = badge;
             if (titlePlayerArtRoot != null) titlePlayerArtRoot.SetActive(true);
             if (titleContinueButton != null) titleContinueButton.interactable = shell.Title.CanContinue;
@@ -462,7 +463,7 @@ namespace Nyangbingo.UI
             counterTransform.anchorMin = counterTransform.anchorMax = counterTransform.pivot =
                 new Vector2(.5f, .5f);
             counterTransform.anchoredPosition = new Vector2(176f, 97f);
-            counterTransform.sizeDelta = new Vector2(84f, 36f);
+            counterTransform.sizeDelta = new Vector2(160f, 36f);
             titleDayCounterText = counterTransform.GetComponent<Text>();
             var menuLabel = titleNewGameButton.GetComponentInChildren<Text>(true);
             titleDayCounterText.font = menuLabel != null ? menuLabel.font : titleDayCounterText.font;
@@ -471,13 +472,14 @@ namespace Nyangbingo.UI
             titleDayCounterText.alignment = TextAnchor.MiddleCenter;
             titleDayCounterText.color = Color.white;
             titleDayCounterText.raycastTarget = false;
+            var oldGlyphs = counterTransform.GetComponent<RuntimePixelGlyphPresenter>();
+            if (oldGlyphs != null) oldGlyphs.SetVisible(false);
+            titleDayCounterText.enabled = true;
+            titleDayCounterText.horizontalOverflow = HorizontalWrapMode.Overflow;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
-            {
-                titleDayCounterText.text = string.Empty;
-                titleDayCounterGlyphs = counterTransform.GetComponent<RuntimePixelGlyphPresenter>() ??
-                                        counterTransform.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                titleDayCounterGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs);
-            }
+                titleHeatStageLabel = new RuntimeArtNumberLabel(titleDayCounterText,
+                    gameplayArtCatalog.ShellNumberGlyphs, "폭염 ", "단계", 1f);
+
 
             var playerEntry = characterArtCatalog?.Find("player");
             if (playerEntry == null || playerEntry.IdleFrames.Count == 0) return;
