@@ -48,6 +48,7 @@ namespace Nyangbingo.Yokai
         [SerializeField] private YokaiDefinition definition;
         [SerializeField] private MonoBehaviour gameSecondsSourceComponent;
         [SerializeField] private Renderer visibilityRenderer;
+        private readonly Plane[] gameplayVisibilityPlanes = new Plane[6];
         [SerializeField] private float wallAttackRange = 1f;
         [SerializeField] private float retreatSpeedMultiplier = .5f;
         private IYokaiTarget target;
@@ -380,7 +381,14 @@ namespace Nyangbingo.Yokai
                 (state != State.Retreat || definition?.Kind != YokaiKind.Yagwanggwi))
                 return;
             if (visibilityRenderer == null) visibilityRenderer = GetComponentInChildren<Renderer>();
-            if (visibilityRenderer != null) TryDespawnIfOffscreen(visibilityRenderer.isVisible);
+            var gameplayCamera = Camera.main;
+            // Renderer.isVisible also includes Scene view cameras. Only the player's
+            // camera determines whether a fleeing enemy has left the gameplay screen.
+            if (visibilityRenderer == null || gameplayCamera == null ||
+                !gameplayCamera.isActiveAndEnabled) return;
+            GeometryUtility.CalculateFrustumPlanes(gameplayCamera, gameplayVisibilityPlanes);
+            TryDespawnIfOffscreen(GeometryUtility.TestPlanesAABB(
+                gameplayVisibilityPlanes, visibilityRenderer.bounds));
         }
 
         public void TickFromGameClock()
@@ -693,13 +701,12 @@ namespace Nyangbingo.Yokai
             {
                 if (characterAnimator == null)
                     characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
-                var routeFacing = physicsBody != null
-                    ? physicsBody.NavigationFacingDirection
-                    : Vector2.zero;
-                var facingMovement = Mathf.Abs(routeFacing.x) > Mathf.Epsilon
-                    ? (Vector3)routeFacing
+                // Navigation can still remember the chase direction during retreat or dash.
+                // Face the displacement actually applied by this move, including collision handling.
+                var facingMovement = physicsBody != null
+                    ? (Vector3)physicsBody.LastMoveDisplacement
                     : displacement;
-                if (Mathf.Abs(facingMovement.x) > .005f)
+                if (Mathf.Abs(facingMovement.x) > Mathf.Epsilon)
                     characterAnimator?.SetFacing(facingMovement);
                 characterAnimator?.SetMoving(true);
             }

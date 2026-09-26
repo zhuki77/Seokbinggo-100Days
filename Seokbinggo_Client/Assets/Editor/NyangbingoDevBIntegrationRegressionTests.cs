@@ -2886,10 +2886,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
             var animatorSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/Yokai/YokaiBrain.cs");
             Require(animatorSource.Contains("characterAnimator?.SetMoving(true)") &&
-                    animatorSource.Contains("physicsBody.NavigationFacingDirection") &&
+                    animatorSource.Contains("physicsBody.LastMoveDisplacement") &&
                     animatorSource.Contains("characterAnimator?.SetFacing(facingMovement)") &&
                     !animatorSource.Contains("ResolveStableGroundFacing"),
-                "Physics-driven yokai movement must keep animation active and face the selected route segment instead of collision displacement.");
+                "Physics-driven yokai movement must face its applied movement, including retreat after chasing.");
             var physicsSource = System.IO.File.ReadAllText(
                 "Assets/Scripts/Nyangbingo/World/WorldMobPhysicsBody.cs");
             Require(physicsSource.Contains("NavigationReversalHoldSeconds") &&
