@@ -126,6 +126,7 @@ namespace Nyangbingo.World
         private CombatProfileDefinition lanternCarryProfile;
         private SpriteRenderer attackIndicator;
         private RuntimeCharacterSpriteAnimator characterAnimator;
+        private bool visualWasGrounded = true;
         private float attackIndicatorRemaining;
         private int attackIndicatorFrameIndex;
         private float attackIndicatorFrameRemaining;
@@ -258,6 +259,8 @@ namespace Nyangbingo.World
                 return false;
             }
             runtimeServices.Talismans?.BindPlayer(transform);
+            attack.SetOutgoingDamageAdjuster((health, damage) =>
+                runtimeServices?.Traits?.AdjustMeleeDamage(health, damage) ?? damage);
 
             var physics = PlayerMovementPhysics.TryLoadFromCatalog(catalog, out var legacyPhysics)
                 ? legacyPhysics
@@ -490,6 +493,7 @@ namespace Nyangbingo.World
                 var handled = TryUseSelectedIceShard() ||
                       TryUseSelectedTalisman() ||
                       TryUseSelectedHealingItem() ||
+                      TryPlantSelectedCatnip() ||
                       TryInteractClosestWorldTarget(includePlacedObjects: false) ||
                       TryOpenRemoteJangdok();
                 if (!handled)
@@ -503,7 +507,11 @@ namespace Nyangbingo.World
                 Input.GetKeyDown(KeyCode.Space))
                 TryJump();
             characterAnimator?.SetFacing(horizontalFacing);
-            characterAnimator?.SetMoving(movementInput.sqrMagnitude > Mathf.Epsilon);
+            if (!visualWasGrounded && grounded)
+                characterAnimator?.PlayLand();
+            characterAnimator?.SetLocomotion(
+                grounded, verticalVelocity > 0.05f, movementInput.sqrMagnitude > Mathf.Epsilon);
+            visualWasGrounded = grounded;
 
             attackCooldown = Mathf.Max(0f, attackCooldown - Time.deltaTime);
             wireSnare.Tick(Time.deltaTime);
@@ -911,7 +919,14 @@ namespace Nyangbingo.World
         {
             if (!AllowsPlayerBasicAttack(activeProfile))
                 return false;
-            attack.Strike(SnapAttackFeedbackDirection(facing));
+            if (BowCombatRules.IsBowProfile(activeProfile) &&
+                !BowCombatRules.TryConsumeAmmo(runtimeServices?.PlayerInventory))
+                return false;
+            var direction = SnapAttackFeedbackDirection(facing);
+            if (EvolvedClawCombatRules.IsSangunClaw(activeProfile))
+                attack.StrikeSangunCombo(direction, activeProfile);
+            else
+                attack.Strike(direction);
             characterAnimator?.PlayAttack();
             ShowAttackFeedback();
             attackCooldown = 1f / activeProfile.AttacksPerSecond;
@@ -1103,12 +1118,13 @@ namespace Nyangbingo.World
             profile.Id != HapjukseonId;
 
         public static bool IsBowCombatProfile(CombatProfileDefinition profile) =>
-            profile != null && !string.IsNullOrWhiteSpace(profile.Id) &&
-            profile.Id.IndexOf("bow", StringComparison.OrdinalIgnoreCase) >= 0;
+            BowCombatRules.IsBowProfile(profile);
 
         public bool TryBeginYeongnoSwallow(int tickDamage, float durationSeconds, float tickInterval)
         {
             if (!initialized || dead || tickDamage <= 0 || durationSeconds <= 0f || tickInterval <= 0f)
+                return false;
+            if (GimmickWeaponCombatRules.IsActiveProfile(this, GimmickWeaponProgress.YeongnoToothId))
                 return false;
             if (TryArtifactEscapeSwallow())
                 return false;
@@ -1535,8 +1551,9 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 마우스 아래 칸이 사거리 안이면 그 칸(공기면 발밑·인접 고체)을 우선하고,
-        /// 아니면 조준 방향 × 사거리 칸을 같은 규칙으로 쓴다.
+        /// 마우스 아래 칸이 사거리 안이면 그 칸을 그대로 쓴다.
+        /// 전경이 이미 없는 칸은 옆 고체로 붙이지 않고, 그 칸(배경)을 선택한다.
+        /// 커서가 사거리 밖일 때만 조준 방향 고체로 폴백한다.
         /// </summary>
         private bool TryResolveMiningCell(TileService tileService, out Vector3Int cell)
         {
@@ -1551,7 +1568,8 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 지표 채굴 UX — 마우스가 공기 칸(플레이어 발 높이)을 가리키면 바로 아래·인접 전경 고체로 보정한다.
+        /// 커서가 사거리 안 칸을 가리키면 전경이 없어도 그 칸을 선택한다.
+        /// 커서가 없을 때만 조준 방향의 전경 고체로 폴백한다.
         /// </summary>
         public static bool TryPickMiningCell(TileService tileService, Vector2 playerOrigin,
             Vector2? mouseWorld, Vector2 facing, float miningReach, out Vector3Int cell)
@@ -1574,7 +1592,8 @@ namespace Nyangbingo.World
             if (mouseWorld.HasValue)
             {
                 var cursorCell = tileService.WorldToCell(mouseWorld.Value);
-                if (IsMineableForegroundCell(tileService, cursorCell) &&
+                // 부서진 칸(전경 없음)도 옆 블록으로 옮기지 않고 그 칸 배경을 선택한다.
+                if (tileService.InBounds(cursorCell) &&
                     IsWithinMiningReach(tileService, attackOrigin, cursorCell, reachSq))
                 {
                     cell = cursorCell;
@@ -1657,7 +1676,8 @@ namespace Nyangbingo.World
             var criticalDefinition = clawTier == 2 ? catalog?.FindGlobal(IronClawMiningCriticalKey) : null;
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
-            var criticalChance = CalculateMiningCriticalChance(baseCriticalChance,
+            var criticalChance = CalculateMiningCriticalChance(
+                baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
                 statSheet.MiningCriticalChance);
             var critical = item != null && amount > 0 && UnityEngine.Random.value < criticalChance;
             if (critical)
@@ -1686,7 +1706,9 @@ namespace Nyangbingo.World
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
             var critical = UnityEngine.Random.value <
-                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+                           CalculateMiningCriticalChance(
+                               baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
+                               statSheet.MiningCriticalChance);
             if (critical)
             {
                 amount++;
@@ -1709,7 +1731,9 @@ namespace Nyangbingo.World
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
             var critical = UnityEngine.Random.value <
-                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+                           CalculateMiningCriticalChance(
+                               baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
+                               statSheet.MiningCriticalChance);
             if (critical)
             {
                 amount++;
@@ -1732,7 +1756,9 @@ namespace Nyangbingo.World
             if (criticalDefinition != null && criticalDefinition.TryGetFloat(out var configuredChance))
                 baseCriticalChance = configuredChance;
             var critical = UnityEngine.Random.value <
-                           CalculateMiningCriticalChance(baseCriticalChance, statSheet.MiningCriticalChance);
+                           CalculateMiningCriticalChance(
+                               baseCriticalChance + (runtimeServices?.Traits?.MiningCriticalBonus ?? 0f),
+                               statSheet.MiningCriticalChance);
             if (critical)
             {
                 amount++;
@@ -1868,13 +1894,13 @@ namespace Nyangbingo.World
         private void TryFanAbility()
         {
             if (activeProfile == null ||
-                (activeProfile.Id != HapjukseonId && activeProfile.Id != CheolseonId &&
-                 activeProfile.Id != SeolpungseonId)) return;
+                !EvolvedFanCombatRules.IsFanAbilityWeapon(activeProfile.Id)) return;
             if (activeProfile.Id == SeolpungseonId)
                 attack.ConfigureFrostSlow(SeolpungseonFrostSlowFraction, SeolpungseonFrostSlowDurationSeconds);
             else
                 attack.ConfigureFrostSlow(0f, 0f);
-            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id)))
+            var knockback = EvolvedFanCombatRules.ResolveAbilityKnockback(activeProfile);
+            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id), knockback))
             {
                 if (activeProfile.Id == SeolpungseonId)
                     attack.ConfigureFrostSlow(0f, 0f);
@@ -1883,7 +1909,10 @@ namespace Nyangbingo.World
         }
 
         public static int ResolveFanAbilityDamage(string combatProfileId) =>
-            combatProfileId == CheolseonId || combatProfileId == SeolpungseonId
+            combatProfileId == CheolseonId || combatProfileId == SeolpungseonId ||
+            combatProfileId == FanItemIds.SeongeFan ||
+            combatProfileId == FanItemIds.IceRootWhipfan ||
+            combatProfileId == FanItemIds.ColdWaveFan
                 ? WireSnareAbility.CheolseonDamage
                 : WireSnareAbility.HapjukseonDamage;
 
@@ -2040,10 +2069,23 @@ namespace Nyangbingo.World
                     ? IronClawId
                     : BareClawId;
             var profileId = runtimeServices?.ActiveSlot?.ResolveCombatProfileId(clawProfileId) ?? clawProfileId;
-            var profile = profileId == LanternId
-                ? lanternCarryProfile ??= CombatProfileDefinition.CreateRuntime(
-                    LanternId, "U0", false, 0, 0f, 0f, 0f, 1.5f, 90f, false, false)
-                : catalog != null ? catalog.FindCombatProfile(profileId) : null;
+            CombatProfileDefinition profile;
+            if (profileId == LanternId)
+            {
+                profile = lanternCarryProfile ??= CombatProfileDefinition.CreateRuntime(
+                    LanternId, "U0", false, 0, 0f, 0f, 0f, 1.5f, 90f, false, false);
+            }
+            else if (GimmickWeaponCombatRules.IsGimmickWeaponId(profileId) && catalog != null)
+            {
+                var baseProfile = catalog.FindCombatProfile(clawProfileId);
+                profile = baseProfile != null
+                    ? GimmickWeaponCombatRules.CreateScaledProfile(profileId, baseProfile, catalog)
+                    : catalog.FindCombatProfile(profileId);
+            }
+            else
+            {
+                profile = catalog != null ? catalog.FindCombatProfile(profileId) : null;
+            }
             if (profile == null || !attack.ConfigureForRuntime(transform, ~0, profile)) return;
             var slowFraction = 0f;
             var slowDefinition = profileId == IceSteelClawId ? catalog?.FindGlobal(IceSteelClawSlowKey) : null;
@@ -2311,7 +2353,31 @@ namespace Nyangbingo.World
                 return true;
             }
 
+            // 캣닢은 HP가 가득일 때 심기로 넘긴다.
+            if (itemId == PlayerHealthRecoveryService.CatnipItemId)
+                return false;
+
             interactionMessages?.ShowExternalMessage("HP가 가득 찼거나 회복 아이템을 사용할 수 없습니다.");
+            return true;
+        }
+
+        private bool TryPlantSelectedCatnip()
+        {
+            tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
+            if (tilePalette?.SelectedItemId != PlayerHealthRecoveryService.CatnipItemId ||
+                worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null)
+                return false;
+
+            var origin = (Vector2)transform.position;
+            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
+            // 수확 가능한 캣닢이 있으면 심기보다 E 상호작용(채집)을 우선한다.
+            if (worldDecorationRenderer.TryFindCatnipInRange(origin, CatnipHarvestRadius, aim, out _))
+                return false;
+            if (!worldDecorationRenderer.TryPlantCatnip(
+                    origin, CatnipHarvestRadius, aim, runtimeServices.PlayerInventory, out var message))
+                return false;
+
+            interactionMessages?.ShowExternalMessage(message);
             return true;
         }
 

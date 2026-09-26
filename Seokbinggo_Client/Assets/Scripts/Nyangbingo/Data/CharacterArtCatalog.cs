@@ -14,6 +14,9 @@ namespace Nyangbingo.Data
             [SerializeField] private Sprite sprite;
             [SerializeField] private Sprite[] idleFrames = Array.Empty<Sprite>();
             [SerializeField] private Sprite[] walkFrames = Array.Empty<Sprite>();
+            [SerializeField] private Sprite[] jumpFrames = Array.Empty<Sprite>();
+            [SerializeField] private Sprite[] fallFrames = Array.Empty<Sprite>();
+            [SerializeField] private Sprite[] landFrames = Array.Empty<Sprite>();
             [SerializeField] private Sprite[] attackFrames = Array.Empty<Sprite>();
             [SerializeField] private Sprite[] hitFrames = Array.Empty<Sprite>();
             [SerializeField] private Sprite[] deathFrames = Array.Empty<Sprite>();
@@ -27,6 +30,9 @@ namespace Nyangbingo.Data
             public Sprite Sprite => sprite;
             public IReadOnlyList<Sprite> IdleFrames => idleFrames ?? Array.Empty<Sprite>();
             public IReadOnlyList<Sprite> WalkFrames => walkFrames ?? Array.Empty<Sprite>();
+            public IReadOnlyList<Sprite> JumpFrames => jumpFrames ?? Array.Empty<Sprite>();
+            public IReadOnlyList<Sprite> FallFrames => fallFrames ?? Array.Empty<Sprite>();
+            public IReadOnlyList<Sprite> LandFrames => landFrames ?? Array.Empty<Sprite>();
             public IReadOnlyList<Sprite> AttackFrames => attackFrames ?? Array.Empty<Sprite>();
             public IReadOnlyList<Sprite> HitFrames => hitFrames ?? Array.Empty<Sprite>();
             public IReadOnlyList<Sprite> DeathFrames => deathFrames ?? Array.Empty<Sprite>();

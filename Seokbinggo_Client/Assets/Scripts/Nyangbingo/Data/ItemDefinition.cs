@@ -23,6 +23,9 @@ namespace Nyangbingo.Data
         public const string Hapjukseon = "hapjukseon";
         public const string Cheolseon = "cheolseon";
         public const string Seolpungseon = "seolpungseon";
+        public const string SeongeFan = "seonge_fan";
+        public const string IceRootWhipfan = "ice_root_whipfan";
+        public const string ColdWaveFan = "cold_wave_fan";
     }
 
     public static class BellRopeItemIds

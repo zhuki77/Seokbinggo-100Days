@@ -210,10 +210,14 @@ namespace Nyangbingo.World
             return true;
         }
 
+        /// <summary>
+        /// items.csv 성에/얼음뿌리/한파석 노트 — 서리 1·2·3차 봉헌 치환.
+        /// 월드젠 광맥(copper/iron/icesteel)과 별개로 lazy-reveal만 이 매핑을 쓴다.
+        /// </summary>
         private static string OreOf(int stage) =>
-            stage >= 3 ? WorldTileTypes.IceSteelOre :
-            stage >= 2 ? WorldTileTypes.IronOre :
-            WorldTileTypes.CopperOre;
+            stage >= 3 ? WorldTileTypes.ColdWaveOre :
+            stage >= 2 ? WorldTileTypes.IceRoot :
+            WorldTileTypes.SeongeOre;
 
         private static int ReadInt(GameDataCatalog catalog, string key, int fallback)
         {

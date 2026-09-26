@@ -36,6 +36,7 @@ namespace Nyangbingo.World
         private readonly RoomTempService roomTemperature;
         private readonly HeatStageService heatStage;
         private readonly Func<bool> suppressHypothermiaFall;
+        private Func<float> dayTemperatureRiseMultiplierProvider;
         private readonly StatSheet statSheet = new StatSheet();
         private readonly float minimum;
         private readonly float maximum;
@@ -91,6 +92,7 @@ namespace Nyangbingo.World
         public float Normalized => maximum <= minimum ? 0f : Mathf.InverseLerp(minimum, maximum, Current);
         public bool IsHeatstroke => Current > heatstrokeThreshold;
         public float RecoveryMultiplier => recoveryMultiplier;
+        public float HypothermiaDamageAtTemperature => hypothermiaDamageAtTemperature;
         public event Action<float> Changed;
         public event Action ReachedMaximum;
         public event Action<int> RoomTemperatureChanged;
@@ -98,6 +100,8 @@ namespace Nyangbingo.World
         public int CurrentRoomTemperature { get; private set; }
         public bool IsHypothermia => trackedTransform != null && roomTemperature != null &&
                                      CurrentRoomTemperature <= hypothermiaRoomTemp;
+        public bool IsHypothermiaDamageImminent =>
+            IsHypothermia && Current <= hypothermiaDamageAtTemperature + 10f;
 
         public void SetTrackedTransform(Transform value) => trackedTransform = value;
 
@@ -108,6 +112,9 @@ namespace Nyangbingo.World
         }
 
         public void ConfigureShadeHeatSuppressor(Func<bool> value) => suppressDaySurfaceHeatRise = value;
+
+        public void ConfigureDayTemperatureRiseMultiplier(Func<float> value) =>
+            dayTemperatureRiseMultiplierProvider = value;
 
         public bool SetRecoveryMultiplier(float value)
         {
@@ -251,7 +258,11 @@ namespace Nyangbingo.World
         private float DayRiseMultiplier()
         {
             statSheet.Recalculate(equipmentSystem);
-            return Mathf.Clamp(1f + statSheet.TemperatureRiseModifier, .65f, 1f);
+            var equipmentMultiplier = Mathf.Clamp(1f + statSheet.TemperatureRiseModifier, .65f, 1f);
+            var traitMultiplier = dayTemperatureRiseMultiplierProvider?.Invoke() ?? 1f;
+            if (float.IsNaN(traitMultiplier) || float.IsInfinity(traitMultiplier) || traitMultiplier <= 0f)
+                traitMultiplier = 1f;
+            return equipmentMultiplier * traitMultiplier;
         }
 
         private void Set(float value)

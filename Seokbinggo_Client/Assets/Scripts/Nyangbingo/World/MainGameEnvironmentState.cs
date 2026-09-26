@@ -65,7 +65,8 @@ namespace Nyangbingo.World
         public bool IsInitialized { get; private set; }
 
         public const string DoorDefinitionId = "door";
-        public const float OpenDoorVisualAlpha = .45f;
+        // 열린 프레임 자체에 통과 구멍이 있다. 추가 반투명은 닫힘/열림 아트가 다른 그림처럼 보이게 한다.
+        public const float OpenDoorVisualAlpha = 1f;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             BuildingArtCatalog artCatalog = null)
@@ -198,22 +199,25 @@ namespace Nyangbingo.World
         public bool TryRemove(string objectId)
         {
             if (string.IsNullOrWhiteSpace(objectId) || !byObjectId.TryGetValue(objectId, out var entry)) return false;
-            if (entry.Record.definitionId == DoorDefinitionId && tileDoorCells.Contains(entry.Cell))
+
+            // 타일 문 회수/파괴: 레지스트리만 지우면 door·door_top 타일·열린 오버레이가 남는다.
+            var isTileDoor = string.Equals(entry.Record.definitionId, DoorDefinitionId, StringComparison.Ordinal) &&
+                             tileDoorCells.Contains(entry.Cell);
+            if (isTileDoor)
             {
                 var tileService = bootstrap?.TileService;
                 if (tileService == null) return false;
-                // Recovery owns the single item drop. Remove the two-cell foreground without
-                // another drop or a recursive OnTileBroken -> TryRemove notification.
-                var baseTile = tileService.GetTile(entry.Cell);
-                var headCell = entry.Cell + Vector3Int.up;
-                var headTile = tileService.GetTile(headCell);
-                var foregroundCell = TileService.IsDoorFootprintElement(baseTile.elementType)
-                    ? entry.Cell : headCell;
-                if ((TileService.IsDoorFootprintElement(baseTile.elementType) ||
-                     TileService.IsDoorFootprintElement(headTile.elementType)) &&
-                    !tileService.TryClearForegroundWithoutDrop(foregroundCell, raiseBrokenEvent: false))
-                    return false;
+                suppressTileDoorSync = true;
+                try
+                {
+                    tileService.ClearDoorFootprintFully(entry.Cell);
+                }
+                finally
+                {
+                    suppressTileDoorSync = false;
+                }
             }
+
             if (entry.Record.definitionId == DoorDefinitionId) SetDoorTileVisible(entry.Cell, true);
             byObjectId.Remove(objectId);
             byCell.Remove(entry.Cell);
@@ -253,7 +257,7 @@ namespace Nyangbingo.World
 
         /// <summary>
         /// 단열 문(설치물·전경 타일) 개폐. BarrierActive=true는 닫힘(밀폐 인정), false는 개방(밀폐 미인정).
-        /// 전경 타일 문은 1x2(door+door_top)를 함께 치우거나 복구하고, 열린 모습은 반투명 오버레이로 남긴다.
+        /// 전경 타일 문은 1x2(door+door_top)를 함께 치우거나 복구하고, 열린 모습은 Frame_2 오버레이로 남긴다.
         /// </summary>
         public bool TryToggleInsulationDoor(string objectId, out bool nowOpen)
         {
@@ -273,9 +277,12 @@ namespace Nyangbingo.World
                     if (nextClosed)
                     {
                         if (!tileService.TryRestoreForeground(entry.Cell, DoorDefinitionId)) return false;
+                        tileService.SetLogicalDoorOpen(entry.Cell, open: false);
                     }
                     else if (!tileService.TryClearForegroundWithoutDrop(entry.Cell, raiseBrokenEvent: false))
                         return false;
+                    else
+                        tileService.SetLogicalDoorOpen(entry.Cell, open: true);
                 }
                 finally
                 {
@@ -1061,6 +1068,10 @@ namespace Nyangbingo.World
             foreground.SetColor(cell, visible ? Color.white : Color.clear);
         }
 
+        /// <summary>
+        /// door.aseprite는 닫힘(Frame_0)→열림(Frame_2)→닫힘(Frame_5) 왕복이다.
+        /// 마지막 프레임은 다시 닫힘이므로 열림으로 쓰면 안 된다.
+        /// </summary>
         private static Sprite ResolveDoorSprite(BuildingArtCatalog.Entry art, bool open)
         {
             if (art?.Frames == null || art.Frames.Count == 0) return null;

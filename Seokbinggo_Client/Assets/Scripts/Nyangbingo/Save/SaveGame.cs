@@ -154,6 +154,11 @@ namespace Nyangbingo.Save
     {
         public string patchId;
         public int harvestedDay;
+        public int supportX;
+        public int supportY;
+        public bool planted;
+        public int respawnDays;
+        public int healHitPoints;
     }
 
     [Serializable]
@@ -271,8 +276,8 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 26;
-        /// <summary>v72: schema 26은 서리 확산의 고유 제단 보스 처치 목록을 추가하며 schema 23부터 순차 이관한다.</summary>
+        public const int CurrentSchemaVersion = 27;
+        /// <summary>v72: schema 27은 시작 특성 id를 추가하며 schema 23부터 순차 이관한다.</summary>
         public const int MinimumCompatibleSchemaVersion = 23;
         private const string FoxRainCharmId = "fox_rain_charm";
         private const int RefundItemMaxStack = 99;
@@ -309,6 +314,8 @@ namespace Nyangbingo.Save
         public float talismanStrideRemaining;
         public float talismanHideRemaining;
         public float talismanFrostRemaining;
+        /// <summary>시작 특성 id 1개. 비어 있으면 미선택(구 세이브·선택 전).</summary>
+        public string selectedTraitId = string.Empty;
         public List<string> gimmickWeaponsGranted = new List<string>();
         public List<ArtifactDailyUseRecord> artifactDailyUses = new List<ArtifactDailyUseRecord>();
         public List<string> frostPendingCells = new List<string>();
@@ -454,6 +461,8 @@ namespace Nyangbingo.Save
                 talismanHideRemaining, TalismanRuntime.HideDurationSeconds);
             talismanFrostRemaining = NormalizeDuration(
                 talismanFrostRemaining, TalismanRuntime.FrostDurationSeconds);
+            if (selectedTraitId == null) selectedTraitId = string.Empty;
+            if (!TraitRules.IsKnownId(selectedTraitId)) selectedTraitId = string.Empty;
             gimmickWeaponsGranted.RemoveAll(string.IsNullOrWhiteSpace);
             var uniqueFrostBossIds = new HashSet<string>(StringComparer.Ordinal);
             frostClearedBossIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) || !uniqueFrostBossIds.Add(id));
@@ -907,7 +916,8 @@ namespace Nyangbingo.Save
             FirstKillDay = Math.Max(0, firstKillDay);
             DisplayName = IsUnlocked ? displayName : "?";
             AppearanceHint = IsUnlocked ? appearanceHint : string.Empty;
-            SourceText = IsUnlocked ? sourceText : string.Empty;
+            SourceText = IsUnlocked ? sourceText ?? string.Empty : string.Empty;
+            HasReadableBackText = IsUnlocked && !string.IsNullOrWhiteSpace(SourceText);
         }
 
         public string EntryId { get; }
@@ -919,11 +929,12 @@ namespace Nyangbingo.Save
         public string DisplayName { get; }
         public string AppearanceHint { get; }
         public string SourceText { get; }
+        public bool HasReadableBackText { get; }
     }
 
     public sealed class YokaiCodexPresentationModel
     {
-        public const int ExpectedCardCount = 9;
+        public const int ExpectedCardCount = 17;
         public const int GridColumns = 3;
         public static readonly Vector2 GridCardSize = new Vector2(72f, 96f);
         public static readonly Vector2 EnlargedCardSize = new Vector2(192f, 256f);
@@ -977,39 +988,24 @@ namespace Nyangbingo.Save
 
             cards.Clear();
             var entryIds = new HashSet<string>(StringComparer.Ordinal);
-            for (var i = 0; i < catalog.Yokai.Count; i++)
-            {
-                var definition = catalog.Yokai[i];
-                var kills = yokaiKills.TryGetValue(definition.Id, out var savedKills) ? savedKills : 0;
-                var firstKillDay = 0;
-                if (definition.Kind == YokaiKind.Gangcheori || definition.Kind == YokaiKind.Imugi)
-                {
-                    for (var bossIndex = 0; bossIndex < catalog.Bosses.Count; bossIndex++)
-                    {
-                        var boss = catalog.Bosses[bossIndex];
-                        var representsSameYokai =
-                            definition.Kind == YokaiKind.Gangcheori && boss.Kind == BossKind.Gangcheori ||
-                            definition.Kind == YokaiKind.Imugi && boss.Kind == BossKind.Imugi;
-                        if (!representsSameYokai || !bossRecords.TryGetValue(boss.Id, out var record)) continue;
-                        kills = Math.Max(kills, record.count);
-                        firstKillDay = record.firstDay;
-                    }
-                }
-                AddCard(entryIds, definition.Id, false, definition.DisplayName, definition.AppearanceHint,
-                    CodexSourceFor(definition.Kind), kills, firstKillDay);
-            }
+            var entries = catalog.CodexEntries;
+            if (entries == null || entries.Count != ExpectedCardCount)
+                throw new InvalidOperationException(
+                    $"Yokai codex requires exactly {ExpectedCardCount} catalog entries, but found {entries?.Count ?? 0}.");
 
-            var mvpDaysDef = catalog.FindGlobal(GlobalKeys.MvpDays);
-            var mvpDays = mvpDaysDef != null && mvpDaysDef.TryGetInt(out var parsedMvpDays) ? parsedMvpDays : 30;
-            for (var i = 0; i < catalog.Bosses.Count; i++)
+            for (var i = 0; i < entries.Count; i++)
             {
-                var definition = catalog.Bosses[i];
-                if (definition.Kind == BossKind.Gangcheori || definition.Kind == BossKind.Imugi) continue;
-                // 데모 범위(mvp_days)를 초과하거나 일수를 파악할 수 없는 보스는 도감에 포함하지 않는다.
-                if (!int.TryParse(definition.RecommendedDay, out var bossDay) || bossDay > mvpDays) continue;
-                bossRecords.TryGetValue(definition.Id, out var record);
-                AddCard(entryIds, definition.Id, true, definition.DisplayName, definition.RecommendedDay,
-                    CodexSourceFor(definition.Kind), record.count, record.firstDay);
+                var entry = entries[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.Id))
+                    throw new InvalidOperationException("Yokai codex catalog contains a null entry.");
+                var isBoss = IsBossKind(entry.Kind);
+                ResolveUnlock(entry, isBoss, yokaiKills, bossRecords, out var kills, out var firstKillDay);
+                var sourceText = ResolveSourceText(entry);
+                var appearanceHint = isBoss
+                    ? (catalog.FindBoss(entry.Id)?.RecommendedDay ?? entry.Source)
+                    : (catalog.FindYokai(entry.Id)?.AppearanceHint ?? entry.Source);
+                AddCard(entryIds, entry.Id, isBoss, entry.DisplayName, appearanceHint, sourceText, kills,
+                    firstKillDay);
             }
 
             if (cards.Count != ExpectedCardCount)
@@ -1019,7 +1015,7 @@ namespace Nyangbingo.Save
                 selectedEntryId = null;
                 backVisible = false;
             }
-            else if (!SelectedCard.IsUnlocked) backVisible = false;
+            else if (!SelectedCard.IsUnlocked || !SelectedCard.HasReadableBackText) backVisible = false;
         }
 
         public bool TryTapCard(string entryId)
@@ -1039,7 +1035,7 @@ namespace Nyangbingo.Save
         public bool TryFlipSelected()
         {
             var selected = SelectedCard;
-            if (selected == null || !selected.IsUnlocked) return false;
+            if (selected == null || !selected.IsUnlocked || !selected.HasReadableBackText) return false;
             backVisible = !backVisible;
             return true;
         }
@@ -1055,44 +1051,65 @@ namespace Nyangbingo.Save
         {
             if (string.IsNullOrWhiteSpace(entryId) || !entryIds.Add(entryId))
                 throw new InvalidOperationException($"Yokai codex contains an invalid or duplicate entry ID '{entryId}'.");
-            if (string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(sourceText))
-                throw new InvalidOperationException($"Yokai codex entry '{entryId}' is missing display or source text.");
-            cards.Add(new YokaiCodexCard(entryId, isBoss, displayName, appearanceHint, sourceText,
+            if (string.IsNullOrWhiteSpace(displayName))
+                throw new InvalidOperationException($"Yokai codex entry '{entryId}' is missing display text.");
+            cards.Add(new YokaiCodexCard(entryId, isBoss, displayName, appearanceHint, sourceText ?? string.Empty,
                 killCount, firstKillDay));
         }
 
-        private static string CodexSourceFor(YokaiKind kind)
+        private static bool IsBossKind(string kind) =>
+            !string.IsNullOrWhiteSpace(kind) &&
+            (kind.IndexOf("보스", StringComparison.Ordinal) >= 0 ||
+             string.Equals(kind, "boss", StringComparison.OrdinalIgnoreCase));
+
+        private static string ResolveSourceText(CodexEntryDefinition entry)
         {
-            switch (kind)
-            {
-                case YokaiKind.ClubGoblin: return "구비 도깨비 씨름담 — 사람에게 씨름을 걸고 방망이를 휘두르는 익살꾼.";
-                case YokaiKind.Bulgasari: return "《송남잡지》 — 쇠를 먹으며 자라나는 불가사리 전승.";
-                case YokaiKind.Yagwanggwi: return "《동국세시기》 — 설날 밤 신발을 훔쳐 가는 야광귀 전승.";
-                case YokaiKind.Eoduksini: return "어둑시니 구전 — 바라볼수록 어둠 속에서 거대해지는 요괴.";
-                case YokaiKind.Gangcheori: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
-                case YokaiKind.Gaekgwi: return "객귀 구전 — 타향에서 죽어 돌아갈 곳을 잃고 떠도는 혼령.";
-                case YokaiKind.Imugi: return "이무기 구전 — 물 아래에서 여의주를 기다리며 용이 되기를 바라는 뱀.";
-                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown yokai codex source.");
-            }
+            if (IsReadableCodexLore(entry.CardBackText)) return entry.CardBackText.Trim();
+            if (IsReadableCodexLore(entry.Source) &&
+                entry.Source.IndexOf("미확인", StringComparison.Ordinal) < 0)
+                return entry.Source.Trim();
+            return string.Empty;
         }
 
-        private static string CodexSourceFor(BossKind kind)
+        private static bool IsReadableCodexLore(string text)
         {
-            switch (kind)
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            var trimmed = text.TrimStart();
+            return trimmed.IndexOf("[작성 대기", StringComparison.Ordinal) != 0;
+        }
+
+        private void ResolveUnlock(CodexEntryDefinition entry, bool isBoss,
+            Dictionary<string, int> yokaiKills, Dictionary<string, BossRecord> bossRecords,
+            out int kills, out int firstKillDay)
+        {
+            kills = 0;
+            firstKillDay = 0;
+            if (isBoss)
             {
-                case BossKind.GoblinChief: return "구비 도깨비 씨름담 — 씨름 한판을 걸어오는 도깨비 이야기.";
-                case BossKind.MotherBulgasari: return "《송남잡지》 — 쇠를 먹으며 자라나는 불가사리 전승.";
-                case BossKind.Imugi: return "이무기 구전 — 물 아래에서 여의주를 기다리며 용이 되기를 바라는 뱀.";
-                case BossKind.Gangcheori: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
-                case BossKind.Jigwi: return "신라 설화의 화귀(火鬼) — 사람이 불덩이가 됐다.";
-                case BossKind.GangcheolBlaze:
-                case BossKind.GangcheolPerfect: return "《성호사설》 — 지나간 자리에 가뭄을 남긴다는 강철 전승.";
-                case BossKind.Samdugumi: return "제주 전승 — 머리 세 달린 짐승.";
-                // 출처 미검증 — 문헌명 확인 전까지 공란
-                case BossKind.Sangun:
-                case BossKind.EopGuryeongi:
-                case BossKind.Yeongno:
-                default: return string.Empty;
+                if (bossRecords.TryGetValue(entry.Id, out var bossRecord))
+                {
+                    kills = bossRecord.count;
+                    firstKillDay = bossRecord.firstDay;
+                }
+                return;
+            }
+
+            if (yokaiKills.TryGetValue(entry.Id, out var savedKills))
+                kills = savedKills;
+
+            // 강철이·이무기 요괴 카드는 대응 보스 처치도 해금에 합산한다.
+            var yokai = catalog.FindYokai(entry.Id);
+            if (yokai == null) return;
+            if (yokai.Kind != YokaiKind.Gangcheori && yokai.Kind != YokaiKind.Imugi) return;
+            for (var bossIndex = 0; bossIndex < catalog.Bosses.Count; bossIndex++)
+            {
+                var boss = catalog.Bosses[bossIndex];
+                var representsSameYokai =
+                    yokai.Kind == YokaiKind.Gangcheori && boss.Kind == BossKind.Gangcheori ||
+                    yokai.Kind == YokaiKind.Imugi && boss.Kind == BossKind.Imugi;
+                if (!representsSameYokai || !bossRecords.TryGetValue(boss.Id, out var record)) continue;
+                kills = Math.Max(kills, record.count);
+                firstKillDay = Math.Max(firstKillDay, record.firstDay);
             }
         }
     }

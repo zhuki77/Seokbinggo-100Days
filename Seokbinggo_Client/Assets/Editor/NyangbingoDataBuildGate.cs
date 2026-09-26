@@ -28,6 +28,21 @@ public static class NyangbingoDataBuildGate
             NyangbingoEditorVerifyLog.Fail("Validate Product Data Freshness", summary);
     }
 
+    [MenuItem("Nyangbingo/Refresh Product Data Manifest")]
+    public static void RefreshManifestFromMenu()
+    {
+        try
+        {
+            WriteCurrentManifest();
+            NyangbingoEditorVerifyLog.Pass("Refresh Product Data Manifest",
+                "Product data freshness manifest rewritten from current CSV files.");
+        }
+        catch (Exception exception)
+        {
+            NyangbingoEditorVerifyLog.Fail("Refresh Product Data Manifest", exception.Message);
+        }
+    }
+
     public static bool TryValidateCurrent(out string summary)
     {
         try
@@ -118,13 +133,23 @@ public static class NyangbingoDataBuildGate
         return lines.Skip(1)
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .Select(line => line.Trim())
+            .Where(line => !IsEditorReferenceManifestEntry(line))
             .ToArray();
+    }
+
+    private static bool IsEditorReferenceManifestEntry(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry)) return false;
+        var separator = entry.IndexOf('|');
+        var fileName = separator > 0 ? entry.Substring(0, separator) : entry;
+        return IsEditorReferenceCsv(fileName);
     }
 
     private static string[] BuildManifestLines(string csvDirectory)
     {
         return Directory.GetFiles(csvDirectory, "*.csv")
             .OrderBy(path => Path.GetFileName(path), StringComparer.Ordinal)
+            .Where(path => !IsEditorReferenceCsv(Path.GetFileName(path)))
             .Select(path =>
             {
                 var fileName = Path.GetFileName(path);
@@ -135,6 +160,12 @@ public static class NyangbingoDataBuildGate
             })
             .ToArray();
     }
+
+    /// <summary>
+    /// 에디터 진행 표기용 CSV. 제품 런타임 카탈로그에 들어가지 않으므로 freshness 게이트에서 제외한다.
+    /// </summary>
+    private static bool IsEditorReferenceCsv(string fileName) =>
+        string.Equals(fileName, "content-status.csv", StringComparison.Ordinal);
 
     private static void ValidateGeneratedCatalog()
     {
@@ -176,7 +207,7 @@ public static class NyangbingoDataBuildGate
             ["items"] = 170,
             ["recipes"] = 97,
             ["modules"] = 11,
-            ["mineral tiers"] = 15,
+            ["mineral tiers"] = 18,
             ["seal rules"] = 23,
             ["ID migrations"] = 28,
             ["day curves"] = 30,

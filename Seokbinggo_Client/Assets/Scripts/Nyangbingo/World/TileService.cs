@@ -232,6 +232,27 @@ namespace Nyangbingo.World
             return destroyed;
         }
 
+        public bool TryHealWall(Vector3Int cell, float amount, out float healed)
+        {
+            healed = 0f;
+            if (!IsFinite(amount) || amount <= 0f ||
+                !TryResolveWallMaterial(cell, out _) ||
+                !wallDamageTaken.TryGetValue(cell, out var currentDamage) ||
+                currentDamage <= 0f)
+                return false;
+
+            healed = Mathf.Min(amount, currentDamage);
+            currentDamage -= healed;
+            var maximum = ResolveWallHitPoints(cell);
+            if (currentDamage <= .0001f)
+                wallDamageTaken.Remove(cell);
+            else
+                wallDamageTaken[cell] = currentDamage;
+            GameEvents.RaiseWallDurabilityChanged(
+                cell, maximum - Mathf.Max(0f, currentDamage), maximum, false);
+            return healed > 0f;
+        }
+
         public float GetWallRemainingHitPoints(Vector3Int cell)
         {
             if (!TryResolveWallMaterial(cell, out _)) return 0f;
@@ -278,6 +299,21 @@ namespace Nyangbingo.World
         }
 
         public bool IsDoorOpen(Vector3Int cell) => openDoors.Contains(ResolveDoorBaseForOpenState(cell));
+
+        /// <summary>
+        /// Environment 개폐(타일 데이터 제거/복구)와 논리 open 플래그를 맞춘다.
+        /// TileService.OpenDoor 오버레이는 쓰지 않는다(Environment 반투명 오버레이와 중복 방지).
+        /// </summary>
+        public void SetLogicalDoorOpen(Vector3Int baseCell, bool open)
+        {
+            if (!InBounds(baseCell)) return;
+            // 호출측이 문 기준 칸(아래)을 넘긴다. door_top 칸이 오면 한 칸 내린다.
+            if (string.Equals(GetTile(baseCell).elementType, DoorTopElementType, StringComparison.Ordinal))
+                baseCell += Vector3Int.down;
+            if (!InBounds(baseCell)) return;
+            if (open) openDoors.Add(baseCell);
+            else RemoveOpenDoorState(baseCell);
+        }
 
         public bool TryGetDamageableWallMaterial(
             Vector3Int cell, out YokaiWallMaterial material) =>
@@ -439,7 +475,17 @@ namespace Nyangbingo.World
                 return false;
 
             var current = tiles[cell.x, cell.y];
-            if (current.IsAir) return false;
+            // 열린 1x2 문은 데이터가 air라 footprint·open 플래그로 부순다(위칸 클릭 포함).
+            if (current.IsAir)
+            {
+                if (IsDoorOpen(cell))
+                    return TryBreakDoorFootprint(ResolveDoorBaseForOpenState(cell), toolTier,
+                        out droppedItemId, out droppedAmount);
+                var below = cell + Vector3Int.down;
+                if (InBounds(below) && IsDoorOpen(below))
+                    return TryBreakDoorFootprint(below, toolTier, out droppedItemId, out droppedAmount);
+                return false;
+            }
             if (IndestructibleElementTypes.Contains(current.elementType)) return false;
             if (toolTier < current.hardness) return false;
 
@@ -513,13 +559,39 @@ namespace Nyangbingo.World
         {
             if (!InBounds(cell)) return false;
             var current = tiles[cell.x, cell.y];
-            if (current.IsAir) return false;
+            if (current.IsAir)
+            {
+                // 열린 문(데이터 air)도 footprint·잔여 타일맵 충돌을 정리해야 한다.
+                if (IsDoorOpen(cell))
+                    return TryClearDoorFootprint(ResolveDoorBaseForOpenState(cell), raiseBrokenEvent);
+                var below = cell + Vector3Int.down;
+                if (InBounds(below) && IsDoorOpen(below))
+                    return TryClearDoorFootprint(below, raiseBrokenEvent);
+                return false;
+            }
             if (IndestructibleElementTypes.Contains(current.elementType)) return false;
 
             if (IsDoorFootprintElement(current.elementType))
                 return TryClearDoorFootprint(ResolveDoorBaseCell(cell, current.elementType), raiseBrokenEvent);
 
             return ClearForegroundCell(cell, current.elementType, raiseBrokenEvent);
+        }
+
+        /// <summary>
+        /// 타일 문 회수/파괴용. 닫힘·열림과 무관하게 door+door_top 데이터·비주얼·open 플래그를 비운다.
+        /// </summary>
+        public void ClearDoorFootprintFully(Vector3Int baseCell)
+        {
+            if (!InBounds(baseCell)) return;
+            if (string.Equals(GetTile(baseCell).elementType, DoorTopElementType, StringComparison.Ordinal))
+                baseCell += Vector3Int.down;
+            TryClearDoorFootprint(baseCell, raiseBrokenEvent: false);
+            // TryClearDoorFootprint가 air-only면 clearedAny=false여도 비주얼 강제 제거는 수행한다.
+            ApplyForegroundVisual(baseCell, null);
+            var head = baseCell + Vector3Int.up;
+            if (InBounds(head)) ApplyForegroundVisual(head, null);
+            RemoveOpenDoorState(baseCell);
+            renderer?.NotifyForegroundCollisionDirty();
         }
 
         /// <summary>인벤 소비 없이 전경 복구(열린 단열 문 닫기).</summary>
@@ -630,12 +702,18 @@ namespace Nyangbingo.World
         private bool TryClearDoorFootprint(Vector3Int baseCell, bool raiseBrokenEvent)
         {
             var head = baseCell + Vector3Int.up;
+            var wasOpen = IsDoorOpen(baseCell);
             var clearedAny = false;
             if (InBounds(baseCell))
             {
                 var baseTile = GetTile(baseCell);
                 if (IsDoorFootprintElement(baseTile.elementType))
                     clearedAny |= ClearForegroundCell(baseCell, baseTile.elementType, raiseBrokenEvent);
+                else
+                {
+                    // 데이터는 air인데 타일맵에만 남은 잔여 충돌/스프라이트를 강제 제거.
+                    ApplyForegroundVisual(baseCell, null);
+                }
             }
 
             if (InBounds(head))
@@ -643,9 +721,14 @@ namespace Nyangbingo.World
                 var headTile = GetTile(head);
                 if (IsDoorFootprintElement(headTile.elementType))
                     clearedAny |= ClearForegroundCell(head, headTile.elementType, raiseBrokenEvent);
+                else
+                    ApplyForegroundVisual(head, null);
             }
 
-            return clearedAny;
+            // 아래·위 칸을 한 번에 비운 뒤 CompositeCollider를 다시 합친다(위칸만 남는 잔여 충돌 방지).
+            renderer?.NotifyForegroundCollisionDirty();
+            if (wasOpen) RemoveOpenDoorState(baseCell);
+            return clearedAny || wasOpen;
         }
 
         private bool TryBreakDoorFootprint(Vector3Int baseCell, int toolTier, out string droppedItemId,
@@ -657,8 +740,9 @@ namespace Nyangbingo.World
             var baseTile = GetTile(baseCell);
             var head = baseCell + Vector3Int.up;
             var headTile = InBounds(head) ? GetTile(head) : default;
-            if (!IsDoorFootprintElement(baseTile.elementType) &&
-                !(InBounds(head) && IsDoorFootprintElement(headTile.elementType)))
+            var hasFootprint = IsDoorFootprintElement(baseTile.elementType) ||
+                               InBounds(head) && IsDoorFootprintElement(headTile.elementType);
+            if (!hasFootprint && !IsDoorOpen(baseCell))
                 return false;
 
             var hardness = 0;
@@ -668,7 +752,11 @@ namespace Nyangbingo.World
             if (toolTier < hardness) return false;
 
             GameEvents.RaiseMiningImpact(MiningImpactSurface.Mineral);
+            // 열린 문(양쪽 air)도 회수·이벤트·잔여 비주얼 정리 대상이다.
+            var wasOpen = IsDoorOpen(baseCell);
             TryClearDoorFootprint(baseCell, raiseBrokenEvent: true);
+            if (!hasFootprint && wasOpen)
+                GameEvents.RaiseTileBroken(baseCell);
             if (TryResolveDrop(DoorElementType, out var item, out var amount))
             {
                 ItemAcquisition.Request(item, amount);
@@ -1165,10 +1253,9 @@ namespace Nyangbingo.World
             if (renderer?.Foreground != null)
                 sprite = renderer.Foreground.GetSprite(cell);
             ApplyForegroundVisual(cell, null);
+            // 1x2: 위칸(door_top) 충돌 타일도 반드시 비운다. 데이터는 유지하고 비주얼·충돌만 제거.
             var head = cell + Vector3Int.up;
-            if (InBounds(head) &&
-                string.Equals(GetTile(head).elementType, DoorTopElementType, StringComparison.Ordinal))
-                ApplyForegroundVisual(head, null);
+            if (InBounds(head)) ApplyForegroundVisual(head, null);
             if (sprite != null && renderer?.Foreground != null)
             {
                 var visual = new GameObject($"OpenDoor_{cell.x}_{cell.y}");

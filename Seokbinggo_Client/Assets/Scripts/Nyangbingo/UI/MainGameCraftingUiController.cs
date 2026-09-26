@@ -756,19 +756,83 @@ namespace Nyangbingo.UI
 
         private void BuildCodexGrid()
         {
-            if (codexGridRoot == null || codexCardButtons == null ||
-                codexCardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            if (codexGridRoot == null)
             {
                 Debug.LogError("[Nyangbingo] MainGameCraftingUiController: IntegratedCodexViewport 하이어라키가 인스펙터에 배선되지 않았습니다.");
+                return;
+            }
+            EnsureCodexCardBindings();
+            if (codexCardButtons == null ||
+                codexCardButtons.Length != YokaiCodexPresentationModel.ExpectedCardCount)
+            {
+                Debug.LogError("[Nyangbingo] MainGameCraftingUiController: 도감 카드 슬롯을 17장으로 구성하지 못했습니다.");
                 return;
             }
             for (var index = 0; index < codexCardButtons.Length; index++)
             {
                 var capturedIndex = index;
                 RuntimeUiButtonArt.ApplyCodexCard(codexCardButtons[index], gameplayArtCatalog);
+                codexCardButtons[index].onClick.RemoveAllListeners();
                 codexCardButtons[index].onClick.AddListener(() => SelectCodexCard(capturedIndex));
             }
             codexGridRoot.SetActive(false);
+        }
+
+        private void EnsureCodexCardBindings()
+        {
+            var needed = YokaiCodexPresentationModel.ExpectedCardCount;
+            if (codexCardButtons != null && codexCardButtons.Length == needed &&
+                codexCardLabels != null && codexCardLabels.Length == needed &&
+                codexCardPortraits != null && codexCardPortraits.Length == needed)
+                return;
+
+            for (var index = codexGridRoot.transform.childCount - 1; index >= 0; index--)
+                Destroy(codexGridRoot.transform.GetChild(index).gameObject);
+
+            var grid = codexGridRoot.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                grid.cellSize = YokaiCodexPresentationModel.GridCardSize;
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = YokaiCodexPresentationModel.GridColumns;
+            }
+
+            codexCardButtons = new Button[needed];
+            codexCardLabels = new Text[needed];
+            codexCardPortraits = new Image[needed];
+            for (var index = 0; index < needed; index++)
+            {
+                var cardObject = new GameObject($"CodexCard_{index + 1:00}", typeof(RectTransform));
+                cardObject.transform.SetParent(codexGridRoot.transform, false);
+                var cardImage = cardObject.AddComponent<Image>();
+                cardImage.color = new Color(.17f, .21f, .25f, 1f);
+                codexCardButtons[index] = cardObject.AddComponent<Button>();
+                var portraitObject = new GameObject("Portrait", typeof(RectTransform));
+                portraitObject.transform.SetParent(cardObject.transform, false);
+                var portrait = portraitObject.AddComponent<Image>();
+                portrait.raycastTarget = false;
+                var portraitRect = portrait.rectTransform;
+                portraitRect.anchorMin = Vector2.zero;
+                portraitRect.anchorMax = Vector2.one;
+                portraitRect.offsetMin = new Vector2(4f, 18f);
+                portraitRect.offsetMax = new Vector2(-4f, -4f);
+                codexCardPortraits[index] = portrait;
+                var labelObject = new GameObject("Label", typeof(RectTransform));
+                labelObject.transform.SetParent(cardObject.transform, false);
+                var label = labelObject.AddComponent<Text>();
+                label.alignment = TextAnchor.LowerCenter;
+                label.fontSize = 11;
+                label.raycastTarget = false;
+                var builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (builtinFont != null)
+                    label.font = builtinFont;
+                label.rectTransform.anchorMin = new Vector2(0f, 0f);
+                label.rectTransform.anchorMax = new Vector2(1f, 0f);
+                label.rectTransform.pivot = new Vector2(0.5f, 0f);
+                label.rectTransform.sizeDelta = new Vector2(0f, 18f);
+                label.rectTransform.anchoredPosition = Vector2.zero;
+                codexCardLabels[index] = label;
+            }
         }
 
         private void BuildCodexExpandedView()
@@ -2005,7 +2069,7 @@ namespace Nyangbingo.UI
                 ? new Color(.16f, .11f, .075f, 1f)
                 : new Color(.12f, .16f, .19f, 1f);
             codexExpandedFrontText.gameObject.SetActive(!codexModel.IsBackVisible);
-            codexExpandedBackText.gameObject.SetActive(codexModel.IsBackVisible);
+            codexExpandedBackText.gameObject.SetActive(codexModel.IsBackVisible && selected.HasReadableBackText);
             codexExpandedFrontText.text = $"{(selected.IsBoss ? "보스" : "요괴")} · 처치 {selected.KillCount}" +
                                           (selected.FirstKillDay > 0
                                               ? $"\n최초 처치 {selected.FirstKillDay}일"
@@ -2013,10 +2077,13 @@ namespace Nyangbingo.UI
                                           (string.IsNullOrWhiteSpace(selected.AppearanceHint)
                                               ? string.Empty
                                               : $"\n{selected.AppearanceHint}");
-            codexExpandedBackText.text = selected.SourceText;
-            codexExpandedHintText.text = codexModel.IsBackVisible
-                ? "카드 클릭 · 앞면 보기    |    바깥 클릭 · 격자"
-                : "카드 클릭 · 전승 보기    |    바깥 클릭 · 격자";
+            codexExpandedBackText.text = selected.HasReadableBackText ? selected.SourceText : string.Empty;
+            if (!selected.HasReadableBackText)
+                codexExpandedHintText.text = "바깥 클릭 · 격자로 돌아가기";
+            else
+                codexExpandedHintText.text = codexModel.IsBackVisible
+                    ? "카드 클릭 · 앞면 보기    |    바깥 클릭 · 격자"
+                    : "카드 클릭 · 전승 보기    |    바깥 클릭 · 격자";
         }
 
         private void ResolveCharacterArtCatalog()
@@ -2075,6 +2142,7 @@ namespace Nyangbingo.UI
 
         private void RebuildOwnedEquipment()
         {
+            runtimeServices?.PromoteInventoryEquipmentItems();
             activeSlotItems.Clear();
             var equippedActiveItemId = runtimeServices.ActiveSlot.EquippedItemId;
             foreach (var item in gameDataCatalog.Items)

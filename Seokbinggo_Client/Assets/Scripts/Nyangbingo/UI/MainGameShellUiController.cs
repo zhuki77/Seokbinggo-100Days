@@ -49,6 +49,7 @@ namespace Nyangbingo.UI
         private Text resultSummaryText;
         private Text resultTeaserText;
         private Button resultGoTitleButton;
+        private GameObject traitSelectPanel;
         private Image bgmSpeakerImage;
         private Image sfxSpeakerImage;
         private Button pauseSaveButton;
@@ -133,11 +134,135 @@ namespace Nyangbingo.UI
 
             MainGameLaunchRequest.Reset();
             shell.EnterGameplay(launchSave);
-            Time.timeScale = 1f;
+            BuildTraitSelectView();
+            TryOpenTraitSelectIfNeeded(launchSave);
+            Time.timeScale = shell.Screen == GameShellScreen.TraitSelect ? 0f : 1f;
             SetStatus(string.Empty);
             IsInitialized = true;
             LoadingOverlayRequest.MarkReady();
             Debug.Log("[Nyangbingo] MainGameShellUiController: 일시정지 4항목·현재 슬롯 저장·설정 셸 연결 완료.");
+        }
+
+        private void TryOpenTraitSelectIfNeeded(SaveGame launchSave)
+        {
+            var traits = FindAnyObjectByType<MainGameRuntimeServices>()?.Traits;
+            if (traits == null || !traits.NeedsSelection) return;
+            if (!shell.OpenTraitSelect())
+                Debug.LogError("[Nyangbingo] 시작 특성 선택 화면을 열지 못했습니다.");
+        }
+
+        private void BuildTraitSelectView()
+        {
+            if (shell == null || traitSelectPanel != null) return;
+            var pauseRoot = resumeButton != null ? resumeButton.transform.root : transform.root;
+            var canvas = pauseRoot != null ? pauseRoot.GetComponentInChildren<Canvas>(true) : null;
+            var parent = canvas != null ? canvas.transform : transform;
+            traitSelectPanel = new GameObject("TraitSelectPanel", typeof(RectTransform), typeof(Image));
+            traitSelectPanel.transform.SetParent(parent, false);
+            var panelRect = (RectTransform)traitSelectPanel.transform;
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+            var panelImage = traitSelectPanel.GetComponent<Image>();
+            panelImage.color = new Color(0.05f, 0.07f, 0.12f, 0.88f);
+            panelImage.raycastTarget = true;
+
+            // 화면 중앙의 고정 카드 — 절대 픽셀 스택이 뷰포트 밖으로 나가지 않게 한다.
+            const float cardWidth = 280f;
+            const float cardHeight = 236f;
+            const float buttonHeight = 36f;
+            const float buttonGap = 6f;
+            var cardObject = new GameObject("TraitSelectCard", typeof(RectTransform), typeof(Image));
+            cardObject.transform.SetParent(panelRect, false);
+            var cardRect = (RectTransform)cardObject.transform;
+            cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(0.5f, 0.5f);
+            cardRect.sizeDelta = new Vector2(cardWidth, cardHeight);
+            cardRect.anchoredPosition = Vector2.zero;
+            var cardImage = cardObject.GetComponent<Image>();
+            cardImage.color = new Color(0.1f, 0.13f, 0.2f, 0.98f);
+            cardImage.raycastTarget = true;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var title = CreateTraitText(cardRect, "Title", font, 15, TextAnchor.MiddleCenter,
+                new Vector2(0f, cardHeight * 0.5f - 18f), new Vector2(cardWidth - 24f, 22f));
+            title.text = "시작 특성 선택";
+            title.fontStyle = FontStyle.Bold;
+            var hint = CreateTraitText(cardRect, "Hint", font, 10, TextAnchor.MiddleCenter,
+                new Vector2(0f, cardHeight * 0.5f - 38f), new Vector2(cardWidth - 24f, 16f));
+            hint.text = "1회만 고릅니다. 되돌릴 수 없습니다.";
+
+            var buttonsTop = cardHeight * 0.5f - 56f;
+            for (var i = 0; i < TraitRules.AllIds.Length; i++)
+            {
+                var traitId = TraitRules.AllIds[i];
+                var definition = gameDataCatalog?.FindTrait(traitId);
+                var buttonObject = new GameObject($"Trait_{traitId}", typeof(RectTransform), typeof(Image), typeof(Button));
+                buttonObject.transform.SetParent(cardRect, false);
+                var buttonRect = (RectTransform)buttonObject.transform;
+                buttonRect.anchorMin = buttonRect.anchorMax = buttonRect.pivot = new Vector2(0.5f, 0.5f);
+                buttonRect.anchoredPosition = new Vector2(0f, buttonsTop - i * (buttonHeight + buttonGap));
+                buttonRect.sizeDelta = new Vector2(cardWidth - 28f, buttonHeight);
+                var buttonImage = buttonObject.GetComponent<Image>();
+                buttonImage.color = new Color(0.16f, 0.22f, 0.32f, 1f);
+                var button = buttonObject.GetComponent<Button>();
+                var labelObject = new GameObject("Label", typeof(RectTransform));
+                labelObject.transform.SetParent(buttonRect, false);
+                var labelRect = (RectTransform)labelObject.transform;
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = new Vector2(10f, 2f);
+                labelRect.offsetMax = new Vector2(-10f, -2f);
+                var label = labelObject.AddComponent<Text>();
+                label.font = font;
+                label.fontSize = 11;
+                label.alignment = TextAnchor.MiddleLeft;
+                label.color = new Color(0.94f, 0.96f, 1f, 1f);
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+                label.raycastTarget = false;
+                var name = definition != null ? definition.DisplayName : traitId;
+                var shortName = definition != null ? definition.ShortName : string.Empty;
+                label.text = string.IsNullOrEmpty(shortName) ? name : $"{name}  ·  {shortName}";
+                var capturedId = traitId;
+                button.onClick.AddListener(() => HandleTraitSelected(capturedId));
+            }
+
+            traitSelectPanel.SetActive(false);
+            shell.ConfigureTraitSelectPanel(traitSelectPanel);
+        }
+
+        private void HandleTraitSelected(string traitId)
+        {
+            var traits = FindAnyObjectByType<MainGameRuntimeServices>()?.Traits;
+            var message = string.Empty;
+            if (traits == null || !traits.TrySelect(traitId, out message))
+            {
+                SetStatus(string.IsNullOrEmpty(message) ? "특성 선택 실패" : message);
+                return;
+            }
+            saveCoordinator?.SaveNow(GameShellController.AutoSaveSlot);
+            shell.CompleteTraitSelect();
+            SetStatus(message);
+        }
+
+        private static Text CreateTraitText(Transform parent, string name, Font font, int fontSize,
+            TextAnchor alignment, Vector2 position, Vector2 size)
+        {
+            var textObject = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)textObject.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            var text = textObject.AddComponent<Text>();
+            text.font = font;
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.color = new Color(0.94f, 0.96f, 1f, 1f);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            return text;
         }
 
         /// <summary>

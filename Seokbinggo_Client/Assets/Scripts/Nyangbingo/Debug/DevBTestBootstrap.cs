@@ -1172,7 +1172,7 @@ namespace Nyangbingo.Debugging
             var frequencies = new[] { 8f, 10f, 6f, 45f, 25f, 8f, 18f, 12f, 10f, 12f, 4f, 10f };
             var hardnesses = new[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1 };
 
-            var valid = gameDataCatalog.MineralTiers.Count == ids.Length;
+            var valid = gameDataCatalog.MineralTiers.Count >= ids.Length;
             for (var i = 0; i < ids.Length; i++)
             {
                 var definition = gameDataCatalog.FindMineralTier(ids[i]);
@@ -1199,6 +1199,19 @@ namespace Nyangbingo.Debugging
                          Mathf.Approximately(definition.MiningSecondsForClawTier(3), tierThree[i]) &&
                          !definition.CanMineWithClawTier(0) && !definition.CanMineWithClawTier(4);
             }
+
+            var frostOres = new[] { "seonge_ore", "ice_root", "cold_wave_ore" };
+            for (var i = 0; i < frostOres.Length; i++)
+            {
+                var definition = gameDataCatalog.FindMineralTier(frostOres[i]);
+                valid &= definition != null &&
+                         definition.Resource == gameDataCatalog.FindItem(frostOres[i]) &&
+                         definition.Hardness == 2 &&
+                         Mathf.Approximately(definition.FrequencyPerHundredTiles, 0f) &&
+                         !definition.CanBreakWithClawTier(1) &&
+                         definition.CanBreakWithClawTier(2);
+            }
+            valid &= gameDataCatalog.MineralTiers.Count == 18;
 
             var worldConfig = WorldGenerationConfig.CreateDefault();
             var veinProfilesMatched = 0;
@@ -1887,19 +1900,19 @@ namespace Nyangbingo.Debugging
                             20f, 20f, 20f, 12, 0.75f, BossSpecialShape.Box, 2f, 0f, 12, 0f, 0f, 4f, 8f,
                             false, true, ItemMvpScope.A,
                             new[] { "club_shard:1", "hemp_stalk:10", "wood:5" },
-                            "yokai_tear:3", "dokkaebi_fire_essence:1", "club_shard:2") &&
-                        MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 6500, 180.6f,
+                            "yokai_tear:3", "dokkaebi_fire_essence:1", "club_shard:2", "ssireum_knot:1") &&
+                        MatchesBossDefinition(motherBulgasari, BossKind.MotherBulgasari, 10000, 217f,
                             "iron_bait_pile", CraftingStation.Furnace, false, 0,
                             24f, 48f, 0f, 14, 1f, BossSpecialShape.Cone, 4f, 60f, 10, 2f, 1f, 0f, 6f,
                             true, true, ItemMvpScope.B,
                             new[] { "iron_ingot:10", "iron_scale:3", "coal:5" },
-                            "yokai_tear:4", "iron_forge_core:1", "iron_scale:4") &&
+                            "yokai_tear:4", "iron_forge_core:1", "iron_scale:4", "iron_appetite:1") &&
                         MatchesBossDefinition(imugi, BossKind.Imugi, 16000, 219f,
-                            "ice_altar_offering", CraftingStation.IceAnvil, true, 30,
+                            "ice_altar_offering", CraftingStation.IceAnvil, false, 30,
                             40f, 40f, 40f, 18, 1.5f, BossSpecialShape.Box, 3f, 0f, 18, 0f, 0f, 3f, 12f,
                             false, true, ItemMvpScope.A,
                             new[] { "icesteel_ingot:2", "frost_essence:2", "ice_shard:10", "yokai_tear:30" },
-                            "yokai_tear:8", "yeouiju:1");
+                            "yokai_tear:8", "yeouiju:1", "yeouiju_shard:1");
 
             if (valid)
                 Debug.Log("[Nyangbingo] Imported boss extended combat, summon materials, and drops.csv rewards completed.");
@@ -2417,8 +2430,10 @@ namespace Nyangbingo.Debugging
             var tear = gameDataCatalog != null ? gameDataCatalog.FindItem("yokai_tear") : null;
             var signature = gameDataCatalog != null ? gameDataCatalog.FindItem("dokkaebi_fire_essence") : null;
             var extra = gameDataCatalog != null ? gameDataCatalog.FindItem("club_shard") : null;
+            var accessory = gameDataCatalog != null ? gameDataCatalog.FindItem("ssireum_knot") : null;
             if (bossDefinition == null || bossDefinition.GuaranteedDrops == null ||
-                bossDefinition.GuaranteedDrops.Length != 3 || tear == null || signature == null || extra == null)
+                bossDefinition.GuaranteedDrops.Length != 4 || tear == null || signature == null ||
+                extra == null || accessory == null)
             {
                 Debug.LogError("[Nyangbingo] Imported boss reward definition is missing.");
                 return;
@@ -2452,18 +2467,18 @@ namespace Nyangbingo.Debugging
                 defeatedHealth.ConfigureForRuntime(bossDefinition.HitPoints);
                 var defeatedStarted = bossManager.TryStart(bossDefinition, defeatedHealth);
                 defeatedHealth.ApplyDamage(bossDefinition.HitPoints, DamageTag.Melee);
-                var defeatRewarded = defeatedStarted && receiverEventCount == 3 && acquisitionCount == 3 &&
+                var defeatRewarded = defeatedStarted && receiverEventCount == 4 && acquisitionCount == 4 &&
                                      inventory.Count(tear.Id) == 3 && inventory.Count(signature.Id) == 1 &&
-                                     inventory.Count(extra.Id) == 2 &&
+                                     inventory.Count(extra.Id) == 2 && inventory.Count(accessory.Id) == 1 &&
                                      !bossManager.IsBossActive && regularSpawner.IsRegularSpawning;
 
                 var fledHealth = fledBossObject.AddComponent<Health>();
                 fledHealth.ConfigureForRuntime(bossDefinition.HitPoints);
                 var fledStarted = bossManager.TryStart(bossDefinition, fledHealth);
                 timeSource.RaiseDawn();
-                var fleeNotRewarded = fledStarted && receiverEventCount == 3 && acquisitionCount == 3 &&
+                var fleeNotRewarded = fledStarted && receiverEventCount == 4 && acquisitionCount == 4 &&
                                       inventory.Count(tear.Id) == 3 && inventory.Count(signature.Id) == 1 &&
-                                      inventory.Count(extra.Id) == 2 &&
+                                      inventory.Count(extra.Id) == 2 && inventory.Count(accessory.Id) == 1 &&
                                       !bossManager.IsBossActive && regularSpawner.IsRegularSpawning;
 
                 if (defeatRewarded && fleeNotRewarded)
@@ -2793,8 +2808,10 @@ namespace Nyangbingo.Debugging
             var imugi = FindCard("imugi");
             var gaekgwi = FindCard("gaekgwi");
             var chief = FindCard("king_dokkaebi");
-            var imugiDuplicateRemoved = FindCard("imugi_boss") == null;
+            var imugiBoss = FindCard("imugi_boss");
+            var jigwi = FindCard("jigwi");
             var layoutMatches = model.Cards.Count == YokaiCodexPresentationModel.ExpectedCardCount &&
+                                model.Cards.Count == 17 &&
                                 YokaiCodexPresentationModel.GridColumns == 3 &&
                                 YokaiCodexPresentationModel.GridCardSize == new Vector2(72f, 96f) &&
                                 YokaiCodexPresentationModel.EnlargedCardSize == new Vector2(192f, 256f);
@@ -2802,6 +2819,8 @@ namespace Nyangbingo.Debugging
                                chief != null && chief.IsBoss && chief.KillCount == 3 && chief.FirstKillDay == 9 &&
                                gangcheol != null && gangcheol.KillCount == 1 &&
                                imugi != null && imugi.KillCount == 1 && imugi.FirstKillDay == 30 &&
+                               imugiBoss != null && imugiBoss.IsBoss && imugiBoss.KillCount == 1 &&
+                               jigwi != null && !jigwi.IsUnlocked &&
                                gaekgwi != null;
             var lockedHidden = yagwanggwi != null && !yagwanggwi.IsUnlocked && yagwanggwi.UsesInkSilhouette &&
                                yagwanggwi.DisplayName == "?" && yagwanggwi.SourceText == string.Empty;
@@ -2821,8 +2840,8 @@ namespace Nyangbingo.Debugging
                                   yagwanggwi.SourceText.Contains("동국세시기");
 
             if (layoutMatches && recordsMatch && lockedHidden && lockedEnlarged && unlockedFlipped &&
-                outsideReturnedToGrid && refreshUnlocked && imugiDuplicateRemoved)
-                Debug.Log("[Nyangbingo] Yokai codex v34 nine-card unlock, merge, enlarge, flip, and source presentation completed.");
+                outsideReturnedToGrid && refreshUnlocked)
+                Debug.Log("[Nyangbingo] Yokai codex 17-card unlock, merge, enlarge, flip, and source presentation completed.");
             else Debug.LogError("[Nyangbingo] Yokai codex presentation test failed.");
         }
 

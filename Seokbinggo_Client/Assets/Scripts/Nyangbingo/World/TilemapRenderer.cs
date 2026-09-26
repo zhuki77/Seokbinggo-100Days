@@ -309,6 +309,14 @@ namespace Nyangbingo.World
                                       "중복 등록되어 있습니다. 첫 번째 항목만 사용합니다.");
                 }
             }
+
+            // door / door_top 등 런타임 전경 타일은 tileVisuals에 없다. 재빌드 후에도 유지한다.
+            foreach (var pair in _runtimeTiles)
+            {
+                if (pair.Value == null || string.IsNullOrEmpty(pair.Key)) continue;
+                _lookup[pair.Key] = pair.Value;
+            }
+
             Debug.Log($"[Nyangbingo] TilemapRenderer: 룩업 테이블이 {_lookup.Count}개의 타일로 갱신되었습니다.");
         }
 
@@ -699,6 +707,8 @@ namespace Nyangbingo.World
             if (_runtimeTiles.TryGetValue(elementType, out var existing) && existing != null)
             {
                 existing.sprite = sprite;
+                // 룩업 재빌드 후에도 Grid 충돌을 유지한다(문 아래칸 통과 버그 방지).
+                existing.colliderType = Tile.ColliderType.Grid;
                 _lookup[elementType] = existing;
                 return;
             }
@@ -839,6 +849,9 @@ namespace Nyangbingo.World
             WorldTileTypes.OysterMushroom => WorldTileTypes.Clay,
             WorldTileTypes.Shiitake => WorldTileTypes.IceShard,
             WorldTileTypes.Seogi => WorldTileTypes.FrostEssence,
+            WorldTileTypes.SeongeOre => WorldTileTypes.IceSteelOre,
+            WorldTileTypes.IceRoot => WorldTileTypes.IceSteelOre,
+            WorldTileTypes.ColdWaveOre => WorldTileTypes.FrostEssence,
             _ => null
         };
 
@@ -871,6 +884,7 @@ namespace Nyangbingo.World
                 WorldTileTypes.Shiitake,
                 WorldTileTypes.StoneDeep, WorldTileTypes.IceSteelOre, WorldTileTypes.FrostEssence,
                 WorldTileTypes.Seogi,
+                WorldTileTypes.SeongeOre, WorldTileTypes.IceRoot, WorldTileTypes.ColdWaveOre,
                 WorldTileTypes.Bedrock, WorldTileTypes.RuinWall, WorldTileTypes.IceLake, WorldTileTypes.IceAltar,
                 WorldTileTypes.BackgroundDirt, WorldTileTypes.BackgroundStone, WorldTileTypes.BackgroundDeep,
                 WorldTileTypes.Wallpaper

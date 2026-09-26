@@ -134,15 +134,25 @@ public static class NyangbingoV72ProgressionRegressionTests
                 frost.TryResolveOreHardness(WorldTileTypes.IronOre, out var ironHardness) &&
                 ironHardness == catalog.FindMineralTier(WorldTileTypes.IronOre).Hardness &&
                 frost.TryResolveOreHardness(WorldTileTypes.IceSteelOre, out var iceSteelHardness) &&
-                iceSteelHardness == catalog.FindMineralTier(WorldTileTypes.IceSteelOre).Hardness,
+                iceSteelHardness == catalog.FindMineralTier(WorldTileTypes.IceSteelOre).Hardness &&
+                frost.TryResolveOreHardness(WorldTileTypes.SeongeOre, out var seongeHardness) &&
+                seongeHardness == catalog.FindMineralTier(WorldTileTypes.SeongeOre).Hardness &&
+                frost.TryResolveOreHardness(WorldTileTypes.IceRoot, out var iceRootHardness) &&
+                iceRootHardness == catalog.FindMineralTier(WorldTileTypes.IceRoot).Hardness &&
+                frost.TryResolveOreHardness(WorldTileTypes.ColdWaveOre, out var coldWaveHardness) &&
+                coldWaveHardness == catalog.FindMineralTier(WorldTileTypes.ColdWaveOre).Hardness,
             "frost ore hardness must come from mineral-tiers catalog");
         frost.MarkPending(new Vector2Int(3, 7));
         Require(!frost.TryLazyReveal(new Vector2Int(3, 7), false, out _),
             "non-air-adjacent pending tile revealed");
         Require(frost.TryLazyReveal(new Vector2Int(3, 7), true, out var ore) &&
-                !string.IsNullOrWhiteSpace(ore), "air-adjacent pending tile did not reveal");
-
+                ore == WorldTileTypes.ColdWaveOre,
+            "air-adjacent pending tile must reveal cold_wave_ore after 10 altar clears");
         var frostSource = File.ReadAllText("Assets/Scripts/Nyangbingo/World/FrostSpreadService.cs");
+        Require(frostSource.Contains("WorldTileTypes.SeongeOre") &&
+                frostSource.Contains("WorldTileTypes.IceRoot") &&
+                frostSource.Contains("WorldTileTypes.ColdWaveOre"),
+            "frost OreOf must use seonge → ice_root → cold_wave consecration mapping");
         Require(!frostSource.Contains("UnsealBedrockLayer") &&
                 !frostSource.Contains("new DepthBand(91") &&
                 !frostSource.Contains("new DepthBand(46") &&

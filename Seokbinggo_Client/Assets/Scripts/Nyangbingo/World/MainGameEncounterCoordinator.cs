@@ -622,7 +622,17 @@ namespace Nyangbingo.World
             // collision policy so large composite creatures cannot be pushed by the player.
             physicsBody.IgnoreCollisionWith(raidTarget.transform);
             placedObjectRuntime ??= GetComponent<MainGameTurretRuntime>();
-            if (definition.Kind == BossKind.Samdugumi)
+            if (definition.Kind == BossKind.Jigwi)
+            {
+                var jigwi = bossObject.AddComponent<BossJigwiBehaviour>();
+                jigwi.Configure(raidTarget.transform, definition);
+                if (!runtimeServices.Register(jigwi))
+                {
+                    Destroy(bossObject);
+                    return null;
+                }
+            }
+            else if (definition.Kind == BossKind.Samdugumi)
             {
                 var samdugumi = bossObject.AddComponent<BossSamdugumiBehaviour>();
                 var targetCounters = raidTarget as IYokaiCounterSource;

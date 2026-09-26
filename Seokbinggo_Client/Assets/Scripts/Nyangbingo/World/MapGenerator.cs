@@ -43,6 +43,12 @@ namespace Nyangbingo.World
         public const string IceSteelOre = "icesteel_ore";
         public const string FrostEssence = "frost_essence";
         public const string Seogi = "seogi";
+        /// <summary>서리 1차 봉헌 치환(T4). 월드젠 광맥 없음.</summary>
+        public const string SeongeOre = "seonge_ore";
+        /// <summary>서리 2차 봉헌 치환(T5). 월드젠 광맥 없음.</summary>
+        public const string IceRoot = "ice_root";
+        /// <summary>서리 3차 봉헌 치환(T6). 월드젠 광맥 없음.</summary>
+        public const string ColdWaveOre = "cold_wave_ore";
 
         // 구조물 / 최하단
         public const string Bedrock = "bedrock";
@@ -73,6 +79,7 @@ namespace Nyangbingo.World
             Dirt, Stone, Coal, Clay, OysterMushroom,
             StoneMid, IronOre, CopperOre, IceShard, Shiitake,
             StoneDeep, IceSteelOre, FrostEssence, Seogi,
+            SeongeOre, IceRoot, ColdWaveOre,
             Bedrock, RuinWall, IceLake, IceAltar,
             BackgroundDirt, BackgroundStone, BackgroundDeep,
             OfficialBackgroundDirt, OfficialBackgroundStone, OfficialBackgroundDeep,
