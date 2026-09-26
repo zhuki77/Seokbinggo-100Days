@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
@@ -102,11 +102,11 @@ namespace Nyangbingo.World
         public bool TryUseCatnip(out int restoredHealth)
             => TryUseHealingItem(CatnipItemId, out restoredHealth);
 
-        public bool TryUseHealingItem(string itemId, out int restoredHealth)
+        public bool TryUseHealingItem(string itemId, out int restoredHealth, int sourceSlot = -1)
         {
             restoredHealth = 0;
             if (!CanUseHealingItem(itemId) ||
-                !inventory.TryRemoveOneWithStorageCondition(itemId, out var condition)) return false;
+                !inventory.TryRemoveOneWithStorageCondition(itemId, out var condition, sourceSlot)) return false;
             restoredHealth = health.Heal(Mathf.RoundToInt(BaseHealingFor(itemId) * Mathf.Clamp01(condition)));
             // 상해도가 0인 음식도 사라지지는 않지만 먹으면 회복 0인 소모품이다.
             return true;

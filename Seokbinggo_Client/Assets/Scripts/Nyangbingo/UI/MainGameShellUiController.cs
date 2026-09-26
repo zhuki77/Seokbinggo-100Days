@@ -510,7 +510,9 @@ namespace Nyangbingo.UI
                 }
             }
             if (confirmationText != null && shell.Screen == GameShellScreen.Confirmation)
-                confirmationText.text = "타이틀로 돌아갈까요? 저장하지 않은 진행은 사라집니다.";
+                confirmationText.text = shell.PendingConfirmation == GameShellConfirmation.Rest
+                    ? "정말 휴식하시겠습니까?"
+                    : "타이틀로 돌아갈까요? 저장하지 않은 진행은 사라집니다.";
         }
 
         private void BindButtons()

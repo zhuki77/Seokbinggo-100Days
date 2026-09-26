@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
@@ -101,8 +101,18 @@ namespace Nyangbingo.Inventory
             Changed?.Invoke(); return true;
         }
 
-        public bool TryRemove(string itemId, int amount)
+        public bool TryRemove(string itemId, int amount, int sourceSlot = -1)
         {
+            if (sourceSlot != -1)
+            {
+                if (sourceSlot < 0 || sourceSlot >= slots.Count || amount <= 0) return false;
+                var selected = slots[sourceSlot];
+                if (selected.itemId != itemId || selected.amount < amount) return false;
+                selected.amount -= amount;
+                slots[sourceSlot] = selected.amount > 0 ? selected : default;
+                Changed?.Invoke();
+                return true;
+            }
             if (!Has(itemId, amount) || amount <= 0) return false;
             for (var i = slots.Count - 1; i >= 0 && amount > 0; i--)
             {
@@ -111,6 +121,20 @@ namespace Nyangbingo.Inventory
                 if (slot.amount == 0) slot = default; slots[i] = slot;
             }
             Changed?.Invoke(); return true;
+        }
+
+        // Restore one failed direct-use consumption to its original slot, including storage state.
+        public bool TryRefundOneToSlot(int sourceSlot, InventorySlot original)
+        {
+            if (sourceSlot < 0 || sourceSlot >= slots.Count || original.amount <= 0) return false;
+            var current = slots[sourceSlot];
+            if (original.amount == 1 ? !string.IsNullOrEmpty(current.itemId) :
+                current.itemId != original.itemId || current.amount != original.amount - 1 ||
+                !HasSameStorageState(current, original.hasStorageCondition,
+                    original.storageCondition01, original.storageMeltRemainder)) return false;
+            slots[sourceSlot] = original;
+            Changed?.Invoke();
+            return true;
         }
 
         public int ApplyOutdoorIceMelt(float meltPerDay)
@@ -137,9 +161,15 @@ namespace Nyangbingo.Inventory
             return melted;
         }
 
-        public bool TryRemoveOneWithStorageCondition(string itemId, out float condition01)
+        public bool TryRemoveOneWithStorageCondition(string itemId, out float condition01, int sourceSlot = -1)
         {
             condition01 = 1f;
+            if (sourceSlot != -1)
+            {
+                if (sourceSlot < 0 || sourceSlot >= slots.Count) return false;
+                condition01 = slots[sourceSlot].EffectiveStorageCondition;
+                return TryRemove(itemId, 1, sourceSlot);
+            }
             if (string.IsNullOrWhiteSpace(itemId)) return false;
             for (var i = slots.Count - 1; i >= 0; i--)
             {
@@ -222,12 +252,21 @@ namespace Nyangbingo.Inventory
             return true;
         }
 
-        public bool TrySwapSlots(int firstIndex, int secondIndex)
+        public bool CanSwapSlots(int firstIndex, int secondIndex)
         {
             if (firstIndex < 0 || firstIndex >= slots.Count ||
-                secondIndex < 0 || secondIndex >= slots.Count ||
-                firstIndex == secondIndex)
+                secondIndex < 0 || secondIndex >= slots.Count || firstIndex == secondIndex)
                 return false;
+            return CanPlaceInSlot(slots[firstIndex].itemId, secondIndex) &&
+                   CanPlaceInSlot(slots[secondIndex].itemId, firstIndex);
+        }
+
+        private bool CanPlaceInSlot(string itemId, int slotIndex) =>
+            string.IsNullOrEmpty(itemId) || slotIndex >= FirstAutoFillSlot(itemId);
+
+        public bool TrySwapSlots(int firstIndex, int secondIndex)
+        {
+            if (!CanSwapSlots(firstIndex, secondIndex)) return false;
             var first = slots[firstIndex];
             slots[firstIndex] = slots[secondIndex];
             slots[secondIndex] = first;

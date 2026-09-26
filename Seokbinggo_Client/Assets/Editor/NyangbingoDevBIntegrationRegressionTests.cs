@@ -484,7 +484,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
         Require(playerSource.Contains("TryUseSelectedIceShard() ||") &&
                 playerSource.Contains("tilePalette.SelectedItemId != IceShardItemId") &&
-                playerSource.Contains("inventory.TryRemove(IceShardItemId, 1)") &&
+                playerSource.Contains("inventory.TryRemove(IceShardItemId, 1, sourceSlot)") &&
                 playerSource.Contains("iceShardTemperatureRelief"),
             "Selecting an ice shard in the quick slot and pressing E must consume it for immediate cooling.");
     }
@@ -2439,7 +2439,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MapGenerator.cs");
         Require(playerSource.Contains("TryUseSelectedHealingItem() ||") &&
                 playerSource.Contains("PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId)") &&
-                playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth)") &&
+                playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth, tilePalette.SelectedSlotIndex)") &&
                 playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: false)") &&
                 playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&

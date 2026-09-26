@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Bosses;
@@ -362,17 +362,28 @@ namespace Nyangbingo.World
 
         public bool BeginPlacementPreview() => BeginPlacementPreview(TurretItemId);
 
-        public bool BeginPlacementPreview(string definitionId)
+        private int placementSourceSlot = -1;
+
+        public bool BeginPlacementPreview(string definitionId, int sourceSlot = -1)
         {
             if (IsPlacementPreviewActive) return true;
             var item = gameDataCatalog?.FindItem(definitionId);
-            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, CurrentDay) ||
+            if (item == null ||
                 GetInventoryCount(definitionId) <= 0)
             {
                 ShowMessage("설치할 완성품이 없습니다.");
                 return false;
             }
 
+            if (sourceSlot == -1)
+            {
+                var slots = runtimeServices.PlayerInventory.Slots;
+                for (var index = 0; index < slots.Count; index++)
+                    if (slots[index].itemId == definitionId && slots[index].amount > 0) { sourceSlot = index; break; }
+            }
+            if (sourceSlot < 0 || sourceSlot >= runtimeServices.PlayerInventory.Capacity ||
+                runtimeServices.PlayerInventory.Slots[sourceSlot].itemId != definitionId) return false;
+            placementSourceSlot = sourceSlot;
             placementDefinitionId = definitionId;
             placementPreview = new GameObject($"{definitionId}PlacementPreview");
             placementCamera = Camera.main;
@@ -549,7 +560,7 @@ namespace Nyangbingo.World
         {
             var definitionId = placementDefinitionId;
             var item = gameDataCatalog?.FindItem(definitionId);
-            if (item == null || !ExpansionProgressionRules.IsScopeAvailable(item.MvpScope, CurrentDay))
+            if (item == null)
                 return false;
             if (!CanPlaceByTurretSlots(definitionId, out var slotReason))
             {
@@ -563,7 +574,11 @@ namespace Nyangbingo.World
                 position = position,
                 rotationDegrees = 0f
             };
-            if (!runtimeServices.PlayerInventory.TryRemove(definitionId, 1)) return false;
+            var sourceSlot = placementSourceSlot;
+            var inventory = runtimeServices.PlayerInventory;
+            if (sourceSlot < 0 || sourceSlot >= inventory.Capacity) return false;
+            var original = inventory.Slots[sourceSlot];
+            if (!inventory.TryRemove(definitionId, 1, sourceSlot)) return false;
             // MainGameEnvironmentState applies the authoritative seal whitelist internally.
             // Passing the placement through as a barrier candidate lets insul_wall/door/roof seal,
             // while lanterns, storage and other non-whitelisted placeables remain non-sealing.
@@ -572,7 +587,7 @@ namespace Nyangbingo.World
             if (!placed || !runtimeRegistered)
             {
                 environmentState.TryRemove(record.objectId);
-                runtimeServices.PlayerInventory.TryAdd(definitionId, 1);
+                inventory.TryRefundOneToSlot(sourceSlot, original);
                 ShowMessage("해당 위치에는 설치할 수 없습니다.");
                 return false;
             }
@@ -628,9 +643,19 @@ namespace Nyangbingo.World
                     ShowMessage("침대 시간 서비스를 찾을 수 없습니다.");
                     return true;
                 }
-                bed.TrySleep(record.position, out var bedMessage);
-                ShowMessage(bedMessage);
-                BuildStateChanged?.Invoke();
+                if (!bed.CanSleep(record.position, out _, out var reason))
+                {
+                    ShowMessage(reason);
+                    return true;
+                }
+                var gameShell = FindAnyObjectByType<GameShellController>();
+                if (gameShell == null || !gameShell.RequestRest(() =>
+                    {
+                        bed.TrySleep(record.position, out var bedMessage);
+                        ShowMessage(bedMessage);
+                        BuildStateChanged?.Invoke();
+                    }))
+                    ShowMessage("휴식 확인창을 열 수 없습니다.");
                 return true;
             }
             if (string.Equals(record.definitionId, TalismanRuntime.WaypointId, StringComparison.Ordinal))
@@ -822,19 +847,15 @@ namespace Nyangbingo.World
                 return true;
             }
             var item = gameDataCatalog?.FindItem(record.definitionId);
-            if (item == null || !runtimeServices.PlayerInventory.TryAdd(record.definitionId, 1))
-            {
-                ShowMessage("인벤토리 공간이 없어 설치물을 회수할 수 없습니다.");
-                return true;
-            }
+            if (item == null) return false;
             var fullSalvage = AllowsFullSalvageRecovery();
-            if (fullSalvage) TryRefundRemainingFuel(record);
             if (!environmentState.TryRemove(record.objectId))
             {
-                runtimeServices.PlayerInventory.TryRemove(record.definitionId, 1);
                 ShowMessage("설치물 회수에 실패했습니다.");
                 return true;
             }
+            WorldItemDropRequest.Request(item, 1, record.position);
+            if (fullSalvage) TryRefundRemainingFuel(record);
             if (record.definitionId == JangdokStorageRuntime.DefinitionId)
                 runtimeServices.JangdokStorage.TryRemoveEmpty(record.objectId);
             if (turrets.TryGetValue(record.objectId, out var entry))
@@ -846,8 +867,8 @@ namespace Nyangbingo.World
             RemovePassiveCounterAura(record.objectId);
             runtimeServices?.ModuleHoldover?.Clear(record.objectId);
             var message = fullSalvage
-                ? $"{item.DisplayName} 회수 완료 · 남은 연료를 반환했습니다."
-                : $"{item.DisplayName} 회수 완료 · 남은 연료는 반환되지 않습니다.";
+                ? $"{item.DisplayName} 드랍 완료 · 남은 연료를 반환했습니다."
+                : $"{item.DisplayName} 드랍 완료 · 남은 연료는 반환되지 않습니다.";
             if (record.definitionId == MainGameEnvironmentState.ColdWaveCoreDefinitionId &&
                 AllowsRelocateColdCore())
                 message += " · 완전체 핵으로 다른 위치에 재설치할 수 있습니다.";
@@ -1115,14 +1136,14 @@ namespace Nyangbingo.World
             {
                 var units = Mathf.Max(1, Mathf.RoundToInt(
                     turret.Controller.FuelRemaining / FuelSecondsPerUnit));
-                runtimeServices.PlayerInventory.TryAdd(FuelItemId, units);
+                WorldItemDropRequest.Request(gameDataCatalog?.FindItem(FuelItemId), units, record.position);
             }
             if (!lanterns.TryGetValue(record.objectId, out var lantern) ||
                 lantern.FuelRemaining <= 0f || lantern.FuelSecondsPerUnit <= 0f)
                 return;
             var lanternUnits = Mathf.Max(1, Mathf.RoundToInt(
                 lantern.FuelRemaining / lantern.FuelSecondsPerUnit));
-            runtimeServices.PlayerInventory.TryAdd(lantern.FuelItemId, lanternUnits);
+            WorldItemDropRequest.Request(gameDataCatalog?.FindItem(lantern.FuelItemId), lanternUnits, record.position);
         }
 
         private void RemoveLantern(string objectId)
