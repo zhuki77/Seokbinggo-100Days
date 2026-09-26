@@ -224,6 +224,48 @@ public static class NyangbingoArt720Binder
     static NyangbingoArt720Binder()
     {
         EditorApplication.delayCall += BindOnFirstImport;
+        EditorApplication.delayCall += EnsureDoorOpenCloseFrames;
+    }
+
+    /// <summary>
+    /// door.aseprite는 6프레임 왕복(닫힘→열림→닫힘)이다.
+    /// 카탈로그가 3장만 가리키면 열림이 닫힘 프레임으로 붙는다.
+    /// </summary>
+    private static void EnsureDoorOpenCloseFrames()
+    {
+        const string doorArtPath = "Assets/Art/Buildings/door.aseprite";
+        var frames = LoadSprites(doorArtPath);
+        if (frames.Length < 3) return;
+        var catalog = AssetDatabase.LoadAssetAtPath<BuildingArtCatalog>(BuildingCatalogPath);
+        if (catalog == null) return;
+        var serialized = new SerializedObject(catalog);
+        var entries = serialized.FindProperty("entries");
+        if (entries == null) return;
+        var entry = FindOrAddItem(entries, "door");
+        var frameArray = entry.FindPropertyRelative("frames");
+        if (frameArray == null) return;
+        var already = frameArray.arraySize == frames.Length;
+        if (already)
+        {
+            for (var index = 0; index < frames.Length; index++)
+            {
+                if (frameArray.GetArrayElementAtIndex(index).objectReferenceValue != frames[index])
+                {
+                    already = false;
+                    break;
+                }
+            }
+        }
+        if (already) return;
+
+        entry.FindPropertyRelative("id").stringValue = "door";
+        frameArray.arraySize = frames.Length;
+        for (var index = 0; index < frames.Length; index++)
+            frameArray.GetArrayElementAtIndex(index).objectReferenceValue = frames[index];
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[Nyangbingo] door art catalog rebound: {frames.Length} frames (closed=Frame_0, open=Frame_2).");
     }
 
     [MenuItem("Nyangbingo/Bind Delivered Art Catalogs")]

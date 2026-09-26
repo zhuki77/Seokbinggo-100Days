@@ -1541,8 +1541,9 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 마우스 아래 칸이 사거리 안이면 그 칸(공기면 발밑·인접 고체)을 우선하고,
-        /// 아니면 조준 방향 × 사거리 칸을 같은 규칙으로 쓴다.
+        /// 마우스 아래 칸이 사거리 안이면 그 칸을 그대로 쓴다.
+        /// 전경이 이미 없는 칸은 옆 고체로 붙이지 않고, 그 칸(배경)을 선택한다.
+        /// 커서가 사거리 밖일 때만 조준 방향 고체로 폴백한다.
         /// </summary>
         private bool TryResolveMiningCell(TileService tileService, out Vector3Int cell)
         {
@@ -1557,7 +1558,8 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 지표 채굴 UX — 마우스가 공기 칸(플레이어 발 높이)을 가리키면 바로 아래·인접 전경 고체로 보정한다.
+        /// 커서가 사거리 안 칸을 가리키면 전경이 없어도 그 칸을 선택한다.
+        /// 커서가 없을 때만 조준 방향의 전경 고체로 폴백한다.
         /// </summary>
         public static bool TryPickMiningCell(TileService tileService, Vector2 playerOrigin,
             Vector2? mouseWorld, Vector2 facing, float miningReach, out Vector3Int cell)
@@ -1580,7 +1582,8 @@ namespace Nyangbingo.World
             if (mouseWorld.HasValue)
             {
                 var cursorCell = tileService.WorldToCell(mouseWorld.Value);
-                if (IsMineableForegroundCell(tileService, cursorCell) &&
+                // 부서진 칸(전경 없음)도 옆 블록으로 옮기지 않고 그 칸 배경을 선택한다.
+                if (tileService.InBounds(cursorCell) &&
                     IsWithinMiningReach(tileService, attackOrigin, cursorCell, reachSq))
                 {
                     cell = cursorCell;

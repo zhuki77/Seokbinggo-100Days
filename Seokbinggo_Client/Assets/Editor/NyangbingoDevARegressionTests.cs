@@ -79,7 +79,7 @@ public static class NyangbingoDevARegressionTests
             ("동굴 지표 관통 금지", () => TestCaveSurfaceProtection(config)),
             // v7/v28: 테라리아급 점프·중력 globals 정본.
             ("플레이어 점프·중력", TestPlayerJumpPhysics),
-            // v28: 지표 채굴 — 마우스 공기 칸 → 발밑 고체 보정.
+            // 부서진 칸은 옆 고체로 붙이지 않고 그 칸을 선택한다.
             ("지표 채굴 타깃 보정", TestMiningCellSurfaceFallback),
         };
 
@@ -1869,9 +1869,10 @@ public static class NyangbingoDevARegressionTests
         var playerOrigin = new Vector2(groundX + .5f, airY + .5f);
         const float reach = 1.5f;
 
-        Assert(!MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
-                new Vector2(groundX + .2f, airY + .3f), Vector2.right, reach, out _),
-            "수평 발톱이 방향선 밖의 아래쪽 지표 블록을 채굴하면 안 됨");
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, playerOrigin,
+                new Vector2(groundX + .2f, airY + .3f), Vector2.right, reach, out var emptyCell) &&
+            emptyCell.x == groundX && emptyCell.y == airY,
+            "이미 부서진 칸은 아래쪽 지표 블록으로 붙지 않고 그 칸을 선택해야 함");
 
         tiles[groundX + 1, airY] = TileData.CreateNaturalWithBackground(
             WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);

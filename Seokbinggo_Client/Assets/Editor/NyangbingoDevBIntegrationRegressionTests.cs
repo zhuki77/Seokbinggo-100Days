@@ -2339,11 +2339,52 @@ public static class NyangbingoDevBIntegrationRegressionTests
             hardness = 1,
             isNaturalTerrain = false
         };
+        tiles[1, 2] = new TileData
+        {
+            elementType = "door_top",
+            hardness = 1,
+            isNaturalTerrain = false
+        };
         var service = new TileService(tiles, null, null, 1);
         Require(service.TryToggleNearestDoor(
                     new Vector2(1.5f, 1.5f), .6f, out var opened) &&
                 opened && service.IsDoorOpen(new Vector3Int(1, 1, 0)),
             "E interaction must open a nearby insulated door while preserving its world tile.");
+        // OpenDoor는 데이터는 남기고 비주얼만 지우므로 elementType은 유지된다.
+        Require(string.Equals(service.GetTile(new Vector3Int(1, 1, 0)).elementType, "door",
+                    System.StringComparison.Ordinal) &&
+                string.Equals(service.GetTile(new Vector3Int(1, 2, 0)).elementType, "door_top",
+                    System.StringComparison.Ordinal),
+            "Opening a 1x2 door must preserve door + door_top world data.");
+
+        var footprintTiles = new TileData[3, 3];
+        footprintTiles[1, 1] = new TileData
+        {
+            elementType = "door",
+            hardness = 1,
+            isNaturalTerrain = false
+        };
+        footprintTiles[1, 2] = new TileData
+        {
+            elementType = "door_top",
+            hardness = 1,
+            isNaturalTerrain = false
+        };
+        var footprintService = new TileService(footprintTiles, null, null, 1);
+        Require(footprintService.TryClearForegroundWithoutDrop(new Vector3Int(1, 1, 0), false) &&
+                footprintService.GetTile(new Vector3Int(1, 1, 0)).IsAir &&
+                footprintService.GetTile(new Vector3Int(1, 2, 0)).IsAir,
+            "Clearing a door footprint must remove both door and door_top cells.");
+        footprintService.SetLogicalDoorOpen(new Vector3Int(1, 1, 0), true);
+        footprintService.ClearDoorFootprintFully(new Vector3Int(1, 1, 0));
+        Require(!footprintService.IsDoorOpen(new Vector3Int(1, 1, 0)),
+            "Full door footprint clear must drop the logical open flag.");
+
+        var envSourceForRemove = System.IO.File.ReadAllText(
+            "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
+        Require(envSourceForRemove.Contains("ClearDoorFootprintFully(entry.Cell)") &&
+                envSourceForRemove.Contains("SetLogicalDoorOpen(entry.Cell, open: true)"),
+            "Tile-door recover/toggle must clear the 1x2 footprint and sync open state.");
 
         var exported = service.ExportDoorStates();
         var restored = new TileService(tiles, null, null, 1);

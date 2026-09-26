@@ -65,7 +65,8 @@ namespace Nyangbingo.World
         public bool IsInitialized { get; private set; }
 
         public const string DoorDefinitionId = "door";
-        public const float OpenDoorVisualAlpha = .45f;
+        // 열린 프레임 자체에 통과 구멍이 있다. 추가 반투명은 닫힘/열림 아트가 다른 그림처럼 보이게 한다.
+        public const float OpenDoorVisualAlpha = 1f;
 
         public void ConfigureForScene(GameDataCatalog catalog, MainGameBootstrap mainBootstrap,
             BuildingArtCatalog artCatalog = null)
@@ -198,6 +199,23 @@ namespace Nyangbingo.World
         public bool TryRemove(string objectId)
         {
             if (string.IsNullOrWhiteSpace(objectId) || !byObjectId.TryGetValue(objectId, out var entry)) return false;
+
+            // 타일 문 회수/파괴: 레지스트리만 지우면 door·door_top 타일·열린 오버레이가 남는다.
+            var isTileDoor = string.Equals(entry.Record.definitionId, DoorDefinitionId, StringComparison.Ordinal) &&
+                             tileDoorCells.Contains(entry.Cell);
+            if (isTileDoor)
+            {
+                suppressTileDoorSync = true;
+                try
+                {
+                    bootstrap?.TileService?.ClearDoorFootprintFully(entry.Cell);
+                }
+                finally
+                {
+                    suppressTileDoorSync = false;
+                }
+            }
+
             byObjectId.Remove(objectId);
             byCell.Remove(entry.Cell);
             var head = entry.Cell + Vector3Int.up;
@@ -232,7 +250,7 @@ namespace Nyangbingo.World
 
         /// <summary>
         /// 단열 문(설치물·전경 타일) 개폐. BarrierActive=true는 닫힘(밀폐 인정), false는 개방(밀폐 미인정).
-        /// 전경 타일 문은 1x2(door+door_top)를 함께 치우거나 복구하고, 열린 모습은 반투명 오버레이로 남긴다.
+        /// 전경 타일 문은 1x2(door+door_top)를 함께 치우거나 복구하고, 열린 모습은 Frame_2 오버레이로 남긴다.
         /// </summary>
         public bool TryToggleInsulationDoor(string objectId, out bool nowOpen)
         {
@@ -252,9 +270,12 @@ namespace Nyangbingo.World
                     if (nextClosed)
                     {
                         if (!tileService.TryRestoreForeground(entry.Cell, DoorDefinitionId)) return false;
+                        tileService.SetLogicalDoorOpen(entry.Cell, open: false);
                     }
                     else if (!tileService.TryClearForegroundWithoutDrop(entry.Cell, raiseBrokenEvent: false))
                         return false;
+                    else
+                        tileService.SetLogicalDoorOpen(entry.Cell, open: true);
                 }
                 finally
                 {
@@ -987,9 +1008,10 @@ namespace Nyangbingo.World
             }
 
             if (!visualsByObjectId.TryGetValue(objectId, out var visual) || visual == null) return;
-            var leftoverAnimator = visual.GetComponent<RuntimeBuildingSpriteAnimator>();
+            var leftoverAnimator = visual.GetComponentInChildren<RuntimeBuildingSpriteAnimator>();
             if (leftoverAnimator != null) Destroy(leftoverAnimator);
-            var renderer = visual.GetComponent<SpriteRenderer>();
+            // 설치 비주얼은 루트가 아니라 자식 Art에 SpriteRenderer가 있다.
+            var renderer = visual.GetComponentInChildren<SpriteRenderer>();
             if (renderer == null) return;
             var sprite = ResolveDoorSprite(buildingArtCatalog?.Find(DoorDefinitionId), open: !barrierActive);
             if (sprite != null) renderer.sprite = sprite;
@@ -1022,7 +1044,7 @@ namespace Nyangbingo.World
             visual.transform.position = worldPosition;
             var spriteRenderer = visual.GetComponent<SpriteRenderer>();
             if (spriteRenderer == null) return;
-            // 문은 개폐 프레임이 들어 있어 루프 애니메이션하면 깜빡인다. 열린 모습은 마지막 프레임 고정.
+            // 문은 개폐 프레임이 들어 있어 루프 애니메이션하면 깜빡인다. 열린 포즈 프레임만 고정한다.
             var openSprite = ResolveDoorSprite(buildingArtCatalog?.Find(DoorDefinitionId), open: true);
             if (openSprite != null) spriteRenderer.sprite = openSprite;
             else RuntimePlaceholderVisual.Configure(spriteRenderer, new Color(.55f, .85f, 1f), .75f, 13);
@@ -1038,11 +1060,36 @@ namespace Nyangbingo.World
             visual.SetActive(false);
         }
 
+        /// <summary>
+        /// door.aseprite는 닫힘(Frame_0)→열림(Frame_2)→닫힘(Frame_5) 왕복이다.
+        /// 마지막 프레임은 다시 닫힘이므로 열림으로 쓰면 안 된다.
+        /// </summary>
         private static Sprite ResolveDoorSprite(BuildingArtCatalog.Entry art, bool open)
         {
             if (art == null || art.Frames == null || art.Frames.Count == 0) return null;
-            if (!open) return art.Frames[0];
-            return art.Frames[art.Frames.Count - 1];
+            var named = new List<Sprite>();
+            for (var index = 0; index < art.Frames.Count; index++)
+            {
+                if (art.Frames[index] != null) named.Add(art.Frames[index]);
+            }
+            if (named.Count == 0) return null;
+
+            if (!open) return FindDoorFrame(named, 0) ?? named[0];
+            return FindDoorFrame(named, 2) ?? FindDoorFrame(named, 3) ?? named[Mathf.Min(2, named.Count - 1)];
+        }
+
+        private static Sprite FindDoorFrame(List<Sprite> frames, int frameIndex)
+        {
+            var suffix = $"_{frameIndex}";
+            for (var index = 0; index < frames.Count; index++)
+            {
+                var name = frames[index].name;
+                if (string.IsNullOrEmpty(name)) continue;
+                if (name.EndsWith(suffix, StringComparison.Ordinal) ||
+                    string.Equals(name, $"Frame{suffix}", StringComparison.Ordinal))
+                    return frames[index];
+            }
+            return null;
         }
 
         private void ClearVisuals()

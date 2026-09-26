@@ -127,9 +127,14 @@ namespace Nyangbingo.World
             if (!visible) return;
             miningTargetRenderer.transform.position = CellVisualAnchor(cell);
             AlignMiningOverlayToCell(miningTargetRenderer, cell);
+            var tile = tileService != null && tileService.InBounds(cell)
+                ? tileService.GetTile(cell)
+                : default;
             miningTargetRenderer.color = mineable
                 ? new Color(.2f, .9f, 1f, .18f)
-                : new Color(1f, .2f, .2f, .24f);
+                : tile.IsAir
+                    ? new Color(.2f, .9f, 1f, .12f)
+                    : new Color(1f, .2f, .2f, .24f);
         }
 
         private void HandlePlayerDamaged(DamageTag tag, int amount)
