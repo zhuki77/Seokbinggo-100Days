@@ -82,7 +82,7 @@ namespace Nyangbingo.Save
                 encounterCoordinator == null || worldDecorationRenderer == null ||
                 timeService == null || saveManager == null || dawnAutoSave == null ||
                 !bootstrap.InitializeServices() || !runtimeServices.Initialize() || !environmentState.Initialize() ||
-                !encounterCoordinator.Initialize())
+                !encounterCoordinator.Initialize() || !worldDecorationRenderer.Initialize())
             {
                 Debug.LogError("[Nyangbingo] MainGameSaveCoordinator: 통합 저장 필수 서비스가 준비되지 않았습니다.");
                 return false;
@@ -253,8 +253,16 @@ namespace Nyangbingo.Save
             return null;
         }
 
+        public bool IsRestoring { get; private set; }
+
+        public void SuspendAutomaticSaving()
+        {
+            if (dawnAutoSave != null) dawnAutoSave.enabled = false;
+        }
+
         public bool SaveNow(int slot)
         {
+            if (IsRestoring) return false;
             if (!IsInitialized && !Initialize()) return false;
             var snapshot = CaptureSnapshot();
             if (snapshot == null || slot < 0 || slot >= SaveManager.SlotCount) return false;
@@ -298,6 +306,7 @@ namespace Nyangbingo.Save
         private bool ApplySnapshot(SaveGame save, bool forceSafeSurfaceSpawn)
         {
             if (save == null || !encounterCoordinator.BeginRestore()) return false;
+            IsRestoring = true;
             var succeeded = false;
             try
             {
@@ -379,6 +388,7 @@ namespace Nyangbingo.Save
             finally
             {
                 encounterCoordinator.EndRestore(succeeded);
+                IsRestoring = false;
             }
         }
 

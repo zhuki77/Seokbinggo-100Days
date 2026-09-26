@@ -145,21 +145,12 @@ namespace Nyangbingo.UI
         /// </summary>
         private void ReturnToTitleAfterFailedLaunch()
         {
-            var failedSlot = MainGameLaunchRequest.SaveSlot;
+            saveCoordinator?.SuspendAutomaticSaving();
             MainGameLaunchRequest.Reset();
-            try
-            {
-                if (saveManager != null && failedSlot >= 0 && failedSlot < SaveManager.SlotCount)
-                    saveManager.Delete(failedSlot);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning($"[Nyangbingo] 실패 세이브 슬롯 삭제 중 예외(무시하고 타이틀로 복귀): {exception.Message}");
-            }
 
             Time.timeScale = 1f;
             LoadingOverlayRequest.Reset();
-            Debug.LogError("[Nyangbingo] 세이브 복원 실패 — Title 씬으로 복귀합니다. 새 게임으로 시작하세요.");
+            Debug.LogError("[Nyangbingo] 세이브 복원 실패 — 저장 파일을 보존하고 Title 씬으로 복귀합니다. 실패 단계 로그를 확인하세요.");
             SceneTransitionRequest.BeginDirectTitle();
             enabled = false;
         }
@@ -169,7 +160,6 @@ namespace Nyangbingo.UI
             switch (MainGameLaunchRequest.RequestedMode)
             {
                 case MainGameLaunchRequest.Mode.NewGame:
-                    saveManager.DeleteAll();
                     launchSave = CreateFreshInitialSave();
                     if (launchSave != null) return true;
                     Debug.LogError("[Nyangbingo] 새 게임 생성 실패 — 타이틀로 복귀합니다.");
@@ -192,7 +182,7 @@ namespace Nyangbingo.UI
                     }
                     Debug.LogError(
                         "[Nyangbingo] 저장 데이터 복원 실패 — 타이틀로 복귀합니다. " +
-                        "최근 맵 생성 변경(가로 1.5배·중간층 동굴 등) 이후에는 구 세이브가 호환되지 않을 수 있습니다. '새 게임'으로 시작하세요.");
+                        "저장 파일은 보존됩니다. 새 게임으로 덮어쓰지 말고 복원 실패 단계 로그를 확인하세요.");
                     launchSave = null;
                     return false;
                 default:
@@ -217,6 +207,7 @@ namespace Nyangbingo.UI
                 return null;
             }
 
+            saveManager.ArchiveBeforeNewGame(GameShellController.AutoSaveSlot);
             saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot);
             Debug.Log($"[Nyangbingo] Fresh new-game save created " +
                       $"(seed={initialSnapshot.seed}, day={initialSnapshot.day}).");

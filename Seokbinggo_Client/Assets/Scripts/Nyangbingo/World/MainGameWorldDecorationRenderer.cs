@@ -48,7 +48,8 @@ namespace Nyangbingo.World
         public int DecorationCount => decorationRoot != null ? decorationRoot.childCount : 0;
         public int ChestCount => chestRenderers.Count;
         public int CatnipPatchCount => catnipPatches.Count;
-        public int HempPatchCount => hempPatches.Count;
+        private int visibleHempPatchCount;
+        public int HempPatchCount => Mathf.Min(hempPatches.Count, visibleHempPatchCount);
         public int TreePatchCount => treePatches.Count;
         public int RebarPatchCount => rebarPatches.Count;
 
@@ -92,18 +93,25 @@ namespace Nyangbingo.World
             runtimeServices = services;
         }
 
-        private void Start()
+        private bool initialized;
+
+        private void Start() => Initialize();
+
+        public bool Initialize()
         {
+            if (initialized) return true;
             bootstrap ??= GetComponent<MainGameBootstrap>();
             runtimeServices ??= GetComponent<MainGameRuntimeServices>();
-            if (bootstrap == null || artCatalog == null) return;
+            if (bootstrap == null || artCatalog == null) return false;
             bootstrap.WorldReady += Rebuild;
             GameEvents.OnTileBroken += HandleTileBroken;
             GameEvents.OnDayStart += RefreshCatnipAvailability;
             if (runtimeServices?.HeatStage != null)
                 runtimeServices.HeatStage.Changed += HandleHeatStageChanged;
             bootstrap.TileService?.SetForegroundPlacementBlocker(IsForegroundPlacementBlocked);
+            initialized = true;
             if (bootstrap.IsWorldReady) Rebuild();
+            return true;
         }
 
         public bool IsForegroundPlacementBlocked(Vector3Int cell)
@@ -242,7 +250,7 @@ namespace Nyangbingo.World
             bootstrap?.TileService?.SetForegroundPlacementBlocker(IsForegroundPlacementBlocked);
             Clear();
             var session = bootstrap?.Session;
-            var result = session != null ? session.LastResult : default;
+            var result = session != null ? session.DecorationBaseline : default;
             var tiles = result.tiles;
             if (tiles == null) return;
 
@@ -372,8 +380,10 @@ namespace Nyangbingo.World
             var width = tiles.GetLength(0);
             var height = tiles.GetLength(1);
             var stageMultiplier = runtimeServices?.HeatStage?.TreeDensityMultiplier ?? 1f;
-            var targetCount = Mathf.Max(0,
+            visibleHempPatchCount = Mathf.Max(0,
                 Mathf.RoundToInt(width * density / 100f * Mathf.Max(0f, stageMultiplier)));
+            // 밀도가 줄어도 저장 ID와 채집 기록은 유지하고 표시·채집만 제한한다.
+            var targetCount = Mathf.Max(visibleHempPatchCount, Mathf.RoundToInt(width * density / 100f));
             var occupiedColumns = new HashSet<int>();
             var attempts = Mathf.Max(width * 4, targetCount * 12);
             for (var attempt = 0; attempt < attempts && hempPatches.Count < targetCount; attempt++)
@@ -440,7 +450,7 @@ namespace Nyangbingo.World
                 SupportCell = supportCell,
                 Renderer = renderer
             });
-            visual.SetActive(HasSolidRuntimeSupport(supportCell));
+            visual.SetActive(IsHempAvailable(hempPatches[id]));
         }
 
         public bool TryHarvestCatnip(Vector2 playerPosition, float radius,
@@ -867,8 +877,12 @@ namespace Nyangbingo.World
             bootstrap?.TileService?.GetTile(patch.SupportCell).IsAir == false &&
             bootstrap?.TileService?.GetTile(patch.SupportCell + Vector3Int.up).IsAir == true;
 
+        private bool IsHempInCurrentStage(HempPatch patch) =>
+            patch != null && patch.Id.StartsWith("hemp_", StringComparison.Ordinal) &&
+            int.TryParse(patch.Id.Substring(5), out var index) && index >= 0 && index < visibleHempPatchCount;
+
         private bool IsHempAvailable(HempPatch patch) =>
-            patch != null && !patch.Harvested &&
+            IsHempInCurrentStage(patch) && !patch.Harvested &&
             bootstrap?.TileService?.GetTile(patch.SupportCell).IsAir == false;
 
         private bool IsTreeAvailable(TreePatch tree) =>
@@ -1043,7 +1057,7 @@ namespace Nyangbingo.World
             foreach (var patch in hempPatches.Values)
             {
                 if (patch.SupportCell != cell) continue;
-                var shouldDrop = !patch.Harvested;
+                var shouldDrop = !patch.Harvested && IsHempInCurrentStage(patch);
                 var dropPosition = patch.Renderer != null
                     ? (Vector2)patch.Renderer.transform.position
                     : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
@@ -1132,7 +1146,8 @@ namespace Nyangbingo.World
                 SupportCell = supportCell
             };
             treePatches.Add(treeId, tree);
-            // LastResult contains the deterministic seed layout. TileService also includes
+            var flipX = random.Next(2) == 0;
+            // DecorationBaseline contains the deterministic seed layout. TileService also includes
             // loaded/mined diffs, so it is authoritative when decorations are rebuilt.
             if (bootstrap?.TileService?.GetTile(supportCell).IsAir != false) return;
 
@@ -1140,7 +1155,7 @@ namespace Nyangbingo.World
             if (art?.Sprite == null) return;
             // 전경 타일 비주얼 윗면(드롭과 동일 +0.5)에 스프라이트 하단(피벗 무관)을 맞춘다.
             tree.Renderer = Spawn(id, art, Vector2.zero,
-                random.Next(2) == 0, supportCell);
+                flipX, supportCell);
             AlignSurfaceVisual(tree.Renderer, supportCell);
         }
 

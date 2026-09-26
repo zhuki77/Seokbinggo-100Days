@@ -1849,7 +1849,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellSource.Contains("EventTriggerType.PointerEnter") &&
                 shellSource.Contains("checkmark.rectTransform.sizeDelta = offSize") &&
                 shellSource.Contains("pauseHoverIndicator.gameObject.SetActive") &&
-                shellSource.Contains("saveManager.DeleteAll()") &&
+                !shellSource.Contains("saveManager.Delete(") &&
+                !shellSource.Contains("saveManager.DeleteAll()") &&
+                shellSource.Contains("saveManager.ArchiveBeforeNewGame(") &&
                 shellSource.Contains("CreateFreshInitialSave()") &&
                 shellSource.Contains("saveManager.Save(GameShellController.AutoSaveSlot, initialSnapshot)") &&
                 shellSource.Contains("!SceneTransitionRequest.IsTransitionActive") &&
