@@ -3117,7 +3117,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     tileServiceSource.Contains("MainGameWorldDropRuntime.DropColliderRadius"),
                 "Player art, claw effects, mining cracks, drops, and target highlights must follow the grounded visual-anchor contract.");
             Require(environmentSource.Contains("new GameObject(\"Art\")") &&
-                    environmentSource.Contains("TrySnapFloorPlacedObjectToTerrain(entry)") &&
+                    !environmentSource.Contains("TrySnapFloorPlacedObjectToTerrain(entry)") &&
                     environmentSource.Contains("SnapPlacedVisualRoot(visual, renderer, entry)") &&
                     environmentSource.Contains("AlignPlacedFloorVisual(renderer, entry)") &&
                     environmentSource.Contains("AlignSpriteBoundsToCellBase(renderer, entry.Cell)") &&
