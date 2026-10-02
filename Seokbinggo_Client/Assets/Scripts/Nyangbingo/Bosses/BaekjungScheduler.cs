@@ -170,7 +170,16 @@ namespace Nyangbingo.Bosses
 
         public void Tick(float gameSeconds)
         {
-            if (!disposed) scheduler.Tick(gameSeconds);
+            if (disposed) return;
+            // A bed transition starts the event before the central driver relays the
+            // skipped daytime delta. Only elapsed time within this night belongs to it.
+            if (timeSource is Nyangbingo.World.DayNightService clock)
+            {
+                if (!clock.IsNight || scheduler.ActiveDefinition?.Day != clock.Day) return;
+                var nightElapsed = Math.Max(0f, clock.TimeOfDayGameSeconds - clock.DayDurationSeconds);
+                gameSeconds = Math.Min(gameSeconds, Math.Max(0f, nightElapsed - scheduler.ElapsedSeconds));
+            }
+            scheduler.Tick(gameSeconds);
         }
 
         public void Dispose()

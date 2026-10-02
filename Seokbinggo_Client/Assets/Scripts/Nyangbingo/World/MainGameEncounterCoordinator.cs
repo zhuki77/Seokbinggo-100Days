@@ -180,7 +180,8 @@ namespace Nyangbingo.World
                                 : "king_dokkaebi";
                 TryStartEditorBossEncounter(bossId);
             }
-            if (Input.GetKeyDown(KeyCode.J)) DefeatAllYokaiForEditorTest();
+            if (Input.GetKeyDown(KeyCode.J) &&
+                (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) DefeatAllYokaiForEditorTest();
             if (Input.GetKeyDown(KeyCode.K)) DefeatActiveBossForEditorTest();
             if (Input.GetKeyDown(KeyCode.F9))
             {

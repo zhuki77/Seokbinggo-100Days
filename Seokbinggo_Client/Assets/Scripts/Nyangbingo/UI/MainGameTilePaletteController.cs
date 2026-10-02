@@ -7,6 +7,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+using Input = Nyangbingo.Core.GameplayInput;
+
 namespace Nyangbingo.UI
 {
     /// <summary>
@@ -187,13 +189,13 @@ namespace Nyangbingo.UI
             return true;
         }
 
-        public bool TrySelectPaletteSlot(int slotIndex)
+        public bool TrySelectPaletteSlot(int slotIndex, bool toggleOffIfSelected = true)
         {
             if (!initialized || slotIndex < 0 || slotIndex >= ShortcutSlotCount) return false;
             RefreshHotbarSlotIds();
 
             // 이미 선택된 슬롯을 다시 누르면 선택 해제(빈손).
-            if (selectedSlotIndex == slotIndex)
+            if (toggleOffIfSelected && selectedSlotIndex == slotIndex)
             {
                 SelectBareHands();
                 return true;
@@ -297,15 +299,15 @@ namespace Nyangbingo.UI
 
             if (gameplayVisible && Time.timeScale > 0f)
             {
-                var shortcutSlot = ReadPaletteMouseWheelSlot();
+                var shortcutSlot = ReadPaletteShortcutSlot();
                 if (shortcutSlot >= 0)
                 {
-                    TrySelectPaletteSlot(shortcutSlot);
+                    TrySelectPaletteSlot(shortcutSlot, toggleOffIfSelected: false);
                     return;
                 }
             }
 
-            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            var pointerOverUi = Input.IsPointerOverUi();
             if (gameplayVisible && !pointerOverUi && Input.GetMouseButtonDown(1) &&
                 (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) &&
                 TryRemoveWallpaperAtPointer())
@@ -444,7 +446,11 @@ namespace Nyangbingo.UI
                 var amount = slotTransform.Find("Amount").GetComponent<Text>();
                 var shortcutTransform = slotTransform.Find("Shortcut");
                 var shortcut = shortcutTransform != null ? shortcutTransform.GetComponent<Text>() : null;
-                if (shortcut != null) shortcut.gameObject.SetActive(false);
+                if (shortcut != null)
+                {
+                    shortcut.text = (slotIndex + 1).ToString();
+                    shortcut.gameObject.SetActive(true);
+                }
 
                 slotViews.Add(new SlotView
                 {
@@ -461,6 +467,16 @@ namespace Nyangbingo.UI
 
         private int ReadPaletteMouseWheelSlot() => ResolveMouseWheelSlot(
             selectedSlotIndex, Input.mouseScrollDelta.y, ShortcutSlotCount);
+
+        private int ReadPaletteShortcutSlot()
+        {
+            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) ||
+                Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) return -1;
+            for (var index = 0; index < ShortcutSlotCount; index++)
+                if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + index)) ||
+                    Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index))) return index;
+            return ReadPaletteMouseWheelSlot();
+        }
 
         private void RefreshSlotVisuals()
         {

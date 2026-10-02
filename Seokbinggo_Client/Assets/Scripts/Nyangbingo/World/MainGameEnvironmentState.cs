@@ -806,6 +806,7 @@ namespace Nyangbingo.World
 
             var restoredById = new Dictionary<string, Entry>(StringComparer.Ordinal);
             var restoredByCell = new Dictionary<Vector3Int, Entry>();
+            var restoredTileDoorCells = new HashSet<Vector3Int>();
             var restoredCooling = new CoolingSourceRuntime(gameDataCatalog);
             var restoredMagpieNestCount = 0;
             var restoredColdWaveCoreCount = 0;
@@ -844,6 +845,20 @@ namespace Nyangbingo.World
                 restoredById.Add(record.objectId, entry);
                 restoredByCell.Add(entry.Cell, entry);
 
+                // Tile doors occupy two cells. Restoring only the base leaves a leak
+                // through the head even though the closed door is visibly intact.
+                if (record.definitionId == DoorDefinitionId &&
+                    record.objectId == TileDoorObjectId(cell))
+                {
+                    var head = cell + Vector3Int.up;
+                    if (restoredByCell.ContainsKey(head)) return false;
+                    restoredByCell.Add(head, entry);
+                    restoredTileDoorCells.Add(cell);
+                    restoredTileDoorCells.Add(head);
+                    entry.BarrierActive = entry.BarrierActive &&
+                        !(bootstrap?.TileService?.IsDoorOpen(cell) ?? false);
+                }
+
                 if (!CoolingSourceRuntime.IsCoolingDefinition(record.definitionId)) continue;
                 if (coolingStateById.TryGetValue(record.objectId, out var state))
                 {
@@ -858,6 +873,8 @@ namespace Nyangbingo.World
 
             byObjectId.Clear();
             byCell.Clear();
+            tileDoorCells.Clear();
+            foreach (var cell in restoredTileDoorCells) tileDoorCells.Add(cell);
             ClearVisuals();
             foreach (var pair in restoredById) byObjectId.Add(pair.Key, pair.Value);
             foreach (var pair in restoredByCell) byCell.Add(pair.Key, pair.Value);

@@ -224,6 +224,14 @@ namespace Nyangbingo.World
             return region.isSealed;
         }
 
+        public bool TryGetCoreLeakCell(Vector3Int core, out Vector3Int leakCell)
+        {
+            IsCoreWindowSealed(core);
+            var region = coreRegionByCell[core];
+            leakCell = region.representativeLeakCell ?? default;
+            return !region.isSealed && region.representativeLeakCell.HasValue;
+        }
+
         /// <summary>해당 셀이 맵 경계 안에 있는지. 맵 밖은 방(room) 개념이 성립하지 않는 확정 실패 상태라,
         /// 디버그 뷰가 Flood Fill 결과(칸 목록) 크기에 좌우되지 않는 별도의 확실한 실패 마커를 그릴 수 있게 노출한다.</summary>
         public bool IsInBounds(Vector3Int cell) => tileService.InBounds(cell);

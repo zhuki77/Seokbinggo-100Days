@@ -8,15 +8,8 @@ namespace Nyangbingo.Save
     public sealed class SaveManager : MonoBehaviour
     {
         public const int SlotCount = 1;
-        private const int LegacySlotCount = 3;
         private static readonly int[] DemoDays = { 1, 15, 30 };
         public event Action<int> Saved;
-
-        private void Awake()
-        {
-            for (var slot = SlotCount; slot < LegacySlotCount; slot++)
-                DeleteFilesForSlot(slot);
-        }
 
         public void ArchiveBeforeNewGame(int slot)
         {
@@ -100,6 +93,8 @@ namespace Nyangbingo.Save
             {
                 if (!File.Exists(path) || !TryDeserialize(File.ReadAllText(path), out data) ||
                     !data.isOfficialDemo) return false;
+                // Repeated rehearsals must not rotate the player's only backup away.
+                ArchiveBeforeDemoLoad(PathFor(0));
                 Save(0, data);
                 return true;
             }
@@ -118,6 +113,14 @@ namespace Nyangbingo.Save
             }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
+        }
+
+        private static void ArchiveBeforeDemoLoad(string path)
+        {
+            var suffix = ".before-demo-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") +
+                         "-" + Guid.NewGuid().ToString("N");
+            if (File.Exists(path)) File.Copy(path, path + suffix);
+            if (File.Exists(path + ".bak")) File.Copy(path + ".bak", path + ".bak" + suffix);
         }
 
         public static bool TryDeserialize(string json, out SaveGame data)
@@ -151,8 +154,17 @@ namespace Nyangbingo.Save
                 Delete(slot);
         }
 
-        private static string PathFor(int slot) =>
-            Path.Combine(Application.persistentDataPath, $"nyangbingo-save-{slot}.json");
+        private static string PathFor(int slot)
+        {
+            var directory = Application.persistentDataPath;
+#if UNITY_EDITOR
+            // SessionState survives play-mode domain reload. Only an explicitly
+            // armed QA session redirects saves; normal players/builds are unchanged.
+            var replayDirectory = UnityEditor.SessionState.GetString("Nyangbingo.QA.SaveDirectory", "");
+            if (!string.IsNullOrEmpty(replayDirectory)) directory = replayDirectory;
+#endif
+            return Path.Combine(directory, $"nyangbingo-save-{slot}.json");
+        }
 
         private static void DeleteFilesForSlot(int slot)
         {

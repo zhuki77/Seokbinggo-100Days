@@ -30,17 +30,17 @@ namespace Nyangbingo.UI
 
         private const string DebugShortcutHelpText =
             "보스·소환\n" +
-            "B  보스 선택 패널(다음 보스)  ·  C  선택 보스 소환 아이템 제작\n" +
+            "B  보스 선택 패널(다음 보스)  ·  Alt+C  선택 보스 소환 아이템 제작\n" +
             "F6  소환 재료 지급  ·  Shift+F6  제작대로 이동\n" +
             "Ctrl+F6  신규 아이템 아트 검증 지급\n" +
             "F7  소환 아이템 지급  ·  Shift+F7  깊은 제단 이동\n" +
             "F8  도깨비 대장  ·  Ctrl+F8  어미 불가사리  ·  Alt+F8  이무기\n" +
             "Shift+F8  삼두구미  ·  Ctrl+Shift+F8  업구렁이\n" +
             "F9  고정 내습 앵커 밤(50→60→90→100)\n" +
-            "Shift+F9  소환 앵커 밤(70→80) — B·F6·C·E 소환 경로\n" +
-            "J  일반 요괴 정리  ·  K  활성 보스 즉시 처치(회피 구간 무시)\n\n" +
+            "Shift+F9  소환 앵커 밤(70→80) — B·F6·Alt+C·E 소환 경로\n" +
+            "Alt+J  일반 요괴 정리  ·  K  활성 보스 즉시 처치(회피 구간 무시)\n\n" +
             "제작·설치·연출\n" +
-            "2 제작 탭 화로 필터 Q 제련↔제작(용광로 등)\n" +
+            "C 제작 탭 화로 필터 Q 제련↔제작(용광로 등)\n" +
             "Ctrl+F5  선택 항목 재료 지급  ·  Shift+F5  필요 제작대로 이동\n" +
             "Shift+F10  채굴 파괴 연출\n" +
             "Ctrl+F10  채굴 치명타 연출\n" +
@@ -111,7 +111,7 @@ namespace Nyangbingo.UI
             ? ResolveNearbyCraftingStation()
             : CraftingStation.None;
 
-        public bool TryGetNearbyCraftingStationPosition(CraftingStation station, out Vector2 position)
+        public bool TryGetNearbyCraftingStationPosition(CraftingStation station, out Vector2 position, float? interactionRange = null)
         {
             position = default;
             if (!initialized || environmentState == null || playerTarget == null || station == CraftingStation.None)
@@ -119,8 +119,8 @@ namespace Nyangbingo.UI
             var definitionId = DefinitionIdForStation(station);
             if (!environmentState.TryGetNearestPlacedObjectPosition(
                     definitionId, playerTarget.transform.position, out position)) return false;
-            return (position - (Vector2)playerTarget.transform.position).sqrMagnitude <=
-                   craftingStationInteractionRange * craftingStationInteractionRange;
+            var range = interactionRange ?? craftingStationInteractionRange;
+            return range > 0f && (position - (Vector2)playerTarget.transform.position).sqrMagnitude <= range * range;
         }
         public bool IsNight => bootstrap?.TimeService?.IsNight == true;
         public bool HasSceneBindings => gameDataCatalog != null && bootstrap != null && runtimeServices != null &&
@@ -203,7 +203,8 @@ namespace Nyangbingo.UI
                     ? $"[Nyangbingo] Boss test selection: {selected.Id} ({selectedIndex + 1}/{BossIds.Length})."
                     : "[Nyangbingo] Boss test selection failed: boss definition missing.");
             }
-            if (Input.GetKeyDown(KeyCode.C)) TryCraftSelectedSummonItem();
+            if (Input.GetKeyDown(KeyCode.C) &&
+                (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) TryCraftSelectedSummonItem();
             if (Input.GetKeyDown(KeyCode.F6))
             {
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
@@ -244,7 +245,14 @@ namespace Nyangbingo.UI
         public bool IsPlayerNearStation(CraftingStation station) =>
             initialized && ResolveNearbyCraftingStation() == station;
 
-        public void ShowExternalMessage(string message) => ShowMessage(message);
+        public void ShowExternalMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            // Facility feedback must remain visible even though debug summon logs stay console-only.
+            transientMessage = message;
+            transientMessageUntil = Time.unscaledTime + 4f;
+            RefreshStatus();
+        }
 
         public BossDefinition FindBossForSummonItem(string itemId)
         {
@@ -575,7 +583,7 @@ namespace Nyangbingo.UI
                 $"▶ {definition.DisplayName} ({definition.Id})\n" +
                 $"권장 {definition.RecommendedDay}일 · {night} · 근처 제작대 {nearby}\n" +
                 $"소환 아이템: {summonItem} · 제작 {station}\n" +
-                "B 다음 보스 · C 제작 · F6 재료 · F7 지급 · Esc 닫기";
+                "B 다음 보스 · Alt+C 제작 · F6 재료 · F7 지급 · Esc 닫기";
         }
 
         private void RefreshDebugBossPickerBody()

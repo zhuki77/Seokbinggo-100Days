@@ -344,6 +344,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
     private static void TestBUiV71InvasionAndCraftingContract()
     {
         Require(InvasionScheduleRules.IsInvasionNight(6) &&
+                InvasionScheduleRules.AnnouncementBannerText.Contains("내일 밤") &&
                 InvasionScheduleRules.IsInvasionNight(96) &&
                 !InvasionScheduleRules.IsInvasionNight(5) &&
                 InvasionScheduleRules.ShouldShowAnnouncement(5, false, true) &&

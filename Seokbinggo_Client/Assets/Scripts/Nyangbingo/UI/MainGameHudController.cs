@@ -10,6 +10,7 @@ using Nyangbingo.World;
 using UnityEngine;
 using UnityEngine.UI;
 using PlayerInventory = Nyangbingo.Inventory.Inventory;
+using Input = Nyangbingo.Core.GameplayInput;
 
 namespace Nyangbingo.UI
 {
@@ -157,6 +158,15 @@ namespace Nyangbingo.UI
         private float sealLeakMarkerRemaining;
         [SerializeField] private Text sealDeltaText;
         private float sealDeltaRemaining;
+        private Text shelterGuideText;
+        private float shelterGuideRefreshAt;
+        private MainGameShellUiController shelterShellUi;
+        private Button shelterGuideToggle;
+        private Text shelterGuideToggleLabel;
+        private bool shelterGuideCollapsed;
+        private LineRenderer shelterRangeOutline;
+        private MainGameEnvironmentState shelterEnvironment;
+        private readonly List<Vector2> shelterStationPositions = new List<Vector2>();
         private float lastSealPercent;
         private bool hasLastSealPercent;
         private int invasionBannerDay;
@@ -315,6 +325,7 @@ namespace Nyangbingo.UI
             BuildAlertOverlay();
             RefreshInventory();
             RefreshStatus();
+            RefreshShelterGuide();
             Debug.Log("[Nyangbingo] MainGameHudController: 체온·석빙고 온도·폭염 단계·발톱 티어 HUD와 " +
                       "v29 50슬롯 통합 인벤토리 연결 완료.");
         }
@@ -350,6 +361,7 @@ namespace Nyangbingo.UI
             RefreshBellRopeDetection();
             RefreshAlertOverlay();
             RefreshStatus();
+            RefreshShelterGuide();
             SynchronizeSealPercentBaseline();
             RefreshInvasionAnnouncement();
             if (deathPanel != null && playerController != null && deathPanel.activeSelf != playerController.IsDead)
@@ -505,7 +517,10 @@ namespace Nyangbingo.UI
 
         private void ShowRepresentativeSealLeak()
         {
-            if (bootstrap?.SealSystem == null || !bootstrap.SealSystem.TryGetCoreLeakCell(out var cell)) return;
+            if (bootstrap?.SealSystem == null || playerController == null) return;
+            var inspection = runtimeServices?.RoomTemperature?.InspectShelter(playerController.transform.position) ?? default;
+            if (!inspection.HasLeak) return;
+            var cell = inspection.Leak;
             EnsureSealLeakMarker();
             bootstrap.WorldRenderer?.GetCellWorldCorners(cell, sealLeakMarkerCorners, .04f);
             if (bootstrap.WorldRenderer == null)
@@ -870,6 +885,21 @@ namespace Nyangbingo.UI
 
             goalBadgeRoot.SetActive(goalBadgeProgress.IsVisible);
             if (!goalBadgeProgress.IsVisible) return;
+            if (goalBadgeRhythmHint != null)
+            {
+                goalBadgeRhythmHint.rectTransform.sizeDelta = new Vector2(155f, 30f);
+                goalBadgeRhythmHint.alignment = TextAnchor.UpperLeft;
+                goalBadgeRhythmHint.color = Color.white;
+                var starterInventory = runtimeServices?.PlayerInventory;
+                if (!goalBadgeProgress.WorkbenchCrafted)
+                    goalBadgeRhythmHint.text = "첫 목표 · 작업대 만들기\n" +
+                        $"흙 {starterInventory?.Count("dirt") ?? 0}/8 · 돌 {starterInventory?.Count("stone") ?? 0}/12  |  C 제작\n" +
+                        "블록에 좌클릭 유지 · Space 점프";
+                else if ((starterInventory?.Count("workbench") ?? 0) > 0)
+                    goalBadgeRhythmHint.text = "작업대 설치 · C 제작 → 설치\n" +
+                        "초록 미리보기에서 좌클릭\nESC 설치 취소";
+                else goalBadgeRhythmHint.text = GoalBadgeDayNightRhythmHint;
+            }
             var completed = new[]
             {
                 goalBadgeProgress.WorkbenchCrafted,
@@ -884,6 +914,151 @@ namespace Nyangbingo.UI
                         : new Color(.08f, .12f, .16f, .88f);
                 if (goalBadgeChecks[index] != null) goalBadgeChecks[index].SetActive(completed[index]);
             }
+        }
+
+        private void RefreshShelterGuide()
+        {
+            if (playerController == null || runtimeServices?.RoomTemperature == null ||
+                hudCanvas == null || goalBadgeRhythmHint == null) return;
+            if (shelterGuideText == null)
+            {
+                shelterGuideText = Instantiate(goalBadgeRhythmHint, hudCanvas.transform);
+                shelterGuideText.name = "ShelterGuide";
+                shelterGuideText.gameObject.SetActive(true);
+                shelterGuideText.raycastTarget = false;
+                shelterGuideText.alignment = TextAnchor.UpperLeft;
+                shelterGuideText.fontSize = 7;
+                shelterGuideText.resizeTextForBestFit = false;
+                shelterGuideText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                shelterGuideText.verticalOverflow = VerticalWrapMode.Overflow;
+                var rect = shelterGuideText.rectTransform;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+                rect.anchoredPosition = new Vector2(12, -78);
+                rect.sizeDelta = new Vector2(220, 110);
+                // Full-screen menu panels must cover the guide even on their opening frame.
+                rect.SetAsFirstSibling();
+                var toggleObject = new GameObject("ShelterGuideToggle", typeof(RectTransform), typeof(Image), typeof(Button));
+                toggleObject.transform.SetParent(hudCanvas.transform, false);
+                var toggleRect = (RectTransform)toggleObject.transform;
+                toggleRect.anchorMin = toggleRect.anchorMax = toggleRect.pivot = new Vector2(0, 1);
+                toggleRect.anchoredPosition = new Vector2(12, -62);
+                toggleRect.sizeDelta = new Vector2(68, 13);
+                toggleObject.GetComponent<Image>().color = new Color(.05f, .12f, .16f, .95f);
+                shelterGuideToggle = toggleObject.GetComponent<Button>();
+                shelterGuideToggle.targetGraphic = toggleObject.GetComponent<Image>();
+                shelterGuideToggle.onClick.AddListener(() => { shelterGuideCollapsed = !shelterGuideCollapsed; shelterGuideRefreshAt = 0; });
+                shelterGuideToggleLabel = Instantiate(shelterGuideText, toggleObject.transform);
+                shelterGuideToggleLabel.name = "Label";
+                shelterGuideToggleLabel.alignment = TextAnchor.MiddleCenter;
+                var labelRect = shelterGuideToggleLabel.rectTransform;
+                labelRect.anchorMin = Vector2.zero; labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
+                toggleRect.SetAsFirstSibling();
+            }
+            // Start may run before Continue applies the saved inventory and facilities.
+            // Do not expose or cache that empty startup state through the loading transition.
+            if (shelterShellUi == null) shelterShellUi = FindAnyObjectByType<MainGameShellUiController>();
+            var guideVisible = shelterShellUi != null && shelterShellUi.IsInitialized &&
+                !SceneTransitionRequest.IsTransitionActive &&
+                !SceneTransitionRequest.IsLoadingSceneLoaded() &&
+                !MainGameCraftingUiController.BlocksGameplayInput &&
+                Time.timeScale > 0f && !playerController.IsDead;
+            shelterGuideToggle.gameObject.SetActive(guideVisible);
+            shelterGuideToggleLabel.text = shelterGuideCollapsed ? "설빙고 안내 펼치기" : "설빙고 안내 접기";
+            shelterGuideText.gameObject.SetActive(guideVisible && !shelterGuideCollapsed);
+            if (shelterRangeOutline != null && (!guideVisible || shelterGuideCollapsed)) shelterRangeOutline.enabled = false;
+            if (!guideVisible)
+            {
+                shelterGuideRefreshAt = 0f;
+                return;
+            }
+            if (Time.unscaledTime < shelterGuideRefreshAt) return;
+            shelterGuideRefreshAt = Time.unscaledTime + .5f;
+            var state = runtimeServices.RoomTemperature.InspectShelter(playerController.transform.position);
+            RefreshShelterRange(state, !shelterGuideCollapsed);
+            var inventory = runtimeServices.PlayerInventory;
+            const string purpose = "첫 설빙고 · 얼음을 지키는 보관 공간\n";
+            if (!state.HasCore)
+            {
+                if (inventory.Count("ice_core") > 0)
+                    shelterGuideText.text = purpose + "얼음 저장고를 방 안에 설치하세요.\nC 제작 → 설치 / 좌클릭 확정 / Esc 취소\n자연 지형·차열벽·지붕·닫힌 단열 문으로 둘러싸세요.";
+                else
+                {
+                    shelterEnvironment ??= runtimeServices.GetComponent<MainGameEnvironmentState>();
+                    bool Placed(string id)
+                    {
+                        shelterStationPositions.Clear();
+                        shelterEnvironment?.CopyPlacedObjectPositions(id, shelterStationPositions);
+                        return shelterStationPositions.Count > 0;
+                    }
+                    var recipeId = ResolveShelterNextRecipe(Placed("workbench"), Placed("furnace"));
+                    var recipe = gameDataCatalog?.FindRecipe(recipeId);
+                    var targetName = recipe?.Output.item != null ? recipe.Output.item.DisplayName : recipeId;
+                    if (inventory.Count(recipeId) > 0)
+                    {
+                        shelterGuideText.text = purpose + $"다음 행동: {targetName} 설치\nC 제작 → 설치 / 좌클릭 확정 / Esc 취소\n설치 후 우클릭으로 시설을 사용하세요.";
+                        return;
+                    }
+                    var materials = new System.Text.StringBuilder();
+                    if (recipe?.Ingredients != null)
+                        foreach (var ingredient in recipe.Ingredients)
+                            if (ingredient.item != null)
+                                materials.Append($"{ingredient.item.DisplayName} {inventory.Count(ingredient.item.Id)}/{ingredient.amount}  ");
+                    shelterGuideText.text = purpose + $"다음 행동: {targetName} 만들기\n" + materials +
+                        "\nC 제작 · 재료/시설 확인\n" + (recipeId == "workbench"
+                            ? "흙·돌에 좌클릭을 유지해 캐고 가까이 가서 주우세요."
+                            : recipeId == "furnace" ? "작업대를 우클릭해 제작하세요."
+                            : "화로에서 제작 · 철 광석은 제련해 주괴로 만드세요.");
+                }
+            }
+            else if (!state.InRange)
+                shelterGuideText.text = state.Sealed
+                    ? purpose + $"가까운 저장고: ({state.Core.x}, {state.Core.y})\n현재 위치는 냉각 범위 밖입니다.\n보관함은 저장고 주변 {state.RangeWidth}×{state.RangeHeight}칸 안에 두세요.\n휴식은 따뜻한 곳에서 · 침대 사용 조건은 별도입니다.\n밀폐 상태: 밀폐됨"
+                    : $"저장고 미밀폐 · 문·벽·지붕을 점검하세요.\n가까운 저장고: ({state.Core.x}, {state.Core.y})\n직접 놓은 흙·돌은 밀폐 벽이 아닙니다.\n보관함의 실제 온도와 보관 조건을 확인하세요.\n현재 위치는 냉각 범위 밖입니다.\n휴식은 따뜻한 곳에서 · 침대 사용 조건은 별도입니다.";
+            else if (!state.Sealed)
+                shelterGuideText.text = purpose + $"저장고 작동 중 · 이 코어 효과 {state.CoreDelta}°C\n아직 밀폐되지 않았습니다.\n자연 지형·차열벽·지붕·닫힌 단열 문을 확인하세요.\n" +
+                    "직접 놓은 흙·돌은 밀폐 벽이 아닙니다.\n" +
+                    (state.HasLeak ? $"점검 위치: ({state.Leak.x}, {state.Leak.y})\n" : "") +
+                    "온도 게이지를 길게 누르면 점검 위치가 표시됩니다.";
+            else
+            {
+                var safetyHint = runtimeServices.PlayerTemperature != null && runtimeServices.PlayerTemperature.IsHypothermia
+                    ? "저체온 위험 · 먼저 따뜻한 곳으로 이동하세요.\n보관 공간의 냉각과 플레이어의 안전은 다릅니다."
+                    : "다음: 장독의 보관 온도와 얼음 수량을 확인하세요.\n휴식 공간은 따뜻하게 유지하세요.";
+                shelterGuideText.text = safetyHint + $"\n가까운 저장고 밀폐됨 · 이 코어 효과 {state.CoreDelta}°C\n현재 실온 {runtimeServices.RoomTemperature.Resolve(playerController.transform.position)}°C\n보관함마다 실제 보관 조건을 확인하세요.";
+            }
+        }
+
+        public static string ResolveShelterNextRecipe(bool workbenchPlaced, bool furnacePlaced) =>
+            furnacePlaced ? "ice_core" : workbenchPlaced ? "furnace" : "workbench";
+
+        private void RefreshShelterRange(RoomTempService.ShelterInspection state, bool visible)
+        {
+            if (shelterRangeOutline != null) shelterRangeOutline.enabled = false;
+            if (!visible || !state.HasCore || bootstrap?.TileService == null) return;
+            if (shelterRangeOutline == null)
+            {
+                EnsureSealLeakMarker();
+                var host = new GameObject("ShelterCoolingRange");
+                host.transform.SetParent(transform, false);
+                shelterRangeOutline = host.AddComponent<LineRenderer>();
+                shelterRangeOutline.useWorldSpace = true;
+                shelterRangeOutline.loop = true;
+                shelterRangeOutline.positionCount = 4;
+                shelterRangeOutline.startWidth = shelterRangeOutline.endWidth = .045f;
+                shelterRangeOutline.sortingOrder = 119;
+                shelterRangeOutline.sharedMaterial = sealLeakMarkerMaterial;
+                shelterRangeOutline.startColor = shelterRangeOutline.endColor = new Color(.2f, .9f, 1f, .65f);
+            }
+            var minimum = state.Core - new Vector3Int(state.RangeWidth / 2, state.RangeHeight / 2, 0);
+            var maximum = minimum + new Vector3Int(state.RangeWidth - 1, state.RangeHeight - 1, 0);
+            var min = bootstrap.TileService.GetCellWorldBounds(minimum).min;
+            var max = bootstrap.TileService.GetCellWorldBounds(maximum).max;
+            shelterRangeOutline.SetPosition(0, new Vector3(min.x, min.y));
+            shelterRangeOutline.SetPosition(1, new Vector3(max.x, min.y));
+            shelterRangeOutline.SetPosition(2, new Vector3(max.x, max.y));
+            shelterRangeOutline.SetPosition(3, new Vector3(min.x, max.y));
+            shelterRangeOutline.enabled = true;
         }
 
         private void RefreshCraftingProgress()
@@ -1083,8 +1258,15 @@ namespace Nyangbingo.UI
             else if (bossHealthValueText != null)
                 bossHealthValueText.text = displayedBossHealth;
 
-            // Current HP is rendered inside the illustrated bar; keep the legacy external label empty.
-            bossStatusText.text = string.Empty;
+            // Keep numeric HP in the illustrated bar; explain the actual combat state below it.
+            var activeCombat = definition != null ? health.GetComponent<BossCombatController>() : null;
+            bossStatusText.raycastTarget = false;
+            bossStatusText.rectTransform.anchoredPosition = new Vector2(0f,
+                BossHealthBarBelowClockY - BossHealthBarHeight - 4f);
+            bossStatusText.text = activeCombat == null ? string.Empty
+                : activeCombat.IsOpeningDodgeActive
+                    ? "공격 불가 · 먼저 피하세요"
+                    : "공격 가능 · 전조를 보며 싸우세요";
 #if UNITY_EDITOR
             // Test controls are listed in the F5 debug shortcut popup.
 #endif

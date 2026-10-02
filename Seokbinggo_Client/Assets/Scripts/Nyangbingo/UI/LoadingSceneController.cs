@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Nyangbingo.Data;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -77,35 +78,55 @@ namespace Nyangbingo.UI
 
         private IEnumerator LoadTarget(string target)
         {
-            var operation = SceneManager.LoadSceneAsync(target, LoadSceneMode.Additive);
-            if (operation == null)
+            // Additive activation enables the destination EventSystem before the source
+            // scene is unloaded. Suspend only currently active source systems during
+            // that overlap; leave the non-interactive loading overlay unchanged.
+            var suspendedEvents = new List<EventSystem>();
+            foreach (var events in FindObjectsByType<EventSystem>(FindObjectsSortMode.None))
             {
+                if (!events.isActiveAndEnabled || events.gameObject.scene == gameObject.scene) continue;
+                suspendedEvents.Add(events);
+                events.enabled = false;
+            }
+            try
+            {
+                var operation = SceneManager.LoadSceneAsync(target, LoadSceneMode.Additive);
+                if (operation == null)
+                {
+                    SceneTransitionRequest.Complete();
+                    yield break;
+                }
+                yield return operation;
+
+                var targetScene = SceneManager.GetSceneByName(target);
+                if (targetScene.IsValid() && targetScene.isLoaded)
+                    SceneManager.SetActiveScene(targetScene);
+
+                // 로딩 오버레이 아래에는 목적지 씬만 남긴다. 특히 MainGame -> Title 전환 중
+                // 일시정지/확인 UI가 로딩 아트 사이로 비치는 것을 방지한다.
+                var unloadOperations = new List<AsyncOperation>();
+                for (var index = SceneManager.sceneCount - 1; index >= 0; index--)
+                {
+                    var scene = SceneManager.GetSceneAt(index);
+                    if (!scene.isLoaded || scene.name == target || scene.name == SceneTransitionRequest.LoadingSceneName)
+                        continue;
+                    var unload = SceneManager.UnloadSceneAsync(scene);
+                    if (unload != null) unloadOperations.Add(unload);
+                }
+                for (var index = 0; index < unloadOperations.Count; index++)
+                    yield return unloadOperations[index];
+
+                yield return PlayLoadingCompletion(() => true);
                 SceneTransitionRequest.Complete();
-                yield break;
+                SceneManager.UnloadSceneAsync(SceneTransitionRequest.LoadingSceneName);
             }
-            yield return operation;
-
-            var targetScene = SceneManager.GetSceneByName(target);
-            if (targetScene.IsValid() && targetScene.isLoaded)
-                SceneManager.SetActiveScene(targetScene);
-
-            // 로딩 오버레이 아래에는 목적지 씬만 남긴다. 특히 MainGame -> Title 전환 중
-            // 일시정지/확인 UI가 로딩 아트 사이로 비치는 것을 방지한다.
-            var unloadOperations = new List<AsyncOperation>();
-            for (var index = SceneManager.sceneCount - 1; index >= 0; index--)
+            finally
             {
-                var scene = SceneManager.GetSceneAt(index);
-                if (!scene.isLoaded || scene.name == target || scene.name == SceneTransitionRequest.LoadingSceneName)
-                    continue;
-                var unload = SceneManager.UnloadSceneAsync(scene);
-                if (unload != null) unloadOperations.Add(unload);
+                // Successful source unload destroys these components. On failure or
+                // cancellation, restore surviving source input rather than stranding it.
+                foreach (var events in suspendedEvents)
+                    if (events != null) events.enabled = true;
             }
-            for (var index = 0; index < unloadOperations.Count; index++)
-                yield return unloadOperations[index];
-
-            yield return PlayLoadingCompletion(() => true);
-            SceneTransitionRequest.Complete();
-            SceneManager.UnloadSceneAsync(SceneTransitionRequest.LoadingSceneName);
         }
 
         private IEnumerator WaitForOverlayReady()

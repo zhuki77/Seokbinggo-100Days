@@ -317,7 +317,7 @@ namespace Nyangbingo.Save
                 succeeded = RestoreStage("time state", () => save.timeState.hasValue) &&
                 RestoreStage("world session", () => bootstrap.Session.LoadSnapshot(save)) &&
                 RestoreStage("door states", () =>
-                    bootstrap.TileService.RestoreDoorStates(save.doorStates)) &&
+                    bootstrap.TileService.RestoreDoorStates(save.doorStates, save.placedObjectRecords)) &&
                 RestoreStage("player spawn", () => PreparePlayerSpawnForRestore(save, forceSafeSurfaceSpawn)) &&
                 RestoreStage("player/time/boss", () => PlayerTimeBossSaveAdapter.Restore(
                     save, encounterCoordinator.PlayerTransform,

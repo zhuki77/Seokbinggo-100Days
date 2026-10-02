@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using Input = Nyangbingo.Core.GameplayInput;
 
 namespace Nyangbingo.World
 {
@@ -303,7 +304,7 @@ namespace Nyangbingo.World
                     CancelPlacementPreview();
                     return;
                 }
-                var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                var pointerOverUi = Input.IsPointerOverUi();
                 if (!pointerOverUi && Input.GetMouseButtonDown(0))
                 {
                     placementPointerConsumedFrame = Time.frameCount;

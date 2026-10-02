@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Text;
+using Input = Nyangbingo.Core.GameplayInput;
 
 namespace Nyangbingo.UI
 {
@@ -54,7 +55,10 @@ namespace Nyangbingo.UI
         private Image sfxSpeakerImage;
         private Button pauseSaveButton;
         private FrostSpreadService frostSpread;
+        private string pendingEndingBossId;
         private RectTransform pauseHoverIndicator;
+        private string pauseStatusMessage = string.Empty;
+        private const string BossSaveRestrictionHint = "보스 전투 중 · 저장 불가\n처치하거나 새벽까지 기다리세요";
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
         public bool IsInitialized { get; private set; }
@@ -192,7 +196,8 @@ namespace Nyangbingo.UI
                 new Vector2(0f, cardHeight * 0.5f - 38f), new Vector2(cardWidth - 24f, 16f));
             hint.text = "1회만 고릅니다. 되돌릴 수 없습니다.";
 
-            var buttonsTop = cardHeight * 0.5f - 56f;
+            // This coordinate is the button CENTER, not its top edge.
+            var buttonsTop = cardHeight * 0.5f - 56f - buttonHeight * 0.5f;
             for (var i = 0; i < TraitRules.AllIds.Length; i++)
             {
                 var traitId = TraitRules.AllIds[i];
@@ -735,7 +740,7 @@ namespace Nyangbingo.UI
                 var statusRect = statusText.rectTransform;
                 statusRect.anchorMin = statusRect.anchorMax = statusRect.pivot = new Vector2(.5f, .5f);
                 statusRect.anchoredPosition = new Vector2(0f, -83f);
-                statusRect.sizeDelta = new Vector2(150f, 14f);
+                statusRect.sizeDelta = new Vector2(166f, 28f);
                 statusText.alignment = TextAnchor.MiddleCenter;
                 statusText.fontSize = 8;
                 statusText.transform.SetAsLastSibling();
@@ -864,7 +869,11 @@ namespace Nyangbingo.UI
             // Settings is displayed on top of the paused gameplay view, so the pause-only
             // keyboard hint must be hidden until the player returns to the pause card.
             if (statusText != null)
+            {
                 statusText.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause);
+                statusText.text = bossManager != null && bossManager.IsBossActive
+                    ? BossSaveRestrictionHint : pauseStatusMessage;
+            }
         }
 
         private void SaveCurrentProgress()
@@ -904,6 +913,18 @@ namespace Nyangbingo.UI
         {
             if (shell == null || shell.Screen == GameShellScreen.Result) return;
             if (!GameShellController.ShouldOpenDemoResult(bossId, gameDataCatalog)) return;
+            // EndingReached occurs before BossEnded records the kill and grants drops.
+            // Capture after those handlers finish, rather than displaying a stale result.
+            pendingEndingBossId = bossId;
+        }
+
+        private void LateUpdate()
+        {
+            if (!IsInitialized || string.IsNullOrEmpty(pendingEndingBossId)) return;
+            var bossId = pendingEndingBossId;
+            pendingEndingBossId = null;
+            if (shell == null || shell.Screen == GameShellScreen.Result ||
+                !GameShellController.ShouldOpenDemoResult(bossId, gameDataCatalog)) return;
             var snapshot = saveCoordinator.CaptureSnapshot();
             if (snapshot == null)
             {
@@ -1041,7 +1062,11 @@ namespace Nyangbingo.UI
                 SceneTransitionRequest.Begin(SceneTransitionRequest.TitleSceneName);
         }
 
-        private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
+        private void SetStatus(string value)
+        {
+            pauseStatusMessage = value ?? string.Empty;
+            if (statusText != null) statusText.text = pauseStatusMessage;
+        }
 
         private void OnDestroy()
         {

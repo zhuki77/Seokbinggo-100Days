@@ -52,6 +52,40 @@ namespace Nyangbingo.World
         public int ColdEnterCelsius => ReadThreshold("room_temp_cold_enter", -5);
         public int FrozenEnterCelsius => ReadThreshold("room_temp_frozen_enter", -10);
 
+        public readonly struct ShelterInspection
+        {
+            public readonly bool HasCore, InRange, Sealed, HasLeak;
+            public readonly Vector3Int Core, Leak;
+            public readonly int CoreDelta, RangeWidth, RangeHeight;
+            public ShelterInspection(bool hasCore, bool inRange, bool sealedRoom, bool hasLeak,
+                Vector3Int core, Vector3Int leak, int delta, int width, int height)
+            {
+                HasCore = hasCore; InRange = inRange; Sealed = sealedRoom; HasLeak = hasLeak;
+                Core = core; Leak = leak; CoreDelta = delta; RangeWidth = width; RangeHeight = height;
+            }
+        }
+
+        // Inspect the nearest core without changing the primary core or progression.
+        // Use the same range and seal rules as ResolveExact; natural cold is not a built shelter.
+        public ShelterInspection InspectShelter(Vector3 worldPosition)
+        {
+            var cell = worldSession?.TileService != null
+                ? worldSession.TileService.WorldToCell(worldPosition)
+                : new Vector3Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y), 0);
+            iceCoreCells.Clear();
+            environmentState?.CopyIceCoreCells(iceCoreCells);
+            if (iceCoreCells.Count == 0) return default;
+            var core = iceCoreCells[0];
+            foreach (var candidate in iceCoreCells)
+                if ((candidate - cell).sqrMagnitude < (core - cell).sqrMagnitude) core = candidate;
+            var inRange = IsInsideCoreRange(cell, core, coreRangeWidth, coreRangeHeight);
+            var sealedRoom = sealSystem != null && sealSystem.IsCoreWindowSealed(core);
+            var leak = default(Vector3Int);
+            var hasLeak = sealSystem != null && sealSystem.TryGetCoreLeakCell(core, out leak);
+            return new ShelterInspection(true, inRange, sealedRoom, hasLeak, core, leak,
+                sealedRoom ? coreDeltaInsulated : coreDeltaPlain, coreRangeWidth, coreRangeHeight);
+        }
+
         public int Resolve(Vector3 worldPosition)
             => Mathf.RoundToInt(ResolveExact(worldPosition));
 

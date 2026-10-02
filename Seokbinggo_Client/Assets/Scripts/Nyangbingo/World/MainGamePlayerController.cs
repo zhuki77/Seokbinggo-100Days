@@ -11,6 +11,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
 using UnityEngine.UI;
+using Input = Nyangbingo.Core.GameplayInput;
 
 namespace Nyangbingo.World
 {
@@ -20,6 +21,7 @@ namespace Nyangbingo.World
     public sealed class MainGamePlayerController : MonoBehaviour
     {
         public const float GameplayCameraOrthographicSize = 8f;
+        public const float PlayerVisualHeightTiles = 2f;
         public const float FallDamageBounceHeightTiles = .5f;
 
         private const string MoveSpeedKey = "player_move_speed";
@@ -301,14 +303,34 @@ namespace Nyangbingo.World
             }
             else
                 RuntimePlaceholderVisual.Configure(playerRenderer, new Color(.25f, .85f, 1f), .8f, 20);
+            // Normalize the idle reference once, preserving aspect ratio and animation
+            // squash/stretch. Do not scale the physics root or shared imported sprites.
+            if (playerRenderer.sprite != null)
+            {
+                var cellHeight = bootstrap.TileService.GetCellWorldBounds(
+                    bootstrap.TileService.WorldToCell(transform.position)).size.y;
+                var referenceHeight = playerArt?.Sprite != null
+                    ? playerArt.Sprite.bounds.size.y : playerRenderer.sprite.bounds.size.y;
+                var parentHeightScale = Mathf.Abs(transform.lossyScale.y);
+                if (referenceHeight > Mathf.Epsilon && parentHeightScale > Mathf.Epsilon)
+                {
+                    var visualScale = cellHeight * PlayerVisualHeightTiles /
+                                      (referenceHeight * parentHeightScale);
+                    playerVisualTransform.localScale = new Vector3(visualScale, visualScale, 1f);
+                }
+            }
             playerVisualTransform.localPosition = Vector3.up *
                 RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
                     playerCollider, playerRenderer);
             initialSpawnPosition = transform.position;
             aliveRendererColor = playerRenderer.color;
             aliveRotation = transform.rotation;
+            // Keep existing attack art size/offset independent from character art scale.
+            var attackVisualRoot = new GameObject("AttackVisual").transform;
+            attackVisualRoot.SetParent(transform, false);
+            attackVisualRoot.localPosition = playerVisualTransform.localPosition;
             var indicatorObject = new GameObject("AttackIndicator");
-            indicatorObject.transform.SetParent(playerVisualTransform, false);
+            indicatorObject.transform.SetParent(attackVisualRoot, false);
             attackIndicator = indicatorObject.AddComponent<SpriteRenderer>();
             // The delivered art is rotated -90 degrees for a right-facing attack, so its
             // source Y axis becomes screen X. flipY is therefore the required screen-space
@@ -521,7 +543,7 @@ namespace Nyangbingo.World
                 TickAttackFeedback(Time.deltaTime);
                 if (attackIndicatorRemaining <= 0f) attackIndicator.enabled = false;
             }
-            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            var pointerOverUi = Input.IsPointerOverUi();
             tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
             var buildingPlacementActive = MainGameTurretRuntime.BlocksCombatInput ||
                                           MainGameTilePaletteController.BlocksGameplayInput ||
@@ -538,11 +560,13 @@ namespace Nyangbingo.World
                 TickMining();
             }
             else CancelMining();
-            // 커서로 설치물을 직접 우클릭하면 상호작용하고, 그 외에는 기존 부채 액티브를 사용한다.
+            // 시설 클릭이 빗나가도 전투 스킬이 발동하지 않도록 입력을 분리한다.
             if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1))
             {
-                if (!TryInteractPlacedObjectAtPointer()) TryFanAbility();
+                TryInteractPlacedObjectAtPointer();
             }
+            if (!buildingPlacementActive && !pointerOverUi && Input.GetKeyDown(KeyCode.F))
+                TryFanAbility();
         }
 
         private void FixedUpdate()
@@ -978,7 +1002,10 @@ namespace Nyangbingo.World
                 ConsiderMiningTarget(aim, aim, MiningWorldTargetKind.PlacedObject, ref bestAimDist, ref bestKind);
                 if (bestKind == MiningWorldTargetKind.PlacedObject) cell = placedCell;
             }
-            if (TryResolveMiningCell(tileService, out var tileCell))
+            // Cursor picking also returns air cells for background interaction. Air cannot
+            // compete with a harvestable decoration in the primary mining target list.
+            if (TryResolveMiningCell(tileService, out var tileCell) &&
+                IsMineableForegroundCell(tileService, tileCell))
             {
                 ConsiderMiningTarget(CellAimPoint(tileCell), aim, MiningWorldTargetKind.Tile, ref bestAimDist, ref bestKind);
                 if (bestKind == MiningWorldTargetKind.Tile) cell = tileCell;
@@ -1167,7 +1194,7 @@ namespace Nyangbingo.World
             attackCooldown = Mathf.Max(0f, attackCooldown - deltaSeconds);
             TickYeongnoSwallow(deltaSeconds);
 
-            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            var pointerOverUi = Input.IsPointerOverUi();
             if (!pointerOverUi && Input.GetMouseButton(0) && attackCooldown <= 0f)
                 TrySwallowWeakPointStrike();
         }
@@ -1268,7 +1295,7 @@ namespace Nyangbingo.World
                        StringComparison.Ordinal);
         }
 
-        private void TryPresentIronVeinEcho(Vector3Int minedCell)
+        private void TryPresentIronVeinEcho(Vector3Int minedCell, string minedElementType)
         {
             if (Time.time < oreEchoMessageUntil ||
                 runtimeServices?.ArtifactVerbs == null || runtimeServices.EquipmentSystem == null)
@@ -1276,12 +1303,20 @@ namespace Nyangbingo.World
             if (!runtimeServices.ArtifactVerbs.HighlightsOreVeins(
                     runtimeServices.EquipmentSystem, BuildArtifactContext()))
                 return;
-            var tileService = bootstrap?.TileService;
-            if (tileService == null) return;
-            var minedTile = tileService.GetTile(minedCell);
-            if (!string.Equals(ResolveMiningDefinitionId(minedTile.elementType), WorldTileTypes.IronOre,
-                    StringComparison.Ordinal))
-                return;
+            if (!TryFindIronVeinDirection(bootstrap?.TileService, minedCell, minedElementType,
+                    out var direction)) return;
+            oreEchoMessageUntil = Time.time + ArtifactVerbRuntime.OreEchoHighlightSeconds;
+            interactionMessages?.ShowExternalMessage($"무쇠 식성 — 철 광맥이 {direction}에 있습니다.");
+        }
+
+        // Called after a successful break: use the captured material, not the now-empty cell.
+        public static bool TryFindIronVeinDirection(TileService tileService, Vector3Int minedCell,
+            string minedElementType, out string direction)
+        {
+            direction = null;
+            if (tileService == null || !tileService.InBounds(minedCell) ||
+                !string.Equals(ResolveMiningDefinitionId(minedElementType), WorldTileTypes.IronOre,
+                    StringComparison.Ordinal)) return false;
             Vector3Int? bestCell = null;
             var bestDistance = float.PositiveInfinity;
             for (var dx = -8; dx <= 8; dx++)
@@ -1289,6 +1324,7 @@ namespace Nyangbingo.World
                 for (var dy = -8; dy <= 8; dy++)
                 {
                     var candidate = minedCell + new Vector3Int(dx, dy, 0);
+                    if (candidate == minedCell) continue;
                     if (!tileService.InBounds(candidate)) continue;
                     var tile = tileService.GetTile(candidate);
                     if (tile.IsAir || !string.Equals(tile.elementType, WorldTileTypes.IronOre,
@@ -1299,13 +1335,12 @@ namespace Nyangbingo.World
                     bestCell = candidate;
                 }
             }
-            if (!bestCell.HasValue) return;
+            if (!bestCell.HasValue) return false;
             var delta = bestCell.Value - minedCell;
-            var direction = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+            direction = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
                 ? delta.x > 0 ? "동쪽" : "서쪽"
                 : delta.y > 0 ? "북쪽" : "남쪽";
-            oreEchoMessageUntil = Time.time + ArtifactVerbRuntime.OreEchoHighlightSeconds;
-            interactionMessages?.ShowExternalMessage($"무쇠 식성 — 철 광맥이 {direction}에 있습니다.");
+            return true;
         }
 
         private bool TryTickRebarMining(int clawTier, float miningDelta)
@@ -1663,12 +1698,13 @@ namespace Nyangbingo.World
         {
             var tileService = bootstrap?.TileService;
             if (tileService == null) return;
+            var minedElementType = tileService.GetTile(cell).elementType;
             string itemId;
             int amount;
             using (ItemAcquisition.CaptureRequests())
                 if (!tileService.TryBreakForeground(cell, clawTier, out itemId, out amount)) return;
 
-            TryPresentIronVeinEcho(cell);
+            TryPresentIronVeinEcho(cell, minedElementType);
 
             var totalAmount = amount;
             var item = string.IsNullOrEmpty(itemId) ? null : catalog?.FindItem(itemId);

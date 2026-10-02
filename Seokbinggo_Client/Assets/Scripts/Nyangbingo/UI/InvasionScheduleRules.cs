@@ -12,7 +12,7 @@ namespace Nyangbingo.UI
         public const int DefaultPeriodDays = 10;
         public const int DefaultOffsetDays = 6;
         public const int MaxScheduledInvasionDay = 96;
-        public const string AnnouncementBannerText = "오늘 밤 침공 · 준비하세요";
+        public const string AnnouncementBannerText = "내일 밤 침공 · 준비하세요";
         public const string BedLockedMessage = "침공 밤에는 잠을 잘 수 없습니다";
 
         public static bool IsInvasionNight(int day, int periodDays = DefaultPeriodDays,

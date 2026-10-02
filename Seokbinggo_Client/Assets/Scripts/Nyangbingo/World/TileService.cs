@@ -365,21 +365,39 @@ namespace Nyangbingo.World
             })
             .ToList();
 
-        public bool RestoreDoorStates(IEnumerable<DoorStateRecord> records)
+        public bool RestoreDoorStates(IEnumerable<DoorStateRecord> records,
+            IEnumerable<PlacedObjectRecord> placedObjects = null)
         {
             if (records == null) return false;
             var validated = new HashSet<Vector3Int>();
+            var logicalOnly = new HashSet<Vector3Int>();
+            var savedDoorCells = new HashSet<Vector3Int>();
+            if (placedObjects != null)
+                foreach (var placed in placedObjects)
+                {
+                    if (placed.definitionId != DoorElementType) continue;
+                    var cell = new Vector3Int(Mathf.FloorToInt(placed.position.x), Mathf.FloorToInt(placed.position.y), 0);
+                    if (placed.objectId == MainGameEnvironmentState.TileDoorObjectId(cell)) savedDoorCells.Add(cell);
+                }
             foreach (var record in records)
             {
                 if (!record.isOpen) continue;
                 var cell = new Vector3Int(record.x, record.y, 0);
-                if (!InBounds(cell) ||
-                    TileIdAlias.ToCanonical(GetTile(cell).elementType) != DoorElementType ||
-                    !validated.Add(cell))
+                if (!InBounds(cell) || !InBounds(cell + Vector3Int.up) || !validated.Add(cell))
                     return false;
+                if (TileIdAlias.ToCanonical(GetTile(cell).elementType) == DoorElementType) continue;
+                // Environment-managed open doors remove both foreground cells.
+                // Accept that representation only when the saved door object proves ownership.
+                if (!savedDoorCells.Contains(cell) || !GetTile(cell).IsAir ||
+                    !GetTile(cell + Vector3Int.up).IsAir) return false;
+                logicalOnly.Add(cell);
             }
-            foreach (var cell in openDoors.ToArray()) CloseDoor(cell);
-            foreach (var cell in validated) OpenDoor(cell);
+            foreach (var cell in openDoors.ToArray())
+                if (GetTile(cell).IsAir) RemoveOpenDoorState(cell);
+                else CloseDoor(cell);
+            foreach (var cell in validated)
+                if (logicalOnly.Contains(cell)) SetLogicalDoorOpen(cell, true);
+                else OpenDoor(cell);
             return true;
         }
 
