@@ -964,7 +964,7 @@ namespace Nyangbingo.UI
                 !MainGameCraftingUiController.BlocksGameplayInput &&
                 Time.timeScale > 0f && !playerController.IsDead;
             shelterGuideToggle.gameObject.SetActive(guideVisible);
-            shelterGuideToggleLabel.text = shelterGuideCollapsed ? "설빙고 안내 펼치기" : "설빙고 안내 접기";
+            shelterGuideToggleLabel.text = shelterGuideCollapsed ? "석빙고 안내 펼치기" : "석빙고 안내 접기";
             shelterGuideText.gameObject.SetActive(guideVisible && !shelterGuideCollapsed);
             if (shelterRangeOutline != null && (!guideVisible || shelterGuideCollapsed)) shelterRangeOutline.enabled = false;
             if (!guideVisible)
@@ -977,7 +977,7 @@ namespace Nyangbingo.UI
             var state = runtimeServices.RoomTemperature.InspectShelter(playerController.transform.position);
             RefreshShelterRange(state, !shelterGuideCollapsed);
             var inventory = runtimeServices.PlayerInventory;
-            const string purpose = "첫 설빙고 · 얼음을 지키는 보관 공간\n";
+            const string purpose = "첫 석빙고 · 얼음을 지키는 보관 공간\n";
             if (!state.HasCore)
             {
                 if (inventory.Count("ice_core") > 0)
