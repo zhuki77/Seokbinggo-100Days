@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Bosses;
 using Nyangbingo.Core;
@@ -17,7 +17,24 @@ namespace Nyangbingo.Yokai
         bool TryRecordInfiltration(YokaiDefinition definition);
     }
     public interface IYokaiCombatTarget { bool TryApplyContactDamage(int amount); }
+    public interface IYokaiAtomicLootTarget
+    {
+        bool TryStealGroundLoot(Vector2 origin, float range, YokaiLoot recipient);
+        bool TryStealInventory(int maxSlots, int maxAmount, YokaiLoot recipient);
+    }
     public interface IYokaiLootTarget { bool TryStealGroundLoot(); bool TryStealInventory(int maxSlots, int maxAmount); }
+    public interface IYokaiCoreTheftTarget { IYokaiTarget TheftTarget { get; } }
+    public interface IYokaiCoreTarget
+    {
+        IYokaiTarget PlayerTarget { get; }
+        Vector3Int CoreCell { get; }
+        bool IsAvailable { get; }
+    }
+    public interface IYokaiCoreRoute
+    {
+        IYokaiTarget ResolveCore(Vector3Int cell);
+        IYokaiTarget FindNextCore(Vector3 origin, IReadOnlyCollection<Vector3Int> completedCells);
+    }
     public interface IYokaiTheftReceiptSource { IReadOnlyList<ItemAmount> TakeStolenItems(); }
     public interface IWallMaterialTarget { YokaiWallMaterial WallMaterial { get; } }
     public interface IYokaiBarrierTarget
@@ -43,7 +60,7 @@ namespace Nyangbingo.Yokai
         public const int GaekgwiWailDamage = 8;
         public const float GaekgwiWailKnockbackTiles = 1f;
         public const float GaekgwiWailHalfExtentTiles = 1.5f;
-        private enum State { Approach, AttackWall, StealLoot, Retreat, DawnFlee }
+        private enum State { Approach, AttackWall, StealLoot, Retreat, DawnFlee, CoreIdle }
         private enum GaekgwiPatternState { Cooldown, Telegraph, Dash }
         [SerializeField] private YokaiDefinition definition;
         [SerializeField] private MonoBehaviour gameSecondsSourceComponent;
@@ -83,8 +100,21 @@ namespace Nyangbingo.Yokai
         private Vector2 gaekgwiDashDirection;
         private GangcheoriBreathController gangcheoriBreath;
         private bool useAggroRadius;
+        private bool hasReachedCoreForTheft;
         private bool isAggroed;
         private bool infiltrationRecorded;
+        private IYokaiTarget corePlayerTarget;
+        private IYokaiCoreRoute coreRoute;
+        private readonly HashSet<Vector3Int> completedCoreCells = new HashSet<Vector3Int>();
+        private bool coreGoalCompleted;
+        private bool coreBreachAttempted;
+        private bool corePathCheckNeeded;
+        private bool coreRouteOpen;
+        private Vector2 coreIdleAnchor;
+        private int coreIdleStep;
+        private float coreIdlePauseRemaining;
+        // Each creature owns its random stream, including ones entering idle on the same tick.
+        private readonly System.Random coreIdleRandom = new System.Random(System.Guid.NewGuid().GetHashCode());
         private Vector2 forcedAggroPosition;
         private float forcedAggroRemaining;
         private bool hasForcedAggro;
@@ -142,9 +172,20 @@ namespace Nyangbingo.Yokai
         {
             ResetGameSecondsSample();
             GameEvents.OnDawnWarning += HandleDawnWarning;
+            GameEvents.OnWallDurabilityChanged += HandleCoreWallChanged;
+            GameEvents.OnSealChanged += HandleCorePathChanged;
+            GameEvents.OnTileBroken += HandleCoreTileChanged;
+            GameEvents.OnTilePlaced += HandleCoreTileChanged;
         }
 
-        private void OnDisable() => GameEvents.OnDawnWarning -= HandleDawnWarning;
+        private void OnDisable()
+        {
+            GameEvents.OnDawnWarning -= HandleDawnWarning;
+            GameEvents.OnWallDurabilityChanged -= HandleCoreWallChanged;
+            GameEvents.OnSealChanged -= HandleCorePathChanged;
+            GameEvents.OnTileBroken -= HandleCoreTileChanged;
+            GameEvents.OnTilePlaced -= HandleCoreTileChanged;
+        }
 
         public void SetTarget(IYokaiTarget value)
         {
@@ -154,10 +195,23 @@ namespace Nyangbingo.Yokai
         }
         public void ConfigureForRuntime(YokaiDefinition value, IYokaiTarget targetValue,
             IYokaiCounterSource counters = null, YokaiSpawnTrack instanceSpawnTrack = YokaiSpawnTrack.Raid,
-            bool gateByAggroRadius = false, bool startEngaged = true, int? hitPointsOverride = null)
+            bool gateByAggroRadius = false, bool startEngaged = true, int? hitPointsOverride = null,
+            IYokaiTarget playerTarget = null, IYokaiCoreRoute coreRouteSource = null)
         {
             definition = value;
             target = targetValue;
+            hasReachedCoreForTheft = false;
+            corePlayerTarget = playerTarget ?? (targetValue as IYokaiCoreTarget)?.PlayerTarget;
+            coreRoute = coreRouteSource;
+            completedCoreCells.Clear();
+            coreGoalCompleted = false;
+            coreBreachAttempted = false;
+            corePathCheckNeeded = targetValue is IYokaiCoreTarget;
+            coreRouteOpen = false;
+            physicsBody?.SetWallBreachAllowed(true);
+            coreIdleAnchor = Vector2.zero;
+            coreIdleStep = 0;
+            coreIdlePauseRemaining = 0f;
             spawnTrack = definition != null &&
                          (instanceSpawnTrack == YokaiSpawnTrack.Raid || instanceSpawnTrack == YokaiSpawnTrack.Resident) &&
                          definition.SupportsSpawnTrack(instanceSpawnTrack)
@@ -219,14 +273,26 @@ namespace Nyangbingo.Yokai
             record.usesAggroRadius = useAggroRadius;
             record.isAggroed = isAggroed;
             record.infiltrationRecorded = infiltrationRecorded;
+            record.hasReachedCoreForTheft = hasReachedCoreForTheft;
+            record.coreGoalCompleted = coreGoalCompleted;
+            record.coreBreachAttempted = coreBreachAttempted;
+            record.coreIdleAnchor = coreIdleAnchor;
+            record.coreIdleStep = coreIdleStep;
+            record.coreIdlePauseRemaining = coreIdlePauseRemaining;
+            record.hasCoreArrivalGoalState = true;
+            record.hasCoreSequenceState = true;
+            record.hasCurrentCoreTarget = target is IYokaiCoreTarget;
+            record.currentCoreCell = target is IYokaiCoreTarget core ? core.CoreCell : default;
+            record.completedCoreCells = new List<Vector3Int>(completedCoreCells);
+            record.completedCoreCells.Sort((left, right) => left.x != right.x
+                ? left.x.CompareTo(right.x) : left.y.CompareTo(right.y));
             record.stolenItems = GetComponent<YokaiLoot>()?.CaptureStolenItems() ??
                                  new List<InventorySlot>();
         }
 
-        public bool RestoreSaveState(YokaiStateRecord record)
+        public bool RestoreSaveState(YokaiStateRecord record, bool prioritizeInvasionCore = false)
         {
-            if (record == null || record.behaviorState < (int)State.Approach ||
-                record.behaviorState > (int)State.DawnFlee ||
+            if (!ValidateSavedCoreGoalState(record) ||
                 !IsFinite(record.dawnFleeDirection) ||
                 !IsFiniteNonNegative(record.sieveStopRemaining) ||
                 !IsFiniteNonNegative(record.sieveCooldownRemaining) ||
@@ -246,7 +312,36 @@ namespace Nyangbingo.Yokai
                  !IsFinite(record.gaekgwiDashDirection)))
                 return false;
 
+            hasReachedCoreForTheft = definition?.Kind == YokaiKind.Yagwanggwi && record.hasReachedCoreForTheft;
+            var initialCore = target as IYokaiCoreTarget;
+            if (hasReachedCoreForTheft && target is IYokaiCoreTheftTarget coreTheft &&
+                coreTheft.TheftTarget?.TargetTransform != null)
+                SetTarget(coreTheft.TheftTarget);
             state = (State)record.behaviorState;
+            coreGoalCompleted = record.coreGoalCompleted;
+            coreBreachAttempted = record.coreBreachAttempted;
+            corePathCheckNeeded = true;
+            coreRouteOpen = false;
+            physicsBody?.SetWallBreachAllowed(true);
+            coreIdleAnchor = record.coreIdleAnchor;
+            coreIdleStep = record.coreIdleStep;
+            coreIdlePauseRemaining = record.coreIdlePauseRemaining;
+            completedCoreCells.Clear();
+            if (record.completedCoreCells != null)
+                foreach (var cell in record.completedCoreCells) completedCoreCells.Add(cell);
+            // 단일 코어 대기 저장에는 완료 목록이 없다. 당시 기준 코어를 완료 처리한다.
+            if (!record.hasCoreSequenceState && record.coreGoalCompleted && initialCore != null)
+                completedCoreCells.Add(initialCore.CoreCell);
+            var restoredCoreMissing = false;
+            if (record.hasCurrentCoreTarget && coreRoute != null)
+            {
+                target = coreRoute.ResolveCore(record.currentCoreCell);
+                restoredCoreMissing = target == null;
+                if (restoredCoreMissing) completedCoreCells.Add(record.currentCoreCell);
+            }
+            else if (record.hasCoreSequenceState && corePlayerTarget != null)
+                target = corePlayerTarget;
+            if (coreGoalCompleted && corePlayerTarget != null) target = corePlayerTarget;
             sieveStopRemaining = record.sieveStopRemaining;
             sieveCooldownRemaining = record.sieveCooldownRemaining;
             lanternPauseRemaining = record.lanternPauseRemaining;
@@ -278,6 +373,33 @@ namespace Nyangbingo.Yokai
                 isAggroed = record.isAggroed || !useAggroRadius;
                 infiltrationRecorded = record.infiltrationRecorded;
             }
+            if (restoredCoreMissing)
+            {
+                if (state == State.DawnFlee || state == State.Retreat) target = corePlayerTarget;
+                else CompleteCoreGoal();
+            }
+            // Old idle saves may have completed the goal at the opening, before reaching a core.
+            if (!record.hasCoreArrivalGoalState && coreGoalCompleted && state == State.CoreIdle &&
+                !infiltrationRecorded)
+                completedCoreCells.Clear();
+            if (coreGoalCompleted && state == State.CoreIdle)
+            {
+                var nextCore = coreRoute?.FindNextCore(transform.position, completedCoreCells);
+                if (nextCore != null) BeginCoreTarget(nextCore);
+            }
+            // 이전 저장의 일반 요괴는 침투 성공 직후 Retreat로 들어갔다. 절도/새벽 도주는 보존한다.
+            if (!record.hasCoreSequenceState && !coreGoalCompleted && infiltrationRecorded && state == State.Retreat &&
+                definition?.Kind != YokaiKind.Yagwanggwi && corePlayerTarget != null)
+                CompleteCoreGoal();
+            // Repair old invasion saves that were waiting outside the ordinary core radius.
+            // Preserve engaged combat, theft, retreat and already completed core sequences.
+            if (prioritizeInvasionCore && spawnTrack == YokaiSpawnTrack.Raid &&
+                state == State.Approach && !isAggroed && !coreGoalCompleted &&
+                !hasReachedCoreForTheft && target is not IYokaiCoreTarget)
+            {
+                var invasionCore = coreRoute?.FindNextCore(transform.position, completedCoreCells);
+                if (invasionCore?.TargetTransform != null) BeginCoreTarget(invasionCore);
+            }
             SetBossEncounterPaused(false);
             SetAnimationMoving(state != State.AttackWall);
             if (definition != null && definition.Kind == YokaiKind.Gaekgwi)
@@ -290,6 +412,30 @@ namespace Nyangbingo.Yokai
             ResetGameSecondsSample();
             return true;
         }
+
+        public static bool ValidateSavedCoreGoalState(YokaiStateRecord record) =>
+            record != null && record.behaviorState >= (int)State.Approach &&
+            record.behaviorState <= (int)State.CoreIdle &&
+            (record.behaviorState != (int)State.CoreIdle || record.coreGoalCompleted) &&
+            (!record.coreGoalCompleted || IsFinite(record.coreIdleAnchor) &&
+             record.coreIdleStep >= 0 && record.coreIdleStep <= 3 &&
+             IsFiniteNonNegative(record.coreIdlePauseRemaining)) &&
+            ValidateSavedCoreSequence(record);
+
+        private static bool ValidateSavedCoreSequence(YokaiStateRecord record)
+        {
+            if (!record.hasCoreSequenceState) return true;
+            if (record.completedCoreCells == null || record.hasCurrentCoreTarget &&
+                (record.coreGoalCompleted || !IsValidCoreCell(record.currentCoreCell))) return false;
+            var visited = new HashSet<Vector3Int>();
+            foreach (var cell in record.completedCoreCells)
+                if (!IsValidCoreCell(cell) || !visited.Add(cell) ||
+                    record.hasCurrentCoreTarget && cell == record.currentCoreCell) return false;
+            return true;
+        }
+
+        private static bool IsValidCoreCell(Vector3Int cell) => cell.x >= 0 && cell.y >= 0 && cell.z == 0;
+
         public void BeginRetreat()
         {
             if (state != State.DawnFlee) state = State.Retreat;
@@ -459,8 +605,9 @@ namespace Nyangbingo.Yokai
                 MoveRetreat(dawnFleeDirection, actionSeconds, true);
                 return;
             }
+            TryCompleteCoreGoal();
             if (target == null || target.TargetTransform == null) return;
-            if (useAggroRadius && !isAggroed)
+            if (useAggroRadius && !isAggroed && state != State.CoreIdle)
             {
                 if (target is IYokaiStealthTarget stealth && stealth.IsHiddenFromAggro) return;
                 var detectionOffset = target.TargetTransform.position - transform.position;
@@ -532,6 +679,14 @@ namespace Nyangbingo.Yokai
                     if (lanternPauseRemaining > 0f || actionSeconds <= .0001f) return;
                 }
             }
+            if (state == State.CoreIdle && !HasForcedAggro)
+            {
+                if (!TryAcquirePlayerFromCoreIdle())
+                {
+                    TickCoreIdle(actionSeconds);
+                    return;
+                }
+            }
             if (definition.Kind == YokaiKind.Gangcheori &&
                 gangcheoriBreath != null &&
                 gangcheoriBreath.Tick(actionSeconds))
@@ -569,16 +724,20 @@ namespace Nyangbingo.Yokai
             // the grounded path graph look like a transition to another floor. Natural
             // terrain is excluded by the barrier target. A zero-DPS yokai must keep routing
             // instead of entering AttackWall forever.
-            var foundBlockingWall = barrierTarget != null &&
-                                    barrierTarget.TryFindBlockingWall(
-                                        currentPosition, wallApproachDirection, attackRange,
-                                        out blockingWallCell, out blockingWallMaterial);
+            var foundBlockingWall = !(target is IYokaiCoreTarget && coreRouteOpen) && barrierTarget != null &&
+                                    (physicsBody != null
+                                        ? physicsBody.TryFindBodyBlockingWall(wallApproachDirection, attackRange,
+                                            out blockingWallCell, out blockingWallMaterial)
+                                        : barrierTarget.TryFindBlockingWall(
+                                            currentPosition, wallApproachDirection, attackRange,
+                                            out blockingWallCell, out blockingWallMaterial));
             var blockingWallDamage = foundBlockingWall
                 ? definition.WallDamageFor(blockingWallMaterial)
                 : 0f;
             var hasBlockingWall = blockingWallDamage > 0f &&
                                   !float.IsNaN(blockingWallDamage) &&
                                   !float.IsInfinity(blockingWallDamage);
+            if (hasBlockingWall && target is IYokaiCoreTarget) coreBreachAttempted = true;
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - actionSeconds);
             switch (state)
             {
@@ -594,16 +753,17 @@ namespace Nyangbingo.Yokai
                         MoveTowardAttackRange(direction, navigationDistance, attackRange, actionSeconds);
                     else
                     {
-                        var lootTarget = target as IYokaiLootTarget;
-                        var stoleLoot = YokaiSpecialRules.ShouldStealGroundLoot(definition.Kind, counters) && lootTarget?.TryStealGroundLoot() == true;
-                        if (!stoleLoot && YokaiSpecialRules.CanStealInventory(definition.Kind, counters) &&
+                        var recipient = GetComponent<YokaiLoot>();
+                        var lootTarget = target as IYokaiAtomicLootTarget;
+                        var stoleLoot = recipient != null &&
+                            YokaiSpecialRules.ShouldStealGroundLoot(definition.Kind, counters) &&
+                            lootTarget?.TryStealGroundLoot(transform.position, attackRange, recipient) == true;
+                        if (!stoleLoot && recipient != null &&
+                            YokaiSpecialRules.CanStealInventory(definition.Kind, counters) &&
                             definition.StealSlots > 0 && definition.StealMaxItems > 0)
                             stoleLoot = lootTarget?.TryStealInventory(
-                                definition.StealSlots, definition.StealMaxItems) == true;
-                        if (stoleLoot && lootTarget is IYokaiTheftReceiptSource receiptSource)
-                            GetComponent<YokaiLoot>()?.RecordStolenItems(
-                                receiptSource.TakeStolenItems());
-                        state = stoleLoot ? State.Retreat : State.Approach;
+                                definition.StealSlots, definition.StealMaxItems, recipient) == true;
+                        state = stoleLoot && recipient.HasStolenItems ? State.Retreat : State.Approach;
                     }
                     break;
                 case State.AttackWall:
@@ -618,6 +778,7 @@ namespace Nyangbingo.Yokai
                                 contactAttackRemaining = WallAttackIntervalGameSeconds;
                                 Attacked?.Invoke();
                                 GameEvents.RaiseWallDamaged();
+                                if (target is IYokaiCoreTarget) corePathCheckNeeded = true;
                             }
                         }
                         break;
@@ -650,7 +811,7 @@ namespace Nyangbingo.Yokai
                         infiltration.TryRecordInfiltration(definition))
                     {
                         infiltrationRecorded = true;
-                        BeginRetreat();
+                        if (target is IYokaiCoreTarget) CompleteCoreGoal();
                         break;
                     }
                     var wall = target as IWallMaterialTarget;
@@ -674,6 +835,138 @@ namespace Nyangbingo.Yokai
                     MoveRetreat(-direction, actionSeconds, false);
                     break;
             }
+        }
+
+        private void HandleCoreWallChanged(Vector3Int cell, float current, float maximum, bool destroyed)
+        {
+            if (destroyed && coreBreachAttempted && !coreGoalCompleted)
+                corePathCheckNeeded = true;
+        }
+
+        private void HandleCoreTileChanged(Vector3Int cell) => HandleCorePathChanged();
+
+        private void HandleCorePathChanged()
+        {
+            if (target is IYokaiCoreTarget && !coreGoalCompleted) corePathCheckNeeded = true;
+        }
+
+        private void TryCompleteCoreGoal()
+        {
+            if (coreGoalCompleted || !(target is IYokaiCoreTarget core) ||
+                target.TargetTransform == null || core.PlayerTarget?.TargetTransform == null ||
+                state == State.Retreat || state == State.DawnFlee) return;
+            if (!core.IsAvailable)
+            {
+                CompleteCoreGoal();
+                return;
+            }
+            var reach = float.IsNaN(wallAttackRange) || float.IsInfinity(wallAttackRange)
+                ? 1f : Mathf.Max(0f, wallAttackRange);
+            var reachedCore = CanAttackTarget(target.TargetTransform.position, reach);
+            if (!reachedCore)
+            {
+                if (!corePathCheckNeeded) return;
+                corePathCheckNeeded = false;
+                coreRouteOpen = physicsBody != null && physicsBody.HasOpenRouteTo(target.TargetTransform.position);
+                physicsBody?.SetWallBreachAllowed(!coreRouteOpen);
+                if (coreRouteOpen && state == State.AttackWall) state = State.Approach;
+                return;
+            }
+            // 온도 페널티는 기존처럼 실제 코어 도달 시 한 번만 기록한다.
+            if (reachedCore && !infiltrationRecorded && target is IYokaiInfiltrationTarget infiltration &&
+                infiltration.TryRecordInfiltration(definition))
+                infiltrationRecorded = true;
+            corePlayerTarget = core.PlayerTarget;
+            CompleteCoreGoal();
+        }
+
+        private void CompleteCoreGoal()
+        {
+            if (target is IYokaiCoreTarget completedCore) completedCoreCells.Add(completedCore.CoreCell);
+            var nextCore = coreRoute?.FindNextCore(transform.position, completedCoreCells);
+            if (nextCore != null)
+            {
+                BeginCoreTarget(nextCore);
+                return;
+            }
+            coreGoalCompleted = true;
+            corePathCheckNeeded = false;
+            coreRouteOpen = false;
+            physicsBody?.SetWallBreachAllowed(true);
+            coreIdleAnchor = transform.position;
+            coreIdleStep = coreIdleRandom.Next(2) == 0 ? 0 : 2;
+            coreIdlePauseRemaining = NextCoreIdlePause();
+            target = corePlayerTarget;
+            useAggroRadius = true;
+            isAggroed = false;
+            state = State.CoreIdle;
+            hasReachedCoreForTheft = definition?.Kind == YokaiKind.Yagwanggwi;
+            ResetGaekgwiPattern();
+        }
+
+        private void BeginCoreTarget(IYokaiTarget nextCore)
+        {
+            target = nextCore;
+            // Infiltration is recorded once per core, not once for the actor's lifetime.
+            infiltrationRecorded = false;
+            coreGoalCompleted = false;
+            coreBreachAttempted = false;
+            corePathCheckNeeded = true;
+            coreRouteOpen = false;
+            physicsBody?.SetWallBreachAllowed(true);
+            hasReachedCoreForTheft = false;
+            useAggroRadius = false;
+            isAggroed = true;
+            state = State.Approach;
+            ResetGaekgwiPattern();
+        }
+
+        private bool TryAcquirePlayerFromCoreIdle()
+        {
+            if (target?.TargetTransform == null ||
+                target is IYokaiStealthTarget stealth && stealth.IsHiddenFromAggro ||
+                !IsWithinAggroRadius(target.TargetTransform.position - transform.position, definition.AggroRadius))
+                return false;
+            isAggroed = true;
+            state = State.Approach;
+            return true;
+        }
+
+        private void TickCoreIdle(float actionSeconds)
+        {
+            if (actionSeconds <= 0f) return;
+            var paused = Mathf.Min(actionSeconds, coreIdlePauseRemaining);
+            coreIdlePauseRemaining -= paused;
+            actionSeconds -= paused;
+            if (actionSeconds <= 0f) return;
+            var offsetX = coreIdleStep == 0 ? 1f : coreIdleStep == 2 ? -1f : 0f;
+            var waypoint = new Vector2(coreIdleAnchor.x + offsetX, transform.position.y);
+            var offset = waypoint - (Vector2)transform.position;
+            var distance = Mathf.Abs(offset.x);
+            if (distance <= .05f || physicsBody != null && !physicsBody.CanWanderTo(waypoint))
+            {
+                ScheduleNextCoreIdleStep();
+                return;
+            }
+            var travel = Mathf.Min(distance, Mathf.Min(definition.MoveSpeed, 1f) * actionSeconds);
+            if (travel <= 0f) return;
+            var moved = MoveBy(Vector3.right * (Mathf.Sign(offset.x) * travel));
+            if (moved < .001f || travel >= distance - .05f)
+            {
+                ScheduleNextCoreIdleStep();
+            }
+        }
+
+        private float NextCoreIdlePause() => .4f + (float)coreIdleRandom.NextDouble() * .9f;
+
+        private void ScheduleNextCoreIdleStep()
+        {
+            // Keep every leg one tile and stay around the completed core goal.
+            // 0/2 go right/left; 1/3 return to the anchor (also compatible with old saves).
+            coreIdleStep = coreIdleStep == 0 || coreIdleStep == 2
+                ? 1
+                : coreIdleRandom.Next(2) == 0 ? 0 : 2;
+            coreIdlePauseRemaining = NextCoreIdlePause();
         }
 
         private void TickForcedAggroChase(float actionSeconds)

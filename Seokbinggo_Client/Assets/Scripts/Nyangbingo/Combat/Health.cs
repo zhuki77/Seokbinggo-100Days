@@ -55,11 +55,16 @@ namespace Nyangbingo.Combat
             return Current - previous;
         }
         public bool TryApplyKnockback(Vector2 impulse)
+            => TryApplyKnockback(impulse, 1f);
+
+        public bool TryApplyKnockback(Vector2 impulse, float durationMultiplier)
         {
             if (knockbackImmune || float.IsNaN(impulse.x) || float.IsInfinity(impulse.x) ||
-                float.IsNaN(impulse.y) || float.IsInfinity(impulse.y)) return false;
+                float.IsNaN(impulse.y) || float.IsInfinity(impulse.y) ||
+                float.IsNaN(durationMultiplier) || float.IsInfinity(durationMultiplier) ||
+                durationMultiplier <= 0f) return false;
             var worldMobBody = GetComponent<WorldMobPhysicsBody>();
-            if (worldMobBody != null) return worldMobBody.TryApplyKnockback(impulse);
+            if (worldMobBody != null) return worldMobBody.TryApplyKnockback(impulse, durationMultiplier);
             var body = GetComponent<Rigidbody2D>();
             if (body == null) return false;
             body.AddForce(impulse, ForceMode2D.Impulse);

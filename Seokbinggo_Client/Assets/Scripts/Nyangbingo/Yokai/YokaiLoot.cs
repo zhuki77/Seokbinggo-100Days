@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Data;
@@ -132,13 +132,18 @@ namespace Nyangbingo.Yokai
             rewardPolicy = rewards;
         }
 
-        public void RecordStolenItems(IReadOnlyList<ItemAmount> items)
+        public bool HasStolenItems => stolenItems.Count > 0;
+
+        public bool RecordStolenItems(IReadOnlyList<ItemAmount> items)
         {
-            if (items == null || items.Count == 0) return;
+            if (definition == null || definition.Kind != YokaiKind.Yagwanggwi ||
+                items == null || items.Count == 0) return false;
             foreach (var stack in items)
-                if (stack.item != null && stack.amount > 0)
-                    stolenItems.Add(stack);
-            theftSucceeded |= stolenItems.Count > 0;
+                if (stack.item == null || stack.amount <= 0 || stack.amount > stack.item.MaxStack)
+                    return false;
+            foreach (var stack in items) stolenItems.Add(stack);
+            theftSucceeded = true;
+            return true;
         }
 
         public List<InventorySlot> CaptureStolenItems()
@@ -198,7 +203,7 @@ namespace Nyangbingo.Yokai
             if (theftSucceeded && definition.Kind == YokaiKind.Yagwanggwi)
             {
                 foreach (var stolen in stolenItems)
-                    Grant(stolen.item, stolen.amount);
+                    Grant(stolen.item, stolen.amount, true);
                 Grant(definition.TearItem, definition.TearBonus);
             }
 
@@ -224,11 +229,12 @@ namespace Nyangbingo.Yokai
         private int ScaleDropAmount(int baseAmount) =>
             rewardPolicy == null ? baseAmount : rewardPolicy.ScaleDropAmount(baseAmount);
 
-        private void Grant(ItemDefinition item, int amount)
+        private void Grant(ItemDefinition item, int amount, bool returnedTheft = false)
         {
             if (item == null || amount <= 0) return;
             Dropped?.Invoke(item, amount);
-            WorldItemDropRequest.Request(item, amount, transform.position);
+            if (returnedTheft) WorldItemDropRequest.RequestReturnedTheft(item, amount, transform.position);
+            else WorldItemDropRequest.Request(item, amount, transform.position);
         }
     }
 }

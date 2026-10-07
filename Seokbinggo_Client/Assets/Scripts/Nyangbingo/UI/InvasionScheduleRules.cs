@@ -12,7 +12,7 @@ namespace Nyangbingo.UI
         public const int DefaultPeriodDays = 10;
         public const int DefaultOffsetDays = 6;
         public const int MaxScheduledInvasionDay = 96;
-        public const string AnnouncementBannerText = "내일 밤 침공 · 준비하세요";
+        public const string AnnouncementBannerText = "오늘 밤 침공 · 준비하세요";
         public const string BedLockedMessage = "침공 밤에는 잠을 잘 수 없습니다";
 
         public static bool IsInvasionNight(int day, int periodDays = DefaultPeriodDays,
@@ -24,12 +24,12 @@ namespace Nyangbingo.UI
             return mod == offsetDays % periodDays;
         }
 
-        /// <summary>침공 전날 낮에 예고 배너를 띄운다.</summary>
+        /// <summary>침공 당일 낮에 오늘 밤의 침공을 예고한다.</summary>
         public static bool ShouldShowAnnouncement(int day, bool isNight, bool announceEnabled,
             int periodDays = DefaultPeriodDays, int offsetDays = DefaultOffsetDays)
         {
             if (!announceEnabled || isNight || day < 1) return false;
-            return IsInvasionNight(day + 1, periodDays, offsetDays);
+            return IsInvasionNight(day, periodDays, offsetDays);
         }
 
         /// <summary>예고된 침공 밤에는 침대(낮잠/스킵)를 막는다.</summary>

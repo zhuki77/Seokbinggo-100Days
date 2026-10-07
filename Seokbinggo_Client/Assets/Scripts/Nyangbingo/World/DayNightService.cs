@@ -175,7 +175,8 @@ namespace Nyangbingo.World
             // §5.3: 음수/NaN/Infinity 거부 — timeScale이 0(정지)이면 rawDeltaSeconds도 항상 0이 되어 여기서 걸러진다.
             if (rawDeltaSeconds <= 0f || float.IsNaN(rawDeltaSeconds) || float.IsInfinity(rawDeltaSeconds)) return;
 
-            gameSeconds += rawDeltaSeconds;
+            // 이벤트 콜백에서도 실제 경계 시각을 관찰해야 새 소비자의 등록 시각이 정확하다.
+            // Tick 전체 시간을 미리 더하면 밤에 생성된 AI가 같은 프레임의 남은 밤 시간을 잃는다.
             var remaining = rawDeltaSeconds;
 
             while (remaining > 0f)
@@ -186,11 +187,13 @@ namespace Nyangbingo.World
                     if (remaining < toNight)
                     {
                         timeOfDayGameSeconds += remaining;
+                        gameSeconds += remaining;
                         remaining = 0f;
                         continue;
                     }
 
                     timeOfDayGameSeconds = dayDurationSeconds;
+                    gameSeconds += toNight;
                     remaining -= toNight;
                     isNight = true;
                     dawnWarningFired = false;
@@ -209,10 +212,12 @@ namespace Nyangbingo.World
                         if (remaining < toWarn)
                         {
                             timeOfDayGameSeconds += remaining;
+                            gameSeconds += remaining;
                             remaining = 0f;
                             continue;
                         }
                         timeOfDayGameSeconds = dayDurationSeconds + warnAt;
+                        gameSeconds += toWarn;
                         remaining -= toWarn;
                     }
                     dawnWarningFired = true;
@@ -224,10 +229,12 @@ namespace Nyangbingo.World
                 if (remaining < toDawn)
                 {
                     timeOfDayGameSeconds += remaining;
+                    gameSeconds += remaining;
                     remaining = 0f;
                     continue;
                 }
 
+                gameSeconds += toDawn;
                 remaining -= toDawn;
                 timeOfDayGameSeconds = 0f;
                 isNight = false;

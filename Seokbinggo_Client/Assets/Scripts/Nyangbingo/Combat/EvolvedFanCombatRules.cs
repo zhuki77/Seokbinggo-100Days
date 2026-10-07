@@ -9,6 +9,8 @@ namespace Nyangbingo.Combat
     /// </summary>
     public static class EvolvedFanCombatRules
     {
+        public const float KnockbackDurationMultiplier = 1f;
+        public const float AbilityBonusTiles = 2f;
         public const string SeongeFanId = FanItemIds.SeongeFan;
         public const string IceRootWhipfanId = FanItemIds.IceRootWhipfan;
         public const string ColdWaveFanId = FanItemIds.ColdWaveFan;
@@ -44,12 +46,25 @@ namespace Nyangbingo.Combat
 
         public static float ResolveAbilityKnockback(CombatProfileDefinition profile)
         {
+            // 합죽선은 일반 공격이 없으므로 +2 규칙에서 제외한다.
+            if (profile != null && profile.Id == FanItemIds.Hapjukseon)
+                return WireSnareAbility.Knockback;
             if (profile != null &&
                 !float.IsNaN(profile.KnockbackTiles) &&
                 !float.IsInfinity(profile.KnockbackTiles) &&
-                profile.KnockbackTiles > 0f)
-                return profile.KnockbackTiles;
+                profile.KnockbackTiles >= 0f)
+                return profile.KnockbackTiles + AbilityBonusTiles;
             return WireSnareAbility.Knockback;
+        }
+
+        public static float ResolveAbilityRange(CombatProfileDefinition profile)
+        {
+            if (profile != null && profile.Id == FanItemIds.Hapjukseon)
+                return 2f;
+            var basicRange = profile != null ? profile.RangeTiles : 2f;
+            if (float.IsNaN(basicRange) || float.IsInfinity(basicRange) || basicRange <= 0f)
+                basicRange = 2f;
+            return basicRange + AbilityBonusTiles;
         }
     }
 }
