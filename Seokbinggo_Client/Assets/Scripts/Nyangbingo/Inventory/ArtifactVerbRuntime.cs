@@ -44,6 +44,29 @@ namespace Nyangbingo.Inventory
         public const float KnockbackGrabSeconds = 1f;
         public const float ModuleHoldoverSeconds = 60f;
         public const float IceMeltSlowMultiplier = .5f;
+        public const string CoolerBaseRadiusKey = "ice_crystal_cooler_radius_tiles";
+        public const string CoolerExtendedRadiusKey = "yeouiju_shard_cooler_radius_tiles";
+        public const string IceMeltSlowKey = "yeouiju_shard_ice_melt_multiplier";
+        private readonly float coolerBaseRadius = CoolerBaseRadiusTiles;
+        private readonly float coolerExtendedRadius = CoolerExtendedRadiusTiles;
+        private readonly float iceMeltSlow = IceMeltSlowMultiplier;
+
+        public ArtifactVerbRuntime(GameDataCatalog catalog = null)
+        {
+            if (catalog == null) return; // 기존 독립 계약 테스트의 기본값을 보존한다.
+            coolerBaseRadius = ReadPositiveGlobal(catalog, CoolerBaseRadiusKey);
+            coolerExtendedRadius = ReadPositiveGlobal(catalog, CoolerExtendedRadiusKey);
+            iceMeltSlow = ReadPositiveGlobal(catalog, IceMeltSlowKey);
+            if (coolerExtendedRadius < coolerBaseRadius || iceMeltSlow > 1f)
+                throw new InvalidOperationException("Invalid ice crystal cooler globals.");
+        }
+
+        private static float ReadPositiveGlobal(GameDataCatalog catalog, string key)
+        {
+            if (catalog.FindGlobal(key) is { } global && global.TryGetFloat(out var value) &&
+                value > 0f && !float.IsNaN(value) && !float.IsInfinity(value)) return value;
+            throw new InvalidOperationException("Missing/invalid cooler global: " + key);
+        }
         public const string CodexTearItemId = "yokai_tear";
 
         private readonly Dictionary<string, int> dailyUses =
@@ -93,12 +116,12 @@ namespace Nyangbingo.Inventory
 
         public float ResolveCoolerRadiusTiles(EquipmentSystem equipment, ArtifactActivationContext context) =>
             IsVerbActive(equipment, ArtifactVerbId.ExtendCoolerRadius, context)
-                ? CoolerExtendedRadiusTiles
-                : CoolerBaseRadiusTiles;
+                ? coolerExtendedRadius
+                : coolerBaseRadius;
 
         public float ResolveIceMeltMultiplier(EquipmentSystem equipment, ArtifactActivationContext context) =>
             IsVerbActive(equipment, ArtifactVerbId.ExtendCoolerRadius, context)
-                ? IceMeltSlowMultiplier
+                ? iceMeltSlow
                 : 1f;
 
         public float ResolveDaySurfaceMoveBonus(EquipmentSystem equipment, ArtifactActivationContext context) =>

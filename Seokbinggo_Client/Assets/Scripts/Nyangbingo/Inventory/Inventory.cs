@@ -21,29 +21,29 @@ namespace Nyangbingo.Inventory
         public float EffectiveStorageCondition => hasStorageCondition ? storageCondition01 : 1f;
     }
 
+    [Serializable]
+    public sealed class InventoryCursorOrigin
+    {
+        public string kind = "player";
+        public string objectId = string.Empty;
+        public int slotIndex = -1;
+        public InventorySlot remainder;
+    }
+
     public sealed class Inventory
     {
         public const int SlotCount = 50;
         private readonly List<InventorySlot> slots;
         private readonly Func<string, ItemDefinition> findItem;
-        private readonly int reservedAutoFillSlotCount;
-        private readonly Func<string, bool> canAutoFillReservedSlot;
         public event Action Changed;
         public IReadOnlyList<InventorySlot> Slots => slots;
         public int Capacity => slots.Count;
         public bool IsEmpty => slots.TrueForAll(slot => string.IsNullOrEmpty(slot.itemId));
 
-        public Inventory(Func<string, ItemDefinition> findItem, int slotCount = SlotCount,
-            int reservedAutoFillSlotCount = 0, Func<string, bool> canAutoFillReservedSlot = null)
+        public Inventory(Func<string, ItemDefinition> findItem, int slotCount = SlotCount)
         {
             this.findItem = findItem ?? throw new ArgumentNullException(nameof(findItem));
             if (slotCount <= 0) throw new ArgumentOutOfRangeException(nameof(slotCount));
-            if (reservedAutoFillSlotCount < 0 || reservedAutoFillSlotCount > slotCount)
-                throw new ArgumentOutOfRangeException(nameof(reservedAutoFillSlotCount));
-            if (reservedAutoFillSlotCount > 0 && canAutoFillReservedSlot == null)
-                throw new ArgumentNullException(nameof(canAutoFillReservedSlot));
-            this.reservedAutoFillSlotCount = reservedAutoFillSlotCount;
-            this.canAutoFillReservedSlot = canAutoFillReservedSlot;
             slots = new List<InventorySlot>(slotCount);
             for (var i = 0; i < slotCount; i++) slots.Add(default);
         }
@@ -65,6 +65,87 @@ namespace Nyangbingo.Inventory
 
         public bool Has(string itemId, int amount) => amount > 0 && Count(itemId) >= amount;
 
+        /// <summary>One-slot cursor escrow. Both inventories commit before observers are notified.</summary>
+        public bool TryClickSlot(int index, Inventory cursor, bool rightClick)
+        {
+            if (cursor == null || cursor == this || cursor.Capacity != 1 ||
+                index < 0 || index >= Capacity) return false;
+            var target = slots[index];
+            var held = cursor.slots[0];
+            if (held.amount <= 0)
+            {
+                if (target.amount <= 0) return false;
+                var count = rightClick ? target.amount / 2 + target.amount % 2 : target.amount;
+                held = TakePortion(ref target, count);
+            }
+            else if (target.amount <= 0)
+            {
+                target = TakePortion(ref held, rightClick ? 1 : held.amount);
+            }
+            else if (target.itemId == held.itemId)
+            {
+                if (!HasSameStorageState(target, held.hasStorageCondition,
+                        held.EffectiveStorageCondition, held.storageMeltRemainder)) return false;
+                var maxStack = FindItem(target.itemId)?.MaxStack ?? 1;
+                if (maxStack <= 1 || target.amount >= maxStack) return false;
+                var count = Math.Min(rightClick ? 1 : held.amount, maxStack - target.amount);
+                var portion = TakePortion(ref held, count);
+                var total = target.amount + count;
+                // Remainders represent fractional melted units, not freshness percentages.
+                var melt = target.storageMeltRemainder + portion.storageMeltRemainder;
+                var melted = (int)melt;
+                target.amount = total - melted;
+                target.storageMeltRemainder = melt - melted;
+            }
+            else
+            {
+                if (rightClick) return false;
+                var swap = held;
+                held = target;
+                target = swap;
+            }
+            slots[index] = target.amount > 0 ? target : default;
+            cursor.slots[0] = held.amount > 0 ? held : default;
+            Changed?.Invoke();
+            cursor.Changed?.Invoke();
+            return true;
+        }
+
+        private static InventorySlot TakePortion(ref InventorySlot source, int count)
+        {
+            var portion = source;
+            portion.amount = count;
+            portion.storageMeltRemainder = source.storageMeltRemainder * ((float)count / source.amount);
+            source.amount -= count;
+            source.storageMeltRemainder -= portion.storageMeltRemainder;
+            if (source.amount <= 0) source = default;
+            return portion;
+        }
+
+        public bool TryReturnCursor(int index, Inventory cursor, InventorySlot expectedRemainder)
+        {
+            if (cursor == null || cursor == this || cursor.Capacity != 1 ||
+                index < 0 || index >= Capacity || cursor.IsEmpty) return false;
+            var target = slots[index];
+            var held = cursor.slots[0];
+            if (target.amount <= 0) return TryClickSlot(index, cursor, false);
+            // Rejoin an unchanged split stack even though its melt fraction was divided.
+            // Never use this exception for an unrelated stack placed in the origin cell.
+            if (!EqualityComparer<InventorySlot>.Default.Equals(target, expectedRemainder) ||
+                target.itemId != held.itemId || target.hasStorageCondition != held.hasStorageCondition ||
+                Math.Abs(target.EffectiveStorageCondition - held.EffectiveStorageCondition) > .0001f ||
+                target.amount + held.amount > (FindItem(held.itemId)?.MaxStack ?? 1)) return false;
+            target.amount += held.amount;
+            var melt = target.storageMeltRemainder + held.storageMeltRemainder;
+            target.amount -= (int)melt;
+            target.storageMeltRemainder = melt - (int)melt;
+            slots[index] = target;
+            cursor.slots[0] = default;
+            Changed?.Invoke();
+            cursor.Changed?.Invoke();
+            return true;
+        }
+
         public bool TryAdd(string itemId, int amount)
             => TryAddWithStorageState(itemId, amount, false, 1f, 0f);
 
@@ -76,8 +157,7 @@ namespace Nyangbingo.Inventory
                 !IsValidStorageState(hasCondition, condition01, meltRemainder) ||
                 CapacityFor(itemId, item.MaxStack, hasCondition, condition01, meltRemainder) < amount)
                 return false;
-            var firstAutoFillSlot = FirstAutoFillSlot(itemId);
-            for (var i = firstAutoFillSlot; i < slots.Count && amount > 0; i++)
+            for (var i = 0; i < slots.Count && amount > 0; i++)
             {
                 var slot = slots[i];
                 if (slot.itemId != itemId || slot.amount >= item.MaxStack ||
@@ -85,7 +165,7 @@ namespace Nyangbingo.Inventory
                 var added = Math.Min(amount, item.MaxStack - slot.amount);
                 slot.amount += added; amount -= added; slots[i] = slot;
             }
-            for (var i = firstAutoFillSlot; i < slots.Count && amount > 0; i++)
+            for (var i = 0; i < slots.Count && amount > 0; i++)
             {
                 if (!string.IsNullOrEmpty(slots[i].itemId)) continue;
                 var added = Math.Min(amount, item.MaxStack);
@@ -186,7 +266,8 @@ namespace Nyangbingo.Inventory
         }
 
         public bool TryRemoveFromOccupiedSlots(int maximumSlots, int maximumAmount,
-            out List<InventorySlot> removedStacks)
+            out List<InventorySlot> removedStacks,
+            Func<IReadOnlyList<InventorySlot>, bool> acceptRemoval = null)
         {
             removedStacks = new List<InventorySlot>();
             if (maximumSlots <= 0 || maximumAmount <= 0) return false;
@@ -194,6 +275,7 @@ namespace Nyangbingo.Inventory
             for (var index = 0; index < slots.Count; index++)
                 if (!string.IsNullOrEmpty(slots[index].itemId) && slots[index].amount > 0)
                     candidates.Add(index);
+            var updates = new List<(int index, InventorySlot slot)>();
             var removedAmount = 0;
             while (candidates.Count > 0 && removedStacks.Count < maximumSlots &&
                    removedAmount < maximumAmount)
@@ -214,9 +296,16 @@ namespace Nyangbingo.Inventory
                 slot.amount -= removed;
                 removedAmount += removed;
                 if (slot.amount <= 0) slot = default;
-                slots[index] = slot;
+                updates.Add((index, slot));
             }
             if (removedStacks.Count == 0) return false;
+            // The recipient owns a validated receipt before removal notifications can run.
+            if (acceptRemoval != null && !acceptRemoval(removedStacks))
+            {
+                removedStacks.Clear();
+                return false;
+            }
+            foreach (var update in updates) slots[update.index] = update.slot;
             Changed?.Invoke();
             return true;
         }
@@ -238,18 +327,34 @@ namespace Nyangbingo.Inventory
 
         public bool CanImport(IEnumerable<InventorySlot> saved) => TryBuildImport(saved, out _);
 
-        public bool TryTransferSlotTo(int slotIndex, Inventory target)
+        public bool TryTransferSlotTo(int slotIndex, Inventory target, int amount = -1)
         {
             if (target == null || ReferenceEquals(this, target) || slotIndex < 0 || slotIndex >= slots.Count)
                 return false;
             var slot = slots[slotIndex];
-            if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0 ||
-                !target.TryAddWithStorageState(slot.itemId, slot.amount,
-                    slot.hasStorageCondition, slot.EffectiveStorageCondition,
-                    slot.storageMeltRemainder))
-                return false;
-            slots[slotIndex] = default;
+            if (string.IsNullOrEmpty(slot.itemId) || slot.amount <= 0) return false;
+            var count = amount == -1 ? slot.amount : amount;
+            if (count <= 0 || count > slot.amount) return false;
+            var portion = TakePortion(ref slot, count);
+            var candidate = new Inventory(target.findItem, target.Capacity);
+            var cursor = new Inventory(findItem, 1);
+            if (!candidate.TryImport(target.Export()) ||
+                !cursor.TryImport(new[] { portion })) return false;
+            // Prefer matching stacks, then empty cells. Plan before mutating either side.
+            for (var pass = 0; pass < 2 && !cursor.IsEmpty; pass++)
+                for (var index = 0; index < candidate.Capacity && !cursor.IsEmpty; index++)
+                {
+                    var empty = candidate.slots[index].amount <= 0;
+                    if (empty != (pass == 1)) continue;
+                    if (!empty && candidate.slots[index].itemId != portion.itemId) continue;
+                    candidate.TryClickSlot(index, cursor, false);
+                }
+            if (!cursor.IsEmpty) return false;
+            slots[slotIndex] = slot;
+            target.slots.Clear();
+            target.slots.AddRange(candidate.slots);
             Changed?.Invoke();
+            target.Changed?.Invoke();
             return true;
         }
 
@@ -258,12 +363,9 @@ namespace Nyangbingo.Inventory
             if (firstIndex < 0 || firstIndex >= slots.Count ||
                 secondIndex < 0 || secondIndex >= slots.Count || firstIndex == secondIndex)
                 return false;
-            return CanPlaceInSlot(slots[firstIndex].itemId, secondIndex) &&
-                   CanPlaceInSlot(slots[secondIndex].itemId, firstIndex);
+            // Manual reordering accepts any item, including the first eight hotbar slots.
+            return true;
         }
-
-        private bool CanPlaceInSlot(string itemId, int slotIndex) =>
-            string.IsNullOrEmpty(itemId) || slotIndex >= FirstAutoFillSlot(itemId);
 
         public bool TrySwapSlots(int firstIndex, int secondIndex)
         {
@@ -307,7 +409,7 @@ namespace Nyangbingo.Inventory
             float condition01, float meltRemainder)
         {
             long capacity = 0;
-            for (var index = FirstAutoFillSlot(itemId); index < slots.Count; index++)
+            for (var index = 0; index < slots.Count; index++)
             {
                 var slot = slots[index];
                 if (slot.itemId == itemId &&
@@ -317,11 +419,6 @@ namespace Nyangbingo.Inventory
             }
             return capacity;
         }
-
-        private int FirstAutoFillSlot(string itemId) =>
-            reservedAutoFillSlotCount == 0 || canAutoFillReservedSlot(itemId)
-                ? 0
-                : reservedAutoFillSlotCount;
 
         private static bool IsValidStorageState(bool hasCondition, float condition01,
             float meltRemainder) =>
@@ -380,7 +477,21 @@ namespace Nyangbingo.Inventory
             return !string.IsNullOrWhiteSpace(objectId) && byObjectId.TryGetValue(objectId, out storage);
         }
 
-        public bool CanRecover(string objectId) => TryGet(objectId, out var storage) && storage.IsEmpty;
+        public bool CanRecover(string objectId) => TryGet(objectId, out _);
+
+        public bool TryTakeContentsAndRemove(string objectId, out List<InventorySlot> contents)
+        {
+            contents = new List<InventorySlot>();
+            if (!TryGet(objectId, out var storage)) return false;
+            foreach (var slot in storage.Slots)
+                if (!string.IsNullOrEmpty(slot.itemId) && slot.amount > 0) contents.Add(slot);
+            storage.Changed -= HandleStorageChanged;
+            byObjectId.Remove(objectId);
+            // Clear stale references held by an open storage screen before notifying listeners.
+            storage.TryImport(new InventorySlot[0]);
+            Changed?.Invoke();
+            return true;
+        }
 
         public bool TryRemoveEmpty(string objectId)
         {
@@ -433,7 +544,7 @@ namespace Nyangbingo.Inventory
     }
 
     /// <summary>
-    /// v28 장비 탭의 무기·도구 1칸. 장착물은 소지품 인벤토리에서 분리되며 Q 토글 상태에 따라
+    /// 장비 탭의 무기·도구 1칸. 런타임은 인벤토리의 아이템을 참조하며 Q 토글 상태에 따라
     /// 전투 프로필로 사용된다. 채굴은 이 상태를 보지 않고 항상 발톱 티어를 사용한다.
     /// </summary>
     public sealed class ActiveSlotSystem
@@ -458,16 +569,19 @@ namespace Nyangbingo.Inventory
         private readonly Func<string, ItemDefinition> findItem;
         private string equippedItemId = string.Empty;
         private bool usingEquippedItem;
+        private readonly bool keepInInventory;
 
         public event Action Changed;
         public string EquippedItemId => equippedItemId;
         public bool HasEquippedItem => !string.IsNullOrEmpty(equippedItemId);
         public bool IsUsingEquippedItem => HasEquippedItem && usingEquippedItem;
 
-        public ActiveSlotSystem(Inventory playerInventory, Func<string, ItemDefinition> itemResolver)
+        public ActiveSlotSystem(Inventory playerInventory, Func<string, ItemDefinition> itemResolver,
+            bool keepInInventory = false)
         {
             inventory = playerInventory ?? throw new ArgumentNullException(nameof(playerInventory));
             findItem = itemResolver ?? throw new ArgumentNullException(nameof(itemResolver));
+            this.keepInInventory = keepInInventory;
         }
 
         public static bool IsAllowedItemId(string itemId) =>
@@ -475,6 +589,14 @@ namespace Nyangbingo.Inventory
 
         public bool TryEquip(string itemId)
         {
+            if (keepInInventory)
+            {
+                if (!IsValidDefinition(itemId) || equippedItemId == itemId || !inventory.Has(itemId, 1)) return false;
+                equippedItemId = itemId;
+                usingEquippedItem = true;
+                Changed?.Invoke();
+                return true;
+            }
             if (!IsValidDefinition(itemId) || equippedItemId == itemId || !inventory.TryRemove(itemId, 1))
                 return false;
 
@@ -493,7 +615,7 @@ namespace Nyangbingo.Inventory
 
         public bool TryUnequip()
         {
-            if (!HasEquippedItem || !inventory.TryAdd(equippedItemId, 1)) return false;
+            if (!HasEquippedItem || !keepInInventory && !inventory.TryAdd(equippedItemId, 1)) return false;
             equippedItemId = string.Empty;
             usingEquippedItem = false;
             Changed?.Invoke();

@@ -23,6 +23,12 @@ namespace Nyangbingo.Core
     /// </summary>
     public interface ISealBarrierRegistry { bool IsRecognizedBarrier(Vector3Int cell); }
 
+    /// <summary>문 점유 칸을 실제 1×2 문의 기준 칸과 개폐 상태로 해석하는 진단 계약.</summary>
+    public interface ISealDoorRegistry
+    {
+        bool TryGetDoor(Vector3Int cell, out Vector3Int anchor, out bool closed);
+    }
+
     /// <summary>
     /// A-16/A-19: 밀폐된 석빙고 코어 구역의 배경 도포율. SealPercent와 별개이며,
     /// 물단지·얼음 항아리 지속시간 +25%에만 사용한다.

@@ -20,6 +20,18 @@ namespace Nyangbingo.Inventory
         /// <summary>얼음심장(-0.15)+한파(-0.40)까지 허용하는 합연산 하한.</summary>
         public const float TemperatureRiseFloor = -0.55f;
 
+        public static bool GrantsSunlightImmunity(EquipmentSystem equipment, int roomTemperatureC,
+            EquipmentColdPenaltyRules coldPenalty)
+        {
+            if (equipment == null) return false;
+            var head = equipment.Get(Nyangbingo.Core.EquipmentSlot.Head);
+            var body = equipment.Get(Nyangbingo.Core.EquipmentSlot.Body);
+            var feet = equipment.Get(Nyangbingo.Core.EquipmentSlot.Feet);
+            return head?.Id == "icesteel_helm" && body?.Id == "icesteel_armor" && feet?.Id == "icesteel_boots" &&
+                head.SetId == SeolhanpungSetId && body.SetId == SeolhanpungSetId && feet.SetId == SeolhanpungSetId &&
+                (coldPenalty == null || coldPenalty.IsSetBonusActive(head, body, feet, roomTemperatureC));
+        }
+
         public static readonly string[] SeongePieceIds =
             { "seonge_helm", "seonge_armor", "seonge_boots" };
         public static readonly string[] IceRootPieceIds =

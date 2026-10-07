@@ -41,6 +41,7 @@ namespace Nyangbingo.World
         public TilemapRenderer WorldRenderer => tilemapRenderer;
         public DayNightService TimeService => dayNightService;
         public GameDataCatalog GameDataCatalog => gameDataCatalog;
+        public int CaveSurfaceCrustThickness => worldConfig.CaveSurfaceCrustThickness;
         public IGameSecondsTickDriver TickDriver => tickDriver;
         public bool IsWorldReady => session?.HasWorld == true;
 

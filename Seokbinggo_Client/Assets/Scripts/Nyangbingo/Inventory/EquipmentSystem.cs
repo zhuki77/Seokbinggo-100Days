@@ -9,19 +9,33 @@ namespace Nyangbingo.Inventory
     {
         private readonly HashSet<string> ownedIds = new HashSet<string>(StringComparer.Ordinal);
         private readonly Func<string, EquipmentDefinition> findEquipment;
+        private readonly Inventory inventory;
+        private readonly Inventory cursor;
 
-        public EquipmentCollection(Func<string, EquipmentDefinition> findEquipment)
+        public EquipmentCollection(Func<string, EquipmentDefinition> findEquipment,
+            Inventory inventory = null, Inventory cursor = null)
         {
             this.findEquipment = findEquipment ?? throw new ArgumentNullException(nameof(findEquipment));
+            this.inventory = inventory;
+            this.cursor = cursor;
         }
 
-        public int Count => ownedIds.Count;
+        public int Count => inventory != null ? Export().Count : ownedIds.Count;
         public event Action<EquipmentDefinition> Added;
 
-        public bool Contains(string equipmentId) => !string.IsNullOrWhiteSpace(equipmentId) && ownedIds.Contains(equipmentId);
+        public bool Contains(string equipmentId) => !string.IsNullOrWhiteSpace(equipmentId) &&
+            (inventory != null ? inventory.Count(equipmentId) + (cursor?.Count(equipmentId) ?? 0) > 0 :
+                ownedIds.Contains(equipmentId));
 
         public bool TryAdd(EquipmentDefinition definition)
         {
+            if (inventory != null)
+            {
+                if (definition == null || findEquipment(definition.Id) != definition ||
+                    Contains(definition.Id) || !inventory.TryAdd(definition.Id, 1)) return false;
+                Added?.Invoke(definition);
+                return true;
+            }
             if (definition == null || string.IsNullOrWhiteSpace(definition.Id) ||
                 findEquipment(definition.Id) != definition || !ownedIds.Add(definition.Id)) return false;
             Added?.Invoke(definition);
@@ -30,7 +44,17 @@ namespace Nyangbingo.Inventory
 
         public List<string> Export()
         {
-            var result = new List<string>(ownedIds);
+            var ids = new HashSet<string>(ownedIds);
+            if (inventory != null)
+            {
+                ids.Clear();
+                foreach (var slot in inventory.Slots)
+                    if (slot.amount > 0 && findEquipment(slot.itemId) != null) ids.Add(slot.itemId);
+                if (cursor != null)
+                    foreach (var slot in cursor.Slots)
+                        if (slot.amount > 0 && findEquipment(slot.itemId) != null) ids.Add(slot.itemId);
+            }
+            var result = new List<string>(ids);
             result.Sort(StringComparer.Ordinal);
             return result;
         }

@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Nyangbingo.Inventory;
 using UnityEngine;
 using Nyangbingo.Core;
@@ -66,6 +67,42 @@ namespace Nyangbingo.Save
     }
 
     [Serializable]
+    public sealed class GoalProgressRecord
+    {
+        public List<string> completedGoalIds = new List<string>();
+        public string selectedGoalId = string.Empty;
+        public int guideDay;
+        public List<string> consumedGuideIds = new List<string>();
+        public List<string> shownRewardCraftingIds = new List<string>();
+        public List<string> pendingRewardCraftingIds = new List<string>();
+        public int pendingDawnDay;
+        public int pendingDawnKeptIce;
+        public List<StorageDawnRecord> pendingStorageDawns = new List<StorageDawnRecord>();
+    }
+
+    [Serializable]
+    public sealed class StorageContainerDawnRecord
+    {
+        public string objectId, cause;
+        public Vector2 position;
+        public float temperature, requiredTemperature;
+        public int iceBefore, iceAfter, keptIce, lostIce;
+        public StorageContainerDawnRecord Copy() => (StorageContainerDawnRecord)MemberwiseClone();
+    }
+
+    [Serializable]
+    public sealed class StorageDawnRecord
+    {
+        public int day, keptIce;
+        public List<StorageContainerDawnRecord> containers = new List<StorageContainerDawnRecord>();
+        public StorageDawnRecord Copy() => new StorageDawnRecord
+        {
+            day = day, keptIce = keptIce,
+            containers = containers.Select(record => record.Copy()).ToList()
+        };
+    }
+
+    [Serializable]
     public struct CoolingSourceStateRecord
     {
         public string objectId;
@@ -87,9 +124,14 @@ namespace Nyangbingo.Save
     {
         public string itemId;
         public int amount;
+        public bool hasStorageCondition;
+        public float storageCondition01;
+        public float storageMeltRemainder;
         public Vector2 position;
         public Vector2 velocity;
         public float pickupDelay;
+        public bool escapingTiles;
+        public bool theftProtected;
     }
 
     [Serializable]
@@ -121,6 +163,17 @@ namespace Nyangbingo.Save
         public bool usesAggroRadius;
         public bool isAggroed;
         public bool infiltrationRecorded;
+        public bool hasReachedCoreForTheft;
+        public bool coreGoalCompleted;
+        public bool hasCoreArrivalGoalState;
+        public bool coreBreachAttempted;
+        public Vector2 coreIdleAnchor;
+        public int coreIdleStep;
+        public float coreIdlePauseRemaining;
+        public bool hasCurrentCoreTarget;
+        public bool hasCoreSequenceState;
+        public Vector3Int currentCoreCell;
+        public List<Vector3Int> completedCoreCells = new List<Vector3Int>();
         public List<InventorySlot> stolenItems = new List<InventorySlot>();
     }
 
@@ -191,6 +244,9 @@ namespace Nyangbingo.Save
         public int maxHealth;
         public bool hasTemperature;
         public float temperature;
+        public bool hasNaturalRecoveryState;
+        public float naturalRecoveryDelayRemaining;
+        public float naturalRecoveryFractionalHealing;
     }
 
     [Serializable]
@@ -276,7 +332,8 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        public const int CurrentSchemaVersion = 27;
+        /// <summary>v86: schema 28 목표 이력에 이어 29는 용기별 미확인 새벽 결과 목록을 추가한다.</summary>
+        public const int CurrentSchemaVersion = 31;
         /// <summary>v72: schema 27은 시작 특성 id를 추가하며 schema 23부터 순차 이관한다.</summary>
         public const int MinimumCompatibleSchemaVersion = 23;
         private const string FoxRainCharmId = "fox_rain_charm";
@@ -284,6 +341,13 @@ namespace Nyangbingo.Save
         public int schemaVersion = CurrentSchemaVersion;
         public bool isOfficialDemo;
         public int seed; public int day = 1; public float timeOfDaySec;
+        // 필드 없는 기존 저장은 0: 기존 광맥·버섯 생성 규칙으로 재생성한다.
+        public int resourceGenerationVersion;
+        // Optional landmark metadata: legacy terrain generation and its tile diffs stay unchanged.
+        public bool hasSurfaceIceLakeArena;
+        public Vector2Int surfaceIceLakeOrigin;
+        public int surfaceIceLakeWidth;
+        public int surfaceIceLakeHeight;
         public List<InventorySlot> inventory = new List<InventorySlot>();
         public List<string> unlockedRecipes = new List<string>();
         public List<string> placedObjects = new List<string>();
@@ -303,6 +367,8 @@ namespace Nyangbingo.Save
         /// <summary>A-16: 배경(벽지) 변경 이력. 구버전 세이브에서는 null일 수 있으며 NormalizeAfterLoad가 빈 목록으로 채운다.</summary>
         public List<TileChangeRecord> backgroundChanges = new List<TileChangeRecord>();
         public List<string> modulesDone = new List<string>();
+        public bool storageSuccess;
+        public bool demoComplete;
         public int seokbinggoStage;
         public int altarClears;
         public List<string> frostClearedBossIds = new List<string>();
@@ -311,6 +377,9 @@ namespace Nyangbingo.Save
         public float invasionTemperatureRise;
         public int invasionRecoolAvailableDay;
         public int invasionLastInfiltrationDay;
+        public List<Vector3Int> invasionBrokenCells = new List<Vector3Int>();
+        public int invasionLastBaseAttackDay;
+        public int invasionLastCompletedRecoveryDay;
         public float talismanStrideRemaining;
         public float talismanHideRemaining;
         public float talismanFrostRemaining;
@@ -326,6 +395,7 @@ namespace Nyangbingo.Save
         public List<ForcedBossEncounterRecord> forcedBossEncounters = new List<ForcedBossEncounterRecord>();
         public List<CodexRecord> dogam = new List<CodexRecord>();
         public bool magpieJoined;
+        public bool magpieActiveForDay;
         public Vector2 magpieNestPosition;
         public int magpieKillCount;
         public bool magpieBaekjungSurvived;
@@ -339,6 +409,10 @@ namespace Nyangbingo.Save
         public List<UtilityCooldownRecord> utilityCooldowns = new List<UtilityCooldownRecord>();
         public List<PendingItemRecord> pendingItemAcquisitions = new List<PendingItemRecord>();
         public CraftingProcessRecord activeCrafting = new CraftingProcessRecord();
+        public List<StationQueueRecord> stationProduction = new List<StationQueueRecord>();
+        public List<InventorySlot> inventoryCursor = new List<InventorySlot>();
+        public InventoryCursorOrigin inventoryCursorOrigin;
+        public bool equipmentStoredInInventory;
         public List<SmeltingRecord> smelting = new List<SmeltingRecord>();
         public List<SmeltingOutputRecord> smeltingOutputs = new List<SmeltingOutputRecord>();
         public List<string> openedChestIds = new List<string>();
@@ -351,6 +425,7 @@ namespace Nyangbingo.Save
         public float baekjungTearRemainder;
         public RunStatsRecord stats = new RunStatsRecord();
         public GoalBadgeRecord goalBadges = new GoalBadgeRecord();
+        public GoalProgressRecord goalProgress = new GoalProgressRecord();
         [NonSerialized] private bool sourceSchemaCaptured;
         [NonSerialized] private int sourceSchemaVersion;
 
@@ -376,6 +451,7 @@ namespace Nyangbingo.Save
             if (worldDrops == null) worldDrops = new List<WorldDropStateRecord>();
             if (doorStates == null) doorStates = new List<DoorStateRecord>();
             if (wallDamage == null) wallDamage = new List<WallDamageStateRecord>();
+            if (invasionBrokenCells == null) invasionBrokenCells = new List<Vector3Int>();
             if (tileChanges == null) tileChanges = new List<TileChangeRecord>();
             if (backgroundChanges == null) backgroundChanges = new List<TileChangeRecord>();
             if (modulesDone == null) modulesDone = new List<string>();
@@ -387,6 +463,9 @@ namespace Nyangbingo.Save
             if (forcedBossEncounters == null) forcedBossEncounters = new List<ForcedBossEncounterRecord>();
             if (dogam == null) dogam = new List<CodexRecord>();
             magpieKillCount = Mathf.Max(0, magpieKillCount);
+            // Older saves did not record suspension after a broken seal. Do not infer
+            // same-day reactivation from a repaired nest; the next morning evaluates it.
+            if (loadedSchemaVersion < 31 || !magpieJoined) magpieActiveForDay = false;
             if (magpieStorage == null) magpieStorage = new List<InventorySlot>();
             if (turretFuel == null) turretFuel = new List<TurretFuelRecord>();
             if (equipment == null) equipment = new List<EquipmentRecord>();
@@ -431,6 +510,46 @@ namespace Nyangbingo.Save
             if (baekjungProgress == null) baekjungProgress = new BaekjungSchedulerState();
             if (stats == null) stats = new RunStatsRecord();
             if (goalBadges == null) goalBadges = new GoalBadgeRecord();
+            if (goalProgress == null) goalProgress = new GoalProgressRecord();
+            if (goalProgress.completedGoalIds == null) goalProgress.completedGoalIds = new List<string>();
+            var uniqueGoalIds = new HashSet<string>(StringComparer.Ordinal);
+            goalProgress.completedGoalIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) || !uniqueGoalIds.Add(id));
+            goalProgress.selectedGoalId ??= string.Empty;
+            goalProgress.shownRewardCraftingIds ??= new List<string>();
+            goalProgress.pendingRewardCraftingIds ??= new List<string>();
+            var shownRewards = new HashSet<string>(StringComparer.Ordinal);
+            goalProgress.shownRewardCraftingIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) || !shownRewards.Add(id));
+            var pendingRewards = new HashSet<string>(StringComparer.Ordinal);
+            goalProgress.pendingRewardCraftingIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) ||
+                shownRewards.Contains(id) || !pendingRewards.Add(id));
+            goalProgress.guideDay = Math.Max(0, goalProgress.guideDay);
+            goalProgress.consumedGuideIds ??= new List<string>();
+            var uniqueGuideIds = new HashSet<string>(StringComparer.Ordinal);
+            goalProgress.consumedGuideIds.RemoveAll(id => string.IsNullOrWhiteSpace(id) || !uniqueGuideIds.Add(id));
+            goalProgress.pendingStorageDawns ??= new List<StorageDawnRecord>();
+            var dawnDays = new HashSet<int>();
+            goalProgress.pendingStorageDawns.RemoveAll(record => record == null || record.day < 1 || !dawnDays.Add(record.day));
+            foreach (var dawn in goalProgress.pendingStorageDawns)
+            {
+                dawn.keptIce = Math.Max(0, dawn.keptIce);
+                dawn.containers ??= new List<StorageContainerDawnRecord>();
+                dawn.containers.RemoveAll(record => record == null || string.IsNullOrWhiteSpace(record.objectId) ||
+                    record.iceBefore < 0 || record.iceAfter < 0 || record.iceAfter > record.iceBefore ||
+                    record.lostIce != record.iceBefore - record.iceAfter || record.keptIce < 0 || record.keptIce > record.iceAfter ||
+                    float.IsNaN(record.temperature) || float.IsInfinity(record.temperature) ||
+                    float.IsNaN(record.requiredTemperature) || float.IsInfinity(record.requiredTemperature) ||
+                    float.IsNaN(record.position.x) || float.IsInfinity(record.position.x) ||
+                    float.IsNaN(record.position.y) || float.IsInfinity(record.position.y));
+                foreach (var record in dawn.containers) record.cause ??= string.Empty;
+            }
+            goalProgress.pendingStorageDawns.Sort((a, b) => a.day.CompareTo(b.day));
+            if (goalProgress.pendingStorageDawns.Count > 0)
+            {
+                goalProgress.pendingDawnDay = goalProgress.pendingStorageDawns[0].day;
+                goalProgress.pendingDawnKeptIce = goalProgress.pendingStorageDawns[0].keptIce;
+            }
+            else if (goalProgress.pendingDawnDay < 1 || goalProgress.pendingDawnKeptIce < 1)
+                goalProgress.pendingDawnDay = goalProgress.pendingDawnKeptIce = 0;
             goalBadges.insulationWallsPlaced = Math.Max(0, goalBadges.insulationWallsPlaced);
             stats.minedTiles = Math.Max(0, stats.minedTiles);
             stats.deaths = Math.Max(0, stats.deaths);
@@ -1097,7 +1216,7 @@ namespace Nyangbingo.Save
             if (yokaiKills.TryGetValue(entry.Id, out var savedKills))
                 kills = savedKills;
 
-            // 강철이·이무기 요괴 카드는 대응 보스 처치도 해금에 합산한다.
+            // 이무기·강철이 요괴 카드는 대응 보스 처치도 해금에 합산한다.
             var yokai = catalog.FindYokai(entry.Id);
             if (yokai == null) return;
             if (yokai.Kind != YokaiKind.Gangcheori && yokai.Kind != YokaiKind.Imugi) return;
@@ -1701,7 +1820,8 @@ namespace Nyangbingo.Save
                 var generatedPosition = chestSource.GetChestPosition(record.chestId);
                 if ((generatedPosition - record.position).sqrMagnitude > .0001f)
                 {
-                    if (save.SourceSchemaVersion >= SaveGame.CurrentSchemaVersion) return false;
+                    // S3 피드백 필드 추가가 기존 v28 월드 좌표의 마이그레이션 허용 범위를 넓히지 않는다.
+                    if (save.SourceSchemaVersion >= 28) return false;
                     record.position = generatedPosition;
                     save.chests[i] = record;
                     migratedLegacyCoordinates = true;

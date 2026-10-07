@@ -13,6 +13,7 @@ namespace Nyangbingo.Inventory
         public float DoubleJumpHeightRatio { get; private set; }
         public float VisionRadiusBonus { get; private set; }
         public bool BlocksInventoryTheft { get; private set; }
+        public bool SunlightImmune { get; private set; }
 
         public void Recalculate(EquipmentSystem equipment) => Recalculate(equipment, 0, null);
 
@@ -22,6 +23,7 @@ namespace Nyangbingo.Inventory
             Defense = 0; MovementMultiplier = 1f; MiningCriticalChance = 0f; TemperatureRiseModifier = 0f;
             FireDamageModifier = 0f; HasDoubleJump = false; DoubleJumpHeightRatio = 0f;
             VisionRadiusBonus = 0f; BlocksInventoryTheft = false;
+            SunlightImmune = ArmorSetRules.GrantsSunlightImmunity(equipment, roomTemperatureC, coldPenalty);
             if (equipment == null) return;
             double defenseTotal = 0d;
             double movementTotal = 1d;

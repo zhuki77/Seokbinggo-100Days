@@ -21,6 +21,7 @@ namespace Nyangbingo.Core
         public static event Action OnBaekjungEnd;
         public static event Action<MiningImpactSurface> OnMiningImpact;
         public static event Action OnItemAcquired;
+        public static event Action<ItemDefinition, int, Vector2> OnWorldItemPickedUp;
         public static event Action OnPlayerDamaged;
         public static event Action OnYokaiDamaged;
         public static event Action OnMiningCritical;
@@ -57,6 +58,8 @@ namespace Nyangbingo.Core
         public static void RaiseBaekjungEnd() => OnBaekjungEnd?.Invoke();
         public static void RaiseMiningImpact(MiningImpactSurface surface) => OnMiningImpact?.Invoke(surface);
         public static void RaiseItemAcquired() => OnItemAcquired?.Invoke();
+        public static void RaiseWorldItemPickedUp(ItemDefinition item, int amount, Vector2 position) =>
+            OnWorldItemPickedUp?.Invoke(item, amount, position);
         public static void RaisePlayerDamaged() => OnPlayerDamaged?.Invoke();
         public static void RaiseYokaiDamaged() => OnYokaiDamaged?.Invoke();
         public static void RaiseMiningCritical() => OnMiningCritical?.Invoke();

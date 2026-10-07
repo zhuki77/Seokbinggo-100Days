@@ -15,7 +15,7 @@ namespace Nyangbingo.World
     /// </summary>
     [DefaultExecutionOrder(-80)]
     [RequireComponent(typeof(MainGameBootstrap))]
-    public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry,
+    public sealed class MainGameEnvironmentState : MonoBehaviour, ISealBarrierRegistry, ISealDoorRegistry,
         IGameSecondsTickable
     {
         public const string MagpieNestDefinitionId = "magpie_nest";
@@ -50,6 +50,7 @@ namespace Nyangbingo.World
         private CoolingSourceRuntime coolingSources;
         private float wallpaperDurationMultiplier = 1.25f;
         private bool suppressTileDoorSync;
+        private TileService placementBlockerTileService;
         private float strawInsulationBonusPerPiece = .05f;
         private Func<float> iceCrystalCoolerRadiusProvider;
         private Func<bool> maintainsModuleAfterShutdown;
@@ -130,7 +131,8 @@ namespace Nyangbingo.World
         {
             var renderer = bootstrap?.WorldRenderer;
             if (renderer == null || buildingArtCatalog == null) return;
-            var boundaryIds = new[] { "insul_wall", "iron_insul_wall", "door", "roof" };
+            // Rope shares the foreground renderer but is not a sealing boundary or a collider.
+            var boundaryIds = new[] { "insul_wall", "iron_insul_wall", "door", "roof", WorldTileTypes.Rope };
             for (var index = 0; index < boundaryIds.Length; index++)
             {
                 var entry = buildingArtCatalog.Find(boundaryIds[index]);
@@ -156,6 +158,22 @@ namespace Nyangbingo.World
             byCell.TryGetValue(cell, out var entry) && entry.BarrierActive &&
             boundaryPolicy != null && boundaryPolicy.SealsPlacedElement(entry.Record.definitionId);
 
+        public bool TryGetDoor(Vector3Int cell, out Vector3Int anchor, out bool closed)
+        {
+            if (!byCell.TryGetValue(cell, out var entry) || entry.Record.definitionId != DoorDefinitionId)
+                byCell.TryGetValue(cell + Vector3Int.down, out entry);
+            if (entry != null && entry.Record.definitionId == DoorDefinitionId &&
+                (cell == entry.Cell || cell == entry.Cell + Vector3Int.up))
+            {
+                anchor = entry.Cell;
+                closed = entry.BarrierActive;
+                return true;
+            }
+            anchor = default;
+            closed = false;
+            return false;
+        }
+
         public bool HasPlacedDefinitionAtCell(Vector3Int cell, string definitionId) =>
             !string.IsNullOrWhiteSpace(definitionId) &&
             byCell.TryGetValue(cell, out var entry) &&
@@ -169,6 +187,10 @@ namespace Nyangbingo.World
             var cell = CellFrom(record.position);
             if (IsInsulationAttachment(record.definitionId) &&
                 !CanPlaceInsulationAt(record.definitionId, cell))
+                return false;
+            // Floor installations reserve the same two cells used by their placement preview.
+            if (!IsInsulationAttachment(record.definitionId) &&
+                (IsPlacedObjectOccupyingCell(cell) || IsPlacedObjectOccupyingCell(cell + Vector3Int.up)))
                 return false;
             if (byObjectId.ContainsKey(record.objectId) ||
                 IsGlobalSingletonDefinition(record.definitionId) &&
@@ -321,8 +343,8 @@ namespace Nyangbingo.World
                 return true;
             }
 
-            if (byCell.ContainsKey(cell)) return false;
-            if (byCell.ContainsKey(head)) return false;
+            if (IsPlacedObjectOccupyingCell(cell)) return false;
+            if (IsPlacedObjectOccupyingCell(head)) return false;
             var record = new PlacedObjectRecord
             {
                 objectId = objectId,
@@ -506,6 +528,9 @@ namespace Nyangbingo.World
             var mouseCell = bootstrap?.TileService != null
                 ? bootstrap.TileService.WorldToCell(mouse)
                 : CellFrom(mouse);
+            // Older overlap bugs can leave a foreground door without a placed-object entry.
+            // Retry only at the aimed cell; an existing installation retains priority.
+            TryRegisterUntrackedTileDoor(mouseCell);
             if (byCell.TryGetValue(mouseCell, out var entry) && entry != null &&
                 (entry.Record.position - playerPosition).sqrMagnitude <= reachSq)
             {
@@ -623,6 +648,14 @@ namespace Nyangbingo.World
                     results.Add(entry.Cell);
         }
 
+        public void CopyColdDeviceCells(List<Vector3Int> results)
+        {
+            if (results == null) return;
+            results.Clear();
+            foreach (var entry in byObjectId.Values)
+                if (entry.Record.definitionId == "cold_device") results.Add(entry.Cell);
+        }
+
         public List<CoolingSourceStateRecord> ExportCoolingSources() => coolingSources?.ExportSnapshots()
             .Select(snapshot => new CoolingSourceStateRecord
             {
@@ -639,6 +672,54 @@ namespace Nyangbingo.World
                    visualsByObjectId.TryGetValue(objectId, out visual) && visual != null;
         }
 
+        public bool TryPlayPlacedAttack(string objectId)
+        {
+            if (string.IsNullOrEmpty(objectId) || !byObjectId.TryGetValue(objectId, out var entry) ||
+                !TryGetVisual(objectId, out var visual)) return false;
+            var art = buildingArtCatalog?.Find(entry.Record.definitionId);
+            if (art?.Sprite == null || art.AttackFrames.Count == 0) return false;
+            var renderer = visual.GetComponentInChildren<SpriteRenderer>();
+            if (renderer == null) return false;
+            var animator = renderer.GetComponent<RuntimeBuildingSpriteAnimator>() ??
+                           renderer.gameObject.AddComponent<RuntimeBuildingSpriteAnimator>();
+            animator.PlayOnce(art.AttackFrames, () =>
+            {
+                if (renderer != null) renderer.sprite = art.Sprite;
+            });
+            return true;
+        }
+
+        private bool IsPlacedObjectOccupyingCell(Vector3Int cell)
+        {
+            if (byCell.ContainsKey(cell)) return true;
+            return byCell.TryGetValue(cell + Vector3Int.down, out var below) &&
+                   below != null && below.Cell + Vector3Int.up == cell &&
+                   !IsInsulationAttachment(below.Record.definitionId);
+        }
+
+        private bool IsForegroundBlockedByPlacedObject(Vector3Int cell)
+        {
+            // Doors own their foreground tiles; their close/restore path must not block itself.
+            if (byCell.TryGetValue(cell, out var entry) && entry != null &&
+                entry.Record.definitionId != DoorDefinitionId &&
+                !IsInsulationAttachment(entry.Record.definitionId))
+                return true;
+            return byCell.TryGetValue(cell + Vector3Int.down, out var below) && below != null &&
+                   below.Record.definitionId != DoorDefinitionId &&
+                   !IsInsulationAttachment(below.Record.definitionId);
+        }
+
+        private void TryRegisterUntrackedTileDoor(Vector3Int cell)
+        {
+            var tiles = TileService;
+            if (tiles == null || !tiles.InBounds(cell)) return;
+            var element = tiles.GetTile(cell).elementType;
+            if (!TileService.IsDoorFootprintElement(element)) return;
+            var anchor = TileService.ResolveDoorBaseCell(cell, element);
+            if (!byObjectId.ContainsKey(TileDoorObjectId(anchor)))
+                TryRegisterTileDoor(anchor, closed: !tiles.IsDoorOpen(anchor));
+        }
+
         public bool CanPlaceAt(Vector2 position)
         {
             if (!IsFinite(position.x) || !IsFinite(position.y)) return false;
@@ -647,7 +728,8 @@ namespace Nyangbingo.World
             var head = cell + Vector3Int.up;
             var ground = cell + Vector3Int.down;
             var decorations = GetComponent<MainGameWorldDecorationRenderer>();
-            return !byCell.ContainsKey(cell) && tileService != null &&
+            return !IsPlacedObjectOccupyingCell(cell) &&
+                   !IsPlacedObjectOccupyingCell(head) && tileService != null &&
                    cell.x >= 0 && ground.y >= 0 && cell.x < tileService.Width && head.y < tileService.Height &&
                    tileService.GetTile(cell).IsAir && tileService.GetTile(head).IsAir &&
                    (decorations == null ||
@@ -661,12 +743,47 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(definitionId) ||
                 !IsFinite(position.x) || !IsFinite(position.y))
                 return false;
-            if (IsGlobalSingletonDefinition(definitionId) &&
-                byObjectId.Values.Any(entry => entry.Record.definitionId == definitionId))
+            if (TryGetReachedPlacementLimit(definitionId, out _, out _))
                 return false;
             return IsInsulationAttachment(definitionId)
                 ? CanPlaceInsulationAt(definitionId, CellFrom(position))
                 : CanPlaceAt(position);
+        }
+
+        public bool TryGetReachedPlacementLimit(string definitionId, out int placedCount, out int limit)
+        {
+            placedCount = 0;
+            limit = 0;
+            if (!IsGlobalSingletonDefinition(definitionId)) return false;
+            limit = 1;
+            placedCount = byObjectId.Values.Count(entry => entry.Record.definitionId == definitionId);
+            return placedCount >= limit;
+        }
+
+        public bool TryGetMagpieNestVisualBounds(out Bounds bounds)
+        {
+            bounds = default;
+            foreach (var entry in byObjectId.Values)
+            {
+                if (entry.Record.definitionId != MagpieNestDefinitionId ||
+                    !visualsByObjectId.TryGetValue(entry.Record.objectId, out var root) || root == null) continue;
+                var renderer = root.GetComponentInChildren<SpriteRenderer>();
+                if (renderer == null || renderer.sprite == null) continue;
+                bounds = renderer.bounds;
+                return true;
+            }
+            return false;
+        }
+
+        public bool IsStorageIceMeltProtected(string objectId)
+        {
+            if (string.IsNullOrEmpty(objectId) || !byObjectId.TryGetValue(objectId, out var storage) ||
+                bootstrap?.SealSystem == null ||
+                !bootstrap.SealSystem.TryGetDebugRegion(storage.Cell, out var sealedArea, out _, out _, out _) ||
+                !sealedArea) return false;
+            var radius = ResolveCoolerRadiusTilesForRecovery(storage.Record.position);
+            return byObjectId.Values.Any(entry => entry.Record.definitionId == CoolingSourceRuntime.IceCrystalCoolerId &&
+                (entry.Record.position - storage.Record.position).sqrMagnitude <= radius * radius);
         }
 
         public float ResolveTemperatureRecoveryMultiplier(Vector2 position, SealSystem seals)
@@ -707,7 +824,7 @@ namespace Nyangbingo.World
 
         public float ResolveCoolerRadiusTilesForRecovery(Vector2 position) =>
             iceCrystalCoolerRadiusProvider != null && IsFinite(position.x) && IsFinite(position.y)
-                ? Mathf.Max(ArtifactVerbRuntime.CoolerBaseRadiusTiles, iceCrystalCoolerRadiusProvider())
+                ? Mathf.Max(0f, iceCrystalCoolerRadiusProvider())
                 : ArtifactVerbRuntime.CoolerBaseRadiusTiles;
 
         public static float CalculateStrawInsulationRecoveryMultiplier(
@@ -973,6 +1090,13 @@ namespace Nyangbingo.World
 
         private void BindWallHealthRuntime()
         {
+            var tileService = bootstrap?.TileService;
+            if (!ReferenceEquals(placementBlockerTileService, tileService))
+            {
+                placementBlockerTileService?.ClearForegroundPlacementBlocker(IsForegroundBlockedByPlacedObject);
+                placementBlockerTileService = tileService;
+            }
+            placementBlockerTileService?.SetForegroundPlacementBlocker(IsForegroundBlockedByPlacedObject);
             bootstrap?.TileService?.SetClayPlasterResolver(cell =>
                 HasPlacedDefinitionAtCell(cell, ClayPlasterDefinitionId));
         }
@@ -1172,6 +1296,7 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            placementBlockerTileService?.ClearForegroundPlacementBlocker(IsForegroundBlockedByPlacedObject);
             GameEvents.OnTileBroken -= HandleAttachmentSupportBroken;
             if (bootstrap != null) bootstrap.WorldReady -= BindWallHealthRuntime;
             bootstrap?.TileService?.SetClayPlasterResolver(null);
