@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Nyangbingo.Core;
@@ -312,6 +312,46 @@ public static class NyangbingoDevARegressionTests
 
         var c = CreateGenerator(config).GenerateDetailed(seed + 999);
         Assert(!TilesEqual(a.tiles, c.tiles, a.width, a.height), "다른 seed인데 완전히 같은 타일 배열이 생성됨");
+
+        foreach (var world in new[] { a, b, c })
+        {
+            for (var dx = 0; dx < config.AltarSize; dx++)
+            {
+                var x = world.altarPosition.x + dx;
+                var floorY = world.altarPosition.y - 1;
+                Assert(world.tiles[x, floorY].hardness > 0 && !world.tiles[x, floorY].IsAir,
+                    $"제단 발밑이 비어 있음: seed={world.acceptedSeed}, ({x}, {floorY})");
+                Assert(world.tiles[x, floorY + 1].elementType == WorldTileTypes.IceAltar,
+                    "바닥 보강으로 제단 위치가 바뀜");
+            }
+        }
+
+        var floorCell = new Vector2Int(a.altarPosition.x, a.altarPosition.y - 1);
+        var oldPlacement = new TileChangeRecord
+        {
+            x = floorCell.x, y = floorCell.y, z = 0,
+            tileId = WorldTileTypes.Dirt, placed = true
+        };
+        var oldChanges = new[] { oldPlacement };
+        var oldWorld = CreateGenerator(config).GenerateForRestore(a.acceptedSeed, oldChanges);
+        Assert(oldWorld.acceptedSeed == a.acceptedSeed, "바닥 보강으로 저장 시드가 바뀜");
+        Assert(new TileService(oldWorld.tiles, null, OfficialCatalog, oldWorld.acceptedSeed).RestoreTileChanges(oldChanges),
+            "구버전의 제단 밑 설치 이력 복원 실패");
+        Assert(oldWorld.tiles[floorCell.x, floorCell.y].elementType == WorldTileTypes.Dirt,
+            "구버전 설치물을 바닥 보강이 덮어씀");
+
+        var newChanges = new[]
+        {
+            new TileChangeRecord
+            {
+                x = floorCell.x, y = floorCell.y, z = 0,
+                tileId = a.tiles[floorCell.x, floorCell.y].elementType, placed = false
+            },
+            oldPlacement
+        };
+        var newWorld = CreateGenerator(config).GenerateForRestore(a.acceptedSeed, newChanges);
+        Assert(new TileService(newWorld.tiles, null, OfficialCatalog, newWorld.acceptedSeed).RestoreTileChanges(newChanges),
+            "새 바닥 채굴 후 설치한 이력 복원 실패");
 
         Debug.Log("[Nyangbingo] Dev A deterministic generation test completed.");
     }
@@ -727,6 +767,7 @@ public static class NyangbingoDevARegressionTests
         TestSealedRoomAtOrAboveTargetCellsIsFullTemperature();
         TestSingleLeakFaceZeroesTemperature();
         TestLeakOutsideWindowIsDetected();                  // 항목 4
+        TestBlockingDoorOverridesEarlierExteriorLeak();
         TestNaturalTerrainAtWindowBoundarySealsNormally();  // 항목 5
         TestNoCoreCellYieldsZero();
         TestCacheRecalculatesOnTileChangeAndNightStart();
@@ -808,6 +849,8 @@ public static class NyangbingoDevARegressionTests
             var core = new Vector3Int(room.x + room.width / 2, room.y + room.height / 2, 0);
             sealSystem.SetSealCoreCell(core);
             Assert(sealSystem.IsCoreWindowSealed(core), "누출 전인데 코어가 미밀폐로 판정됨");
+            Assert(sealSystem.GetMissingBoundaryCells(core).Count == 0,
+                "밀폐된 방에는 찬바람 안내가 없어야 함");
 
             // 경계 벽 하나를 인공(비자연) 벽으로 교체해 누출 1개를 만든다(v15 QA 꼼수 방지와 동일한 방식).
             var wallCell = new Vector3Int(room.xMin - 1, core.y, 0);
@@ -817,8 +860,54 @@ public static class NyangbingoDevARegressionTests
             Assert(sealSystem.LeakFaceCount > 0, "인공 벽으로 막았는데 LeakFaceCount가 0임");
             Assert(!sealSystem.IsCoreWindowSealed(core), "누출면 1개 발생 후에도 코어가 밀폐로 판정됨");
             Assert(sealSystem.SealPercent == 0f, "누출면 1개 발생 후에도 SealPercent > 0");
+            var windCells = sealSystem.GetMissingBoundaryCells(core);
+            Assert(sealSystem.TryGetCoreLeakCell(core, out var markerCell) &&
+                windCells.Count == 1 && windCells[0] == markerCell,
+                "누출 진단 아이콘과 찬바람은 동일한 현재 누출 칸을 사용해야 함");
         }
         finally { sealSystem.Dispose(); }
+    }
+
+    private sealed class DiagnosticDoorRegistry : ISealBarrierRegistry, ISealDoorRegistry
+    {
+        public Vector3Int Anchor;
+        public bool IsRecognizedBarrier(Vector3Int cell) => false;
+        public bool TryGetDoor(Vector3Int cell, out Vector3Int anchor, out bool closed)
+        {
+            anchor = Anchor;
+            closed = false;
+            return cell == Anchor || cell == Anchor + Vector3Int.up;
+        }
+    }
+
+    private static void TestBlockingDoorOverridesEarlierExteriorLeak()
+    {
+        var tiles = BuildStoneField(20, 12);
+        var core = new Vector3Int(10, 6, 0);
+        CarveRoom(tiles, new RectInt(9, 5, 3, 3));
+        var door = new Vector3Int(8, 5, 0);
+        tiles[door.x, door.y] = TileData.CreateCaveAir(WorldTileTypes.BackgroundStone);
+        for (var x = 3; x <= door.x; x++)
+            tiles[x, core.y] = TileData.CreateCaveAir(WorldTileTypes.BackgroundStone);
+        // Exterior artificial stone is visited before the corridor reaches the window.
+        // It must not hold the representative leak after the door is identified.
+        tiles[7, 5].isNaturalTerrain = false;
+        var service = new TileService(tiles, null, null, 1);
+        var seal = new SealSystem(service, sealWindowRadiusX: 5, sealWindowRadiusY: 3);
+        try
+        {
+            Assert(seal.TryGetCoreLeakCell(core, out var before) && before != door,
+                "픽스처: 문 연결 전에 문 바깥의 누출이 먼저 선택되어야 함");
+            seal.SetBarrierRegistry(new DiagnosticDoorRegistry { Anchor = door });
+            Assert(seal.TryGetCoreLeakCell(core, out var after) && after == door,
+                "밀폐를 막는 문은 이전 외부 누출과 캐시보다 우선되어야 함");
+            var wind = seal.GetMissingBoundaryCells(core);
+            Assert(wind.Count == 1 && wind[0] == door,
+                "찬바람과 누출 진단은 같은 문 기준 칸을 사용해야 함");
+            Assert(Mathf.Approximately(MainGameBuildingGuide.GetLeakVisualYOffset(seal, service, door), .5f),
+                "문 누출은 1x2 문의 중앙 높이에 표시되어야 함");
+        }
+        finally { seal.Dispose(); }
     }
 
     // 항목 4: 57×25(테스트에서는 축소된 창) 밖으로 공기가 이어지면 누출 처리.
@@ -848,6 +937,16 @@ public static class NyangbingoDevARegressionTests
                 "대표 누출 셀이 코어 진단 창 밖을 가리킴");
             Assert(leakCell == new Vector3Int(room.xMax, core.y, 0),
                 "대표 누출 셀은 먼 진단 창 경계가 아니라 실제로 막아야 할 통로 입구를 가리켜야 함");
+            var windCells = sealSystem.GetMissingBoundaryCells(core);
+            Assert(windCells.Count == 1 && windCells[0] == leakCell,
+                "외부로 열린 통로도 가상 밀폐 조건 없이 진단 아이콘과 같은 곳에 찬바람을 표시해야 함");
+            Assert(tileService.GetTile(leakCell).IsAir &&
+                   sealSystem.IsSealBoundaryCell(leakCell + Vector3Int.up),
+                "픽스처: 누출 빈 칸의 바로 위에는 밀폐 경계 벽이 있어야 함");
+            var markerCenter = tileService.GetCellWorldBounds(leakCell).center + Vector3.up *
+                MainGameBuildingGuide.GetLeakVisualYOffset(sealSystem, tileService, leakCell);
+            Assert(tileService.WorldToCell(markerCenter) == leakCell,
+                "일반 누출 마커·찬바람·수리 체크의 중심은 위 벽이 아니라 실제 누출 빈 칸에 있어야 함");
         }
         finally { sealSystem.Dispose(); }
     }
@@ -1893,6 +1992,35 @@ public static class NyangbingoDevARegressionTests
                 new Vector2(3.6f, 3.4f), Vector2.down, reach, out var wallCell) &&
             wallCell.x == 3 && wallCell.y == 3,
             "지하 벽 직접 클릭이 바뀌면 안 됨");
+
+        tiles[2, 2] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+        tiles[4, 2] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, new Vector2(1.5f, 2.5f),
+                new Vector2(4.5f, 2.5f), Vector2.right, 4f, out var occludedCell) &&
+            occludedCell == new Vector3Int(2, 2, 0),
+            "앞쪽 장애물과 목표 사이에 공기 칸이 있어도 벽 뒤 타일을 채굴하면 안 됨");
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, new Vector2(1.5f, 2.5f),
+                new Vector2(3.5f, 2.5f), Vector2.right, 4f, out var occludedAirCell) &&
+            occludedAirCell == new Vector3Int(2, 2, 0),
+            "커서가 벽 뒤 공기를 가리켜도 앞쪽 장애물이 먼저 선택되어야 함");
+        tiles[2, 2] = TileData.CreateAir();
+        Assert(MainGamePlayerController.TryPickMiningCell(tileService, new Vector2(1.5f, 2.5f),
+                new Vector2(4.5f, 2.5f), Vector2.right, 4f, out var clearedPathCell) &&
+            clearedPathCell == new Vector3Int(4, 2, 0),
+            "앞쪽 장애물을 제거한 뒤에는 다음 목표 타일을 선택해야 함");
+
+        var cornerTiles = new TileData[4, 4];
+        cornerTiles[2, 1] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+        cornerTiles[2, 2] = TileData.CreateNaturalWithBackground(
+            WorldTileTypes.Stone, 1, WorldTileTypes.BackgroundDirt);
+        var cornerService = new TileService(cornerTiles, renderer: null, catalog: null, seed: 42);
+        Assert(MainGamePlayerController.TryPickMiningCell(cornerService, new Vector2(1.5f, 1.5f),
+                new Vector2(2.5f, 2.5f), Vector2.one, 4f, out var cornerCell) &&
+            cornerCell == new Vector3Int(2, 2, 0),
+            "모서리만 스치는 칸은 가로막는 장애물로 판정하면 안 됨");
 
         Debug.Log("[Nyangbingo] Dev A mining cell surface fallback test completed.");
     }

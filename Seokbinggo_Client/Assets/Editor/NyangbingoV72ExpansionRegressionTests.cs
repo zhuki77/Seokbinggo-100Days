@@ -207,10 +207,11 @@ public static class NyangbingoV72ExpansionRegressionTests
         Require(bRecipe != null && bRecipe.MvpScope == ItemMvpScope.B &&
                 !ExpansionProgressionRules.IsScopeAvailable(ItemMvpScope.B, 30) &&
                 ExpansionProgressionRules.IsScopeAvailable(ItemMvpScope.B, 31) &&
-                MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 1) &&
-                MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 30) &&
-                MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 31),
-            "B recipes must be visible from day 1 while the separate boss-use date gate is retained");
+                !MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 1) &&
+                !MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 30) &&
+                !MainGameCraftingUiController.ShouldShowRecipe(bRecipe, true, 31) &&
+                MainGameCraftingUiController.ShouldShowRecipe(bRecipe, false, 1),
+            "v86 B11 hidden policy must hide B recipes independently of the separate boss-use date gate");
     }
 
     private static void ValidateDemoContract()
@@ -237,6 +238,264 @@ public static class NyangbingoV72ExpansionRegressionTests
         if (definition == null || !definition.TryGetInt(out var value))
             throw new InvalidOperationException($"missing integer global: {key}");
         return value;
+    }
+
+    [MenuItem("Nyangbingo/Run Station Production Queue Regression")]
+    public static void RunStationQueueRegression()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
+        var recipe = catalog.FindRecipe("wallpaper");
+        Require(recipe != null && recipe.DurationSeconds > 0f, "timed crafting fixture missing");
+        var inventory = new Nyangbingo.Inventory.Inventory(catalog.FindItem);
+        foreach (var ingredient in recipe.Ingredients)
+            Require(inventory.TryAdd(ingredient.item.Id, ingredient.amount * 20), "fixture materials failed");
+        var exists = new HashSet<string> { "station-a", "station-b" };
+        var service = new Nyangbingo.Crafting.StationProductionService(catalog, inventory,
+            exists.Contains, _ => true);
+        var a = service.Get("station-a", recipe.Station, Vector2.zero);
+        var b = service.Get("station-b", recipe.Station, Vector2.right);
+        for (var i = 0; i < 5; i++) Require(service.TryEnqueue(a, recipe), "active plus four waiting failed");
+        var beforeRejected = JsonUtility.ToJson(new InventorySnapshot { slots = inventory.Export() });
+        Require(!service.TryEnqueue(a, recipe) && beforeRejected ==
+            JsonUtility.ToJson(new InventorySnapshot { slots = inventory.Export() }), "overflow consumed materials");
+        Require(service.TryEnqueue(b, recipe), "stations share queue capacity");
+        service.Tick(recipe.DurationSeconds * .5f);
+        Require(Mathf.Approximately(a.jobs[0].remaining, b.jobs[0].remaining), "independent station tick failed");
+        var firstId = recipe.Ingredients[0].item.Id;
+        var beforeCancel = inventory.Count(firstId);
+        Require(service.Cancel(a, 2) && a.jobs.Count == 4 &&
+            inventory.Count(firstId) == beforeCancel + recipe.Ingredients[0].amount,
+            "waiting cancellation failed to refund");
+        var saved = service.Export();
+        var restored = new Nyangbingo.Crafting.StationProductionService(catalog, inventory,
+            exists.Contains, _ => true);
+        Require(restored.Restore(saved), "queue restore failed");
+        var restoredA = restored.Get("station-a", recipe.Station, Vector2.zero);
+        var remaining = restoredA.jobs[0].remaining;
+        saved[0].jobs.Clear();
+        Require(restoredA.jobs.Count == 4 && Mathf.Approximately(remaining, recipe.DurationSeconds * .5f),
+            "restore did not preserve timers or deep-copy state");
+        Require(restored.Cancel(restoredA, 0) &&
+            Mathf.Approximately(restoredA.jobs[0].remaining, recipe.DurationSeconds),
+            "active cancellation failed to promote the next job");
+        var beforeDestroyed = inventory.Count(firstId);
+        exists.Remove("station-a");
+        restored.Tick(.1f);
+        Require(restoredA.jobs.Count == 0 && inventory.Count(firstId) ==
+            beforeDestroyed + 3 * recipe.Ingredients[0].amount, "destroyed station lost materials");
+
+        // Full inventory cancellation must retain refunds across save/restore until collection fits.
+        var small = new Nyangbingo.Inventory.Inventory(catalog.FindItem, recipe.Ingredients.Length);
+        foreach (var ingredient in recipe.Ingredients)
+            Require(small.TryAdd(ingredient.item.Id, ingredient.amount), "small fixture failed");
+        var fullService = new Nyangbingo.Crafting.StationProductionService(catalog, small, _ => true, _ => true);
+        var full = fullService.Get("full", recipe.Station, Vector2.zero);
+        Require(fullService.TryEnqueue(full, recipe), "small reservation failed");
+        var filler = catalog.FindItem("dirt");
+        Require(small.TryAdd(filler.Id, filler.MaxStack * small.Capacity), "fill fixture failed");
+        Require(fullService.Cancel(full, 0) && full.jobs.Count == 0 && full.returns.Count > 0,
+            "full inventory cancellation lost refunds");
+        Require(fullService.Restore(fullService.Export()), "pending refund restore failed");
+        full = fullService.Get("full", recipe.Station, Vector2.zero);
+        Require(small.TryRemove(filler.Id, small.Count(filler.Id)) && fullService.Collect(full) > 0 &&
+            full.returns.Count == 0, "pending refund could not be collected");
+        Debug.Log("[Nyangbingo] Station queues: capacity, isolation, refunds, persistence and destruction passed.");
+    }
+
+    [MenuItem("Nyangbingo/Run Inventory Click Drop Regression")]
+    public static void RunInventoryClickDropRegression()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
+        var bag = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 3);
+        var storage = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 2);
+        var cursor = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(bag.TryAdd("wood", 9), "click fixture failed");
+        bag.Changed += () => Require(bag.Count("wood") + storage.Count("wood") +
+            cursor.Count("wood") == 9, "observer saw an incomplete transaction");
+        Require(bag.TryClickSlot(0, cursor, true) && cursor.Count("wood") == 5 &&
+            bag.Count("wood") == 4, "odd stack half pickup failed");
+        Require(storage.TryClickSlot(0, cursor, true) && storage.Count("wood") == 1 &&
+            cursor.Count("wood") == 4, "single placement failed");
+        Require(storage.TryClickSlot(0, cursor, false) && storage.Count("wood") == 5 &&
+            cursor.IsEmpty, "cross-container merge failed");
+        Require(bag.TryClickSlot(0, cursor, false) && bag.IsEmpty &&
+            storage.TryClickSlot(0, cursor, false) && storage.Count("wood") == 9,
+            "whole stack merge failed");
+        var restoredCursor = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(storage.TryClickSlot(0, cursor, true) &&
+            restoredCursor.TryImport(cursor.Export()) && restoredCursor.Count("wood") == 5,
+            "held stack persistence failed");
+        Require(bag.TryAdd("stone", 1) && bag.TryClickSlot(0, cursor, false) &&
+            cursor.Count("stone") == 1 && bag.Count("wood") == 5, "different ID swap failed");
+        var max = catalog.FindItem("wood").MaxStack;
+        var full = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        var extra = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(full.TryAdd("wood", max - 1) && extra.TryAdd("wood", 3) &&
+            full.TryClickSlot(0, extra, false) && full.Count("wood") == max &&
+            extra.Count("wood") == 2 && !full.TryClickSlot(0, extra, true),
+            "stack cap or remainder failed");
+        var weapon = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        var heldWeapon = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(weapon.TryAdd("iron_claw", 1) && heldWeapon.TryAdd("iron_claw", 1) &&
+            !weapon.TryClickSlot(0, heldWeapon, false) && heldWeapon.Count("iron_claw") == 1,
+            "equipment merged");
+        var aged = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        var fresh = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(aged.TryAddWithStorageState("wood", 2, true, .5f, .2f) &&
+            fresh.TryAddWithStorageState("wood", 2, false, 1f, .3f) &&
+            !aged.TryClickSlot(0, fresh, false) && !aged.TryClickSlot(0, fresh, true) &&
+            aged.Count("wood") == 2 && fresh.Count("wood") == 2,
+            "different storage states merged");
+        var splitSource = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        var destination = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 2);
+        Require(splitSource.TryAddWithStorageState("wood", 9, true, .5f, .36f), "shift fixture failed");
+        splitSource.Changed += () => Require(splitSource.Count("wood") + destination.Count("wood") == 11,
+            "shift observer saw an incomplete transaction");
+        Require(destination.TryAddWithStorageState("wood", 2, false, 1f, 0f) &&
+            splitSource.TryTransferSlotTo(0, destination, 5) &&
+            splitSource.Count("wood") == 4 && destination.Slots[0].amount == 2 &&
+            destination.Slots[1].amount == 5 &&
+            Mathf.Approximately(destination.Slots[1].EffectiveStorageCondition, .5f) &&
+            Mathf.Approximately(splitSource.Slots[0].storageMeltRemainder +
+                destination.Slots[1].storageMeltRemainder, .36f),
+            "shift half failed or merged incompatible freshness");
+        Require(!splitSource.TryTransferSlotTo(0, destination) && splitSource.Count("wood") == 4,
+            "failed shift consumed source");
+        Require(destination.TryTransferSlotTo(1, splitSource, 5) == false,
+            "shift merged different melt states without an empty slot");
+        var same = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        var sameHeld = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(same.TryAddWithStorageState("wood", 2, true, .5f, 0f) &&
+            sameHeld.TryAddWithStorageState("wood", 2, true, .5f, 0f) &&
+            same.TryClickSlot(0, sameHeld, false) && same.Count("wood") == 4 && sameHeld.IsEmpty,
+            "matching storage states failed to merge");
+        var originBag = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 2);
+        var originCursor = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        Require(originBag.TryAddWithStorageState("wood", 9, true, .5f, .36f) &&
+            originBag.TryClickSlot(0, originCursor, true), "origin pickup failed");
+        var remainder = originBag.Slots[0];
+        Require(originBag.TryReturnCursor(0, originCursor, remainder) && originCursor.IsEmpty &&
+            originBag.Slots[0].amount == 9 &&
+            Mathf.Approximately(originBag.Slots[0].storageMeltRemainder, .36f),
+            "half-stack return failed to restore source");
+        Require(originBag.TryClickSlot(0, originCursor, false) &&
+            originBag.TryReturnCursor(0, originCursor, default) && originCursor.IsEmpty &&
+            originBag.Slots[0].amount == 9, "whole-stack return failed");
+        Require(originBag.TryClickSlot(0, originCursor, true) && originBag.TryAdd("stone", 1),
+            "partial return fixture failed");
+        remainder = originBag.Slots[0];
+        Require(originBag.TryClickSlot(1, originCursor, false) &&
+            !originBag.TryReturnCursor(0, originCursor, remainder) && originCursor.Count("stone") == 1,
+            "unrelated origin stack overwritten");
+        Debug.Log("[Nyangbingo] Inventory click/drop regression passed.");
+    }
+
+    [MenuItem("Nyangbingo/Run Production Goal Guide Regression")]
+    public static void RunProductionGoalGuideRegression()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
+        var bag = new Nyangbingo.Inventory.Inventory(catalog.FindItem);
+        var furnace = catalog.Recipes.First(r => r.Output.item?.Id == "furnace");
+        string Target(string id, int count = 1) =>
+            Nyangbingo.World.ProductionGoalGuide.Resolve(catalog, bag, id, count, _ => true);
+        Require(Target("furnace") == "nearest:" + furnace.Ingredients[0].item.Id,
+            "missing furnace material not selected");
+        foreach (var ingredient in furnace.Ingredients)
+            Require(bag.TryAdd(ingredient.item.Id, ingredient.amount), "goal material fixture failed");
+        Require(Target("furnace") == "station:workbench", "ready furnace still points to ore");
+        Require(bag.TryRemove("copper_ore", 1) && Target("furnace") == "nearest:copper_ore",
+            "new shortage did not replace station target");
+        Require(bag.TryAdd("copper_ore", 1) && bag.TryAdd("furnace", 1) && Target("furnace") == null,
+            "owned installation still requests materials");
+        var smelt = catalog.Smelting.First(r => r.Output.item?.Id == "iron_ingot");
+        var oreBag = new Nyangbingo.Inventory.Inventory(catalog.FindItem);
+        Require(oreBag.TryAdd(smelt.Input.item.Id, smelt.Input.amount * 2), "smelt fixture failed");
+        Require(Nyangbingo.World.ProductionGoalGuide.Resolve(catalog, oreBag, "iron_ingot",
+            smelt.Output.amount * 2, _ => true) == "nearest:" + smelt.Fuel.item.Id,
+            "smelting ignored missing fuel");
+        Require(oreBag.TryAdd(smelt.Fuel.item.Id, smelt.Fuel.amount * 2) &&
+            Nyangbingo.World.ProductionGoalGuide.Resolve(catalog, oreBag, "iron_ingot",
+                smelt.Output.amount * 2, _ => true) == "station:furnace",
+            "ready smelting did not point to furnace");
+        foreach (var id in new[] { "ice_core", "iron_claw", "ice_anvil", "icesteel_claw", "workbench" })
+        {
+            var inventory = new Nyangbingo.Inventory.Inventory(catalog.FindItem);
+            var recipe = catalog.Recipes.First(r => r.Output.item?.Id == id);
+            foreach (var ingredient in recipe.Ingredients)
+                Require(inventory.TryAdd(ingredient.item.Id, ingredient.amount), "multi-goal fixture failed");
+            var expected = recipe.Station switch
+            {
+                Nyangbingo.Core.CraftingStation.Furnace => "station:furnace",
+                Nyangbingo.Core.CraftingStation.Foundry => "station:blast_furnace",
+                Nyangbingo.Core.CraftingStation.IceAnvil => "station:ice_anvil", _ => null
+            };
+            Require(Nyangbingo.World.ProductionGoalGuide.Resolve(catalog, inventory, id, 1, _ => true)
+                == expected, "wrong station for production goal " + id);
+        }
+        Debug.Log("[Nyangbingo] Production goal guide regression passed.");
+    }
+
+    [MenuItem("Nyangbingo/Run Inventory Equipment Ownership Regression")]
+    public static void RunInventoryEquipmentOwnershipRegression()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
+        var inventory = new Nyangbingo.Inventory.Inventory(catalog.FindItem);
+        var cursor = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 1);
+        var storage = new Nyangbingo.Inventory.Inventory(catalog.FindItem, 2);
+        var collection = new Nyangbingo.Inventory.EquipmentCollection(catalog.FindEquipment, inventory, cursor);
+        var equipment = catalog.Equipment.First(e => e != null && catalog.FindItem(e.Id) != null);
+        Require(collection.TryAdd(equipment) && collection.Contains(equipment.Id) &&
+            inventory.Count(equipment.Id) == 1, "equipment not represented in inventory");
+        var slot = inventory.Export().FindIndex(i => i.itemId == equipment.Id);
+        Require(inventory.TryClickSlot(slot, cursor, false) && collection.Contains(equipment.Id),
+            "cursor pickup lost ownership");
+        Require(storage.TryClickSlot(0, cursor, false) && !collection.Contains(equipment.Id),
+            "stored equipment remains player-owned");
+        Require(storage.TryTransferSlotTo(0, inventory) && collection.Contains(equipment.Id),
+            "storage retrieval failed to restore ownership");
+        var active = new Nyangbingo.Inventory.ActiveSlotSystem(inventory, catalog.FindItem, keepInInventory: true);
+        Require(inventory.TryAdd("dokkaebi_club", 2), "weapon fixture failed");
+        Require(active.TryEquip("dokkaebi_club") && inventory.Count("dokkaebi_club") == 2 &&
+            active.TryUnequip() && inventory.Count("dokkaebi_club") == 2,
+            "equipment toggle consumed or duplicated inventory items");
+        Debug.Log("[Nyangbingo] Inventory equipment ownership regression passed.");
+    }
+
+    [MenuItem("Nyangbingo/Run Seolhanpung Sunlight Immunity Regression")]
+    public static void RunSeolhanpungSunlightImmunityRegression()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
+        Require(Nyangbingo.Inventory.EquipmentColdPenaltyRules.TryCreate(catalog, out var cold),
+            "cold penalty fixture missing");
+        var equipped = new Nyangbingo.Inventory.EquipmentSystem();
+        var stats = new Nyangbingo.Inventory.StatSheet();
+        Require(!Nyangbingo.Inventory.ArmorSetRules.GrantsSunlightImmunity(equipped, 20, cold),
+            "bare player is immune");
+        foreach (var id in new[] { "icesteel_helm", "icesteel_armor", "icesteel_boots" })
+            Require(equipped.TryEquip(catalog.FindEquipment(id)), "set fixture missing");
+        stats.Recalculate(equipped, 20, cold);
+        Require(stats.SunlightImmune &&
+            Mathf.Approximately(stats.FireDamageModifier, -.25f) &&
+            Mathf.Approximately(stats.TemperatureRiseModifier, -.20f),
+            "complete set immunity or existing modifiers failed");
+        Require(Nyangbingo.Inventory.ArmorSetRules.GrantsSunlightImmunity(equipped, -10, cold) &&
+            !Nyangbingo.Inventory.ArmorSetRules.GrantsSunlightImmunity(equipped, -11, cold),
+            "immunity ignored existing set cold tolerance");
+        Require(equipped.TryUnequip(Nyangbingo.Core.EquipmentSlot.Feet) &&
+            !Nyangbingo.Inventory.ArmorSetRules.GrantsSunlightImmunity(equipped, 20, cold),
+            "partial set is immune");
+        Require(equipped.TryEquip(catalog.FindEquipment("iron_boots")) &&
+            !Nyangbingo.Inventory.ArmorSetRules.GrantsSunlightImmunity(equipped, 20, cold),
+            "mixed set is immune");
+        stats.Recalculate(equipped, 20, cold);
+        Require(!stats.SunlightImmune, "stat recalculation retained stale immunity");
+        Debug.Log("[Nyangbingo] Seolhanpung sunlight immunity regression passed.");
+    }
+
+    [Serializable]
+    private sealed class InventorySnapshot
+    {
+        public List<Nyangbingo.Inventory.InventorySlot> slots;
     }
 
     private static void Require(bool condition, string message)

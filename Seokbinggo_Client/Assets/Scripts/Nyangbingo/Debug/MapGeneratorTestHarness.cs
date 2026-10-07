@@ -24,7 +24,7 @@ namespace Nyangbingo.Debugging
         [Header("선택: 채굴/상자 테스트용 (비워두면 아이템 드랍·상자 보상 없이 파괴/설치만 동작)")]
         [SerializeField] private GameDataCatalog catalog;
 
-        [Header("5단계: 세이브/로드 테스트 (F5 저장 / F9 로드)")]
+        [Header("5단계: 세이브/로드 테스트 (Ctrl+Alt+F1 저장 / Ctrl+Alt+F2 로드)")]
         [SerializeField] private bool enableSaveLoadHotkeys = true;
         [SerializeField] private SaveManager saveManager;
         [Range(0, SaveManager.SlotCount - 1)][SerializeField] private int saveSlot = 0;
@@ -140,8 +140,10 @@ namespace Nyangbingo.Debugging
         {
             if (!enableSaveLoadHotkeys || session == null) return;
 
-            if (Input.GetKeyDown(KeyCode.F5)) SaveNow();
-            else if (Input.GetKeyDown(KeyCode.F9)) LoadNow();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Nyangbingo.Core.DevelopmentShortcuts.IsPressed(Nyangbingo.Core.DevelopmentShortcut.MapSave)) SaveNow();
+            else if (Nyangbingo.Core.DevelopmentShortcuts.IsPressed(Nyangbingo.Core.DevelopmentShortcut.MapLoad)) LoadNow();
+#endif
         }
 
         private void OnDestroy()
@@ -205,7 +207,7 @@ namespace Nyangbingo.Debugging
         /// DEV_B_TO_DEV_A_HANDOFF.md §11.4/§13 1단계 완료 기준("새벽 시... 자동 저장이 한 번만 실행")을
         /// 이 하네스 안에서 실제로 배선한다. WorldSessionController는 MonoBehaviour가 아니라 씬에 미리
         /// 인스펙터로 꽂아둘 수 없으므로, 세션이 만들어진 뒤 WorldSessionSaveProviderAdapter를 통해
-        /// 코드로 연결한다 — F5/F9 수동 저장과 동일한 session/saveManager/saveSlot을 그대로 재사용해,
+        /// 코드로 연결한다 — Ctrl+Alt+F1/F2 수동 저장과 동일한 session/saveManager/saveSlot을 그대로 재사용해,
         /// 새벽 자동 저장과 수동 저장이 같은 슬롯을 놓고 서로 다른 상태를 남기지 않게 한다.
         /// </summary>
         private void SetupDawnAutoSave()
@@ -532,11 +534,11 @@ namespace Nyangbingo.Debugging
 
         private static void LogLegend()
         {
-            Debug.Log("[Nyangbingo] 범례 — 초록: 스폰(반지하 알코브), 빨강: 이무기 제단, 노랑: 미개봉 상자, 회색: 개봉된 상자, " +
+            Debug.Log("[Nyangbingo] 범례 — 초록: 스폰(반지하 알코브), 빨강: 강철이 제단, 노랑: 미개봉 상자, 회색: 개봉된 상자, " +
                       "보라: 밤 시간대 요괴 스폰 후보(GetValidSpawnPositions 데모), " +
                       "하늘색: 개방 공중, 어두운 무채색: 동굴(배경벽), 갈색: 흙, 회색: 돌, 검정: 석탄, 주황: 점토, " +
                       "적갈색: 철광석, 금색: 구리광석, 청록: 얼음조각/서리류, 진남색: 심층암, 보라: 폐허, 마젠타: 미매핑 타일. " +
-                      "F5: 저장, F9: 로드(세이브/상자 개봉 테스트). 좌상단 HUD: 현재 일차/낮밤 상태/배속 조절.");
+                      "Ctrl+Alt+F1: 저장, Ctrl+Alt+F2: 로드(세이브/상자 개봉 테스트). 좌상단 HUD: 현재 일차/낮밤 상태/배속 조절.");
         }
     }
 }

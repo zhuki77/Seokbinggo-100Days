@@ -71,6 +71,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Run(TestWorldCellCoordinateContract);
         Run(TestDemoSafeSpawnRestorePolicy);
         Run(TestLatestProductFlowContracts);
+        Run(TestS5SeparateAchievementsAndCompletionPersistence);
+        Run(TestS6MaterialSourceCatalog);
+        Run(TestS7RemovalSimulationAndDamageEvent);
         Run(TestPlayerPhysicsIntegrationContract);
         Run(TestSurfaceCameraCompositionContract);
         Run(TestMeleeArcAttackPhysicsQueryContract);
@@ -95,6 +98,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Run(TestDemoBossAccessoryDropContract);
         Run(TestMagpieGuideAndCropBandContract);
         Run(TestStartingTraitContract);
+        Run(TestV86RemainingFeatureConnections);
         Run(TestWorldDropVisualSurfaceOffset);
         Run(TestTreeVegetationVisualOffset);
         Run(TestBossPausedYokaiVisibilityContract);
@@ -113,6 +117,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Run(TestIceCrystalCoolerRecoveryContract);
         Run(TestFrostLanternRuntimeContract);
         Run(TestDoorAndDoorPaperContract);
+        Run(TestDoorInstallationOverlapAndUntrackedRecovery);
         Run(TestChestLootInterfaceContract);
         Run(TestProductAudioMixerContract);
         Run(TestAudioSettingsPersistenceContract);
@@ -124,9 +129,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Run(TestBUiV71InvasionAndCraftingContract);
         Run(TestV79EndingUiContract);
         Run(TestUndergroundTemperatureRecoveryContract);
+        Run(TestNaturalRecoverySaveRestoresRestEligibility);
         Run(TestPlayerFireMitigationContract);
         Run(TestPlayerVisionBonusContract);
         Run(TestYagwangRuntimeTheftContract);
+        Run(TestYagwangAtomicTheftAndReturnedDropProtection);
         return ranTests;
     }
 
@@ -187,6 +194,68 @@ public static class NyangbingoDevBIntegrationRegressionTests
             UnityEngine.Object.DestroyImmediate(accessory);
             UnityEngine.Object.DestroyImmediate(accessoryItem);
             UnityEngine.Object.DestroyImmediate(resource);
+        }
+    }
+
+    private static void TestYagwangAtomicTheftAndReturnedDropProtection()
+    {
+        var item = ItemDefinition.CreateRuntime("atomic_theft_test", "Atomic Theft", 99);
+        var definition = YokaiDefinition.CreateRuntime(YokaiKind.Yagwanggwi,
+            10, 3.5f, 12, 0f, new ItemAmount[0], inventoryStealSlots: 1, inventoryStealMaxItems: 10);
+        var targetObject = new GameObject("AtomicTheftTarget");
+        var thiefObject = new GameObject("AtomicThief");
+        var dropsObject = new GameObject("ReturnedTheftDrops");
+        try
+        {
+            var inventory = new Nyangbingo.Inventory.Inventory(id => id == item.Id ? item : null);
+            Require(inventory.TryAdd(item.Id, 12), "Theft fixture must have twelve items.");
+            var changes = 0;
+            inventory.Changed += () => changes++;
+            Require(!inventory.TryRemoveFromOccupiedSlots(1, 10, out var rejected, _ => false) &&
+                    rejected.Count == 0 && inventory.Count(item.Id) == 12 && changes == 0,
+                "Rejected receipt must leave source items and notifications untouched.");
+            var loot = thiefObject.AddComponent<YokaiLoot>();
+            loot.ConfigureForRuntime(definition);
+            var target = targetObject.AddComponent<MainGameRaidTarget>();
+            target.ConfigureTheftRuntime(inventory, new EquipmentSystem(), null);
+            var receiptVisibleAtNotification = false;
+            inventory.Changed += () => receiptVisibleAtNotification = loot.HasStolenItems;
+            Require(!target.TryStealInventory(1, 10, (YokaiLoot)null) &&
+                    inventory.Count(item.Id) == 12,
+                "Missing recipient must never remove inventory items.");
+            Require(target.TryStealInventory(1, 10, loot) && receiptVisibleAtNotification &&
+                    inventory.Count(item.Id) == 2 && loot.CaptureStolenItems()[0].amount == 10,
+                "Exact cargo must belong to this thief before inventory observers run.");
+
+            var drops = dropsObject.AddComponent<MainGameWorldDropRuntime>();
+            typeof(MainGameWorldDropRuntime).GetMethod("Spawn", InstanceMembers).Invoke(drops,
+                new object[] { item, 1, Vector2.right * 20f, null });
+            Require(!drops.TryStealNearestStack(Vector2.zero, out _, out _, 1f),
+                "A thief cannot take distant offscreen drops.");
+            Require(!drops.TryStealNearestStack(Vector2.right * 20f, out _, out _, 1f,
+                        (_, __) => false) && drops.ActiveDropCount == 1,
+                "A rejected ground receipt must preserve its source drop.");
+            typeof(MainGameWorldDropRuntime).GetMethod("SpawnReturnedTheft", InstanceMembers).Invoke(drops,
+                new object[] { item, 1, Vector2.zero });
+            var saved = drops.Export();
+            Require(saved.Count == 2 && saved.Count(record => record.theftProtected) == 1 &&
+                    !drops.TryStealNearestStack(Vector2.zero, out _, out _, 1f),
+                "Returned cargo must stay collectible without immediate re-theft.");
+            Require(drops.Restore(saved, id => id == item.Id ? item : null) &&
+                    drops.Export().Count(record => record.theftProtected) == 1 &&
+                    !drops.TryStealNearestStack(Vector2.zero, out _, out _, 1f),
+                "Returned-cargo protection must survive save restoration.");
+            typeof(YokaiLoot).GetMethod("DropAll", InstanceMembers).Invoke(loot, null);
+            Require(drops.Export().Count(record => record.theftProtected) == 11,
+                "Death must return all ten recorded items without reward scaling or randomness.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(dropsObject);
+            UnityEngine.Object.DestroyImmediate(thiefObject);
+            UnityEngine.Object.DestroyImmediate(targetObject);
+            UnityEngine.Object.DestroyImmediate(definition);
+            UnityEngine.Object.DestroyImmediate(item);
         }
     }
 
@@ -292,6 +361,65 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "The player must continuously resolve equipment and placed Haetae fire mitigation.");
     }
 
+    private static void TestNaturalRecoverySaveRestoresRestEligibility()
+    {
+        var host = new GameObject("RecoverySaveRegression");
+        PlayerHealthRecoveryService recovery = null;
+        PlayerHealthRecoveryService restored = null;
+        try
+        {
+            var health = host.AddComponent<Health>();
+            health.ConfigureForRuntime(100);
+            var inventory = new Inventory(_ => null);
+            recovery = new PlayerHealthRecoveryService(inventory, health, 10f, 1f, 25);
+            restored = new PlayerHealthRecoveryService(inventory, health, 10f, 1f, 25);
+            health.ApplyDamage(20, DamageTag.Melee);
+            recovery.Tick(4f);
+            var state = new PlayerStateRecord();
+            Require(recovery.CaptureRecoveryState(state) &&
+                    Mathf.Approximately(state.naturalRecoveryDelayRemaining, 6f),
+                "After four safe seconds the save must retain six seconds of rest lockout.");
+            // Exercise actual serialization, including the new optional state flag.
+            state = JsonUtility.FromJson<PlayerStateRecord>(JsonUtility.ToJson(state));
+            Require(restored.RestoreRecoveryState(state) && !restored.IsNaturalRecoveryReady,
+                "Continue must not bypass the saved post-hit rest delay.");
+            restored.Tick(5.5f);
+            Require(!restored.IsNaturalRecoveryReady,
+                "Rest must stay blocked until all saved delay has elapsed.");
+            restored.Tick(.75f);
+            Require(restored.IsNaturalRecoveryReady && restored.CaptureRecoveryState(state) &&
+                    Mathf.Approximately(state.naturalRecoveryFractionalHealing, .25f),
+                "Recovery must resume with its fractional healing progress.");
+            Require(recovery.RestoreRecoveryState(state) && recovery.IsNaturalRecoveryReady,
+                "A recovery-ready save must remain ready immediately after Continue.");
+            recovery.Tick(.75f);
+            Require(health.Current == 81,
+                "Fractional healing must not be lost or grant extra HP across Continue.");
+            health.RestoreCurrent(100);
+            Require(recovery.CaptureRecoveryState(state) && restored.RestoreRecoveryState(state) &&
+                    restored.IsNaturalRecoveryReady,
+                "Full HP must not prevent immediate rest when saved recovery was ready.");
+            state.naturalRecoveryDelayRemaining = float.NaN;
+            Require(!restored.RestoreRecoveryState(state) && restored.IsNaturalRecoveryReady,
+                "Invalid recovery data must fail without changing current readiness.");
+            Require(restored.RestoreRecoveryState(new PlayerStateRecord()) &&
+                    !restored.IsNaturalRecoveryReady,
+                "Legacy saves without timing must retain the conservative damage lockout.");
+            restored.Tick(10f);
+            Require(restored.IsNaturalRecoveryReady,
+                "Legacy saves must become eligible after the normal ten-second delay.");
+            health.ApplyDamage(1, DamageTag.Melee);
+            Require(!restored.IsNaturalRecoveryReady,
+                "New damage after Continue must restart the full rest lockout.");
+        }
+        finally
+        {
+            recovery?.Dispose();
+            restored?.Dispose();
+            UnityEngine.Object.DestroyImmediate(host);
+        }
+    }
+
     private static void TestUndergroundTemperatureRecoveryContract()
     {
         var surfaceHeights = new[] { 10, 12 };
@@ -344,14 +472,18 @@ public static class NyangbingoDevBIntegrationRegressionTests
     private static void TestBUiV71InvasionAndCraftingContract()
     {
         Require(InvasionScheduleRules.IsInvasionNight(6) &&
-                InvasionScheduleRules.AnnouncementBannerText.Contains("내일 밤") &&
+                InvasionScheduleRules.AnnouncementBannerText.Contains("오늘 밤") &&
                 InvasionScheduleRules.IsInvasionNight(96) &&
                 !InvasionScheduleRules.IsInvasionNight(5) &&
-                InvasionScheduleRules.ShouldShowAnnouncement(5, false, true) &&
-                !InvasionScheduleRules.ShouldShowAnnouncement(5, true, true) &&
+                !InvasionScheduleRules.ShouldShowAnnouncement(5, false, true) &&
+                InvasionScheduleRules.ShouldShowAnnouncement(6, false, true) &&
+                InvasionScheduleRules.ShouldShowAnnouncement(16, false, true) &&
+                InvasionScheduleRules.ShouldShowAnnouncement(26, false, true) &&
+                !InvasionScheduleRules.ShouldShowAnnouncement(6, true, true) &&
+                !InvasionScheduleRules.ShouldShowAnnouncement(6, false, false) &&
                 InvasionScheduleRules.IsBedLocked(6, true, true) &&
                 !InvasionScheduleRules.IsBedLocked(6, false, true),
-            "Invasion schedule must announce on the eve and lock beds on invasion nights.");
+            "Invasion schedule must announce during the invasion day's daylight and lock beds that night.");
         Require(RoomTempPresentation.FormatCelsius(-12) == "-12℃" &&
                 RoomTempPresentation.ResolveBand(0) == RoomTempPresentation.Band.Warm &&
                 RoomTempPresentation.ResolveBand(-7) == RoomTempPresentation.Band.Chilled &&
@@ -530,7 +662,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 playerSource.Contains("tilePalette.SelectedItemId != IceShardItemId") &&
                 playerSource.Contains("inventory.TryRemove(IceShardItemId, 1, sourceSlot)") &&
                 playerSource.Contains("iceShardTemperatureRelief"),
-            "Selecting an ice shard in the quick slot and pressing E must consume it for immediate cooling.");
+            "Selecting an ice shard in the quick slot and right-clicking must consume it for immediate cooling.");
     }
 
     private static void TestAudioSettingsPersistenceContract()
@@ -1771,6 +1903,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             sealPct = 73.5f,
             baekjungTearRemainder = .5f,
             magpieJoined = true,
+            magpieActiveForDay = true,
             magpieKillCount = 30,
             magpieBaekjungSurvived = true,
             magpieNestPosition = new Vector2(8.5f, 10.5f),
@@ -1849,13 +1982,22 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "World-drop item, amount, transform, velocity, and pickup delay must survive JSON.");
         Require(Mathf.Approximately(loaded.sealPct, 73.5f) &&
                 Mathf.Approximately(loaded.baekjungTearRemainder, .5f) &&
-                loaded.magpieJoined && loaded.magpieKillCount == 30 &&
+                loaded.magpieJoined && loaded.magpieActiveForDay && loaded.magpieKillCount == 30 &&
                 loaded.magpieBaekjungSurvived &&
                 loaded.magpieNestPosition == new Vector2(8.5f, 10.5f) &&
                 loaded.magpieStorage.Count == 1 &&
                 loaded.magpieStorage[0].itemId == "stone" &&
                 loaded.magpieStorage[0].amount == 2,
             "Seal, Baekjung, and persistent magpie progression/storage must survive JSON.");
+        save.magpieActiveForDay = false;
+        Require(SaveManager.TryDeserialize(JsonUtility.ToJson(save), out var suspendedMagpie) &&
+                suspendedMagpie.magpieJoined && !suspendedMagpie.magpieActiveForDay &&
+                suspendedMagpie.magpieKillCount == 30 && suspendedMagpie.magpieStorage.Count == 1,
+            "A suspended magpie must remain joined but inactive after a save roundtrip.");
+        Require(SaveManager.TryDeserialize(
+                "{\"schemaVersion\":30,\"magpieJoined\":true,\"magpieActiveForDay\":true}", out var oldMagpie) &&
+                oldMagpie.magpieJoined && !oldMagpie.magpieActiveForDay,
+            "Pre-31 saves cannot infer same-day magpie activity from a repaired nest.");
         Require(SaveManager.TryDeserialize(
                     $"{{\"schemaVersion\":{SaveGame.MinimumCompatibleSchemaVersion}}}", out var legacy) &&
                 legacy.schemaVersion == SaveGame.CurrentSchemaVersion &&
@@ -2331,6 +2473,67 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "installed-lantern lifecycle without treating the cosmetic lantern as a counter.");
     }
 
+    private static void TestDoorInstallationOverlapAndUntrackedRecovery()
+    {
+        var host = new GameObject("DoorOverlapRegression");
+        var config = WorldGenerationConfig.CreateDefault();
+        WorldSessionController session = null;
+        var item = ItemDefinition.CreateRuntime("door", "Door", 99);
+        try
+        {
+            var bootstrap = host.AddComponent<MainGameBootstrap>();
+            var environment = host.AddComponent<MainGameEnvironmentState>();
+            session = new WorldSessionController(config, null, null);
+            var tiles = new TileData[6, 6];
+            var service = new TileService(tiles, null, null, 1);
+            SetField(session, "tileService", service);
+            SetField(bootstrap, "session", session);
+            SetField(environment, "bootstrap", bootstrap);
+            SetField(environment, "boundaryPolicy", new SealBoundaryPolicy(new SealWhitelistDefinition[0]));
+            var entryType = typeof(MainGameEnvironmentState).GetNestedType("Entry", BindingFlags.NonPublic);
+            var entry = Activator.CreateInstance(entryType);
+            var anchor = new Vector3Int(2, 2, 0);
+            SetField(entry, "Cell", anchor);
+            SetField(entry, "Record", new PlacedObjectRecord
+            {
+                objectId = "overlap_furnace", definitionId = "furnace",
+                position = new Vector2(2.5f, 2.5f)
+            });
+            ((IDictionary)GetField(environment, "byObjectId")).Add("overlap_furnace", entry);
+            ((IDictionary)GetField(environment, "byCell")).Add(anchor, entry);
+            Invoke(environment, "BindWallHealthRuntime");
+            var inventory = new Nyangbingo.Inventory.Inventory(id => id == item.Id ? item : null);
+            Require(inventory.TryAdd(item.Id, 3), "Door overlap fixture must own door items.");
+            foreach (var cell in new[] { anchor, anchor + Vector3Int.up, anchor + Vector3Int.down })
+                Require(!service.CanPlaceForeground(cell, "door") &&
+                        !service.TryPlaceForeground(cell, "door", inventory) && inventory.Count("door") == 3,
+                    "Door preview and commit must both reject base or head overlap with a furnace.");
+            Require(service.CanPlaceForeground(anchor + Vector3Int.right, "door"),
+                "An adjacent clear footprint must remain available.");
+
+            // Reproduce legacy bad saves: world door tiles exist, but registration failed.
+            tiles[2, 2] = new TileData { elementType = "door", hardness = 1 };
+            tiles[2, 3] = new TileData { elementType = "door_top", hardness = 1 };
+            Require(!environment.TryRegisterTileDoor(anchor),
+                "A colliding legacy door must not overwrite the furnace registry.");
+            Require(environment.TryRemove("overlap_furnace"), "Legacy furnace must remain recoverable.");
+            Require(environment.TryResolvePlacedObjectMiningTarget(new Vector2(1.5f, 2.5f),
+                        new Vector2(2.5f, 3.5f), 4f, out var recovered, out _) &&
+                    recovered.objectId == MainGameEnvironmentState.TileDoorObjectId(anchor),
+                "After furnace recovery, either door tile must recover its missing registry entry.");
+            Require(environment.TryRemove(recovered.objectId) && service.GetTile(anchor).IsAir &&
+                    service.GetTile(anchor + Vector3Int.up).IsAir && environment.PlacedObjectCount == 0,
+                "Recovered legacy door must clear both cells and its registry without leaving a ghost.");
+        }
+        finally
+        {
+            session?.Dispose();
+            UnityEngine.Object.DestroyImmediate(host);
+            UnityEngine.Object.DestroyImmediate(config);
+            UnityEngine.Object.DestroyImmediate(item);
+        }
+    }
+
     private static void TestDoorAndDoorPaperContract()
     {
         var tiles = new TileData[3, 3];
@@ -2752,14 +2955,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     upwardDiagonalService, new Vector2(2.9f, 2.4f),
                     new Vector2(3.5f, 3.5f), new Vector2(.6f, 1.1f),
                     1.5f, out var upwardDiagonalCell) &&
-                upwardDiagonalCell == new Vector3Int(3, 3, 0),
-            "A cursor over an upper-diagonal tile must not be intercepted by the nearer side tile.");
+                upwardDiagonalCell == new Vector3Int(3, 2, 0),
+            "An upper-diagonal aim must mine the first intervening side tile before the cursor tile.");
         Require(MainGamePlayerController.TryPickMiningCell(
                     upwardDiagonalService, new Vector2(2.9f, 2.4f),
                     null, new Vector2(.6f, 1.1f),
                     1.5f, out var fallbackDiagonalCell) &&
-                fallbackDiagonalCell == new Vector3Int(3, 3, 0),
-            "Eight-direction mining over air must prefer the intended diagonal neighbor before ray order.");
+                fallbackDiagonalCell == new Vector3Int(3, 2, 0),
+            "Eight-direction fallback mining must also respect the first intervening foreground tile.");
 
         var downwardDiagonalTiles = new TileData[6, 6];
         downwardDiagonalTiles[3, 3] = new TileData
@@ -2771,8 +2974,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     downwardDiagonalService, new Vector2(2.9f, 3.6f),
                     new Vector2(3.5f, 2.5f), new Vector2(.6f, -1.1f),
                     1.5f, out var downwardDiagonalCell) &&
-                downwardDiagonalCell == new Vector3Int(3, 2, 0),
-            "A cursor over a lower-diagonal tile must not be intercepted by the player's nearer support-side tile.");
+                downwardDiagonalCell == new Vector3Int(3, 3, 0),
+            "A lower-diagonal aim must mine the first intervening side tile before the cursor tile.");
 
         const int isolatedPhysicsLayer = 31;
         var isolatedPhysicsMask = (LayerMask)(1 << isolatedPhysicsLayer);
@@ -2898,18 +3101,20 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Coyote time must not recharge from residual ground contact while the player is already rising.");
 
         var playerObject = new GameObject("PlayerPhysicsIntegrationContract",
-            typeof(Rigidbody2D), typeof(CircleCollider2D));
+            typeof(Rigidbody2D), typeof(BoxCollider2D));
         try
         {
             var body = playerObject.GetComponent<Rigidbody2D>();
-            var playerCollider = playerObject.GetComponent<CircleCollider2D>();
+            var playerCollider = playerObject.GetComponent<BoxCollider2D>();
             MainGamePlayerController.ConfigurePhysicsBody(body, playerCollider);
 
             Require(body.bodyType == RigidbodyType2D.Dynamic &&
                     Mathf.Approximately(body.gravityScale, 0f) && body.freezeRotation &&
                     body.collisionDetectionMode == CollisionDetectionMode2D.Continuous &&
                     body.interpolation == RigidbodyInterpolation2D.Interpolate &&
-                    !playerCollider.isTrigger && Mathf.Approximately(playerCollider.radius, .38f),
+                    !playerCollider.isTrigger && playerCollider.size == new Vector2(.8f, 1.8f) &&
+                    Mathf.Approximately(playerCollider.offset.y - playerCollider.size.y * .5f, -.38f) &&
+                    Mathf.Approximately(MainGamePlayerController.ColliderFeetBelowRoot(playerCollider), .38f),
                 "The merged player must retain the official dynamic foreground-physics body contract.");
 
             var centeredPlayerBounds = new Bounds(new Vector3(.5f, .5f), new Vector3(.76f, .76f));
@@ -3115,7 +3320,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(playerSource.Contains("TryUseSelectedHealingItem() ||") &&
                 playerSource.Contains("PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId)") &&
                 playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth, tilePalette.SelectedSlotIndex)") &&
-                playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: false)") &&
+                playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: true)") &&
                 playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
                 playerSource.Contains("TryTickHempMining(") &&
@@ -3271,6 +3476,37 @@ public static class NyangbingoDevBIntegrationRegressionTests
         {
             UnityEngine.Object.DestroyImmediate(healHost);
         }
+    }
+
+    private static void TestV86RemainingFeatureConnections()
+    {
+        var session = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/World/WorldSessionController.cs");
+        var encounters = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/World/MainGameEncounterCoordinator.cs");
+        var temperature = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/World/RoomTempService.cs");
+        var opening = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
+        var goal = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/World/MainGameGoalTracker.cs");
+        Require(session.Contains("save.surfaceIceLakeOrigin = SurfaceIceLakeBounds.position") &&
+                session.IndexOf("surfaceLake = AddSurfaceIceLake(result, save)") <
+                session.IndexOf("loadedTileService.RestoreTileChanges(") &&
+                session.Contains("foreach (var change in save.tileChanges)") &&
+                session.Contains("foreach (var placed in save.placedObjectRecords)"),
+            "Existing saves must preserve developed areas and persist a surface landmark before replaying its excavation diffs.");
+        Require(encounters.Contains("combat.ConfigureArena(bootstrap.Session.SurfaceIceLakeBounds)") &&
+                encounters.Contains("WorldMobLocomotion.Flying") &&
+                goal.Contains("bootstrap.Session.SurfaceIceLakeArrival"),
+            "Day-30 spawning, arena combat and the objective arrow must share the same surface landmark.");
+        Require(temperature.Contains("FindGlobal(\"cold_device_effect\")?.Value == \"core_equivalent\"") &&
+                temperature.Contains("CopyColdDeviceCells(coldDeviceCells)") &&
+                temperature.Contains("CanReceiveCoreCooling(cell, device)") &&
+                temperature.Contains("IsCoreWindowSealed(device)"),
+            "Cold devices must add their own sealed/unsealed cooling with the same range and room boundary as cores.");
+        Require(opening.Contains("if (!isNewGame || !TryOpenOpening()) TryOpenTraitSelectIfNeeded(launchSave)") &&
+                opening.Contains("art.Count < openingPageCount") &&
+                opening.Contains("if (art[i] == null) return false") &&
+                opening.Contains("openingImage.preserveAspect = true"),
+            "Only a complete art set opens the new-game slideshow; Continue and missing art must preserve trait/gameplay flow.");
+        Require(MainGameTilePaletteController.IsDirectUseHotbarItem(WorldTileTypes.IceShard),
+            "Selecting an ice shard must use cooling rather than starting a physical tile placement preview.");
     }
 
     private static void TestStartingTraitContract()
@@ -3778,6 +4014,109 @@ public static class NyangbingoDevBIntegrationRegressionTests
         }
     }
 
+    private static void TestS7RemovalSimulationAndDamageEvent()
+    {
+        var tiles = new TileData[20, 20];
+        for (var x = 6; x <= 12; x++)
+            for (var y = 6; y <= 12; y++)
+                if (x == 6 || x == 12 || y == 6 || y == 12)
+                    tiles[x, y] = new TileData { elementType = "stone", isNaturalTerrain = true, hardness = 1 };
+        tiles[8, 8] = new TileData { elementType = "stone", isNaturalTerrain = true, hardness = 1 };
+        var service = new TileService(tiles, null, null, 1);
+        using (var seal = new SealSystem(service))
+        {
+            var core = new Vector3Int(9, 9, 0);
+            var wall = new Vector3Int(6, 9, 0);
+            var revision = seal.Revision;
+            Require(seal.IsCoreWindowSealed(core) && seal.WouldBreakCoreSeal(core, wall),
+                "S7 must warn when removing a true enclosure wall.");
+            Require(!seal.WouldBreakCoreSeal(core, new Vector3Int(8, 8, 0)) &&
+                    seal.Revision == revision && service.GetTile(wall).elementType == "stone" &&
+                    seal.IsCoreWindowSealed(core),
+                "Interior pillars must remain safe and removal simulation must not mutate the world.");
+        }
+        var damageService = new TileService(new TileData[6, 5], null, null, 2);
+        var damageCell = new Vector3Int(2, 1, 0);
+        Require(damageService.TryPlaceForeground(damageCell, "insul_wall"), "S7 damage fixture placement.");
+        var destroyedEvents = 0;
+        damageService.WallDestroyedByDamage += (cell, height) =>
+        {
+            Require(cell == damageCell && height == 1, "S7 records the actual destroyed footprint.");
+            destroyedEvents++;
+        };
+        Require(damageService.TryDamageWall(damageCell, 1f, out _, out var partial) &&
+                !partial && destroyedEvents == 0,
+            "Partial damage must not become a broken-cell record.");
+        Require(damageService.TryDamageWall(damageCell, 10000f, out _, out var destroyed) &&
+                destroyed && destroyedEvents == 1,
+            "Damage destruction must publish exactly one footprint event after success.");
+    }
+
+    private static void TestS6MaterialSourceCatalog()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>("Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null, "S6 requires the imported catalog.");
+        var ore = MaterialSourceGuide.Describe(catalog, "iron_ore");
+        Require(ore.Contains("지하 중층") && ore.Contains("46~90칸") && ore.Contains("필요 발톱 T1"),
+            "S6 must use the actual depth and soft-gate claw tier from mineral data.");
+        var shard = MaterialSourceGuide.Describe(catalog, "club_shard");
+        Require(shard.Contains("방망이 도깨비") && shard.Contains("25%") &&
+                shard.Contains("매번 나오지 않음") && !shard.Contains("확정"),
+            "Random drops must not promise a fixed kill count or guaranteed reward.");
+        Require(MaterialSourceGuide.Describe(catalog, "stolen_bundle").Contains("절도 성공 후 처치 시"),
+            "Conditional guaranteed drops must retain the theft condition.");
+        var ingot = MaterialSourceGuide.Describe(catalog, "iron_ingot");
+        Require(ingot.Contains("제련 · 화로") && ingot.Contains("철 광석 ×2") && ingot.Contains("석탄 ×1"),
+            "Smelting sources must include station, input, and fuel.");
+        Require(MaterialSourceGuide.Describe(catalog, "catnip").Contains("작물 채집 · 밴드 1"),
+            "Crop sources must show their catalog bands.");
+        Require(MaterialSourceGuide.Describe(catalog, "yeouiju").Contains("강철이"),
+            "Source names must preserve the confirmed boss/elite role correction.");
+        Require(MaterialSourceGuide.Describe(catalog, "unknown_item").Contains("등록되어 있지"),
+            "Unknown sources must not invent a location.");
+    }
+
+    private static void TestS5SeparateAchievementsAndCompletionPersistence()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>("Assets/Data/SO/GameDataCatalog.asset");
+        Require(catalog != null && DemoAchievementRules.RequiredCoreModuleCount(catalog) == 5 &&
+                DemoAchievementRules.CoreModules(catalog).Length == 5 &&
+                catalog.FindGlobal("result_achievements")?.Value == "boss|build|storage",
+            "S5 must use the five core module rows and three separate achievements.");
+        var save = new SaveGame
+        {
+            bossRecords = new List<BossRecord> { new BossRecord { bossId = "imugi_boss", count = 1 } },
+            modulesDone = new List<string> { "door", "roof", "door", "seokbinggo_s1", "seokbinggo_s6", "unknown" }
+        };
+        var partial = GameShellController.BuildResult(save, catalog);
+        Require(partial.DemoBossDefeated && partial.CoreModulesInstalled == 2 &&
+                partial.CoreModulesRequired == 5 && !partial.DemoComplete && !partial.StorageSuccess &&
+                GameShellController.ShouldOpenDemoResult("imugi_boss", catalog),
+            "Boss victory must open results without a module gate, with construction and storage separate.");
+        save.goalProgress.completedGoalIds.Add("g09");
+        save.modulesDone = DemoAchievementRules.CoreModules(catalog).Select(module => module.Id).ToList();
+        var complete = GameShellController.BuildResult(save, catalog);
+        Require(complete.CoreModulesComplete && complete.StorageSuccess && complete.DemoComplete &&
+                save.storageSuccess && save.demoComplete,
+            "Later construction and acknowledged dawn preservation must update saved achievement state.");
+        var restored = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
+        restored.modulesDone.Clear();
+        var historical = GameShellController.BuildResult(restored, catalog);
+        Require(historical.DemoComplete && historical.StorageSuccess && historical.CoreModulesInstalled == 0,
+            "Attained completion and storage must survive reload while current construction remains truthful.");
+        var unconfirmed = new SaveGame();
+        unconfirmed.goalProgress.pendingDawnKeptIce = 4;
+        Require(!GameShellController.BuildResult(unconfirmed, catalog).StorageSuccess,
+            "An unread dawn result must not grant g09 storage success.");
+        var withoutBoss = new SaveGame { modulesDone = save.modulesDone };
+        Require(!GameShellController.BuildResult(withoutBoss, catalog).DemoComplete,
+            "Five modules alone must not complete the demo.");
+        var finalBoss = new SaveGame
+        { bossRecords = new List<BossRecord> { new BossRecord { bossId = "gangcheol_perfect", count = 1 } } };
+        Require(!GameShellController.BuildResult(finalBoss, catalog).DemoBossDefeated,
+            "S5 must resolve the configured demo gate without confusing extended final bosses.");
+    }
+
     private static void TestLatestProductFlowContracts()
     {
         Require(!GameShellController.ShouldEndDemoAtDay(31) &&
@@ -3789,7 +4128,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
         {
             sealPct = 87.5f,
             modulesDone = new System.Collections.Generic.List<string>
-                { "module_a", "module_b", "module_a" },
+                { "insul_wall", "door", "insul_wall", "seokbinggo_s3", "unknown_module" },
             bossRecords = new System.Collections.Generic.List<BossRecord>
                 { new BossRecord { bossId = "imugi_boss", count = 1, firstDay = 30 } },
             dogam = new System.Collections.Generic.List<CodexRecord>
@@ -4068,19 +4407,27 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Narrative range-toggle status was reintroduced into the tile palette HUD.");
         Require(playerSource.Contains("MainGameHudController.BlocksWorldPrimaryInput"),
             "Clicking the top-right seal thermometer must block claw attacks and mining input.");
-        Require(!playerSource.Contains("miningAllowedByLastSwing") &&
+        Require(playerSource.Contains("lastBasicAttackHitTarget = attack.LastHitCount > 0;") &&
                 System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"if \(attackCooldown <= 0f\)\s*TryBasicAttack\(\);\s*//[\s\S]{0,180}TickMining\(\);"),
-            "A successful claw hit must not reset or suppress mining held on the same primary input.");
+                    @"if \(lastBasicAttackHitTarget && attackCooldown > 0f\)\s*CancelMining\(\);\s*else\s*TickMining\(\);") &&
+                playerSource.Contains("(lastBasicAttackHitTarget && attackCooldown > 0f)"),
+            "A successful attack must cancel mining and hide its target feedback throughout the attack cooldown.");
         Require(System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryInteractClosestWorldTarget\(includePlacedObjects: false\)") &&
+                    @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,500}TryInteractClosestWorldTarget\(includePlacedObjects: true\)") &&
                 playerSource.Contains("TryOpenChestAt(") &&
                 System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"GetMouseButtonDown\(1\)[\s\S]{0,220}TryInteractPlacedObjectAtPointer\(\)[\s\S]{0,120}TryFanAbility\(\)") &&
-                turretSource.Contains("TryResolvePlacedObjectMiningTarget(") &&
-                !System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"GetKeyDown\(KeyCode\.E\)[\s\S]{0,600}TryInteractNearestPlacedObject"),
-            "Natural gathering and chests must remain on E while a pointed placed object takes right-click priority over the fan ability.");
+                    @"GetMouseButtonDown\(1\)[\s\S]{0,250}TryUseSelectedItem\(\)") &&
+                turretSource.Contains("TryResolvePlacedObjectMiningTarget("),
+            "E must select reachable natural and placed targets; right-click uses the selected item and F keeps the fan skill.");
+        var craftingSource = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
+        Require(System.Text.RegularExpressions.Regex.IsMatch(paletteSource,
+                    @"GetMouseButtonDown\(1\)[\s\S]{0,120}pointerConsumedFrame = Time.frameCount;[\s\S]{0,60}ConfirmForegroundPlacement\(\)") &&
+                System.Text.RegularExpressions.Regex.IsMatch(turretSource,
+                    @"GetMouseButtonDown\(1\)[\s\S]{0,160}ConfirmPlacementPreview\(\)") &&
+                !paletteSource.Contains("Input.GetMouseButtonDown(0)) ConfirmForegroundPlacement()") &&
+                craftingSource.Contains("page == Page.Gathering ? Input.GetMouseButtonDown(1) && inventoryDragSourceIndex < 0 : Input.GetKeyDown(KeyCode.E)") &&
+                craftingSource.Contains("else if (Input.GetMouseButtonDown(1)) ConfirmSummonItemUse()"),
+            "Tile, furniture and inventory use must agree on right-click; last-item placement consumes the frame without a second use.");
     }
 
     private static void TestBossHealthArtMapping()
@@ -4115,8 +4462,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "King Dokkaebi must use the first Unity texture row of the boss health sheet.");
         Require(MainGameHudController.BossHealthArtRow("mother_bulgasari") == 1,
             "Mother Bulgasari must use the second Unity texture row of the boss health sheet.");
-        Require(MainGameHudController.BossHealthArtRow("imugi_boss") == 2,
-            "Imugi must use the third Unity texture row of the boss health sheet.");
+        Require(MainGameHudController.BossHealthArtRow("imugi_boss") == 3,
+            "The day-30 Gangcheol boss must use the fourth Unity texture row, retaining its legacy save ID.");
         Require(MainGameHudController.BossHealthArtRow("unknown") == -1,
             "Unknown bosses must not inherit another boss health frame.");
         var motherDefinition = AssetDatabase.LoadAssetAtPath<BossDefinition>(
@@ -4171,9 +4518,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             characterCatalog != null ? characterCatalog.FindSprite("imugi_post_tail") : null;
         Require(imugiBody != null && imugiPreTail != null && imugiPostTail != null &&
                 AssetDatabase.GetAssetPath(imugiPreTail) ==
-                "Assets/Art/Characters/imugi_pre_tail.aseprite" &&
+                "Assets/Art/Characters/imugi_mid_body_canvas.png" &&
                 AssetDatabase.GetAssetPath(imugiPostTail) ==
-                "Assets/Art/Characters/imugi_post_tail.aseprite",
+                "Assets/Art/Characters/imugi_last_body_canvas.png",
             "Imugi must bind its delivered body, pre-tail, and post-tail art.");
         var imugiTailObject = new GameObject("ImugiTailCompositionContract");
         try
@@ -4293,9 +4640,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             characterCatalog != null ? characterCatalog.FindSprite("gangcheol_post_tail") : null;
         Require(gangcheoriPreTail != null && gangcheoriPostTail != null &&
                 AssetDatabase.GetAssetPath(gangcheoriPreTail) ==
-                "Assets/Art/Characters/gangcheol_post_tail.aseprite" &&
+                "Assets/Art/Characters/gangcheol_mid_body_canvas.png" &&
                 AssetDatabase.GetAssetPath(gangcheoriPostTail) ==
-                "Assets/Art/Characters/gangcheol_pre_tail.aseprite",
+                "Assets/Art/Characters/gangcheol_last_body_canvas.png",
             "Gangcheori must correct the delivered reversed labels so its larger tail piece precedes its smaller tip.");
         var gangcheoriTailObject = new GameObject("GangcheoriTailCompositionContract");
         var gangcheoriHead = gangcheoriTailObject.AddComponent<SpriteRenderer>();
@@ -4378,15 +4725,15 @@ public static class NyangbingoDevBIntegrationRegressionTests
         var shortcutHelpSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameBossSummonUiController.cs");
         Require(encounterSource.Contains(
-                    "YokaiKind.Gangcheori, \"Alt+F12\", \"Gangcheori\"") &&
+                    "YokaiKind.Gangcheori, \"Shift+F9\", \"이무기\"") &&
                 encounterSource.Contains(
-                    "YokaiKind.Gaekgwi, \"Alt+Shift+F12\", \"Gaekgwi\"") &&
+                    "YokaiKind.Gaekgwi, \"Ctrl+F9\", \"객귀\"") &&
                 encounterSource.Contains("ResolveInstanceSpawnTrack(definition)") &&
                 encounterSource.Contains("var selectedTarget = ResolveSpawnTarget") &&
                 encounterSource.Contains(
                     "definition, selectedTarget, counters, instanceSpawnTrack") &&
-                shortcutHelpSource.Contains("Alt+F12  강철이 소환") &&
-                shortcutHelpSource.Contains("Alt+Shift+F12  객귀 소환"),
+                shortcutHelpSource.Contains("DevelopmentShortcuts.GetHelpText") &&
+                encounterSource.Contains("DevelopmentShortcut.Gaekgwi"),
             "Editor shortcuts must immediately spawn resident Gangcheori and raid Gaekgwi using their actual spawn tracks.");
         var gameplayCatalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(
             "Assets/Art/Gameplay/GameplayArtCatalog.asset");
@@ -4537,8 +4884,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.Alpha4 &&
                 MainGameCraftingUiController.UnifiedTabHotkey(4) == KeyCode.None,
             "The four unified panels must be assigned to number keys 1 through 4.");
-        Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F5,
-            "Crafting test grants must remain on modified F5 without reclaiming the 1-4 product panel keys.");
+        Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F12,
+            "Crafting test grants use F12; F5 remains help and 1-4 remain product panels.");
         Require(MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Furnace) &&
                 MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Foundry) &&
                 !MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Workbench),
@@ -4570,6 +4917,21 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 shellUiSource.Contains("!MainGameCraftingUiController.ConsumedEscapeThisFrame"),
             "Crafting stations must keep their recipes separate, " +
             "and Escape must close any 1-4 panel without opening pause in the same frame.");
+        var gameplayInputSource = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/Core/GameplayInput.cs");
+        var paletteEscapeSource = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
+        var turretEscapeSource = System.IO.File.ReadAllText("Assets/Scripts/Nyangbingo/World/MainGameTurretRuntime.cs");
+        var shellUpdateStart = shellUiSource.IndexOf("private void Update()");
+        var shellEscapeStart = shellUiSource.IndexOf("private void ProcessEscapeFallback()");
+        Require(shellUpdateStart >= 0 && shellEscapeStart > shellUpdateStart &&
+                !shellUiSource.Substring(shellUpdateStart, shellEscapeStart - shellUpdateStart).Contains("shell.OpenPause()") &&
+                System.Text.RegularExpressions.Regex.IsMatch(shellUiSource,
+                    @"private void LateUpdate\(\)\s*\{\s*ProcessEscapeFallback\(\);") &&
+                shellUiSource.Contains("(codex == null || !codex.IsOpen) && Input.TryConsumeEscape()") &&
+                paletteEscapeSource.Contains("if (Input.TryConsumeEscape())") &&
+                turretEscapeSource.Contains("if (Input.TryConsumeEscape())") &&
+                craftingUiSource.Contains("if (open && Input.TryConsumeEscape())") &&
+                gameplayInputSource.Contains("escapeConsumedFrame == Time.frameCount || !GetKeyDown(KeyCode.Escape)"),
+            "Placement and panel cancellation must run before pause fallback and consume Escape once, independent of Update execution order.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpPanelSize.x <=
                     MainGameUiResolutionController.LogicalResolution.x &&
                 MainGameBossSummonUiController.DebugShortcutHelpPanelSize.y <=
@@ -4588,17 +4950,15 @@ public static class NyangbingoDevBIntegrationRegressionTests
         ItemDefinition FindRoutingItem(string id) =>
             id == hotbarItem.Id ? hotbarItem : id == inventoryOnlyItem.Id ? inventoryOnlyItem : null;
         var routedInventory = new Inventory(
-            FindRoutingItem, 12, MainGameCraftingUiController.InventoryHotbarSlotCount,
-            itemId => itemId == hotbarItem.Id);
+            FindRoutingItem, 12);
         Require(routedInventory.TryAdd(inventoryOnlyItem.Id, 1) &&
-                routedInventory.Slots.Take(MainGameCraftingUiController.InventoryHotbarSlotCount)
-                    .All(slot => string.IsNullOrEmpty(slot.itemId)) &&
-                routedInventory.Slots[MainGameCraftingUiController.InventoryHotbarSlotCount].itemId ==
-                    inventoryOnlyItem.Id,
-            "Items that cannot be selected on the hotbar must skip its first eight slots during acquisition.");
+                routedInventory.Slots[0].itemId == inventoryOnlyItem.Id &&
+                routedInventory.TryAdd(inventoryOnlyItem.Id, 1) &&
+                routedInventory.Slots[0].amount == 2,
+            "Inert items must fill and stack in hotbar slots during acquisition.");
         Require(routedInventory.TryAdd(hotbarItem.Id, 1) &&
-                routedInventory.Slots[0].itemId == hotbarItem.Id,
-            "Hotbar-selectable items must still auto-fill the first eight inventory slots.");
+                routedInventory.Slots[1].itemId == hotbarItem.Id,
+            "All items must use the same first-empty-slot order.");
         UnityEngine.Object.DestroyImmediate(hotbarItem);
         UnityEngine.Object.DestroyImmediate(inventoryOnlyItem);
     }
@@ -4743,12 +5103,26 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 inventory.Slots[7].amount == 3 &&
                 !inventory.TrySwapSlots(7, 7),
             "Shift-click inventory reordering must move stacks into and out of the first eight hotbar slots.");
+        var reservedInventory = new Nyangbingo.Inventory.Inventory(FindItem, 10);
+        Require(reservedInventory.TryAdd(runtimeDirt.Id, 2) &&
+                reservedInventory.Slots[0].itemId == runtimeDirt.Id &&
+                reservedInventory.TryAdd(runtimeStone.Id, 3) &&
+                reservedInventory.TrySwapSlots(0, 8) &&
+                reservedInventory.Slots[8].itemId == runtimeDirt.Id &&
+                reservedInventory.Slots[8].amount == 2 &&
+                reservedInventory.TrySwapSlots(8, 9) &&
+                reservedInventory.Slots[9].itemId == runtimeDirt.Id &&
+                !reservedInventory.CanSwapSlots(-1, 0),
+            "Manual stack swaps must work between hotbar and inventory slots.");
         var craftingSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
         var playerSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
         Require(craftingSource.Contains("TrySwapSlots(sourceIndex, index)") &&
-                craftingSource.Contains("Shift+다른 슬롯 클릭: 위치 교환") &&
+                craftingSource.Contains("EventTriggerType.BeginDrag") &&
+                craftingSource.Contains("EventTriggerType.Drop") &&
+                craftingSource.Contains("CanSwapSlots(sourceIndex, index)") &&
+                !craftingSource.Contains("var swapRequested =") &&
                 !craftingSource.Contains("앞 8칸은 퀵슬롯") &&
                 craftingSource.Contains("transform.Find(\"HotbarShortcut\")") &&
                 craftingSource.Contains("oldNumberHint.gameObject.SetActive(false)") &&
@@ -4756,7 +5130,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 craftingSource.Contains("{index + 1} · {UnifiedTabLabel(index)}") &&
                 !paletteSource.Contains("설치 거리가 너무 멉니다") &&
                 !paletteSource.Contains("붉은 위치에는 블럭을 설치할 수 없습니다") &&
-                paletteSource.Contains("퀵슬롯에서 선택할 수 없습니다") &&
+                paletteSource.Contains("if (!IsHotbarSelectable(selectedItem") &&
+                !paletteSource.Contains("퀵슬롯에서 선택할 수 없습니다") &&
                 !paletteSource.Contains("퀵슬롯에서 설치할 수 없습니다") &&
                 playerSource.Contains("채굴 도구 등급 부족") &&
                 playerSource.Contains("RaiseMiningTargetChanged"),

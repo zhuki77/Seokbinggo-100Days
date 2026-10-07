@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1395,6 +1395,8 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
     }
     private void Sample(float movement = 0f, params KeyCode[] keys) =>
         GameplayInput.Sample(movement, new Vector3(Screen.width * .5f, Screen.height * .5f), false, false, keys);
+    private void SampleUse() => GameplayInput.Sample(0f,
+        new Vector3(Screen.width * .5f, Screen.height * .5f), false, true);
     private void Require(bool condition, string label)
     {
         if (!condition) throw new Exception(label);
@@ -1452,8 +1454,8 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     $"player visual is two blocks high (width {visual.bounds.size.x / blockHeight:F3}, height {visual.bounds.size.y / blockHeight:F3}, scale {visual.transform.localScale.x:F3})");
                 Require(Vector3.Distance(player.transform.localScale, Vector3.one) < .001f,
                     "physics root scale remains unchanged");
-                var collider = player.GetComponent<CircleCollider2D>();
-                Require(Mathf.Abs(visual.bounds.min.y - (player.transform.position.y + collider.offset.y - collider.radius)) < .02f,
+                var collider = player.GetComponent<BoxCollider2D>();
+                Require(Mathf.Abs(visual.bounds.min.y - (player.transform.position.y + collider.offset.y - collider.size.y * .5f)) < .02f,
                     "visual feet align with collider bottom");
                 Require(player.transform.Find("AttackVisual").localScale == Vector3.one,
                     "attack art does not inherit character scaling");
@@ -1620,7 +1622,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(FindAnyObjectByType<MainGameTurretRuntime>().IsPlacementPreviewValid ? 53 : 51);
                 break;
             case 53:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), true, false);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
                 Next(54);
                 break;
             case 54:
@@ -1689,7 +1691,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(300);
                 break;
             case 300:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, false, KeyCode.E);
                 Next(301);
                 break;
             case 301:
@@ -1995,7 +1997,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (foundrySmeltRun || installAnvilRun)
                 {
                     placedFurnace = FindAnyObjectByType<MainGameEnvironmentState>().ExportPlacedObjects().Single(r => r.definitionId == (installAnvilRun ? "blast_furnace" : "furnace"));
-                    GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, true);
+                    GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, false, KeyCode.E);
                     Next(700);
                     break;
                 }
@@ -2023,7 +2025,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     Next(FindAnyObjectByType<MainGameTurretRuntime>().IsPlacementPreviewValid ? 504 : 502);
                 break;
             case 504:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), true, false);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
                 Next(505);
                 break;
             case 505:
@@ -2037,7 +2039,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     if (BedAutoOnlyRun)
                     {
                         placedFurnace = FindAnyObjectByType<MainGameEnvironmentState>().ExportPlacedObjects().Single(r => r.definitionId == "furnace");
-                        bedOutputBefore = FindAnyObjectByType<MainGameRuntimeServices>().Furnace.Completed.Where(r => r.item.Id == "iron_ingot").Sum(r => r.amount);
+                        bedOutputBefore = FindAnyObjectByType<MainGameRuntimeServices>().StationProduction.PendingCount("iron_ingot") + FindAnyObjectByType<MainGameRuntimeServices>().Furnace.Completed.Where(r => r.item.Id == "iron_ingot").Sum(r => r.amount);
                         toolNavigationAttempts = 0;
                         Next(600); break;
                     }
@@ -2062,7 +2064,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(420);
                 break;
             case 810:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, false, KeyCode.E);
                 Next(811); break;
             case 811:
                 Sample();
@@ -2101,7 +2103,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             case 814:
                 Sample();
                 var wallServices = FindAnyObjectByType<MainGameRuntimeServices>();
-                Require(wallServices.CraftingProcess.Active?.Id == WallRecipe, "normal E starts requested building craft");
+                Require(wallServices.StationProduction.Export().Any(s => s.jobs.Count > 0 && s.jobs[0].recipeId == WallRecipe), "normal E starts requested building craft");
                 if(StorageCraftRun)
                 {
                     Require(wallServices.PlayerInventory.Count("wood")==savedStone-6 && wallServices.PlayerInventory.Count("stone")==storageStoneBefore-8 && wallServices.PlayerInventory.Count("dirt")==storageDirtBefore-10,"jangdok consumes ordinary wood6 stone8 dirt10");
@@ -2158,7 +2160,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next((bool)typeof(MainGameTilePaletteController).GetField("foregroundPlacementValid", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(FindAnyObjectByType<MainGameTilePaletteController>()) ? 819 : 817);
                 break;
             case 819:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), true, false);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
                 Next(820); break;
             case 820:
                 Sample();
@@ -2213,7 +2215,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(872); break;
             case 872:
                 if (Time.realtimeSinceStartup - phaseStarted < .6f) { Sample(); return; }
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(new Vector3(296.5f, 120.5f)), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(new Vector3(296.5f, 120.5f)), false, false, KeyCode.E);
                 Next(873); break;
             case 873:
                 Sample();
@@ -2237,7 +2239,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(shelterRestoreStage == 1 ? 876 : 878); break;
             case 876:
                 if (Time.realtimeSinceStartup - phaseStarted < .6f) { Sample(); return; }
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(new Vector3(296.5f, 120.5f)), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(new Vector3(296.5f, 120.5f)), false, false, KeyCode.E);
                 Next(877); break;
             case 877:
                 Sample();
@@ -2263,7 +2265,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory,"recool-before.png"));
                 Next(1301);break;
             case 1301:
-                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placementPoint),false,true);
+                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(1302);break;
             case 1302:
                 Sample();
@@ -2420,7 +2422,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(FindAnyObjectByType<MainGameEnvironmentState>().IsRecognizedBarrier(installedDoorCell), "closed door participates in seal boundary registry");
                 Next(841); break;
             case 841:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(842); break;
             case 842:
                 Sample();
@@ -2434,7 +2436,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (Time.realtimeSinceStartup - phaseStarted < .5f) return;
                 Next(844); break;
             case 844:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(845); break;
             case 845:
                 Sample();
@@ -2454,7 +2456,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "door-blocked.png"));
                 Next(848); break;
             case 848:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(849); break;
             case 849:
                 Sample();
@@ -2481,7 +2483,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (Time.realtimeSinceStartup - phaseStarted > 3f) throw new Exception("Open door did not permit return crossing.");
                 break;
             case 852:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(853); break;
             case 853:
                 Sample();
@@ -2527,7 +2529,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (Time.realtimeSinceStartup - phaseStarted > 12f) throw new Exception("Normal leak excavation failed; inspect mining target and reach.");
                 break;
             case 832:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, false, KeyCode.E);
                 Next(833); break;
             case 833:
                 Sample();
@@ -2585,7 +2587,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Finish("passed", "Normal ice-core installation, current cooling coverage and title Continue restored. Enclosure construction, novice understanding and OS process restart remain unverified.");
                 break;
             case 506:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, false, KeyCode.E);
                 Next(507);
                 break;
             case 507:
@@ -2701,7 +2703,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 break;
             case 483:
                 BeginPlacementAudit();
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(tiles.GetCellCenterWorld(ascentCell)), true, false);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(tiles.GetCellCenterWorld(ascentCell)), false, true);
                 Next(484);
                 break;
             case 484:
@@ -2940,7 +2942,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     ((bool)PlayerField("grounded") || Time.realtimeSinceStartup - phaseStarted > 1.5f)) Next(401);
                 break;
             case 410:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, false, KeyCode.E);
                 Next(411);
                 break;
             case 411:
@@ -3168,7 +3170,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     : "Partial route checkpoint saved; full return and furnace completion not established by this segment.");
                 break;
             case 600:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, false, KeyCode.E);
                 Next(601);
                 break;
             case 601:
@@ -3290,7 +3292,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             case 614:
                 Sample();
                 var clawServices = FindAnyObjectByType<MainGameRuntimeServices>();
-                Require(clawServices.CraftingProcess.Active?.Id == ProgressionRecipe, "normal E starts selected progression crafting");
+                Require(clawServices.StationProduction.Export().Any(s => s.jobs.Count > 0 && s.jobs[0].recipeId == ProgressionRecipe), "normal E starts selected progression crafting");
                 if (CoolerCraftRun) Require(clawServices.PlayerInventory.Count("icesteel_ingot")==0 && clawServices.PlayerInventory.Count("copper_ingot")==0 && clawServices.PlayerInventory.Count("yeouiju")==0,"cooler craft consumes five ice ingots, three copper ingots and earned Yeouiju");
                 else if (T3CraftRun) Require(clawServices.PlayerInventory.Count("icesteel_ingot") == 0 && clawServices.PlayerInventory.Count("frost_essence") == coreIceBefore - 2, "T3 craft consumes five ingots and two earned frost essence");
                 else if (coreCraftRun) Require(clawServices.PlayerInventory.Count("iron_ingot") == 0 &&
@@ -3331,14 +3333,14 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             case 718:
                 healingHealthBefore = ((Nyangbingo.Combat.Health)PlayerField("health")).Current;
                 healingCountBefore = FindAnyObjectByType<MainGameRuntimeServices>().PlayerInventory.Count(healingItemId);
-                Sample(0f, KeyCode.E);
+                SampleUse();
                 Next(719);
                 break;
             case 719:
                 Sample();
                 Require(FindAnyObjectByType<MainGameRuntimeServices>().PlayerInventory.Count(healingItemId) == healingCountBefore - 1 &&
                     (healingReturnPhase == 1160 || ((Nyangbingo.Combat.Health)PlayerField("health")).Current > healingHealthBefore),
-                    "normal E consumes one earned mushroom and restores HP");
+                    "normal right-click consumes one earned mushroom and restores HP");
                 checks.Add($"Healing {healingItemId} at {Time.realtimeSinceStartup - controlStarted:F3}s: HP {healingHealthBefore} -> {((Nyangbingo.Combat.Health)PlayerField("health")).Current}; room={FindAnyObjectByType<MainGameRuntimeServices>().PlayerTemperature.CurrentRoomTemperature}");
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "normal-healing-latest.png"));
                 Next(healingReturnPhase);
@@ -3544,13 +3546,13 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(satbaSelected < satbaIndex ? 899 : 900); break;
             case 899: Sample(0f, KeyCode.RightArrow); Next(891); break;
             case 900: Sample(0f, KeyCode.LeftArrow); Next(891); break;
-            case 892: Sample(0f, KeyCode.E); Next(893); break;
+            case 892: SampleUse(); Next(893); break;
             case 893:
                 Sample();
                 if (Time.realtimeSinceStartup - phaseStarted < .5f) return;
                 var confirmUi = FindAnyObjectByType<MainGameCraftingUiController>();
                 Require(((GameObject)typeof(MainGameCraftingUiController).GetField("summonConfirmationRoot", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(confirmUi)).activeSelf,
-                    "normal inventory E opens summon confirmation");
+                    "normal inventory right-click opens summon confirmation");
                 checks.Add("Confirmation text: " + ((Text)typeof(MainGameCraftingUiController).GetField("summonConfirmationText", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(confirmUi)).text);
                 Require(FindAnyObjectByType<MainGameRuntimeServices>().PlayerInventory.Count("ssireum_satba") == 1, "opening confirmation does not consume satba");
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "satba-confirmation.png"));
@@ -3566,10 +3568,10 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(!((GameObject)typeof(MainGameCraftingUiController).GetField("summonConfirmationRoot", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(FindAnyObjectByType<MainGameCraftingUiController>())).activeSelf,
                     "cancel closes summon confirmation");
                 Next(896); break;
-            case 896: Sample(0f, KeyCode.E); Next(897); break;
+            case 896: SampleUse(); Next(897); break;
             case 897:
                 if (Time.realtimeSinceStartup - phaseStarted < .4f) { Sample(); return; }
-                Sample(0f, KeyCode.E); Next(898); break;
+                SampleUse(); Next(898); break;
             case 898:
                 Sample();
                 if (Time.realtimeSinceStartup - phaseStarted < 1f) return;
@@ -3860,7 +3862,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 checks.Add($"Bed interaction eligibility: allowed={bedSleepAllowed}, room={bedRoom}, reason={bedReason}, player={player.transform.position}.");
                 Next(971); break;
             case 971:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(972); break;
             case 972:
                 Sample();
@@ -3891,7 +3893,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(Time.timeScale > 0f && !player.IsDead, "bed interaction returns to living gameplay");
                 Next(BedWarmRun ? 975 : 420); break;
             case 975:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(976); break;
             case 976:
                 Sample();
@@ -3923,7 +3925,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     if (BedAutoOnlyRun)
                     {
                         var liveRestHealth = ((Nyangbingo.Combat.Health)PlayerField("health")).Current;
-                        var liveRestOutputs = FindAnyObjectByType<MainGameRuntimeServices>().Furnace.Completed.Where(r => r.item.Id == "iron_ingot").Sum(r => r.amount);
+                        var liveRestOutputs = FindAnyObjectByType<MainGameRuntimeServices>().StationProduction.PendingCount("iron_ingot") + FindAnyObjectByType<MainGameRuntimeServices>().Furnace.Completed.Where(r => r.item.Id == "iron_ingot").Sum(r => r.amount);
                         checks.Add($"Dawn snapshot comparison: savedHP={bedAutoSave.playerState.currentHealth}, liveHP={liveRestHealth}, savedIronOutputs={bedAutoSave.smeltingOutputs.Where(r => r.itemId == "iron_ingot").Sum(r => r.amount)}, liveIronOutputs={liveRestOutputs}");
                         Require(bedAutoSave.playerState.currentHealth == liveRestHealth, "dawn autosave captures post-rest health");
                         Require(liveRestOutputs == bedOutputBefore + 1 && bedAutoSave.smeltingOutputs.Where(r => r.itemId == "iron_ingot").Sum(r => r.amount) == liveRestOutputs, "dawn autosave captures completed earned-material iron smelting");
@@ -3981,7 +3983,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(!invasionServices.Bed.CanSleep(placementPoint, out var invasionRoom, out var invasionReason) && invasionRoom >= -4f && invasionReason.Contains("침공"), "warm bed is locked by invasion rather than temperature");
                 checks.Add($"First invasion eligibility: room={invasionRoom}, reason={invasionReason}, elapsed={Time.realtimeSinceStartup - controlStarted:F3}s");
                 bedClockBefore = invasionTime.GameSeconds;
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(1011); break;
             case 1011:
                 Sample();
@@ -4079,7 +4081,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require((bool)typeof(MainGameTilePaletteController).GetField("foregroundPlacementValid", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(FindAnyObjectByType<MainGameTilePaletteController>()), "actual destroyed floor accepts normal wall preview");
                 Next(1033); break;
             case 1033:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), true, false);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
                 Next(1034); break;
             case 1034:
                 Sample();
@@ -4188,7 +4190,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                         Require(Nyangbingo.Crafting.RecipeUnlockPolicy.IsUnlocked(auditRecipe, auditRuntime.RecipeBook), recipeId + " available under restored unlock policy");
                         checks.Add("Reward recipe " + recipeId + ", station=" + auditRecipe.Station + ", seconds=" + auditRecipe.DurationSeconds + ": " + string.Join(", ", auditRecipe.Ingredients.Select(i => i.item.Id + "=" + returnInv.Count(i.item.Id) + "/" + i.amount)));
                     }
-                    GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, true);
+                    GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedWorkbench.position), false, false, KeyCode.E);
                     Next(1141); break;
                 }
                 checks.Add($"Normal loot return start={player.transform.position}, target={placedWorkbench.position}, HP={((Nyangbingo.Combat.Health)PlayerField("health")).Current}, stone={returnInv.Count("stone")}, shiitake={returnInv.Count("shiitake")}");
@@ -4448,11 +4450,11 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             }
             case 1242:
                 if(Time.realtimeSinceStartup-phaseStarted<.3f){Sample();return;}
-                Sample(0f,KeyCode.E); placementProbe=0; Next(1243); break;
+                SampleUse(); placementProbe=0; Next(1243); break;
             case 1243:
                 Sample();
                 if(Time.realtimeSinceStartup-phaseStarted<.3f)return;
-                Require(FindAnyObjectByType<MainGameTurretRuntime>().IsPlacementPreviewActive,"normal inventory E starts station placement");
+                Require(FindAnyObjectByType<MainGameTurretRuntime>().IsPlacementPreviewActive,"normal inventory right-click starts station placement");
                 Next(1244); break;
             case 1244:
                 Sample();
@@ -4466,7 +4468,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if(Time.realtimeSinceStartup-phaseStarted>=.1f)Next(FindAnyObjectByType<MainGameTurretRuntime>().IsPlacementPreviewValid?1246:1244);
                 break;
             case 1246:
-                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placementPoint),true,false);Next(1247);break;
+                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placementPoint), false, true);Next(1247);break;
             case 1247:
                 Sample();
                 if(Time.realtimeSinceStartup-phaseStarted<.3f)return;
@@ -4481,7 +4483,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             case 1280:
                 if(Time.realtimeSinceStartup-phaseStarted<.5f){Sample();return;}
                 storageTestId=FindAnyObjectByType<MainGameEnvironmentState>().ExportPlacedObjects().Single(x=>x.definitionId=="jangdok").objectId;
-                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placementPoint),false,true);Next(1281);break;
+                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);Next(1281);break;
             case 1281:
             {
                 Sample();if(Time.realtimeSinceStartup-phaseStarted<.5f)return;
@@ -4527,7 +4529,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 storageTestId=restoredJar.objectId;
                 Require(restoredStorageServices.JangdokStorage.TryGet(storageTestId,out var restoredStorage) && restoredStorage.Count("ice_shard")==4 && Mathf.Approximately(restoredStorage.Slots.Where(x=>x.itemId=="ice_shard").Sum(x=>x.storageMeltRemainder),.25f),"Continue restores actual ice4 and melt remainder0.25");
                 Require(restoredStorageServices.PlayerInventory.Count("ice_shard")==0,"no player-bag duplication after restore");
-                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(restoredJar.position),false,true);Next(1285);break;
+                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(restoredJar.position), false, false, KeyCode.E);Next(1285);break;
             }
             case 1285:
             {
@@ -4592,7 +4594,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             case 1253:
                 if(Time.realtimeSinceStartup-phaseStarted<.3f){Sample();return;}
                 placedFurnace=FindAnyObjectByType<MainGameEnvironmentState>().ExportPlacedObjects().Single(x=>x.definitionId=="ice_anvil");
-                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placedFurnace.position),false,true);
+                GameplayInput.Sample(0f,Camera.main.WorldToScreenPoint(placedFurnace.position), false, false, KeyCode.E);
                 Next(1254);break;
             case 1254:
                 Sample();
@@ -4658,7 +4660,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (oreHp<=60 && oreServices.PlayerInventory.Count("oyster_mushroom")>0)
                 {
                     checks.Add($"Cooler ore normal oyster consumption requested HP={oreHp}.");
-                    Sample(0f,KeyCode.E); Next(1238); break;
+                    SampleUse(); Next(1238); break;
                 }
                 var oreOffset=304.5f-player.transform.position.x;
                 var oreMove=Mathf.Abs(oreOffset)>.15f ? Mathf.Sign(oreOffset) : 0f;
@@ -5166,7 +5168,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(!secondInvasionServices.Bed.CanSleep(placementPoint, out var secondRoom, out var secondReason) && secondRoom >= -4f && secondReason.Contains("침공"), "day16 warm bed is restricted by invasion rather than cold");
                 checks.Add($"Day16 invasion eligibility: room={secondRoom}, reason={secondReason}, elapsed={Time.realtimeSinceStartup - controlStarted:F3}s");
                 bedClockBefore = secondInvasionClock.GameSeconds;
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placementPoint), false, false, KeyCode.E);
                 Next(1092); break;
             case 1092:
                 Sample();
@@ -5278,7 +5280,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 toolNavigationAttempts = 0;
                 Next(1052); break;
             case 1052:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, false, KeyCode.E);
                 Next(1053); break;
             case 1053:
                 Sample();
@@ -5349,7 +5351,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                         checks.Add($"Warm-bed cell {bedX},{bedY}: {tiles.GetTile(new Vector3Int(bedX, bedY, 0)).elementType}");
                 Next(987); break;
             case 987:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(tiles.GetCellCenterWorld(new Vector3Int(301,119,0))), tiles.GetTile(new Vector3Int(301,119,0)).IsAir, false);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(tiles.GetCellCenterWorld(new Vector3Int(301,119,0))), false, tiles.GetTile(new Vector3Int(301,119,0)).IsAir);
                 if (!tiles.GetTile(new Vector3Int(301,119,0)).IsAir) { Next(988); break; }
                 if (Time.realtimeSinceStartup - phaseStarted > 3f) throw new Exception("Warm-bed normal floor placement could not fill support cell.");
                 break;
@@ -5391,7 +5393,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (BedAutoOnlyRun)
                 {
                     Require(((Nyangbingo.Combat.Health)PlayerField("health")).Current == 100, "dawn autosave Continue restores recovered HP100");
-                    Require(FindAnyObjectByType<MainGameRuntimeServices>().Furnace.Completed.Where(r => r.item.Id == "iron_ingot").Sum(r => r.amount) == bedOutputBefore + 1, "dawn autosave Continue restores completed iron output");
+                    Require(FindAnyObjectByType<MainGameRuntimeServices>().StationProduction.PendingCount("iron_ingot") + FindAnyObjectByType<MainGameRuntimeServices>().Furnace.Completed.Where(r => r.item.Id == "iron_ingot").Sum(r => r.amount) == bedOutputBefore + 1, "dawn autosave Continue restores completed iron output");
                     Require(FindAnyObjectByType<MainGameRuntimeServices>().PlayerInventory.Count("iron_ore") == smeltOreBefore - 2 && FindAnyObjectByType<MainGameRuntimeServices>().PlayerInventory.Count("coal") == smeltCoalBefore - 1, "autosave restoration does not refund consumed smelting materials");
                 }
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "bed-rest-continued.png"));
@@ -5698,7 +5700,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Finish("passed", "Normal ice-anvil installation, cold-device recipe and missing-material response, save, title Continue and restored station use passed. Cold-device crafting, OS restart, combat and full progression unverified.");
                 break;
             case 640:
-                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, true);
+                GameplayInput.Sample(0f, Camera.main.WorldToScreenPoint(placedFurnace.position), false, false, KeyCode.E);
                 Next(641);
                 break;
             case 641:
