@@ -205,13 +205,16 @@ namespace Nyangbingo.World
         public void ClearEopModuleSuspensions() => eopSuspendedObjectIds.Clear();
         public bool IsPlacementPreviewActive => placementPreview != null;
         public bool IsPlacementPreviewValid => IsPlacementPreviewActive && placementValid;
+        public string PlacementDefinitionId => IsPlacementPreviewActive ? placementDefinitionId : null;
+        public Vector3Int PlacementCell => environmentState?.TileService?.WorldToCell(placementPosition) ?? default;
         public bool IsBottomInteractionPromptVisible { get; private set; }
         public static bool BlocksCombatInput => anyPlacementPreviewActive ||
                                                 placementPointerConsumedFrame == Time.frameCount;
         public static bool ConsumedEscapeThisFrame => placementEscapeConsumedFrame == Time.frameCount;
         public int TurretItemCount => runtimeServices?.PlayerInventory?.Count(TurretItemId) ?? 0;
         public int CoalCount => runtimeServices?.PlayerInventory?.Count(FuelItemId) ?? 0;
-        public bool IsCrafting => runtimeServices?.CraftingProcess?.IsCrafting == true;
+        public bool IsCrafting => runtimeServices?.StationProduction?.FindNearestActive(Vector2.zero) != null ||
+                                  runtimeServices?.CraftingProcess?.IsCrafting == true;
         public RecipeDefinition TurretRecipe => gameDataCatalog?.FindRecipe(TurretItemId);
         private int CurrentDay => FindAnyObjectByType<DayNightService>()?.Day ?? 1;
         public event Action BuildStateChanged;
@@ -298,36 +301,28 @@ namespace Nyangbingo.World
             if (IsPlacementPreviewActive)
             {
                 UpdatePlacementPreview();
-                if (Input.GetKeyDown(KeyCode.Escape))
+                if (Input.TryConsumeEscape())
                 {
                     placementEscapeConsumedFrame = Time.frameCount;
                     CancelPlacementPreview();
                     return;
                 }
                 var pointerOverUi = Input.IsPointerOverUi();
-                if (!pointerOverUi && Input.GetMouseButtonDown(0))
-                {
-                    placementPointerConsumedFrame = Time.frameCount;
-                    ConfirmPlacementPreview();
-                    return;
-                }
                 if (!pointerOverUi && Input.GetMouseButtonDown(1))
                 {
                     placementPointerConsumedFrame = Time.frameCount;
-                    CancelPlacementPreview();
+                    ConfirmPlacementPreview();
                     return;
                 }
                 RefreshInteractionStatus();
                 return;
             }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (Input.GetKeyDown(KeyCode.F11))
+            if (DevelopmentShortcuts.CanUseWorldShortcuts)
             {
-                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
-                    GrantFuelForEditorTest();
-                else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                    GrantCraftingMaterialsForEditorTest();
-                else GrantTurretItemForEditorTest();
+                if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.TowerItem)) GrantTurretItemForEditorTest();
+                if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.TowerMaterials)) GrantCraftingMaterialsForEditorTest();
+                if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.TowerFuel)) GrantFuelForEditorTest();
             }
 #endif
             RefreshInteractionStatus();
@@ -363,9 +358,12 @@ namespace Nyangbingo.World
                 ShowMessage("작업대 근처에서 제작할 수 있습니다.");
                 return false;
             }
-            if (!runtimeServices.CraftingProcess.TryStart(recipe, recipe.Station))
+            if (!craftingStationUi.TryGetCraftingStationIdentity(recipe.Station, null,
+                    out var stationId, out var stationPosition)) return false;
+            var queue = runtimeServices.StationProduction.Get(stationId, recipe.Station, stationPosition);
+            if (!runtimeServices.StationProduction.TryEnqueue(queue, recipe))
             {
-                ShowMessage("등탑 재료가 부족하거나 다른 제작이 진행 중입니다.");
+                ShowMessage("등탑 재료가 부족하거나 제작 대기열이 가득 찼습니다.");
                 return false;
             }
             ShowMessage($"도깨비불 등탑 제작 시작: {recipe.DurationSeconds:0}초");
@@ -446,7 +444,9 @@ namespace Nyangbingo.World
                                   MainGameTilePaletteController.IsWithinPlacementReach(
                                       playerController.transform.position, placementPosition,
                                       MainGameTilePaletteController.PlacementReachTiles);
-                if (withinReach) ShowMessage("붉은 미리보기 위치에는 설치할 수 없습니다.");
+                if (withinReach)
+                    ShowMessage(TryGetPlacementLimitMessage(placementDefinitionId, out var limitMessage)
+                        ? limitMessage : "붉은 미리보기 위치에는 설치할 수 없습니다.");
                 return false;
             }
             var placed = TryPlaceTurretAt(placementPosition);
@@ -571,13 +571,26 @@ namespace Nyangbingo.World
                     Mathf.FloorToInt(worldPosition.y), 0);
         }
 
+        private bool TryGetPlacementLimitMessage(string definitionId, out string message)
+        {
+            message = null;
+            if (environmentState != null &&
+                environmentState.TryGetReachedPlacementLimit(definitionId, out var count, out var limit))
+            {
+                var name = ItemName(definitionId);
+                message = $"{name}: 맵에 최대 {limit}개까지 설치할 수 있습니다. (현재 {count}개 설치됨)";
+                return true;
+            }
+            return !CanPlaceByTurretSlots(definitionId, out message);
+        }
+
         private bool TryPlaceTurretAt(Vector2 position)
         {
             var definitionId = placementDefinitionId;
             var item = gameDataCatalog?.FindItem(definitionId);
             if (item == null)
                 return false;
-            if (!CanPlaceByTurretSlots(definitionId, out var slotReason))
+            if (TryGetPlacementLimitMessage(definitionId, out var slotReason))
             {
                 ShowMessage(slotReason);
                 return false;
@@ -607,7 +620,7 @@ namespace Nyangbingo.World
                 return false;
             }
             ShowMessage(CoolingSourceRuntime.IsCoolingDefinition(definitionId)
-                ? $"{item.DisplayName} 설치 완료 · 우클릭으로 상태를 확인하세요."
+                ? $"{item.DisplayName} 설치 완료 · E로 상태를 확인하세요."
                 : $"{item.DisplayName} 설치 완료");
             Debug.Log($"[Nyangbingo] Product placeable installed: id={record.objectId}, " +
                       $"definition={definitionId}, position={record.position}.");
@@ -638,7 +651,7 @@ namespace Nyangbingo.World
             {
                 if (productCraftingUi == null)
                     productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
-                if (productCraftingUi != null && productCraftingUi.TryOpenForStation(craftingStation)) return true;
+                if (productCraftingUi != null && productCraftingUi.TryOpenForStation(craftingStation, record.objectId)) return true;
                 ShowMessage($"{ItemName(record.definitionId)} 제작 화면을 열 수 없습니다.");
                 return true;
             }
@@ -658,16 +671,22 @@ namespace Nyangbingo.World
                     ShowMessage("침대 시간 서비스를 찾을 수 없습니다.");
                     return true;
                 }
-                if (!bed.CanSleep(record.position, out _, out var reason))
+                if (!bed.CanSleep(record.position, out var bedTemperature, out var reason))
                 {
-                    ShowMessage(reason);
+                    bed.ReportDeniedSleep(bedTemperature);
+                    if (runtimeServices.Goals == null ||
+                        BedService.CanSleepAtTemperature(bedTemperature, bed.MinimumSleepTemperature))
+                        ShowMessage(reason);
                     return true;
                 }
                 var gameShell = FindAnyObjectByType<GameShellController>();
                 if (gameShell == null || !gameShell.RequestRest(() =>
                     {
-                        bed.TrySleep(record.position, out var bedMessage);
-                        ShowMessage(bedMessage);
+                        var slept = bed.TrySleep(record.position, out var bedMessage);
+                        bed.CanSleep(record.position, out var confirmedTemperature, out _);
+                        if (slept || runtimeServices.Goals == null ||
+                            BedService.CanSleepAtTemperature(confirmedTemperature, bed.MinimumSleepTemperature))
+                            ShowMessage(bedMessage);
                         BuildStateChanged?.Invoke();
                     }))
                     ShowMessage("휴식 확인창을 열 수 없습니다.");
@@ -869,10 +888,11 @@ namespace Nyangbingo.World
                 string.IsNullOrWhiteSpace(record.definitionId) ||
                 environmentState == null || runtimeServices?.PlayerInventory == null)
                 return false;
-            if (record.definitionId == JangdokStorageRuntime.DefinitionId &&
-                !runtimeServices.JangdokStorage.CanRecover(record.objectId))
+            var isJangdok = record.definitionId == JangdokStorageRuntime.DefinitionId;
+            var dropRuntime = isJangdok ? FindAnyObjectByType<MainGameWorldDropRuntime>() : null;
+            if (isJangdok && dropRuntime == null)
             {
-                ShowMessage("장독 창고가 비어 있어야 회수할 수 있습니다.");
+                ShowMessage("아이템 드랍 처리가 준비되지 않았습니다.");
                 return true;
             }
             var item = gameDataCatalog?.FindItem(record.definitionId);
@@ -883,10 +903,17 @@ namespace Nyangbingo.World
                 ShowMessage("설치물 회수에 실패했습니다.");
                 return true;
             }
-            WorldItemDropRequest.Request(item, 1, record.position);
+            if (isJangdok)
+            {
+                runtimeServices.JangdokStorage.TryTakeContentsAndRemove(record.objectId, out var contents);
+                dropRuntime.SpawnStoredStack(item,
+                    new InventorySlot { itemId = item.Id, amount = 1 }, record.position, 0, contents.Count + 1);
+                for (var index = 0; index < contents.Count; index++)
+                    dropRuntime.SpawnStoredStack(gameDataCatalog.FindItem(contents[index].itemId),
+                        contents[index], record.position, index + 1, contents.Count + 1);
+            }
+            else WorldItemDropRequest.Request(item, 1, record.position);
             if (fullSalvage) TryRefundRemainingFuel(record);
-            if (record.definitionId == JangdokStorageRuntime.DefinitionId)
-                runtimeServices.JangdokStorage.TryRemoveEmpty(record.objectId);
             if (turrets.TryGetValue(record.objectId, out var entry))
             {
                 entry.Controller.Fired -= entry.FireHandler;
@@ -921,7 +948,7 @@ namespace Nyangbingo.World
         }
 
         private string ItemName(string definitionId) =>
-            gameDataCatalog?.FindItem(definitionId)?.DisplayName ?? definitionId;
+            gameDataCatalog?.ItemDisplayName(definitionId, "설치물") ?? "설치물";
 
         private void RefreshInteractionStatus()
         {
@@ -1385,6 +1412,7 @@ namespace Nyangbingo.World
         private void HandleDamageTurretFired(TurretEntry turret, Health target, int damage)
         {
             if (turret?.Origin == null || target == null) return;
+            environmentState?.TryPlayPlacedAttack(turret.ObjectId);
             if (turret.Profile.FanConeAttack)
             {
                 ApplyFanConeDamage(turret, target, damage);
@@ -1492,8 +1520,8 @@ namespace Nyangbingo.World
         {
             if (runtimeServices?.PlayerInventory != null &&
                 runtimeServices.PlayerInventory.TryAdd(TurretItemId, 1))
-                ShowMessage("F11 테스트 지급: 도깨비불 등탑 x1");
-            else ShowMessage("F11 등탑 지급 실패: 인벤토리 공간을 확인하세요.");
+                ShowMessage("Ctrl+F10 테스트 지급: 도깨비불 등탑 x1");
+            else ShowMessage("Ctrl+F10 등탑 지급 실패: 인벤토리 공간을 확인하세요.");
         }
 
         private void GrantCraftingMaterialsForEditorTest()
@@ -1503,15 +1531,15 @@ namespace Nyangbingo.World
             foreach (var ingredient in recipe.Ingredients)
                 if (ingredient.item != null)
                     runtimeServices.PlayerInventory.TryAdd(ingredient.item.Id, ingredient.amount);
-            ShowMessage("Shift+F11 테스트 지급: 등탑 제작 재료");
+            ShowMessage("Alt+F10 테스트 지급: 등탑 제작 재료");
         }
 
         private void GrantFuelForEditorTest()
         {
             if (runtimeServices?.PlayerInventory != null &&
                 runtimeServices.PlayerInventory.TryAdd(FuelItemId, 1))
-                ShowMessage("Ctrl+F11 테스트 지급: 석탄 x1");
-            else ShowMessage("Ctrl+F11 석탄 지급 실패: 인벤토리 공간을 확인하세요.");
+                ShowMessage("Ctrl+Shift+F10 테스트 지급: 석탄 x1");
+            else ShowMessage("Ctrl+Shift+F10 석탄 지급 실패: 인벤토리 공간을 확인하세요.");
         }
 #endif
 

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: boss_tonight
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: boss_tonight
+  tier: 2
+  triggerState: boss_tonight
+  text: "\uC624\uB298 \uBC24 {boss}\uAC00 {place}\uC5D0 \uB098\uD0C0\uB098\uC694.
+    \uD68C\uBCF5\uD488\uACFC \uC7A5\uBE44\uB97C \uCC59\uAE30\uC138\uC694."
+  variables: boss|place
+  clearWhen: night_start
+  repeat: once_per_day
+  source: "[\uAC00\uC548 \uBB38\uAD6C]"
+  note: "\uAC15\uCCA0\uC774 30\uC77C \u2014 place = \uC5BC\uC74C \uD638\uC218(imugi_arena=surface_ice_lake
+    \xB7 D2 \uD655\uC815)"

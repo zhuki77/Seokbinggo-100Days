@@ -1,0 +1,17 @@
+﻿ZIP 원본,대상 ID,용도,캔버스/프레임,현재 상태,판정/주의,프레임 태그,SHA256,바이트 동일 프로젝트 원본
+새 폴더/cold_wave_battery.aseprite,cold_wave_battery,한파 포대 설치 그림,32×16 / 4프레임,현재 월드 미연결,프레임 0 아이콘 공유. 실제 셀 27×32px(캔버스 밖 포함). 최신 적용 결과 참고,"[{""name"": ""attack"", ""from"": 1, ""to"": 3, ""direction"": 0}]",c9dcafaa27bae60db0762ffa7f3327a77502634d5358153b4ac5e3be06527baa,
+새 폴더/cold_wave_singijeon.aseprite,cold_wave_singijeon,한파 신기전 아이콘,16×16 / 1프레임,현재 아이콘 미연결,대상 명확,[],c50a556ada1f1466d503e91387a48a71502e1c4d5d4524124e2174aae811a6f8,
+새 폴더/ice_root_battery.aseprite,ice_root_battery,도관 포대 설치 그림,32×16 / 4프레임,현재 월드 미연결,아이콘 전용 파일은 없음. 프레임 0 공유 가능,"[{""name"": ""attack"", ""from"": 1, ""to"": 3, ""direction"": 0}]",c3d4bae37f21b95eac982e4b5e7dee21973939264ca69614741f356544b5ceee,
+새 폴더/jigwi_ash.aseprite,jigwi_ash,지귀의 재 무기 아이콘,16×16 / 1프레임,기존 연결과 다름,새 잉걸 파일이 기존 지귀의 재 파일과 동일. 재/잉걸을 함께 바로잡을 필요,[],2a7acb94d0120e62e60a93c4563f1e0b28cfdecbfca64ba89d428721b75c5f75,
+새 폴더/jigwi_ember_mat.aseprite,jigwi_ember_mat / jigwi_ember,지귀의 잉걸 재료·아티팩트,16×16 / 1프레임,두 ID 모두 현재 미연결,동일 대상 두 ID에 공유 가능. 기존 jigwi_ash 파일과 SHA256 동일,[],00d1a269c5dbc720f2425730ca87c8bcec2e1061f6622c992918772684da6b6f,Assets/Art/Items/DeliveredFinal/jigwi_ash.aseprite
+새 폴더/oyster_mushroom_block.aseprite,oyster_mushroom,느타리 월드 전용 그림,16×16 / 1프레임,기존 아이콘 공유 월드 그림과 다름,"월드는 새 block 원본으로 교체, 인벤토리 아이콘은 기존 그림 유지",[],f97b814b18a975b9a330682f84cedddc68082a5e9f33312c9ef6728f5044d2a3,
+새 폴더/plaster_doll.aseprite,plaster_doll,미장이 인형 설치 그림,16×32 / 1프레임,현재 월드 미연결,전신+받침대. 1×2타일 캔버스이며 점유 크기와는 별개,[],3d65b20d83484d90af74003998d914e36a468ea97357c120e822b83c84dd7185,
+새 폴더/plaster_doll1.aseprite,plaster_doll,미장이 인형 머리 부분,16×16 / 1프레임,미연결,아이콘 후보로 보이나 파일만으로 아이콘 용도 확정 불가,[],bca46be17283f4e467666b9cb97d8efe95da76549283f1753dcb8e7febf2ab06,
+새 폴더/plaster_doll2.aseprite,plaster_doll,미장이 인형 하부/받침 부분,16×16 / 1프레임,미연결,부분 그림. 별도 상태인지 타일 분할인지 용도 확인 필요,[],32014c03fe9f39103d0ffb54e093e81ac9114c16876a39fee24d2e57cb3c5006,
+새 폴더/shiitake_block.aseprite,shiitake,표고 월드 전용 그림,16×16 / 1프레임,기존 아이콘 공유 월드 그림과 다름,"월드는 새 block 원본으로 교체, 인벤토리 아이콘은 기존 그림 유지",[],78077cb515be57ef7e84bf478a927d853ba7b83652239a696e31a5dcc1dce74c,
+새 폴더/singijeon_sondae.aseprite,singijeon_sondae,신기전 손대 아이콘,16×16 / 1프레임,현재 아이콘 미연결,대상 명확,[],7e42fa6d2f867d13ab7e120fbea3fd98ad9ad881e4011212f194b8bc361237f4,
+새 폴더/t_deep_seonge.aseprite,seonge_ore,성에 광석 월드 타일,16×16 / 1프레임,이미 동일 원본 연결,현재 프로젝트 원본과 SHA256/픽셀 동일. 교체 불필요,[],1e2a65a63e7d474395b4c015726344ca8b190f1fba1a9d28e732f936ff4e3c94,Assets/Art/Tiles/seonge_ore.aseprite
+새 폴더/yeongno_mask_mat.aseprite,yeongno_mask_mat / yeongno_mask,영노의 탈 재료·아티팩트,16×16 / 1프레임,두 ID 모두 현재 미연결,동일 대상 두 ID에 공유 가능,[],5d44dd551fbec2f0c745f6ff6808ec16fb64155906448e953acaba2195875b7b,
+새 폴더/석이.aseprite,seogi,석이 월드 전용 그림,16×16 / 1프레임,현재 월드 미연결,석이_item과 별도 그림,[],fa447032b62f5b3e72a04860251841c78915d275b5c80eb15b9abb54df898105,
+새 폴더/석이_item.aseprite,seogi,석이 아이콘,16×16 / 1프레임,현재 아이콘 미연결,월드 원본과 분리해 연결,[],364540fde4b89f2863d527a4a63d8b44275d57c65b0d5eb477ffd5298222d931,
+새 폴더/신기전.aseprite,singijeon_cart,신기전 화차 설치 그림,32×16 / 4프레임,현재 화차 그림과 다름,CSV 이름·외형 기준 대응. 공격 프레임 1~3을 발사 이벤트에 연결해야 함,"[{""name"": ""attack"", ""from"": 1, ""to"": 3, ""direction"": 0}]",035e2dd08ae7d667552922e2743149186a6a71a8adbba4ff4dcc2780fc52eff7,

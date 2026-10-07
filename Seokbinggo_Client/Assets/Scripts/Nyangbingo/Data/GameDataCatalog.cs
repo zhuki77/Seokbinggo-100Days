@@ -31,6 +31,8 @@ namespace Nyangbingo.Data
         [SerializeField] private CodexEntryDefinition[] codexEntries = Array.Empty<CodexEntryDefinition>();
         [SerializeField] private TraitDefinition[] traits = Array.Empty<TraitDefinition>();
         [SerializeField] private CropDefinition[] crops = Array.Empty<CropDefinition>();
+        [SerializeField] private GoalDefinition[] goals = Array.Empty<GoalDefinition>();
+        [SerializeField] private GuideMessageDefinition[] guideMessages = Array.Empty<GuideMessageDefinition>();
 
         private Dictionary<string, ItemDefinition> itemsById;
         private Dictionary<string, RecipeDefinition> recipesById;
@@ -55,6 +57,8 @@ namespace Nyangbingo.Data
         private Dictionary<string, CodexEntryDefinition> codexEntriesById;
         private Dictionary<string, TraitDefinition> traitsById;
         private Dictionary<string, CropDefinition> cropsById;
+        private Dictionary<string, GoalDefinition> goalsById;
+        private Dictionary<string, GuideMessageDefinition> guideMessagesById;
         private bool indexesValid;
 
         public IReadOnlyList<ItemDefinition> Items => items ?? Array.Empty<ItemDefinition>();
@@ -86,11 +90,32 @@ namespace Nyangbingo.Data
         public IReadOnlyList<TraitDefinition> Traits => traits ?? Array.Empty<TraitDefinition>();
         public IReadOnlyList<CropDefinition> Crops => crops ?? Array.Empty<CropDefinition>();
         public bool IsValid { get { EnsureIndex(); return indexesValid; } }
+        public IReadOnlyList<GoalDefinition> Goals => goals ?? Array.Empty<GoalDefinition>();
+        public IReadOnlyList<GuideMessageDefinition> GuideMessages => guideMessages ?? Array.Empty<GuideMessageDefinition>();
+        public GoalDefinition FindGoal(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && goalsById.TryGetValue(id, out var goal) ? goal : null;
+        }
+        public GuideMessageDefinition FindGuideMessage(string id)
+        {
+            EnsureIndex();
+            return indexesValid && !string.IsNullOrEmpty(id) && guideMessagesById.TryGetValue(id, out var message) ? message : null;
+        }
 
         public ItemDefinition FindItem(string id)
         {
             EnsureIndex();
             return indexesValid && !string.IsNullOrEmpty(id) && itemsById.TryGetValue(id, out var item) ? item : null;
+        }
+
+        /// <summary>Player-facing names must never fall back to internal identifiers.</summary>
+        public string ItemDisplayName(string id, string fallback = "아이템")
+        {
+            var name = FindItem(id)?.DisplayName;
+            if (string.IsNullOrWhiteSpace(name) || name == id) name = FindModule(id)?.DisplayName;
+            if (string.IsNullOrWhiteSpace(name) || name == id) name = FindMineralTier(id)?.DisplayName;
+            return string.IsNullOrWhiteSpace(name) || name == id ? fallback : name;
         }
 
         public RecipeDefinition FindRecipe(string id)
@@ -288,6 +313,8 @@ namespace Nyangbingo.Data
             codexEntriesById = null;
             traitsById = null;
             cropsById = null;
+            goalsById = null;
+            guideMessagesById = null;
             indexesValid = false;
         }
 
@@ -330,6 +357,9 @@ namespace Nyangbingo.Data
             indexesValid &= codexEntriesValid;
             traitsById = BuildIndex(traits, value => value.Id, out var traitsValid); indexesValid &= traitsValid;
             cropsById = BuildIndex(crops, value => value.Id, out var cropsValid); indexesValid &= cropsValid;
+            goalsById = BuildIndex(goals, value => value.Id, out var goalsValid); indexesValid &= goalsValid;
+            guideMessagesById = BuildIndex(guideMessages, value => value.Id, out var guideMessagesValid);
+            indexesValid &= guideMessagesValid;
         }
 
         private static Dictionary<string, T> BuildIndex<T>(IEnumerable<T> values, Func<T, string> getId,

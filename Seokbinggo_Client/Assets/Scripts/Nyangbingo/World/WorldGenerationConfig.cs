@@ -65,6 +65,8 @@ namespace Nyangbingo.World
         [SerializeField]
         private OreVeinProfile[] oreVeins =
         {
+            // 버섯 프로파일은 경도·지층 및 버전 0 저장 복원용으로 유지한다.
+            // 버전 1 새 월드는 광맥 대신 최종 동굴 바닥에 2~3개씩 개별 배치한다.
             // 상층 돌은 노이즈 필이 아니라 광맥 클러스터로만 배치(지표 ban depth 아래).
             new OreVeinProfile { elementType = WorldTileTypes.Stone, layer = WorldLayer.Upper, frequencyPer100Tiles = 25f, minClusterSize = 4, maxClusterSize = 8, depthMin = 1, depthMax = 45 },
             new OreVeinProfile { elementType = WorldTileTypes.Coal, layer = WorldLayer.Upper, frequencyPer100Tiles = 8f, minClusterSize = 3, maxClusterSize = 6, depthMin = 1, depthMax = 45 },
@@ -92,7 +94,7 @@ namespace Nyangbingo.World
         [Min(1)][SerializeField] private int ruinWidth = 3;
         [Min(1)][SerializeField] private int ruinHeight = 2;
 
-        [Header("구조물 — Pass 4 : 심층 얼음호수 + 이무기 제단")]
+        [Header("구조물 — Pass 4 : 심층 얼음호수 + 강철이 제단")]
         [Range(0f, 1f)][SerializeField] private float deepAltarColumnRatio = 0.75f;
         [Min(2)][SerializeField] private int altarSize = 2;
         [Range(1, 3)][SerializeField] private int altarHardness = 3;
@@ -181,6 +183,10 @@ namespace Nyangbingo.World
         public int AltarHardness => altarHardness;
         public int IceLakeWidth => iceLakeWidth;
         public int IceLakeHeight => iceLakeHeight;
+
+        [Header("지상 얼음 호수 아레나 — 기존 지하 제단과 별개")]
+        [Min(6)] [SerializeField] private int surfaceIceLakeArenaWidth = 32;
+        public int SurfaceIceLakeArenaWidth => Mathf.Max(6, surfaceIceLakeArenaWidth);
 
         public int ChestCountRuins => chestCountRuins;
         public int ChestCountUpper => chestCountUpper;

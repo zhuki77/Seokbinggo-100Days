@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: door_open
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: door_open
+  tier: 3
+  triggerState: seal_blocked_by_open_door
+  text: "\uBB38\uC744 \uB2EB\uC73C\uBA74 \uBC00\uD3D0 \uC0C1\uD0DC\uB97C \uD655\uC778\uD560
+    \uC218 \uC788\uC5B4\uC694."
+  variables: 
+  clearWhen: door_closed
+  repeat: while_active
+  source: "\uC624\uB108 2026-10-03"
+  note: "\uB204\uCD9C \uC6D0\uC778\uC774 \uC5F4\uB9B0 \uBB38\uC774\uBA74 \uBA3C \uB204\uCD9C
+    \uC88C\uD45C\uBCF4\uB2E4 \uBA3C\uC800"

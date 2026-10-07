@@ -49,6 +49,7 @@ namespace Nyangbingo.UI
         public static float PlacementReachTiles => placementReachTiles;
 
         private static int escapeConsumedFrame = -1;
+        private static int pointerConsumedFrame = -1;
         private static bool foregroundPlacementActive;
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
@@ -82,7 +83,7 @@ namespace Nyangbingo.UI
         private bool productPlacementWasActive;
         private bool initialized;
 
-        public static bool BlocksGameplayInput => foregroundPlacementActive;
+        public static bool BlocksGameplayInput => foregroundPlacementActive || pointerConsumedFrame == Time.frameCount;
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsInitialized => initialized;
 
@@ -91,10 +92,13 @@ namespace Nyangbingo.UI
             paletteRoot != null && content != null &&
             rangeToggleStatusText != null && interactionPromptText != null;
         public bool IsForegroundPlacementActive => foregroundPreview != null;
+        public string ForegroundPlacementItemId => IsForegroundPlacementActive ? foregroundPlacementItemId : null;
+        public Vector3Int ForegroundPlacementCell => foregroundPlacementCell;
         /// <summary>핫바에서 전경 블록·벽지를 고른 동안 좌클릭 채굴/공격을 막는다.</summary>
         public bool ShouldBlockPrimaryForPlacement =>
             IsForegroundPlacementActive ||
-            (!string.IsNullOrEmpty(selectedItemId) && SupportsPalettePlacement(selectedItemId));
+            (!string.IsNullOrEmpty(selectedItemId) && !IsDirectUseHotbarItem(selectedItemId) &&
+             SupportsPalettePlacement(selectedItemId));
         public int VisibleSlotCount => ShortcutSlotCount;
         public string SelectedItemId => selectedItemId;
         public int SelectedSlotIndex => selectedSlotIndex;
@@ -119,6 +123,7 @@ namespace Nyangbingo.UI
             TileService.SupportsForegroundPlacement(itemId) || IsWallpaper(itemId);
 
         public static bool IsDirectUseHotbarItem(string itemId) =>
+            itemId == WorldTileTypes.IceShard ||
             PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId) ||
             TalismanRuntime.IsConsumableId(itemId);
 
@@ -215,6 +220,15 @@ namespace Nyangbingo.UI
                 return true;
             }
 
+            var selectedItem = gameDataCatalog?.FindItem(itemId);
+            if (!IsHotbarSelectable(selectedItem, gameDataCatalog?.Recipes,
+                    bootstrap?.TimeService?.Day ?? 1))
+            {
+                // Inert items can occupy a hotbar slot but act exactly like an empty hand.
+                SelectEmptySlot(slotIndex);
+                return true;
+            }
+
             if (TryBeginPlacement(itemId, slotIndex))
             {
                 selectedSlotIndex = slotIndex;
@@ -222,9 +236,8 @@ namespace Nyangbingo.UI
                 return true;
             }
 
-            var selectedItem = gameDataCatalog?.FindItem(itemId);
             ShowPaletteStatus(selectedItem != null
-                ? $"{selectedItem.DisplayName}은(는) 퀵슬롯에서 선택할 수 없습니다."
+                ? $"{selectedItem.DisplayName} 배치를 시작할 수 없습니다."
                 : "이 아이템은 퀵슬롯에서 사용할 수 없습니다.");
             // 설치 불가 아이템이거나 배치 실패여도 해당 칸 선택은 유지한다(빈손 배치).
             SelectEmptySlot(slotIndex);
@@ -275,8 +288,11 @@ namespace Nyangbingo.UI
                 runtimeServices.PlayerInventory == null) return;
             var gameplayVisible = (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
                                   !MainGameCraftingUiController.BlocksGameplayInput;
-            if (paletteRoot != null && paletteRoot.activeSelf != gameplayVisible)
-                paletteRoot.SetActive(gameplayVisible);
+            var paletteVisible = gameplayVisible ||
+                (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
+                MainGameCraftingUiController.ShowsInventoryPointer;
+            if (paletteRoot != null && paletteRoot.activeSelf != paletteVisible)
+                paletteRoot.SetActive(paletteVisible);
 
             SynchronizeProductPlacementSelection();
             RefreshBottomStatusStacking();
@@ -311,12 +327,15 @@ namespace Nyangbingo.UI
             if (gameplayVisible && !pointerOverUi && Input.GetMouseButtonDown(1) &&
                 (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) &&
                 TryRemoveWallpaperAtPointer())
+            {
+                pointerConsumedFrame = Time.frameCount;
                 return;
+            }
 
             // 선택은 남아 있는데 미리보기만 끊긴 경우 복구(그렇지 않으면 좌클릭이 채굴로 간다).
             if (gameplayVisible && Time.timeScale > 0f &&
                 !IsForegroundPlacementActive &&
-                SupportsPalettePlacement(selectedItemId) &&
+                !IsDirectUseHotbarItem(selectedItemId) && SupportsPalettePlacement(selectedItemId) &&
                 runtimeServices?.PlayerInventory != null &&
                 runtimeServices.PlayerInventory.Count(selectedItemId) > 0)
                 BeginForegroundPlacement(selectedItemId);
@@ -329,7 +348,7 @@ namespace Nyangbingo.UI
             }
 
             UpdateForegroundPreview();
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (Input.TryConsumeEscape())
             {
                 escapeConsumedFrame = Time.frameCount;
                 CancelForegroundPlacement();
@@ -338,13 +357,10 @@ namespace Nyangbingo.UI
 
             if (!pointerOverUi && Input.GetMouseButtonDown(1))
             {
-                if (TryRemoveHoveredWallpaper()) return;
-                // Match placeable cancellation: keep the highlighted slot and wheel origin,
-                // but clear the active item so the preview is not restarted next frame.
-                SelectEmptySlot(selectedSlotIndex);
-                return;
+                pointerConsumedFrame = Time.frameCount;
+                ConfirmForegroundPlacement();
             }
-            if (!pointerOverUi && Input.GetMouseButtonDown(0)) ConfirmForegroundPlacement();
+
         }
 
         private void BuildPaletteUi()
@@ -441,7 +457,13 @@ namespace Nyangbingo.UI
                     continue;
                 }
                 var button = slotTransform.GetComponent<Button>();
-                button.onClick.AddListener(() => TrySelectPaletteSlot(capturedIndex));
+                MainGameCraftingUiController.WireInventoryPointer(button, pointer =>
+                {
+                    pointerConsumedFrame = Time.frameCount;
+                    if (MainGameCraftingUiController.TryClickQuickslot(capturedIndex, pointer)) return;
+                    if (pointer.button == PointerEventData.InputButton.Left)
+                        TrySelectPaletteSlot(capturedIndex);
+                });
                 var icon = slotTransform.Find("Icon").GetComponent<Image>();
                 var amount = slotTransform.Find("Amount").GetComponent<Text>();
                 var shortcutTransform = slotTransform.Find("Shortcut");
@@ -582,7 +604,8 @@ namespace Nyangbingo.UI
             var previewObject = new GameObject($"{itemId}TilePlacementPreview");
             foregroundPreview = previewObject.AddComponent<SpriteRenderer>();
             foregroundPreview.sortingOrder = 31;
-            foregroundPreview.sprite = itemArtCatalog?.FindSprite(itemId);
+            foregroundPreview.sprite = bootstrap?.TileService?.ResolvePlacementPreviewSprite(
+                Vector3Int.zero, itemId);
             if (foregroundPreview.sprite == null)
                 RuntimePlaceholderVisual.Configure(foregroundPreview, Color.white, 1f, 31);
             UpdateForegroundPreview();
@@ -598,6 +621,9 @@ namespace Nyangbingo.UI
             foregroundPlacementCell = tileService != null
                 ? tileService.WorldToCell(position)
                 : new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+            var worldSprite = tileService?.ResolvePlacementPreviewSprite(
+                foregroundPlacementCell, foregroundPlacementItemId);
+            if (worldSprite != null) foregroundPreview.sprite = worldSprite;
             var cellCenter = tileService != null
                 ? tileService.GetCellCenterWorld(foregroundPlacementCell)
                 : new Vector3(foregroundPlacementCell.x + .5f, foregroundPlacementCell.y + .5f, 0f);
@@ -622,9 +648,13 @@ namespace Nyangbingo.UI
                                            : tileService.CanPlaceForeground(foregroundPlacementCell,
                                                foregroundPlacementItemId)) &&
                                        HasForegroundSourceItem();
-            foregroundPreview.color = foregroundPlacementValid
-                ? new Color(.35f, 1f, .75f, .65f)
-                : new Color(1f, .25f, .25f, .65f);
+            var terrainWarning = runtimeServices?.BuildingGuide?.HasNonSealTerrainWarning(
+                foregroundPlacementCell, foregroundPlacementItemId) == true;
+            foregroundPreview.color = !foregroundPlacementValid
+                ? new Color(1f, .25f, .25f, .65f)
+                : terrainWarning
+                    ? new Color(1f, .85f, .25f, .65f)
+                    : new Color(.35f, 1f, .75f, .65f);
         }
 
         private bool HasForegroundSourceItem()

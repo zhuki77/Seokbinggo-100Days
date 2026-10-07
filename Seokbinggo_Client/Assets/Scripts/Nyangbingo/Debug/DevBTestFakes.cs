@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Bosses;
 using Nyangbingo.Core;
@@ -149,7 +149,7 @@ namespace Nyangbingo.Debugging
         public Vector2 GetChestPosition(string chestId) => positions[chestId];
     }
 
-    public sealed class DevBTestYokaiTarget : MonoBehaviour, IYokaiTarget, IYokaiLootTarget, IYokaiCounterSource, IWallMaterialTarget
+    public sealed class DevBTestYokaiTarget : MonoBehaviour, IYokaiTarget, IYokaiLootTarget, IYokaiAtomicLootTarget, IYokaiCounterSource, IWallMaterialTarget
     {
         public Transform TargetTransform => transform;
         public bool IsInLanternRange { get; set; }
@@ -163,11 +163,29 @@ namespace Nyangbingo.Debugging
         public float EoduksiniBloomCooldownSeconds { get; set; }
         public float EoduksiniLanternDamageMultiplier { get; set; }
         public YokaiWallMaterial WallMaterial { get; set; }
+        public ItemDefinition TheftItem { get; set; }
         public int GroundLootStealCount { get; private set; }
         public int InventoryStealCount { get; private set; }
         public int LastInventoryStealSlots { get; private set; }
         public int LastInventoryStealLimit { get; private set; }
         public float WallDamageReceived { get; private set; }
+
+        public bool TryStealGroundLoot(Vector2 origin, float range, YokaiLoot recipient)
+        {
+            if (!HasGroundLoot || recipient == null || TheftItem == null ||
+                ((Vector2)transform.position - origin).sqrMagnitude > range * range ||
+                !recipient.RecordStolenItems(new[] { new ItemAmount { item = TheftItem, amount = 1 } }))
+                return false;
+            return TryStealGroundLoot();
+        }
+        public bool TryStealInventory(int maxSlots, int maxAmount, YokaiLoot recipient)
+        {
+            if (IsInventoryTheftBlocked || maxSlots <= 0 || maxAmount <= 0 ||
+                recipient == null || TheftItem == null ||
+                !recipient.RecordStolenItems(new[] { new ItemAmount { item = TheftItem, amount = 1 } }))
+                return false;
+            return TryStealInventory(maxSlots, maxAmount);
+        }
 
         public void DamageWall(float amount) => WallDamageReceived += amount;
         public bool TryStealGroundLoot()

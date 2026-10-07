@@ -363,6 +363,11 @@ namespace Nyangbingo.Editor
             var existing = AssetDatabase.LoadAssetAtPath<Tile>(tilePath);
             if (existing != null)
             {
+                if (WorldTileTypes.IsPassableForeground(elementType) && existing.colliderType != Tile.ColliderType.None)
+                {
+                    existing.colliderType = Tile.ColliderType.None;
+                    EditorUtility.SetDirty(existing);
+                }
                 if (existing.sprite == null)
                 {
                     existing.sprite = sprite;
@@ -373,7 +378,8 @@ namespace Nyangbingo.Editor
 
             var tile = ScriptableObject.CreateInstance<Tile>();
             tile.sprite = sprite;
-            tile.colliderType = Tile.ColliderType.Grid;
+            tile.colliderType = WorldTileTypes.IsPassableForeground(elementType)
+                ? Tile.ColliderType.None : Tile.ColliderType.Grid;
             AssetDatabase.CreateAsset(tile, tilePath);
             return tile;
         }

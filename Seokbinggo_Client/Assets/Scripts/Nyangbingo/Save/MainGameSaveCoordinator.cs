@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.UI;
@@ -128,7 +128,7 @@ namespace Nyangbingo.Save
             // startup player may not have completed its first physics placement yet, so applying
             // the product safe-spawn repair here would intentionally change the snapshot and make
             // an otherwise valid serialization round trip fail.
-            if (!ApplySnapshot(before, false))
+            if (!ApplySnapshot(before, false, false))
             {
                 Debug.LogError("[Nyangbingo] MainGameSaveCoordinator: editor round-trip apply stage failed.");
                 return false;
@@ -186,6 +186,8 @@ namespace Nyangbingo.Save
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .ToList();
+            if (runtimeServices.Goals != null)
+                save.modulesDone = runtimeServices.Goals.InstalledCoreModuleIds.ToList();
             save.seokbinggoStage = runtimeServices.Seokbinggo?.Stage ?? 0;
             save.altarClears = runtimeServices.FrostSpread?.AltarClears ?? 0;
             save.frostClearedBossIds = runtimeServices.FrostSpread?.ExportClearedBossIds() ?? new List<string>();
@@ -219,6 +221,12 @@ namespace Nyangbingo.Save
                 return CaptureFailed("player, time, and boss state");
             save.playerState.hasTemperature = true;
             save.playerState.temperature = runtimeServices.PlayerTemperature.Current;
+            // Startup verification may capture before the player controller binds health.
+            // This is idempotent for an already-bound recovery service and keeps its timer.
+            if (!runtimeServices.BindPlayerHealth(encounterCoordinator.PlayerHealth))
+                return CaptureFailed("natural recovery binding");
+            if (runtimeServices.PlayerHealthRecovery?.CaptureRecoveryState(save.playerState) != true)
+                return CaptureFailed("natural recovery state");
 
             ProgressionSaveAdapter.Capture(save, runtimeServices.PlayerInventory,
                 runtimeServices.EquipmentSystem, FurnaceStationId, runtimeServices.Furnace);
@@ -235,6 +243,10 @@ namespace Nyangbingo.Save
                 return CaptureFailed("recipe book");
             if (!CraftingProcessSaveAdapter.Capture(save, runtimeServices.CraftingProcess))
                 return CaptureFailed("crafting process");
+            save.stationProduction = runtimeServices.StationProduction.Export();
+            save.inventoryCursor = runtimeServices.InventoryCursor.Export();
+            save.inventoryCursorOrigin = runtimeServices.InventoryCursorOrigin;
+            save.equipmentStoredInInventory = true;
             if (!UtilityCooldownSaveAdapter.Capture(save, runtimeServices.UtilityService))
                 return CaptureFailed("utility cooldown");
             if (!PendingItemAcquisitionSaveAdapter.Capture(save, runtimeServices.InventoryRuntime))
@@ -243,6 +255,15 @@ namespace Nyangbingo.Save
                 return CaptureFailed("progress tracker");
             if (!encounterCoordinator.CaptureProgress(save))
                 return CaptureFailed("encounter progress");
+
+            if (runtimeServices.Goals != null)
+            {
+                save.goalProgress = runtimeServices.Goals.Capture();
+                save.demoComplete = runtimeServices.Goals.DemoComplete;
+                save.storageSuccess = runtimeServices.Goals.StorageSuccess;
+            }
+            DemoAchievementRules.UpdateSavedAchievements(save, catalog);
+            runtimeServices.BuildingGuide?.CaptureMaintenance(save);
 
             save.NormalizeAfterLoad();
             return save;
@@ -300,20 +321,20 @@ namespace Nyangbingo.Save
             if (rollback == null) return false;
             if (ApplySnapshot(save, forceSafeSurfaceSpawn)) return true;
             // A rollback must restore the exact captured state, not reinterpret its position.
-            ApplySnapshot(rollback, false);
+            ApplySnapshot(rollback, false, false);
             return false;
         }
 
-        private bool ApplySnapshot(SaveGame save, bool forceSafeSurfaceSpawn)
+        private bool ApplySnapshot(SaveGame save, bool forceSafeSurfaceSpawn, bool reevaluateGoals = true)
         {
             if (save == null || !encounterCoordinator.BeginRestore()) return false;
             IsRestoring = true;
+            runtimeServices.Goals?.SetSuspended(true);
             var succeeded = false;
             try
             {
                 save.NormalizeAfterLoad();
                 runtimeServices.BindPlayerHealth(encounterCoordinator.PlayerHealth);
-                runtimeServices.PlayerHealthRecovery?.ResetAfterRestore();
                 succeeded = RestoreStage("time state", () => save.timeState.hasValue) &&
                 RestoreStage("world session", () => bootstrap.Session.LoadSnapshot(save)) &&
                 RestoreStage("door states", () =>
@@ -323,6 +344,8 @@ namespace Nyangbingo.Save
                     save, encounterCoordinator.PlayerTransform,
                     encounterCoordinator.PlayerHealth, timeService, encounterCoordinator.BossManager)) &&
                 RestoreStage("player transient state", ResetPlayerTransientState) &&
+                RestoreStage("natural recovery state", () =>
+                    runtimeServices.PlayerHealthRecovery?.RestoreRecoveryState(save.playerState) == true) &&
                 RestoreStage("furnace progression", () => ProgressionSaveAdapter.Restore(
                     save, runtimeServices.PlayerInventory,
                     runtimeServices.EquipmentSystem, FindEquipment,
@@ -342,6 +365,15 @@ namespace Nyangbingo.Save
                 RestoreStage("recipe progression", () => RestoreRecipeProgression(save)) &&
                 RestoreStage("crafting process", () =>
                     CraftingProcessSaveAdapter.Restore(save, runtimeServices.CraftingProcess, FindRecipe)) &&
+                RestoreStage("station production queues", () =>
+                    runtimeServices.StationProduction.Restore(save.stationProduction)) &&
+                RestoreStage("inventory cursor", () => runtimeServices.InventoryCursor.TryImport(
+                    save.inventoryCursor ?? new List<Nyangbingo.Inventory.InventorySlot>())) &&
+                RestoreStage("inventory cursor origin", () =>
+                {
+                    runtimeServices.InventoryCursorOrigin = save.inventoryCursorOrigin;
+                    return true;
+                }) &&
                 RestoreStage("utility cooldowns", () =>
                     UtilityCooldownSaveAdapter.Restore(save, runtimeServices.UtilityService)) &&
                 RestoreStage("pending item acquisitions", () =>
@@ -384,13 +416,21 @@ namespace Nyangbingo.Save
                      save.placedObjectRecords
                          .Where(record => record.definitionId == Nyangbingo.Inventory.JangdokStorageRuntime.DefinitionId)
                          .Select(record => record.objectId))) &&
-                RestoreStage("turrets", () => turretRuntime.RestoreProgress(save));
-                if (succeeded) isOfficialDemoSession = save.isOfficialDemo;
+                RestoreStage("turrets", () => turretRuntime.RestoreProgress(save)) &&
+                RestoreStage("base maintenance", () => runtimeServices.BuildingGuide == null ||
+                    runtimeServices.BuildingGuide.RestoreMaintenance(save));
+                if (succeeded)
+                {
+                    runtimeServices.MigrateEquipmentToInventory(save);
+                    isOfficialDemoSession = save.isOfficialDemo;
+                    runtimeServices.Goals?.Restore(save, reevaluateGoals);
+                }
                 return succeeded;
             }
             finally
             {
                 encounterCoordinator.EndRestore(succeeded);
+                runtimeServices.Goals?.SetSuspended(false);
                 IsRestoring = false;
             }
         }
@@ -426,10 +466,8 @@ namespace Nyangbingo.Save
                 return true;
             }
 
-            var halfExtent = .38f;
-            var circle = player.GetComponent<CircleCollider2D>();
-            if (circle != null)
-                halfExtent = Mathf.Max(.05f, circle.radius * Mathf.Abs(player.lossyScale.y));
+            var halfExtent = MainGamePlayerController.ColliderFeetBelowRoot(
+                player.GetComponent<BoxCollider2D>());
 
             var savedPosition = (Vector2)save.playerState.position;
             if (!ShouldResolveSafePlayerSpawn(forceSafeSurfaceSpawn,

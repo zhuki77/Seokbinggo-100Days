@@ -201,8 +201,8 @@ public static class NyangbingoMainGameSceneCreator
         Require(eventSystem != null, "EventSystem");
         Require(playerController != null && playerController.GetComponent<Rigidbody2D>() != null,
             "Player Rigidbody2D");
-        Require(playerController != null && playerController.GetComponent<CircleCollider2D>() != null,
-            "Player CircleCollider2D");
+        Require(playerController != null && playerController.GetComponent<BoxCollider2D>() != null,
+            "Player BoxCollider2D");
         Require(playerController != null && playerController.GetComponent<MeleeArcAttack>() != null,
             "Player MeleeArcAttack");
         Require(hud != null && hud.HasPlayerStatusBindings, "HUD player status bindings");

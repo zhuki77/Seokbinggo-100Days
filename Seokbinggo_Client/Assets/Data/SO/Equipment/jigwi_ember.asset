@@ -32,4 +32,4 @@ MonoBehaviour:
   activationCondition: DaySurface
   hasColdTolerance: 0
   coldToleranceC: 0
-  coldNote:
+  coldNote: 

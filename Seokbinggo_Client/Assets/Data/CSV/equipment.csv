@@ -1,4 +1,4 @@
-﻿id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,doubleJumpHeightRatio,visionRadiusBonus,blocksInventoryTheft,setId,setTemperatureRiseModifier,setFireDamageModifier,verb_id,usage_limit_per_day,activation_condition,note,coldToleranceC,coldNote
+id,slot,isAccessory,defense,movementBonus,miningCriticalBonus,temperatureRiseModifier,fireDamageModifier,grantsDoubleJump,doubleJumpHeightRatio,visionRadiusBonus,blocksInventoryTheft,setId,setTemperatureRiseModifier,setFireDamageModifier,verb_id,usage_limit_per_day,activation_condition,note,coldToleranceC,coldNote
 straw_helm,Head,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,짚 투구 - 방어 1,0,"straw — 실온 0도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
 straw_armor,Body,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,짚 갑옷 - 방어 1,0,"straw — 실온 0도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"
 straw_boots,Feet,false,1,0,0,0,0,false,0,0,false,none,0,0,,0,None,짚 신발 - 방어 1,0,"straw — 실온 0도까지 정상. 그 아래는 효율 감소(하드 차단 아님, 오너 확정)"

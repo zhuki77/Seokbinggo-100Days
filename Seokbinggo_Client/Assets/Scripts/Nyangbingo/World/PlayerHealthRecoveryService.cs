@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
 using Nyangbingo.Inventory;
+using Nyangbingo.Save;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -62,6 +63,10 @@ namespace Nyangbingo.World
         public float RegenPerSecond => regenPerSecond;
         public int CatnipHealAmount => catnipHealAmount;
         public float SecondsSinceDamage => secondsSinceDamage;
+        // Full HP must not prevent resting: this describes recovery eligibility,
+        // rather than whether an HP point was actually restored this frame.
+        public bool IsNaturalRecoveryReady => !disposed && !health.IsDead &&
+            secondsSinceDamage >= regenDelaySeconds && ResolveRegenMultiplier() > 0f;
         public bool CanUseCatnip => !disposed && !health.IsDead && health.Current < health.MaxHealth &&
                                     inventory.Has(CatnipItemId, 1);
         public bool CanUseHealingItem(string itemId) =>
@@ -94,9 +99,7 @@ namespace Nyangbingo.World
 
             var eligibleSeconds = Mathf.Max(0f, secondsSinceDamage - Mathf.Max(previousElapsed, regenDelaySeconds));
             if (eligibleSeconds <= 0f) return;
-            var regenMultiplier = regenMultiplierProvider != null ? regenMultiplierProvider() : 1f;
-            if (float.IsNaN(regenMultiplier) || float.IsInfinity(regenMultiplier) || regenMultiplier < 0f)
-                regenMultiplier = 1f;
+            var regenMultiplier = ResolveRegenMultiplier();
             fractionalHealing += eligibleSeconds * regenPerSecond * regenMultiplier;
             var wholeHealth = Mathf.FloorToInt(fractionalHealing);
             if (wholeHealth <= 0) return;
@@ -122,10 +125,35 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public void ResetAfterRestore()
+        public bool CaptureRecoveryState(PlayerStateRecord record)
         {
-            secondsSinceDamage = 0f;
-            fractionalHealing = 0f;
+            if (disposed || record == null) return false;
+            record.hasNaturalRecoveryState = true;
+            record.naturalRecoveryDelayRemaining = Mathf.Clamp(
+                regenDelaySeconds - secondsSinceDamage, 0f, regenDelaySeconds);
+            record.naturalRecoveryFractionalHealing = fractionalHealing;
+            return true;
+        }
+
+        public bool RestoreRecoveryState(PlayerStateRecord record)
+        {
+            if (disposed || record == null) return false;
+            // Old saves did not retain the last hit time. Keep the conservative delay
+            // rather than granting immediate rest through a legacy save reload.
+            if (!record.hasNaturalRecoveryState)
+            {
+                secondsSinceDamage = 0f;
+                fractionalHealing = 0f;
+                return true;
+            }
+            var remaining = record.naturalRecoveryDelayRemaining;
+            var fraction = record.naturalRecoveryFractionalHealing;
+            if (float.IsNaN(remaining) || float.IsInfinity(remaining) || remaining < 0f ||
+                float.IsNaN(fraction) || float.IsInfinity(fraction) || fraction < 0f || fraction >= 1f)
+                return false;
+            secondsSinceDamage = regenDelaySeconds - Mathf.Min(remaining, regenDelaySeconds);
+            fractionalHealing = fraction;
+            return true;
         }
 
         public void Dispose()
@@ -140,6 +168,12 @@ namespace Nyangbingo.World
             if (amount <= 0) return;
             secondsSinceDamage = 0f;
             fractionalHealing = 0f;
+        }
+
+        private float ResolveRegenMultiplier()
+        {
+            var value = regenMultiplierProvider?.Invoke() ?? 1f;
+            return float.IsNaN(value) || float.IsInfinity(value) || value < 0f ? 1f : value;
         }
 
         private static bool IsFinitePositive(float value) =>

@@ -303,6 +303,9 @@ namespace Nyangbingo.World
             foreach (var visual in tileVisuals)
             {
                 if (string.IsNullOrEmpty(visual.elementType) || visual.tile == null) continue;
+                // 기존 씬·세이브도 동일 규칙을 적용한다. 채굴 경도나 스프라이트는 변경하지 않는다.
+                if (WorldTileTypes.IsPassableForeground(visual.elementType) && visual.tile is Tile mushroomTile)
+                    mushroomTile.colliderType = Tile.ColliderType.None;
                 if (!_lookup.TryAdd(visual.elementType, visual.tile))
                 {
                     Debug.LogWarning($"[Nyangbingo] TilemapRenderer: elementType '{visual.elementType}' 매핑이 " +
@@ -708,7 +711,8 @@ namespace Nyangbingo.World
             {
                 existing.sprite = sprite;
                 // 룩업 재빌드 후에도 Grid 충돌을 유지한다(문 아래칸 통과 버그 방지).
-                existing.colliderType = Tile.ColliderType.Grid;
+                existing.colliderType = WorldTileTypes.IsPassableForeground(elementType)
+                    ? Tile.ColliderType.None : Tile.ColliderType.Grid;
                 _lookup[elementType] = existing;
                 return;
             }
@@ -716,7 +720,8 @@ namespace Nyangbingo.World
             var tile = ScriptableObject.CreateInstance<Tile>();
             tile.name = $"Runtime_{elementType}";
             tile.sprite = sprite;
-            tile.colliderType = Tile.ColliderType.Grid;
+            tile.colliderType = WorldTileTypes.IsPassableForeground(elementType)
+                ? Tile.ColliderType.None : Tile.ColliderType.Grid;
             _runtimeTiles[elementType] = tile;
             _lookup[elementType] = tile;
         }
@@ -830,8 +835,7 @@ namespace Nyangbingo.World
                 wallpaperFallback != null)
                 return wallpaperFallback;
 
-            // v72 버섯 3종은 전용 아트 납품 전에도 채굴 노드가 투명해지지 않도록
-            // 같은 지층의 기존 자원 타일을 임시 시각 폴백으로 사용한다. 데이터/채굴 ID는 원본을 유지한다.
+            // 이전 자원 대체 API는 호환용으로만 유지하며 다른 자원의 그림을 반환하지 않는다.
             var visualFallback = ResourceVisualFallbackId(elementType);
             if (!string.IsNullOrEmpty(visualFallback) &&
                 _lookup.TryGetValue(visualFallback, out var fallbackResourceTile) &&
@@ -844,16 +848,8 @@ namespace Nyangbingo.World
             return fallbackTile;
         }
 
-        public static string ResourceVisualFallbackId(string elementType) => elementType switch
-        {
-            WorldTileTypes.OysterMushroom => WorldTileTypes.Clay,
-            WorldTileTypes.Shiitake => WorldTileTypes.IceShard,
-            WorldTileTypes.Seogi => WorldTileTypes.FrostEssence,
-            WorldTileTypes.SeongeOre => WorldTileTypes.IceSteelOre,
-            WorldTileTypes.IceRoot => WorldTileTypes.IceSteelOre,
-            WorldTileTypes.ColdWaveOre => WorldTileTypes.FrostEssence,
-            _ => null
-        };
+        // 다른 자원의 그림으로 대체하지 않는다. 미제공 자원은 공통 누락 표시로 남긴다.
+        public static string ResourceVisualFallbackId(string elementType) => null;
 
         /// <summary>
         /// 인스펙터에서 우클릭 → 실행하면 WorldTileTypes에 정의된 모든 elementType 슬롯을

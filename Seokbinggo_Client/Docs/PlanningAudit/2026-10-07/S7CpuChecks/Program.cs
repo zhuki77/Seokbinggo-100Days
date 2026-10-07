@@ -1,0 +1,63 @@
+using UnityEngine;
+using Nyangbingo.World;
+using Nyangbingo.Core;
+using Nyangbingo.Data;
+using Nyangbingo.Save;
+using System.Text.Json;
+var n=0;
+void Check(bool b,string s){if(!b)throw new Exception(s);n++;}
+var tiles=new TileService();
+for(var x=7;x<=13;x++)for(var y=7;y<=13;y++)if(x==7||x==13||y==7||y==13)tiles.Set(new(x,y),"stone");
+using var seal=new SealSystem(tiles);
+var core=new Vector3Int(10,10);var wall=new Vector3Int(7,10);
+Check(seal.IsCoreWindowSealed(core),"sealed baseline");
+var rev=seal.Revision;
+Check(seal.WouldBreakCoreSeal(core,wall),"boundary removal breaks seal");
+Check(seal.Revision==rev&&tiles.GetTile(wall).elementType=="stone"&&seal.IsCoreWindowSealed(core),"simulation never mutates tiles/revision/cache");
+tiles.Set(new(9,9),"stone");Check(!seal.WouldBreakCoreSeal(core,new(9,9)),"interior pillar safe");
+Check(!seal.WouldBreakCoreSeal(core,new(15,15)),"air safe");
+for(var y=7;y<=13;y++)tiles.Set(new(6,y),"stone");
+Check(!seal.WouldBreakCoreSeal(core,wall),"second outer wall keeps seal");
+tiles.Set(new(6,10),null);Check(seal.WouldBreakCoreSeal(core,wall),"opening behind boundary now dangerous");
+var registry=new DoorRegistry();seal.SetBarrierRegistry(registry);
+tiles.Set(new(13,9),"door",false);tiles.Set(new(13,10),"door_top",false);
+Check(seal.IsCoreWindowSealed(core)&&seal.WouldBreakCoreSeal(core,new(13,10)),"closed two-cell door removal");
+var bootstrap=new MainGameBootstrap{TileService=tiles,SealSystem=seal};var env=new MainGameEnvironmentState();
+env.Objects.Add(new(){objectId="jar",definitionId="jangdok",position=new(10,10)});
+var goals=new MainGameGoalTracker();var runtime=new MainGameRuntimeServices();
+using var guide=new MainGameBuildingGuide(new(),bootstrap,env,goals,runtime);
+guide.Evaluate(env.Core);GameEvents.Aim(wall);Check(guide.MiningSealBoundary,"aimed boundary updates immediately without periodic evaluation");
+GameEvents.Aim(new(9,9));Check(!guide.MiningSealBoundary&&guide.MiningCell==new Vector3Int(9,9),"safe new cell cannot inherit old warning");
+var rapidCorrect=true;for(var i=0;i<10;i++){GameEvents.Aim(wall);rapidCorrect&=guide.MiningSealBoundary;GameEvents.Aim(new(9,9));rapidCorrect&=!guide.MiningSealBoundary;}
+Check(rapidCorrect,"rapid alternating aim has no stale warning");
+GameEvents.Aim(wall);var readCount=tiles.TileReadCount;guide.RefreshMiningWarning(env.Core);guide.RefreshMiningWarning(env.Core);
+Check(tiles.TileReadCount==readCount,"unchanged aim/revision/core reuses cached result without flood fill");
+tiles.Set(new(6,10),"stone");guide.RefreshMiningWarning(env.Core);Check(!guide.MiningSealBoundary,"same aim refreshes on wall revision without maintenance timer");
+tiles.Set(new(6,10),null);guide.RefreshMiningWarning(env.Core);Check(guide.MiningSealBoundary,"same aim rechecks reopened boundary");
+GameEvents.Aim(wall,false,false);Check(!guide.MiningSealBoundary,"hidden aim clears warning immediately");
+runtime.Invasion.IsCurrentInvasionNight=false;tiles.DamageDestroy(new(9,9));guide.Evaluate(env.Core);Check(guide.DamagedCells.Count==0,"ordinary destruction not invasion damage");
+runtime.Invasion.IsCurrentInvasionNight=true;tiles.DamageDestroy(wall);guide.Evaluate(env.Core);
+Check(guide.DamagedCells.Count==1&&guide.LastBaseAttackDay==6,"record actual destroyed wall");
+Check(!guide.ShowRecoveryChecklist,"checklist waits until daytime");
+bootstrap.TimeService.Day=7;bootstrap.TimeService.IsNight=false;
+runtime.Invasion.LastFinishedInvasionDay=6;
+runtime.Invasion.TemperatureRiseCelsius=3;runtime.Invasion.LastInfiltrationDay=6;guide.Evaluate(env.Core);
+Check(guide.ShowRecoveryChecklist&&!guide.StorageReady&&guide.HeatRemaining==3,"three separate recovery states");
+var fired=0;guide.Fired+=s=>{if(s=="invasion_heat_cleared")fired++;};runtime.Invasion.TemperatureRiseCelsius=0;guide.Evaluate(env.Core);
+Check(fired==1&&guide.DamagedCells.Count==1&&!guide.StorageReady,"recooling is not structural/storage recovery");guide.Evaluate(env.Core);Check(fired==1,"heat event once per transition");
+var save=new SaveGame();guide.CaptureMaintenance(save);
+var opts=new JsonSerializerOptions{IncludeFields=true};var copy=JsonSerializer.Deserialize<SaveGame>(JsonSerializer.Serialize(save,opts),opts);
+Check(copy.invasionBrokenCells.Count==1&&copy.invasionLastBaseAttackDay==6,"JSON stores broken cells/day");
+Check(guide.RestoreMaintenance(copy),"restore damage");guide.Evaluate(env.Core);Check(guide.DamagedCells.Count==1&&fired==1,"restore does not invent heat clear event");
+tiles.Set(wall,"stone",false);guide.Evaluate(env.Core);Check(guide.DamagedCells.Count==1,"non-sealing replacement does not repair");
+tiles.Set(wall,"stone",true);guide.Evaluate(env.Core);Check(guide.DamagedCells.Count==0&&!guide.StorageReady,"structure repaired separately");
+runtime.StorageTemperature.Condition.Met=true;guide.Evaluate(env.Core);Check(guide.StorageReady,"actual storage condition becomes ready");
+registry.Closed=false;tiles.DamageDestroy(new(13,9),2);guide.Evaluate(env.Core);Check(guide.DamagedCells.Count==2,"door footprint two broken cells");
+Check(!guide.RestoreMaintenance(new(){invasionBrokenCells=new(){new(-1,0)}})&&guide.DamagedCells.Count==2,"bad restore rejected without mutation");
+guide.CaptureMaintenance(save);Check(save.invasionBrokenCells.Count==2,"save keeps destroyed doorway");
+Console.WriteLine($"S7 CPU seal/maintenance checks: {n}/{n} passed. No Unity runtime executed.");
+class DoorRegistry:ISealBarrierRegistry,ISealDoorRegistry {
+ public bool Closed=true;
+ public bool IsRecognizedBarrier(Vector3Int c)=>Closed&&(c==new Vector3Int(13,9)||c==new Vector3Int(13,10));
+ public bool TryGetDoor(Vector3Int c,out Vector3Int anchor,out bool closed){anchor=new(13,9);closed=Closed;return c==anchor||c==anchor+Vector3Int.up;}
+}

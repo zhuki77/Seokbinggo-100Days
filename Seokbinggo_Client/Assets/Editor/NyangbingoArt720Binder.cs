@@ -21,6 +21,27 @@ public static class NyangbingoArt720Binder
     // decoration, and building art therefore also needs an item preview entry.
     private static readonly (string id, string path)[] ItemBindings =
     {
+        ("rope", "Assets/Art/Tiles/rope.aseprite"),
+        ("cold_wave_tower", "Assets/Art/Items/DeliveredFinal/cold_wave_tower_icon.aseprite"),
+        ("seonge_tower", "Assets/Art/Items/DeliveredFinal/seonge_tower_icon.aseprite"),
+        ("tal_waypoint", "Assets/Art/Items/DeliveredFinal/tal_waypoint_icon.aseprite"),
+        ("scarecrow", "Assets/Art/Items/DeliveredFinal/scarecrow_icon.aseprite"),
+        ("gong_tower", "Assets/Art/Items/DeliveredFinal/gong_tower_icon.aseprite"),
+        ("yeouiju_shard", "Assets/Art/Items/DeliveredFinal/yeouiju_shard.aseprite"),
+        ("tiger_gait", "Assets/Art/Items/DeliveredFinal/tiger_gait.aseprite"),
+        ("ssireum_knot", "Assets/Art/Items/DeliveredFinal/ssireum_knot.aseprite"),
+        ("skate_pad", "Assets/Art/Items/DeliveredFinal/skate_pad.aseprite"),
+        ("perfect_core", "Assets/Art/Items/DeliveredFinal/perfect_core.aseprite"),
+        ("old_key", "Assets/Art/Items/DeliveredFinal/old_key.aseprite"),
+        ("minhwa_ink", "Assets/Art/Items/DeliveredFinal/minhwa_ink.aseprite"),
+        ("magpie_bell", "Assets/Art/Items/DeliveredFinal/magpie_bell.aseprite"),
+        ("iron_appetite", "Assets/Art/Items/DeliveredFinal/iron_appetite.aseprite"),
+        ("gate_mark", "Assets/Art/Items/DeliveredFinal/gate_mark.aseprite"),
+        ("frost_map", "Assets/Art/Items/DeliveredFinal/frost_map.aseprite"),
+        ("dry_trace", "Assets/Art/Items/DeliveredFinal/dry_trace.aseprite"),
+        ("drought_heart_shard", "Assets/Art/Items/DeliveredFinal/drought_heart_shard.aseprite"),
+        ("clay_hand", "Assets/Art/Items/DeliveredFinal/clay_hand.aseprite"),
+        ("altar_echo", "Assets/Art/Items/DeliveredFinal/altar_echo.aseprite"),
         ("wood", "Assets/Art/Decorations/tree.aseprite"),
         ("hemp_stalk", "Assets/Art/Decorations/hemp.aseprite"),
         ("rebar", "Assets/Art/Decorations/ruin_rebar.aseprite"),
@@ -32,6 +53,7 @@ public static class NyangbingoArt720Binder
         ("ice_shard", "Assets/Art/Tiles/ice_shard.aseprite"),
         ("icesteel_ore", "Assets/Art/Tiles/icesteel_ore.aseprite"),
         ("frost_essence", "Assets/Art/Tiles/frost_essence.aseprite"),
+        ("seonge_ore", "Assets/Art/Tiles/seonge_ore.aseprite"),
         ("clay", "Assets/Art/Items/clay.aseprite"),
         ("stone_mid", "Assets/Art/Tiles/stone_mid.aseprite"),
         ("bare_claw", "Assets/Art/Items/bare_claw.aseprite"),
@@ -39,7 +61,7 @@ public static class NyangbingoArt720Binder
         ("icesteel_claw", "Assets/Art/Items/icesteel_claw.aseprite"),
         ("dokkaebi_club", "Assets/Art/Items/dokkaebi_club.aseprite"),
         ("cheolseon", "Assets/Art/Items/cheolseon.aseprite"),
-        ("seolpungseon", "Assets/Art/Items/cheolseon.aseprite"),
+        ("seolpungseon", "Assets/Art/Items/DeliveredFinal/seolpungseon.aseprite"),
         ("drought_heart", "Assets/Art/Items/drought_heart.aseprite"),
         ("frostclaw_gauntlet", "Assets/Art/Items/frostclaw_gauntlet.aseprite"),
         ("iron_forge_core", "Assets/Art/Items/iron_forge_core.aseprite"),
@@ -55,26 +77,26 @@ public static class NyangbingoArt720Binder
         ("ice_anvil", "Assets/Art/Buildings/ice_anvil.aseprite"),
         ("lantern", "Assets/Art/Buildings/lantern.aseprite"),
         ("sieve", "Assets/Art/Buildings/sieve.aseprite"),
-        ("haetae_statue", "Assets/Art/Buildings/haetae_statue.aseprite"),
+        ("haetae_statue", "Assets/Art/Items/DeliveredFinal/haetae_statue_icon.aseprite"),
         ("nest_bed", "Assets/Art/Buildings/nest_bed.aseprite"),
         ("magpie_nest", "Assets/Art/Buildings/magpie_nest.aseprite"),
         ("bell_rope", "Assets/Art/Buildings/bell_rope.aseprite"),
         ("iron_bell_rope", "Assets/Art/Buildings/iron_bell_rope.aseprite"),
-        ("frost_bell_rope", "Assets/Art/Buildings/iron_bell_rope.aseprite"),
+        ("frost_bell_rope", "Assets/Art/Items/DeliveredFinal/frost_bell_rope.aseprite"),
         ("iron_sieve", "Assets/Art/Buildings/iron_sieve.aseprite"),
         ("frost_lantern", "Assets/Art/Buildings/frost_lantern.aseprite"),
         ("insul_wall", "Assets/Art/Buildings/insul_wall.aseprite"),
-        ("door", "Assets/Art/Buildings/door.aseprite"),
+        ("door", "Assets/Art/Items/DeliveredFinal/door_icon.aseprite"),
         ("roof", "Assets/Art/Buildings/roof.aseprite"),
-        ("jangdok", "Assets/Art/Buildings/jangdok.aseprite"),
+        ("jangdok", "Assets/Art/Items/DeliveredFinal/jangdok_icon.aseprite"),
         ("ice_core", "Assets/Art/Buildings/ice_core.aseprite"),
         ("iron_insul_wall", "Assets/Art/Buildings/iron_insul_wall.aseprite"),
         ("cold_device", "Assets/Art/Buildings/cold_device.aseprite"),
-        ("dokkaebi_fire_tower", "Assets/Art/Buildings/dokkaebi_fire_tower.aseprite"),
-        ("singijeon_cart", "Assets/Art/Buildings/singijeon_cart.aseprite"),
+        ("dokkaebi_fire_tower", "Assets/Art/Items/DeliveredFinal/dokkaebi_fire_tower_icon.aseprite"),
+        ("singijeon_cart", "Assets/Art/Items/DeliveredFinal/singijeon_cart_icon.aseprite"),
         ("ice_crystal_cooler", "Assets/Art/Buildings/ice_crystal_cooler.aseprite"),
         ("cold_wave_core", "Assets/Art/Buildings/cold_wave_core.aseprite"),
-        ("ice_jar", "Assets/Art/Buildings/ice_jar.aseprite"),
+        ("ice_jar", "Assets/Art/Items/DeliveredFinal/ice_jar_icon.aseprite"),
         ("straw_insul", "Assets/Art/Buildings/straw_insul.aseprite"),
         ("clay_plaster", "Assets/Art/Buildings/clay_plaster.aseprite"),
         ("munpungji", "Assets/Art/Buildings/munpungji.aseprite"),
@@ -92,32 +114,31 @@ public static class NyangbingoArt720Binder
         ("shadow_shard", "Assets/Art/Items/shadow_shard.aseprite"),
         ("stolen_bundle", "Assets/Art/Items/stolen_bundle.aseprite"),
         ("yeouiju", "Assets/Art/Items/yeouiju.aseprite"),
-        ("ssireum_knot", "Assets/Art/Items/ssireum_satba.aseprite"),
-        ("iron_appetite", "Assets/Art/Tiles/iron_ore.aseprite"),
-        ("yeouiju_shard", "Assets/Art/Items/yeouiju.aseprite"),
-        ("jigwi_ember", "Assets/Art/Items/dokkaebi_fire_essence.aseprite"),
-        ("drought_heart_shard", "Assets/Art/Items/drought_heart.aseprite"),
-        ("tiger_gait", "Assets/Art/Items/gangcheol_scale.aseprite"),
-        ("three_horn", "Assets/Art/Items/cheolseon.aseprite"),
-        ("eop_scale", "Assets/Art/Items/iron_scale.aseprite"),
-        ("yeongno_mask", "Assets/Art/Items/yeouiju.aseprite"),
-        ("perfect_core", "Assets/Art/Items/iron_forge_core.aseprite"),
-        ("clay_hand", "Assets/Art/Items/clay.aseprite"),
-        ("skate_pad", "Assets/Art/Items/ice_shard.aseprite"),
-        ("magpie_bell", "Assets/Art/Buildings/bell_rope.aseprite"),
-        ("old_key", "Assets/Art/Items/stolen_bundle.aseprite"),
-        ("minhwa_ink", "Assets/Art/Buildings/minhwa_scroll.aseprite"),
-        ("vault_seal", "Assets/Art/Items/stolen_bundle.aseprite"),
-        ("gate_mark", "Assets/Art/Buildings/munpungji.aseprite"),
-        ("dry_trace", "Assets/Art/Items/shadow_shard.aseprite"),
-        ("altar_echo", "Assets/Art/Buildings/minhwa_scroll.aseprite"),
-        ("frost_map", "Assets/Art/Tiles/frost_essence.aseprite"),
-        ("first_frost_claw", "Assets/Art/Items/frostclaw_gauntlet.aseprite"),
-        ("baekjung_bundle", "Assets/Art/Items/stolen_bundle.aseprite"),
-        ("yeouiju_claw", "Assets/Art/Items/yeouiju.aseprite"),
-        ("jigwi_ash", "Assets/Art/Items/dokkaebi_fire_essence.aseprite"),
-        ("sangun_whisker", "Assets/Art/Items/gangcheol_scale.aseprite"),
-        ("yeongno_tooth", "Assets/Art/Items/yeouiju.aseprite")
+        // 같은 이름/대상의 재료·아티팩트만 전용 납품 그림을 공유한다.
+        ("three_horn", "Assets/Art/Items/DeliveredFinal/three_horn_mat.aseprite"),
+        ("eop_scale", "Assets/Art/Items/DeliveredFinal/eop_scale_mat.aseprite"),
+        ("first_frost_claw", "Assets/Art/Items/DeliveredFinal/first_frost_claw.aseprite"),
+        ("baekjung_bundle", "Assets/Art/Items/DeliveredFinal/baekjung_bundle.aseprite"),
+        ("yeouiju_claw", "Assets/Art/Items/DeliveredFinal/yeouiju_claw.aseprite"),
+        ("jigwi_ash", "Assets/Art/Items/DeliveredFinal/jigwi_ash.aseprite"),
+        ("jigwi_ember_mat", "Assets/Art/Items/DeliveredFinal/jigwi_ember_mat.aseprite"),
+        ("jigwi_ember", "Assets/Art/Items/DeliveredFinal/jigwi_ember_mat.aseprite"),
+        ("yeongno_mask_mat", "Assets/Art/Items/DeliveredFinal/yeongno_mask_mat.aseprite"),
+        ("yeongno_mask", "Assets/Art/Items/DeliveredFinal/yeongno_mask_mat.aseprite"),
+        ("singijeon_sondae", "Assets/Art/Items/DeliveredFinal/singijeon_sondae.aseprite"),
+        ("cold_wave_singijeon", "Assets/Art/Items/DeliveredFinal/cold_wave_singijeon.aseprite"),
+        ("cold_wave_battery", "Assets/Art/Items/DeliveredFinal/cold_wave_battery_icon.aseprite"),
+        ("ice_root_battery", "Assets/Art/Items/DeliveredFinal/ice_root_battery_icon.aseprite"),
+        ("plaster_doll", "Assets/Art/Items/DeliveredFinal/plaster_doll_icon.aseprite"),
+        ("seogi", "Assets/Art/Items/DeliveredFinal/seogi.aseprite"),
+        ("sangun_whisker", "Assets/Art/Items/DeliveredFinal/sangun_whisker.aseprite"),
+        ("yeongno_tooth", "Assets/Art/Items/DeliveredFinal/yeongno_tooth.aseprite")
+    };
+
+    // 전용 원본 미제공. 재연결 실행 시 다른 아이템 그림이 다시 붙지 않게 해제한다.
+    private static readonly string[] MissingItemArtIds =
+    {
+        "vault_seal"
     };
 
     private static readonly (string property, string path, int expectedFrames)[] FrameBindings =
@@ -157,6 +178,9 @@ public static class NyangbingoArt720Binder
 
     private static readonly (string property, string path)[] SpriteBindings =
     {
+        ("deathTearPouch", "Assets/Art/Gameplay/death_tear_pouch.aseprite"),
+        ("hypothermiaStatusIcon", "Assets/Art/Gameplay/hypothermia_status_icon.aseprite"),
+        ("nightSpawnBlockedIcon", "Assets/Art/Gameplay/night_spawn_blocked_icon.aseprite"),
         ("dangerIcon", "Assets/Art/UI/danger_icon.aseprite"),
         ("bossWarningLarge", "Assets/Art/UI/Boss/boss_warning_32.aseprite"),
         ("bossWarningSmall", "Assets/Art/UI/Boss/boss_warning_16.aseprite"),
@@ -443,6 +467,12 @@ public static class NyangbingoArt720Binder
             entry.FindPropertyRelative("sprite").objectReferenceValue = sprite;
         }
 
+        foreach (var id in MissingItemArtIds)
+        {
+            var entry = FindOrAddItem(entries, id);
+            entry.FindPropertyRelative("id").stringValue = id;
+            entry.FindPropertyRelative("sprite").objectReferenceValue = null;
+        }
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(catalog);
         return true;

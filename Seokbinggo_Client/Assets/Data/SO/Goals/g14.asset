@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g14
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g14
+  order: 14
+  phase: P1
+  track: select
+  displayName: "\uD575\uC2EC \uBAA8\uB4C8 5\uC885"
+  iconRef: ice_core
+  completeState: core_modules_complete
+  completeParam: win_modules
+  guideTarget: core
+  hintMessageId: goal_core_modules
+  mvpScope: A
+  note: "\uCC28\uC5F4\uBCBD\xB7\uB2E8\uC5F4 \uBB38\xB7\uCC28\uC5F4 \uC9C0\uBD95\xB7\uC7A5\uB3C5
+    \uCC3D\uACE0\xB7\uC5BC\uC74C \uC800\uC7A5\uACE0 \u2014 \uACB0\uACFC \uD654\uBA74
+    \u300C\uC11D\uBE59\uACE0 \uC644\uC131\u300D\uACFC \uAC19\uC740 \uAC12"

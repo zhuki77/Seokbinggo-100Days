@@ -1,6 +1,7 @@
 using System;
 using Nyangbingo.Data;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace Nyangbingo.World
 {
@@ -9,6 +10,39 @@ namespace Nyangbingo.World
     /// </summary>
     public static class PlayerMovementPhysics
     {
+        private static PhysicsMaterial2D actorMovementMaterial;
+        public static PhysicsMaterial2D ActorMovementMaterial => actorMovementMaterial != null
+            ? actorMovementMaterial
+            : actorMovementMaterial = new PhysicsMaterial2D("NyangbingoActorMovement")
+            { friction = 0f, bounciness = 0f, hideFlags = HideFlags.DontSave };
+
+        public static bool HasForegroundGroundSupport(Collider2D actor, float probeDistance,
+            RaycastHit2D[] hits, ContactPoint2D[] contacts)
+        {
+            if (actor == null || !actor.enabled) return false;
+            var footY = actor.bounds.min.y;
+            var contactCount = actor.GetContacts(contacts);
+            for (var i = 0; i < contactCount; i++)
+            {
+                var contact = contacts[i];
+                if (contact.normal.y > .5f && contact.point.y <= footY + .05f &&
+                    (IsForegroundCollider(contact.collider) || IsForegroundCollider(contact.otherCollider)))
+                    return true;
+            }
+            var count = actor.Cast(Vector2.down, new ContactFilter2D { useTriggers = false }, hits, probeDistance);
+            for (var i = 0; i < count; i++)
+            {
+                var hit = hits[i];
+                // 시작부터 겹친 Cast의 법선은 검사 반대 방향일 수 있어 위의 실제 접촉으로 판정한다.
+                if (hit.distance > .0001f && hit.normal.y > .5f && hit.point.y <= footY + .05f &&
+                    IsForegroundCollider(hit.collider)) return true;
+            }
+            return false;
+        }
+
+        private static bool IsForegroundCollider(Collider2D collider) => collider != null &&
+            !collider.isTrigger && (collider is TilemapCollider2D || collider is CompositeCollider2D);
+
         public const string JumpHeightTilesKey = "player_jump_height_tiles";
         public const string GravityKey = "player_gravity";
         public const string MaxFallSpeedKey = "player_max_fall_speed";

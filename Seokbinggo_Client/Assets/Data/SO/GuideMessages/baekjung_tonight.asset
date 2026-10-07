@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: baekjung_tonight
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: baekjung_tonight
+  tier: 2
+  triggerState: baekjung_tonight
+  text: "\uC624\uB298 \uBC24\uC740 \uBC31\uC911\uB0A0\uC774\uC5D0\uC694. \uC694\uAD34\uAC00
+    \uD3C9\uC18C\uBCF4\uB2E4 \uB9CE\uC774 \uB098\uC640\uC694."
+  variables: 
+  clearWhen: night_start
+  repeat: once_per_day
+  source: "[\uAC00\uC548 \uBB38\uAD6C]"
+  note: "baekjung_day=15 \xB7 \uD734\uC2DD \uC7A0\uAE08 \uC5C6\uC74C"

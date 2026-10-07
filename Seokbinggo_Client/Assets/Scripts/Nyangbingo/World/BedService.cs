@@ -12,15 +12,20 @@ namespace Nyangbingo.World
         private readonly DayNightService time;
         private readonly RoomTempService roomTemperature;
         private readonly InvasionService invasion;
+        private readonly DayEventDefinition baekjung;
         private readonly float minimumSleepTemperature;
+        private readonly Func<bool> naturalRecoveryReady;
 
         public BedService(GameDataCatalog catalog, DayNightService timeService,
-            RoomTempService roomTempService, InvasionService invasionService)
+            RoomTempService roomTempService, InvasionService invasionService,
+            Func<bool> recoveryReady = null)
         {
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             time = timeService ?? throw new ArgumentNullException(nameof(timeService));
             roomTemperature = roomTempService ?? throw new ArgumentNullException(nameof(roomTempService));
             invasion = invasionService ?? throw new ArgumentNullException(nameof(invasionService));
+            baekjung = catalog.FindDayEvent("baekjung");
+            naturalRecoveryReady = recoveryReady;
 
             if (!ReadBool(catalog, GlobalKeys.BedEnabled) ||
                 !ReadBool(catalog, GlobalKeys.BedLockedOnInvasion) ||
@@ -36,6 +41,13 @@ namespace Nyangbingo.World
         }
 
         public float MinimumSleepTemperature => minimumSleepTemperature;
+        public event Action<float> Slept;
+        public event Action<float> SleepDeniedCold;
+        public void ReportDeniedSleep(float roomTemperature)
+        {
+            if (!CanSleepAtTemperature(roomTemperature, minimumSleepTemperature))
+                SleepDeniedCold?.Invoke(minimumSleepTemperature);
+        }
 
         public bool CanSleep(Vector2 bedPosition, out float roomTemperatureCelsius, out string reason)
         {
@@ -50,6 +62,17 @@ namespace Nyangbingo.World
                 reason = "예고된 요괴 침공 밤에는 잠들 수 없습니다.";
                 return false;
             }
+            // 침공과 동일하게 해당 밤 전체를 제한한다. 이어하기 직후에도 일정으로 판정한다.
+            if (time.IsNight && baekjung != null && time.Day == baekjung.Day)
+            {
+                reason = "백중날 밤에는 잠들 수 없습니다.";
+                return false;
+            }
+            if (naturalRecoveryReady != null && !naturalRecoveryReady())
+            {
+                reason = "피해를 받은 뒤에는 쉴 수 없습니다. 자연회복이 시작될 때까지 기다리세요.";
+                return false;
+            }
             reason = string.Empty;
             return true;
         }
@@ -62,7 +85,11 @@ namespace Nyangbingo.World
 
         public bool TrySleep(Vector2 bedPosition, out string message)
         {
-            if (!CanSleep(bedPosition, out var roomTemperatureCelsius, out message)) return false;
+            if (!CanSleep(bedPosition, out var roomTemperatureCelsius, out message))
+            {
+                ReportDeniedSleep(roomTemperatureCelsius);
+                return false;
+            }
             var skippedNight = time.IsNight;
             if (!time.AdvanceToNextPhase())
             {
@@ -72,6 +99,7 @@ namespace Nyangbingo.World
             message = skippedNight
                 ? $"보금자리 취침 · 실온 {roomTemperatureCelsius:0.#}℃ · {time.Day}일차 새벽"
                 : $"보금자리 취침 · 실온 {roomTemperatureCelsius:0.#}℃ · {time.Day}일차 해질녘";
+            Slept?.Invoke(roomTemperatureCelsius);
             return true;
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Bosses;
@@ -9,6 +9,7 @@ using Nyangbingo.Inventory;
 using Nyangbingo.Save;
 using Nyangbingo.Yokai;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Nyangbingo.World
 {
@@ -19,9 +20,12 @@ namespace Nyangbingo.World
     [DefaultExecutionOrder(-80)]
     [RequireComponent(typeof(MainGameBootstrap), typeof(MainGameRuntimeServices), typeof(BossManager))]
     public sealed class MainGameEncounterCoordinator : MonoBehaviour,
-        IRegularSpawnController, IForcedBossSpawnController, IBaekjungSpawnController
+        IRegularSpawnController, IForcedBossSpawnController, IBaekjungSpawnController, IYokaiCoreRoute
     {
         private const float BossScale = 2f;
+        // Installed objects render through order 25. Group each creature so its
+        // head/body/tail retain their internal order while all appear in front.
+        private const int CreatureSortingOrder = 26;
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameBootstrap bootstrap;
@@ -56,10 +60,12 @@ namespace Nyangbingo.World
         private Dictionary<YokaiKind, int> stagedResidentLastKilledDays;
         private ResidentYokaiRules residentRules;
         private int spawnSequence;
-        private int debugBossIndex;
         private BossCombatController activeBossCombat;
         private MainGameTurretRuntime placedObjectRuntime;
-        private MainGameCoreRaidTarget coreRaidTarget;
+        private readonly Dictionary<Vector3Int, MainGameCoreRaidTarget> coreRaidTargets =
+            new Dictionary<Vector3Int, MainGameCoreRaidTarget>();
+        private readonly List<Vector3Int> liveCoreCells = new List<Vector3Int>();
+        private MainGameEnvironmentState coreEnvironment;
         private float baseVicinityRadius = 28f;
         private readonly List<SpawnedYokai> bossPausedYokai = new List<SpawnedYokai>();
 
@@ -76,7 +82,10 @@ namespace Nyangbingo.World
         public int ActiveRegularCount => spawnedYokai.Count(entry =>
             !entry.raid && entry.spawnTrack == YokaiSpawnTrack.Raid && IsAlive(entry));
         public int PendingRegularCount => pendingRegular.Count;
-        public bool IsRegularSpawningEnabled => regularSpawningEnabled && !discardRegularForCurrentNight;
+        private bool IsDayEventNight => bootstrap?.TimeService?.IsNight == true &&
+            gameDataCatalog != null && gameDataCatalog.DayEvents.Any(e => e != null && e.Day == bootstrap.TimeService.Day);
+        public bool IsRegularSpawningEnabled => regularSpawningEnabled && !discardRegularForCurrentNight &&
+            !IsDayEventNight;
         public BossManager BossManager => bossManager;
         public BaekjungScheduler BaekjungScheduler => baekjungScheduler;
         public Transform PlayerTransform => raidTarget != null ? raidTarget.transform : null;
@@ -85,6 +94,9 @@ namespace Nyangbingo.World
         public static bool ShouldPauseFieldYokaiForBoss(bool forcedInvasion) => !forcedInvasion;
         public static int ResolveRegularSpawnCap(int maxActive, bool includesForcedInvasionBoss) =>
             Math.Max(0, maxActive - (includesForcedInvasionBoss ? 1 : 0));
+        public static bool ShouldDiscardLegacyEarlyGaekgwi(bool dayEventNight, bool raid,
+            YokaiKind kind, int dispatchedWaves) =>
+            dayEventNight && !raid && kind == YokaiKind.Gaekgwi && dispatchedWaves < 2;
         public static bool ShouldSpawnResident(
             int day, int firstDay, int lastKilledDay, int activeCount, int maxPerSpecies) =>
             day >= firstDay && day > lastKilledDay &&
@@ -101,7 +113,7 @@ namespace Nyangbingo.World
         public static bool TryMapForcedBossToCompositionKind(
             BossKind bossKind, out YokaiKind yokaiKind)
         {
-            // v34 day 30 represents Imugi in both day-curve composition and bosses.csv.
+            // Confirmed day-30 Gangcheol retains the legacy Imugi composition/save IDs.
             // The composition entry reserves the encounter slot; the actual combatant is
             // created exclusively through ForcedBossEncounterBinding.
             if (bossKind == BossKind.Imugi)
@@ -164,50 +176,21 @@ namespace Nyangbingo.World
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F8))
-            {
-                var shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                var ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-                var alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-                var bossId = ctrl && shift
-                    ? "eop_guryeongi"
-                    : shift
-                        ? "samdugumi"
-                        : ctrl
-                            ? "mother_bulgasari"
-                            : alt
-                                ? "imugi_boss"
-                                : "king_dokkaebi";
-                TryStartEditorBossEncounter(bossId);
-            }
-            if (Input.GetKeyDown(KeyCode.J) &&
-                (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) DefeatAllYokaiForEditorTest();
-            if (Input.GetKeyDown(KeyCode.K)) DefeatActiveBossForEditorTest();
-            if (Input.GetKeyDown(KeyCode.F9))
-            {
-                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                    TryJumpToNextSummonAnchorNightForEditorTest();
-                else
-                    TryJumpToNextForcedInvasionAnchorForEditorTest();
-            }
-            if (Input.GetKeyDown(KeyCode.F12))
-            {
-                var shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                var alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-                if (alt && shift)
-                    SpawnYokaiForEditorTest(
-                        YokaiKind.Gaekgwi, "Alt+Shift+F12", "Gaekgwi");
-                else if (alt)
-                    SpawnYokaiForEditorTest(
-                        YokaiKind.Gangcheori, "Alt+F12", "Gangcheori");
-                else if (shift)
-                    GrantEoduksiniVisualTestKit();
-                else if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
-                    GrantRoofVisualTestKit();
-                else
-                    SpawnYokaiForEditorTest(
-                        YokaiKind.Eoduksini, "F12", "Eoduksini");
-            }
+            if (!DevelopmentShortcuts.CanUseWorldShortcuts) return;
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.GoblinBoss)) TryStartEditorBossEncounter("king_dokkaebi");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.BulgasariBoss)) TryStartEditorBossEncounter("mother_bulgasari");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.ImugiBoss)) TryStartEditorBossEncounter("imugi_boss");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Samdugumi)) TryStartEditorBossEncounter("samdugumi");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Eop)) TryStartEditorBossEncounter("eop_guryeongi");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.ClearYokai)) DefeatAllYokaiForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.DefeatBoss)) DefeatActiveBossForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.ForcedAnchor)) TryJumpToNextForcedInvasionAnchorForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.SummonAnchor)) TryJumpToNextSummonAnchorNightForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Eoduksini)) SpawnYokaiForEditorTest(YokaiKind.Eoduksini, "F9", "어둑시니");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Gangcheori)) SpawnYokaiForEditorTest(YokaiKind.Gangcheori, "Shift+F9", "이무기");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Gaekgwi)) SpawnYokaiForEditorTest(YokaiKind.Gaekgwi, "Ctrl+F9", "객귀");
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.EoduksiniKit)) GrantEoduksiniVisualTestKit();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RoofKit)) GrantRoofVisualTestKit();
         }
 
         private void SpawnYokaiForEditorTest(
@@ -259,8 +242,8 @@ namespace Nyangbingo.World
             var lanternGranted = inventory != null && inventory.TryAdd("lantern", 1);
             var coalGranted = inventory != null && inventory.TryAdd("coal", 3);
             Debug.Log(lanternGranted && coalGranted
-                ? "[Nyangbingo] Shift+F12 Eoduksini visual test kit granted: lantern x1, coal x3."
-                : "[Nyangbingo] Shift+F12 test kit grant was incomplete: check inventory capacity.");
+                ? "[Nyangbingo] Alt+F9 Eoduksini visual test kit granted: lantern x1, coal x3."
+                : "[Nyangbingo] Alt+F9 test kit grant was incomplete: check inventory capacity.");
         }
 
         private void GrantRoofVisualTestKit()
@@ -268,8 +251,8 @@ namespace Nyangbingo.World
             var inventory = runtimeServices?.PlayerInventory;
             var granted = inventory != null && inventory.TryAdd("roof", 8);
             Debug.Log(granted
-                ? "[Nyangbingo] Ctrl+F12 roof visual test kit granted: roof x8."
-                : "[Nyangbingo] Ctrl+F12 roof test kit grant failed: check inventory capacity.");
+                ? "[Nyangbingo] Ctrl+Shift+F9 roof visual test kit granted: roof x8."
+                : "[Nyangbingo] Ctrl+Shift+F9 roof test kit grant failed: check inventory capacity.");
         }
 
         private void DefeatAllYokaiForEditorTest()
@@ -295,17 +278,17 @@ namespace Nyangbingo.World
                 health = activeBossCombat.GetComponent<Health>();
             if (health == null || definition == null)
             {
-                Debug.LogWarning("[Nyangbingo] K boss test defeat: no active boss.");
+                Debug.LogWarning("[Nyangbingo] Shift+F8 boss test defeat: no active boss.");
                 return;
             }
 
             if (health.IsDead)
             {
-                Debug.LogWarning("[Nyangbingo] K boss test defeat: boss already dead.");
+                Debug.LogWarning("[Nyangbingo] Shift+F8 boss test defeat: boss already dead.");
                 return;
             }
 
-            Debug.Log($"[Nyangbingo] K boss test defeat requested: {definition.Id}.");
+            Debug.Log($"[Nyangbingo] Shift+F8 boss test defeat requested: {definition.Id}.");
             // Opening-dodge sets damageTakenMultiplier=0 for up to 120s; bypass for editor kills.
             health.ApplyResolvedDamage(health.Current, DamageTag.Melee);
         }
@@ -315,7 +298,7 @@ namespace Nyangbingo.World
 
         public bool TryJumpToNextForcedInvasionAnchorForEditorTest()
         {
-            if (!TryPrepareEditorAnchorNightJump(out var dayNight, out var currentDay, "F9 forced invasion anchor"))
+            if (!TryPrepareEditorAnchorNightJump(out var dayNight, out var currentDay, "Ctrl+F8 forced invasion anchor"))
                 return false;
 
             var targetDay = ResolveNextAnchorDay(currentDay, dayNight.IsNight, ForcedInvasionAnchorDays);
@@ -323,14 +306,14 @@ namespace Nyangbingo.World
                 definition != null && definition.ForcedDay == targetDay);
             if (targetBoss == null)
             {
-                Debug.LogError($"[Nyangbingo] F9 anchor day {targetDay} boss definition missing.");
+                Debug.LogError($"[Nyangbingo] Ctrl+F8 anchor day {targetDay} boss definition missing.");
                 return false;
             }
 
             ResetForcedBossBinding(targetDay);
             if (!TryJumpToAnchorNightForEditorTest(dayNight, currentDay, targetDay, out var usedAtomicRestore))
             {
-                Debug.LogError($"[Nyangbingo] F9 failed advancing to day {targetDay} night.");
+                Debug.LogError($"[Nyangbingo] Ctrl+F8 failed advancing to day {targetDay} night.");
                 return false;
             }
 
@@ -342,36 +325,36 @@ namespace Nyangbingo.World
 
             var started = bossManager?.ActiveDefinition?.Id == targetBoss.Id;
             Debug.Log(started
-                ? $"[Nyangbingo] F9 forced invasion anchor ready: day {targetDay}, " +
+                ? $"[Nyangbingo] Ctrl+F8 forced invasion anchor ready: day {targetDay}, " +
                   $"boss={targetBoss.Id} ({targetBoss.DisplayName})."
-                : $"[Nyangbingo] F9 advanced to day {targetDay} night but forced boss did not start.");
+                : $"[Nyangbingo] Ctrl+F8 advanced to day {targetDay} night but forced boss did not start.");
             return started;
         }
 
         public bool TryJumpToNextSummonAnchorNightForEditorTest()
         {
-            if (!TryPrepareEditorAnchorNightJump(out var dayNight, out var currentDay, "Shift+F9 summon anchor"))
+            if (!TryPrepareEditorAnchorNightJump(out var dayNight, out var currentDay, "Alt+F8 summon anchor"))
                 return false;
 
             var targetDay = ResolveNextAnchorDay(currentDay, dayNight.IsNight, SummonAnchorDays);
             var targetBoss = gameDataCatalog?.FindBoss(targetDay == 70 ? "samdugumi" : "eop_guryeongi");
             if (targetBoss == null || targetBoss.ForcedDay > 0 || targetBoss.SummonItem == null)
             {
-                Debug.LogError($"[Nyangbingo] Shift+F9 anchor day {targetDay} summon boss definition missing.");
+                Debug.LogError($"[Nyangbingo] Alt+F8 anchor day {targetDay} summon boss definition missing.");
                 return false;
             }
 
             if (!TryJumpToAnchorNightForEditorTest(dayNight, currentDay, targetDay, out var usedAtomicRestore))
             {
-                Debug.LogError($"[Nyangbingo] Shift+F9 failed advancing to day {targetDay} night.");
+                Debug.LogError($"[Nyangbingo] Alt+F8 failed advancing to day {targetDay} night.");
                 return false;
             }
 
             if (usedAtomicRestore)
                 HandleNightStart();
 
-            Debug.Log($"[Nyangbingo] Shift+F9 summon anchor ready: day {targetDay}, " +
-                      $"boss={targetBoss.Id}. B→선택, F6 재료, C 제작, 인벤에서 E 소환.");
+            Debug.Log($"[Nyangbingo] Alt+F8 summon anchor ready: day {targetDay}, " +
+                      $"boss={targetBoss.Id}. F6 선택, Ctrl+F6 재료, Shift+F6 제작, 인벤에서 우클릭 소환.");
             return true;
         }
 
@@ -479,10 +462,7 @@ namespace Nyangbingo.World
             raidTarget.ConfigureStealthRuntime(() =>
                 runtimeServices?.Talismans?.IgnoresYokaiAggro == true ||
                 SuppressesSurfaceFirstStrike());
-            var coreTargetObject = new GameObject("IceCoreRaidTarget");
-            coreTargetObject.transform.SetParent(transform, false);
-            coreRaidTarget = coreTargetObject.AddComponent<MainGameCoreRaidTarget>();
-            coreRaidTarget.Configure(raidTarget, runtimeServices.Invasion);
+            coreEnvironment = GetComponent<MainGameEnvironmentState>();
 
             bossManager.ConfigureForRuntime(bootstrap.TimeService, this);
             baekjungScheduler = new BaekjungScheduler(gameDataCatalog.DayEvents);
@@ -535,6 +515,7 @@ namespace Nyangbingo.World
             var locomotion = WorldMobPhysicsBody.ForBoss(definition.Kind);
             if (!TryGetBossSpawnPosition(definition, locomotion, out var position)) return null;
             var bossObject = new GameObject($"Boss_{definition.Id}");
+            bossObject.AddComponent<SortingGroup>().sortingOrder = CreatureSortingOrder;
             bossObject.transform.SetParent(transform, false);
             bossObject.transform.localScale = Vector3.one * BossScale;
             bossObject.transform.position = position;
@@ -568,7 +549,8 @@ namespace Nyangbingo.World
             visualObject.transform.SetParent(bossObject.transform, false);
             var bossRenderer = visualObject.AddComponent<SpriteRenderer>();
             visualObject.AddComponent<RuntimeSpriteBoundsHurtbox>().Configure(bossRenderer);
-            var bossArtId = definition.Kind == BossKind.Imugi ? "imugi" : definition.Id;
+            // Legacy role IDs stay stable for saves; the confirmed day-30 identity is Gangcheol.
+            var bossArtId = definition.Kind == BossKind.Imugi ? "gangcheol" : definition.Id;
             var bossArt = characterArtCatalog != null ? characterArtCatalog.Find(bossArtId) : null;
             if (bossArt?.Sprite == null)
                 RuntimePlaceholderVisual.Configure(bossRenderer, new Color(1f, .25f, .2f), 1.3f, 15);
@@ -586,6 +568,8 @@ namespace Nyangbingo.World
                 return null;
             }
             combat.ConfigureWarningArt(gameplayArtCatalog);
+            if (definition.Kind == BossKind.Imugi && bootstrap.Session.SurfaceIceLakeBounds.width > 0)
+                combat.ConfigureArena(bootstrap.Session.SurfaceIceLakeBounds);
             if (bossArt?.Sprite != null)
             {
                 var characterAnimator = visualObject.AddComponent<RuntimeCharacterSpriteAnimator>();
@@ -597,13 +581,13 @@ namespace Nyangbingo.World
             }
             if (definition.Kind == BossKind.Imugi)
             {
-                var bodySprite = characterArtCatalog?.FindSprite("imugi_body");
+                var bodySprite = characterArtCatalog?.FindSprite("gangcheol_body");
                 if (bodySprite != null)
                     bossObject.AddComponent<RuntimeImugiBodyVisual>().Configure(
                         bodySprite,
-                        characterArtCatalog?.FindSprite("imugi_pre_tail"),
-                        characterArtCatalog?.FindSprite("imugi_post_tail"),
-                        14);
+                        characterArtCatalog?.FindSprite("gangcheol_pre_tail"),
+                        characterArtCatalog?.FindSprite("gangcheol_post_tail"),
+                        14, characterArtCatalog?.FindSprite("gangcheol_hand"), completeTailSprites: true);
             }
             else if (definition.Kind == BossKind.Gangcheori ||
                      definition.Kind == BossKind.GangcheolBlaze ||
@@ -734,29 +718,31 @@ namespace Nyangbingo.World
                 bootstrap?.TimeService?.IsNight != true || gameDataCatalog?.Bosses == null ||
                 gameDataCatalog.Bosses.Count == 0)
             {
-                Debug.LogWarning("[Nyangbingo] F8 boss test requires initialized MainGame nighttime with no active boss.");
+                FindAnyObjectByType<Nyangbingo.UI.MainGameBossSummonUiController>()?.ShowExternalMessage(
+                    bossManager?.IsBossActive == true ? "보스 테스트: 활성 보스를 먼저 처치하세요(Shift+F8)." :
+                    bootstrap?.TimeService?.IsNight != true ? "보스 테스트는 밤에만 가능합니다." : "보스 테스트: 메인게임 초기화·데이터를 확인하세요.");
+                Debug.LogWarning("[Nyangbingo] 보스 테스트 requires initialized MainGame nighttime with no active boss.");
                 return false;
             }
 
             var definition = gameDataCatalog.FindBoss(preferredBossId);
-            for (var offset = 0; offset < gameDataCatalog.Bosses.Count && definition == null; offset++)
+            if (definition == null)
             {
-                var index = (debugBossIndex + offset) % gameDataCatalog.Bosses.Count;
-                definition = gameDataCatalog.Bosses[index];
-                if (definition != null) debugBossIndex = (index + 1) % gameDataCatalog.Bosses.Count;
+                FindAnyObjectByType<Nyangbingo.UI.MainGameBossSummonUiController>()?.ShowExternalMessage(
+                    $"보스 테스트 실패: {preferredBossId} 정의가 없습니다.");
+                return false;
             }
-            if (definition == null) return false;
 
             var health = CreateBoss(definition, false);
             if (health != null && bossManager.TryStart(definition, health, bootstrap.TimeService.GameSeconds))
             {
-                Debug.Log($"[Nyangbingo] F8 boss test started: {definition.Id} ({definition.DisplayName}).");
+                Debug.Log($"[Nyangbingo] 보스 테스트 started: {definition.Id} ({definition.DisplayName}).");
                 return true;
             }
 
             DestroyUnstartedBoss(health);
             RestoreYokaiAfterBossEncounter(true);
-            Debug.LogError($"[Nyangbingo] F8 boss test failed to start: {definition.Id}.");
+            Debug.LogError($"[Nyangbingo] 보스 테스트 failed to start: {definition.Id}.");
             return false;
         }
 
@@ -972,12 +958,25 @@ namespace Nyangbingo.World
             if (state.usesDetailedYokaiState)
             {
                 for (var index = 0; index < state.activeYokai.Count; index++)
-                    if (SpawnSavedYokai(state.activeYokai[index]) == null)
+                {
+                    var record = state.activeYokai[index];
+                    // Older restores could run the day-curve pool before the event gate.
+                    // An ordinary Gaekgwi before wave two is that duplicate, not the
+                    // event's midboss. The untouched event schedule will spawn it at +150s.
+                    if (ShouldDiscardLegacyEarlyGaekgwi(IsDayEventNight, record.raid,
+                        gameDataCatalog.FindYokai(record.yokaiId).Kind, baekjungScheduler.DispatchedWaveCount))
+                    {
+                        Debug.LogWarning("[Nyangbingo] Removed legacy pre-wave ordinary Gaekgwi during restore; " +
+                                         "the scheduled second wave remains pending.");
+                        continue;
+                    }
+                    if (SpawnSavedYokai(record) == null)
                     {
                         Debug.LogError("[Nyangbingo] MainGameEncounterCoordinator: detailed yokai restore failed.");
                         ClearSpawnedYokai();
                         return false;
                     }
+                }
                 if (regularSpawningEnabled)
                     for (var index = 0; index < state.pendingRegularYokaiIds.Count; index++)
                         EnqueuePendingRegular(
@@ -1254,7 +1253,9 @@ namespace Nyangbingo.World
             var day = bootstrap != null && bootstrap.TimeService != null ? bootstrap.TimeService.Day : 0;
             currentDayCurve = gameDataCatalog.FindDayCurve(day);
 
-            if (currentDayCurve == null) return;
+            // Restore rebuilds event subscriptions, so the regular handler can run before
+            // the Baekjung handler. The calendar, not callback order, owns this night.
+            if (currentDayCurve == null || IsDayEventNight) return;
 
             var includesForcedInvasionBoss = TryGetForcedInvasionCompositionKind(
                 day, out var forcedInvasionKind);
@@ -1392,7 +1393,7 @@ namespace Nyangbingo.World
                 1, health.MaxHealth);
             var loot = brain.GetComponent<YokaiLoot>();
             if (!health.RestoreCurrent(restoredHealth) ||
-                !brain.RestoreSaveState(record) ||
+                !brain.RestoreSaveState(record, prioritizeInvasionCore: IsRegularInvasionNight) ||
                 loot == null ||
                 !loot.RestoreStolenItems(record.stolenItems, gameDataCatalog.FindItem))
             {
@@ -1428,6 +1429,7 @@ namespace Nyangbingo.World
                     spawnSequence = Math.Max(spawnSequence, restoredSequence + 1);
             }
             var yokaiObject = new GameObject($"Yokai_{definition.Id}_{instanceId}");
+            yokaiObject.AddComponent<SortingGroup>().sortingOrder = CreatureSortingOrder;
             yokaiObject.transform.SetParent(transform, false);
             yokaiObject.transform.position = position;
             var health = yokaiObject.AddComponent<Health>();
@@ -1460,15 +1462,12 @@ namespace Nyangbingo.World
                 visualObject.transform.SetParent(yokaiObject.transform, false);
             var yokaiRenderer = visualObject.AddComponent<SpriteRenderer>();
             var yokaiArt = characterArtCatalog != null
-                ? characterArtCatalog.Find(definition.Id)
+                ? characterArtCatalog.Find(definition.Kind == YokaiKind.Gangcheori ? "imugi" :
+                    definition.Kind == YokaiKind.Imugi ? "gangcheol" : definition.Id)
                 : null;
             if (yokaiArt?.Sprite == null)
                 RuntimePlaceholderVisual.Configure(yokaiRenderer,
                     raid ? new Color(1f, .45f, .8f) : new Color(.8f, .35f, 1f), .8f, 10);
-            if (usesGroundedVisualRoot)
-                visualObject.transform.localPosition = Vector3.up *
-                    RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
-                        collider, yokaiRenderer);
             yokaiObject.AddComponent<RuntimeDamageFlash>();
             yokaiObject.AddComponent<RuntimeWorldDamagePopup>();
             var brain = yokaiObject.AddComponent<YokaiBrain>();
@@ -1479,15 +1478,19 @@ namespace Nyangbingo.World
                 characterAnimator.Configure(yokaiArt, 10);
                 characterAnimator.Bind(brain);
             }
+            if (usesGroundedVisualRoot)
+                visualObject.transform.localPosition = Vector3.up *
+                    RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
+                        collider, yokaiRenderer);
             if (definition.Kind == YokaiKind.Gangcheori)
             {
-                var bodySprite = characterArtCatalog?.FindSprite("gangcheol_body");
+                var bodySprite = characterArtCatalog?.FindSprite("imugi_body");
                 if (bodySprite != null)
                     yokaiObject.AddComponent<RuntimeGangcheoriBodyVisual>()
                         .Configure(
                             bodySprite,
-                            characterArtCatalog?.FindSprite("gangcheol_pre_tail"),
-                            characterArtCatalog?.FindSprite("gangcheol_post_tail"),
+                            characterArtCatalog?.FindSprite("imugi_pre_tail"),
+                            characterArtCatalog?.FindSprite("imugi_post_tail"),
                             yokaiRenderer,
                             9);
             }
@@ -1498,7 +1501,7 @@ namespace Nyangbingo.World
                 ? new CounterAuraSensor(yokaiObject.transform,
                     placedObjectRuntime.ActiveCounterAuras, targetCounters)
                 : targetCounters;
-            var selectedTarget = ResolveSpawnTarget(position, out var usesAggroRadius);
+            var selectedTarget = ResolveSpawnTarget(position, instanceSpawnTrack, out var usesAggroRadius);
             var suppressFirstStrike = SuppressesSurfaceFirstStrike();
             var hitPoints = DayCurveCombatRules.ResolveYokaiHitPoints(
                 gameDataCatalog, currentDayCurve, definition.HitPoints);
@@ -1506,7 +1509,7 @@ namespace Nyangbingo.World
                 definition, selectedTarget, counters, instanceSpawnTrack,
                 gateByAggroRadius: usesAggroRadius || suppressFirstStrike,
                 startEngaged: !usesAggroRadius && !suppressFirstStrike,
-                hitPointsOverride: hitPoints);
+                hitPointsOverride: hitPoints, playerTarget: raidTarget, coreRouteSource: this);
             if (definition.Kind == YokaiKind.Gangcheori)
             {
                 var breath = yokaiObject.AddComponent<GangcheoriBreathController>();
@@ -1541,6 +1544,11 @@ namespace Nyangbingo.World
                 spawnTrack = instanceSpawnTrack
             });
             runtimeServices.Register(brain);
+            if (definition.Kind == YokaiKind.Gaekgwi || instanceSpawnTrack != YokaiSpawnTrack.Resident)
+                Debug.Log($"[Nyangbingo] Yokai spawned: id={instanceId}, kind={definition.Kind}, raid={raid}, day={bootstrap.TimeService.Day}, " +
+                          $"waveCount={baekjungScheduler?.DispatchedWaveCount ?? 0}, " +
+                          $"position={position}, player={raidTarget.transform.position}, " +
+                          $"gameSeconds={bootstrap.TimeService.GameSeconds}.");
             return brain;
         }
 
@@ -1567,6 +1575,38 @@ namespace Nyangbingo.World
         private bool TryGetBossSpawnPosition(BossDefinition definition, WorldMobLocomotion locomotion,
             out Vector3 position)
         {
+            if (definition?.Kind == BossKind.Imugi &&
+                gameDataCatalog?.FindGlobal("imugi_arena")?.Value == "surface_ice_lake")
+            {
+                position = default;
+                var lake = bootstrap.Session.SurfaceIceLakeBounds;
+                if (lake.width == 0) return false;
+                var centerX = Mathf.FloorToInt(lake.center.x);
+                for (var offset = 0; offset < lake.width; offset++)
+                    for (var side = 0; side < (offset == 0 ? 1 : 2); side++)
+                    {
+                        var x = centerX + (side == 0 ? offset : -offset);
+                        if (x < lake.xMin || x >= lake.xMax) continue;
+                        var feet = new Vector3Int(x, lake.yMax, 0);
+                        if (bootstrap.TileService.TryGetYokaiSpawnPosition(feet,
+                                WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind), out var center))
+                        {
+                            // Boss roots use a feet pivot; the shared spawn helper returns the circle center.
+                            position = center - Vector3.up * WorldMobPhysicsBody.ColliderVerticalOffsetForBoss(definition.Kind);
+                            return true;
+                        }
+                        // Gangcheol flies. Excavating the lake surface must not silently cancel day 30.
+                        if (locomotion == WorldMobLocomotion.Flying)
+                            for (var y = lake.yMax + 1; y < bootstrap.TileService.Height - 1; y++)
+                            {
+                                var air = new Vector3Int(x, y, 0);
+                                if (bootstrap.TileService.GetTile(air).BlocksMovement) continue;
+                                position = bootstrap.TileService.GetCellCenterWorld(air);
+                                return true;
+                            }
+                    }
+                return false;
+            }
             if (definition?.Kind == BossKind.EopGuryeongi && raidTarget != null)
             {
                 position = raidTarget.transform.position;
@@ -1607,26 +1647,93 @@ namespace Nyangbingo.World
                     center, minimumSpawnRange, maximumRange)
                 : bootstrap.TileService.GetValidSpawnPositions(
                     center, minimumSpawnRange, maximumRange);
+            var bodyTiles = definition.UsesArenaBody ? 1 : WorldV72Rules.BodyTilesForHitPoints(definition.HitPoints);
+            var radius = .42f * bodyTiles;
+            candidates.RemoveAll(candidate =>
+                !bootstrap.TileService.TryGetYokaiSpawnPosition(candidate, radius, out _));
             if (!TerrainSpawnRules.TryChooseCell(
                     definition, candidates, gameDataCatalog, bootstrap.TileService,
                     bootstrap.Session.LastResult, spawnSequence, out var cell))
                 return false;
-            position = bootstrap.TileService.GetCellCenterWorld(cell);
-            return true;
+            return bootstrap.TileService.TryGetYokaiSpawnPosition(cell, radius, out position);
         }
 
-        private IYokaiTarget ResolveSpawnTarget(Vector3 spawnPosition, out bool usesAggroRadius)
+        private bool IsRegularInvasionNight => runtimeServices?.Invasion?.IsCurrentInvasionNight == true;
+
+        private IYokaiTarget ResolveSpawnTarget(Vector3 spawnPosition, YokaiSpawnTrack spawnTrack,
+            out bool usesAggroRadius)
         {
             usesAggroRadius = true;
+            // Regular invasion actors approach a live core regardless of distance or sealing.
+            // The separate raid flag belongs to Baekjung waves, not the regular invasion calendar.
+            if (spawnTrack == YokaiSpawnTrack.Raid && IsRegularInvasionNight)
+            {
+                var invasionCore = FindNextCore(spawnPosition, System.Array.Empty<Vector3Int>());
+                if (invasionCore?.TargetTransform != null)
+                {
+                    usesAggroRadius = false;
+                    return invasionCore;
+                }
+            }
             var coreCell = bootstrap?.SealSystem?.SealCoreCell;
-            if (!coreCell.HasValue || coreRaidTarget == null || bootstrap?.TileService == null)
-                return raidTarget;
-            coreRaidTarget.SetCorePosition(bootstrap.TileService, coreCell.Value);
-            if (!WorldV72Rules.ShouldTargetCore(
-                    spawnPosition, coreRaidTarget.transform.position, baseVicinityRadius))
-                return raidTarget;
+            var coreTarget = coreCell.HasValue ? ResolveCore(coreCell.Value) : null;
+            if (coreTarget?.TargetTransform == null || !WorldV72Rules.ShouldTargetCore(
+                    spawnPosition, coreTarget.TargetTransform.position, baseVicinityRadius))
+                coreTarget = FindNextCore(spawnPosition, System.Array.Empty<Vector3Int>());
+            if (coreTarget?.TargetTransform == null || !WorldV72Rules.ShouldTargetCore(
+                    spawnPosition, coreTarget.TargetTransform.position, baseVicinityRadius)) return raidTarget;
             usesAggroRadius = false;
-            return coreRaidTarget;
+            return coreTarget;
+        }
+
+        private void CopyLiveCoreCells()
+        {
+            liveCoreCells.Clear();
+            coreEnvironment?.CopyIceCoreCells(liveCoreCells);
+        }
+
+        public IYokaiTarget ResolveCore(Vector3Int cell)
+        {
+            CopyLiveCoreCells();
+            if (bootstrap?.TileService == null || !liveCoreCells.Contains(cell)) return null;
+            return GetCoreTarget(cell);
+        }
+
+        private MainGameCoreRaidTarget GetCoreTarget(Vector3Int cell)
+        {
+            if (!coreRaidTargets.TryGetValue(cell, out var coreTarget) || coreTarget == null)
+            {
+                var coreObject = new GameObject($"IceCoreRaidTarget_{cell.x}_{cell.y}");
+                coreObject.transform.SetParent(transform, false);
+                coreTarget = coreObject.AddComponent<MainGameCoreRaidTarget>();
+                coreRaidTargets[cell] = coreTarget;
+            }
+            coreTarget.Configure(raidTarget, runtimeServices.Invasion, this);
+            coreTarget.SetCorePosition(bootstrap.TileService, cell);
+            return coreTarget;
+        }
+
+        public IYokaiTarget FindNextCore(Vector3 origin, IReadOnlyCollection<Vector3Int> completedCells)
+        {
+            if (bootstrap?.TileService == null) return null;
+            CopyLiveCoreCells();
+            Vector3Int? nearestCell = null;
+            var nearestDistance = float.PositiveInfinity;
+            foreach (var cell in liveCoreCells)
+            {
+                if (completedCells?.Contains(cell) == true) continue;
+                var corePosition = bootstrap.TileService.GetCellCenterWorld(cell);
+                if (!IsRegularInvasionNight &&
+                    !WorldV72Rules.ShouldTargetCore(origin, corePosition, baseVicinityRadius)) continue;
+                var distance = (corePosition - origin).sqrMagnitude;
+                if (distance > nearestDistance) continue;
+                if (distance == nearestDistance && nearestCell.HasValue &&
+                    (cell.x > nearestCell.Value.x || cell.x == nearestCell.Value.x && cell.y >= nearestCell.Value.y))
+                    continue;
+                nearestCell = cell;
+                nearestDistance = distance;
+            }
+            return nearestCell.HasValue ? GetCoreTarget(nearestCell.Value) : null;
         }
 
         private float ReadPositiveGlobal(string key, float fallback)
@@ -1705,7 +1812,7 @@ namespace Nyangbingo.World
         }
 
         private static bool ValidateYokaiBrainState(YokaiStateRecord record) =>
-            record.behaviorState >= 0 && record.behaviorState <= 4 &&
+            YokaiBrain.ValidateSavedCoreGoalState(record) &&
             IsFinite(record.dawnFleeDirection) &&
             IsFiniteNonNegative(record.sieveStopRemaining) &&
             IsFiniteNonNegative(record.sieveCooldownRemaining) &&

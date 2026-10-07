@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g05
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g05
+  order: 5
+  phase: P0
+  track: auto
+  displayName: "\uC791\uC740 \uBC29 \uBC00\uD3D0"
+  iconRef: door
+  completeState: core_sealed
+  completeParam: true
+  guideTarget: core
+  hintMessageId: core_unsealed
+  mvpScope: A
+  note: "\uC624\uB108 \u300C\uC791\uC740 \uBC29\u300D. \uBC00\uD3D0 = flood-fill
+    \uACBD\uACC4\uAC00 seal-whitelist \uC778\uC815 \uC694\uC18C\uB85C\uB9CC \uB2EB\uD798.
+    \uCF54\uC5B4 \uD6A8\uACFC core_delta_plain \u22125 \u2192 core_delta_insulated
+    \u221210"

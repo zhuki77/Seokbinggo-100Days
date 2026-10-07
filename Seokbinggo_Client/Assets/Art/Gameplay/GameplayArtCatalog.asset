@@ -12,6 +12,124 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 146fb9fd9d01eab4fbd2c038e2e6fe7d, type: 3}
   m_Name: GameplayArtCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GameplayArtCatalog
+  weaponAttackAnimations:
+  - itemId: dokkaebi_club
+    frames:
+    - {fileID: -7532648142406835750, guid: cf2d1412caba2e8488a2a5ace3794de3, type: 3}
+    - {fileID: -4582820587884720156, guid: cf2d1412caba2e8488a2a5ace3794de3, type: 3}
+    - {fileID: 1338639345540327787, guid: cf2d1412caba2e8488a2a5ace3794de3, type: 3}
+    - {fileID: 3310765722267737331, guid: cf2d1412caba2e8488a2a5ace3794de3, type: 3}
+    - {fileID: 1995897896080823344, guid: cf2d1412caba2e8488a2a5ace3794de3, type: 3}
+    - {fileID: -3311924638417417644, guid: cf2d1412caba2e8488a2a5ace3794de3, type: 3}
+  - itemId: gakgung
+    frames:
+    - {fileID: -935891668522377106, guid: d5c5e99a7ed1cc44a8916528aa03eaa8, type: 3}
+    - {fileID: 1579317900911684508, guid: d5c5e99a7ed1cc44a8916528aa03eaa8, type: 3}
+    - {fileID: 4383710808981384256, guid: d5c5e99a7ed1cc44a8916528aa03eaa8, type: 3}
+    - {fileID: -1592425581301388514, guid: d5c5e99a7ed1cc44a8916528aa03eaa8, type: 3}
+    - {fileID: 6420623631906306016, guid: d5c5e99a7ed1cc44a8916528aa03eaa8, type: 3}
+    - {fileID: -7146320247318234536, guid: d5c5e99a7ed1cc44a8916528aa03eaa8, type: 3}
+  - itemId: ice_root_bow
+    frames:
+    - {fileID: -8394672993629107221, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: -6980570653062700246, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: -2722605960879846341, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: -4400276596344851100, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: 3737567911028161890, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: -5779011388489685635, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: 2588883238988060901, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: -4436145400010288408, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+    - {fileID: 2863782270536055931, guid: aa55612b450bf034aac93d7a56d8d428, type: 3}
+  - itemId: seonge_gakgung
+    frames:
+    - {fileID: -5312252829879560949, guid: 14ea801ced1aaec4697e06fbfb415f03, type: 3}
+    - {fileID: 1275343130295563633, guid: 14ea801ced1aaec4697e06fbfb415f03, type: 3}
+    - {fileID: 6546252173632477023, guid: 14ea801ced1aaec4697e06fbfb415f03, type: 3}
+    - {fileID: 2101096199069695219, guid: 14ea801ced1aaec4697e06fbfb415f03, type: 3}
+    - {fileID: -4065437644430481415, guid: 14ea801ced1aaec4697e06fbfb415f03, type: 3}
+    - {fileID: 6781203298887384408, guid: 14ea801ced1aaec4697e06fbfb415f03, type: 3}
+  - itemId: straw_sling
+    frames:
+    - {fileID: -5736011147549968707, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+    - {fileID: 5844866201189424863, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+    - {fileID: -8828042303382771099, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+    - {fileID: 9105219379594418060, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+    - {fileID: -7403796621570589713, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+    - {fileID: -4672829261971336555, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+    - {fileID: 2057821414804222939, guid: ff712a35f65cf9b45aa9ef36c27852c1, type: 3}
+  - itemId: hapjukseon
+    frames:
+    - {fileID: -434832377014760426, guid: 18872a99a6a1aea418d1878e4cd37b49, type: 3}
+    - {fileID: 9128639228162066747, guid: 18872a99a6a1aea418d1878e4cd37b49, type: 3}
+    - {fileID: -622457099201270479, guid: 18872a99a6a1aea418d1878e4cd37b49, type: 3}
+    - {fileID: -3853659157513231142, guid: 18872a99a6a1aea418d1878e4cd37b49, type: 3}
+    - {fileID: -7959331647561387187, guid: 18872a99a6a1aea418d1878e4cd37b49, type: 3}
+  - itemId: cheolseon
+    frames:
+    - {fileID: -2796553284920602542, guid: e1f8fc847a0dc814a90c79798cf09d7b, type: 3}
+    - {fileID: 1741561638824173791, guid: e1f8fc847a0dc814a90c79798cf09d7b, type: 3}
+    - {fileID: -5387124056938505938, guid: e1f8fc847a0dc814a90c79798cf09d7b, type: 3}
+    - {fileID: -953721525687449079, guid: e1f8fc847a0dc814a90c79798cf09d7b, type: 3}
+    - {fileID: -8587751258239231592, guid: e1f8fc847a0dc814a90c79798cf09d7b, type: 3}
+  - itemId: seolpungseon
+    frames:
+    - {fileID: 8465516784562438090, guid: 485c9dc6ff1db8447bc381ba210db8b2, type: 3}
+    - {fileID: 7348550287151232576, guid: 485c9dc6ff1db8447bc381ba210db8b2, type: 3}
+    - {fileID: 4930397369202865878, guid: 485c9dc6ff1db8447bc381ba210db8b2, type: 3}
+    - {fileID: 3481960155712571151, guid: 485c9dc6ff1db8447bc381ba210db8b2, type: 3}
+    - {fileID: 6011555468803413178, guid: 485c9dc6ff1db8447bc381ba210db8b2, type: 3}
+  - itemId: seonge_fan
+    frames:
+    - {fileID: -3444865296279552102, guid: a664232fb0ac28e4798b5b4dbd1e89a4, type: 3}
+    - {fileID: -7747569832511292272, guid: a664232fb0ac28e4798b5b4dbd1e89a4, type: 3}
+    - {fileID: 9143751030952105758, guid: a664232fb0ac28e4798b5b4dbd1e89a4, type: 3}
+    - {fileID: -2596344652424475844, guid: a664232fb0ac28e4798b5b4dbd1e89a4, type: 3}
+    - {fileID: 6711377146001948791, guid: a664232fb0ac28e4798b5b4dbd1e89a4, type: 3}
+  - itemId: cold_wave_fan
+    frames:
+    - {fileID: 3339920092776652127, guid: fc0a9f531f1aa4049924b2a6efb7332c, type: 3}
+    - {fileID: -4817000181650983637, guid: fc0a9f531f1aa4049924b2a6efb7332c, type: 3}
+    - {fileID: 107624079059865093, guid: fc0a9f531f1aa4049924b2a6efb7332c, type: 3}
+    - {fileID: -4393445855228314419, guid: fc0a9f531f1aa4049924b2a6efb7332c, type: 3}
+    - {fileID: -641564150836793301, guid: fc0a9f531f1aa4049924b2a6efb7332c, type: 3}
+  - itemId: singijeon_sondae
+    frames:
+    - {fileID: 21300000, guid: cc7a264f5897a3c41972bf35797edd5a, type: 3}
+    - {fileID: 21300000, guid: 87fc820695d1f644cb6aa79a40b5b09e, type: 3}
+    - {fileID: 21300000, guid: 8432996e6e4a3a24b95c82438d822323, type: 3}
+    - {fileID: 21300000, guid: c6299b5cfffd1a743aa572bcb5368e4d, type: 3}
+    - {fileID: 21300000, guid: 6e54618748cd12044ba7c80786aeb0a2, type: 3}
+    - {fileID: 21300000, guid: f4bbf53a5acbbe943ae42ed9107ee953, type: 3}
+    - {fileID: 21300000, guid: b2a95e4ed1c1e0946ae59c1e76af51ee, type: 3}
+    - {fileID: 21300000, guid: 59d90a2e7cd60344bb0b2f6fd31e1d57, type: 3}
+  - itemId: cold_wave_singijeon
+    frames:
+    - {fileID: 21300000, guid: 3f3e94e814619f94ca9c07b30fa3c4b9, type: 3}
+    - {fileID: 21300000, guid: 79fd74c9a839f204b8d2dcd0ef3a146e, type: 3}
+    - {fileID: 21300000, guid: 4d360e54d8dd0aa4eafad8c7d23ee420, type: 3}
+    - {fileID: 21300000, guid: a24f895a19febe44ba19621ceddc93cc, type: 3}
+    - {fileID: 21300000, guid: a8ff71aa20762e048bafe34184f6085b, type: 3}
+    - {fileID: 21300000, guid: fc9c89bddd38ed94aa84321a24648cd3, type: 3}
+    - {fileID: 21300000, guid: 252a45cb549c7bd45904f28dcc654131, type: 3}
+    - {fileID: 21300000, guid: a0fc049234297764e983fcaaeabc723c, type: 3}
+    - {fileID: 21300000, guid: 69fdcec80fc5904449fc6b1745053ddc, type: 3}
+  - itemId: ice_root_whipfan
+    frames:
+    - {fileID: 21300000, guid: 101117c24495c48449585d7e976a4d49, type: 3}
+    - {fileID: 21300000, guid: 603456996122f7841b293a26f9c5aa5f, type: 3}
+    - {fileID: 21300000, guid: 4ce74188e08c1ef4e9bd87485b07bb78, type: 3}
+    - {fileID: 21300000, guid: 958b01d3749a59b47afe840d414d7592, type: 3}
+    - {fileID: 21300000, guid: 33c5a644623c3b94e98d8c68adeddc8a, type: 3}
+    - {fileID: 21300000, guid: 493d63b3a81a0d54c90bf44fa3e0f858, type: 3}
+    - {fileID: 21300000, guid: 3843406553d96cd49964b68ae243f632, type: 3}
+  arrowProjectile: {fileID: 3989408422510696299, guid: 203ee5f2074888644bb737da315caf98, type: 3}
+  slingStoneProjectile: {fileID: -2015109436368767599, guid: c8846330c87d4b64494466523b37e46d, type: 3}
+  fanWindFrames:
+  - {fileID: 3521251568883760572, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
+  - {fileID: -373040935055202425, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
+  - {fileID: -8378419233823984523, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
+  - {fileID: -5610657100678056555, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
+  - {fileID: -7425023199020944573, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
   temperatureFrames:
   - {fileID: 6089713551096819619, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
   - {fileID: 7442340692086479441, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
@@ -148,9 +266,38 @@ MonoBehaviour:
   - {fileID: -4108460224007923871, guid: 2fcf25b3e4d71cc4da5e4e90c632d2d5, type: 3}
   - {fileID: 5472590092209955421, guid: 35de94610bc8d5f408d1c25bcc263a3c, type: 3}
   dangerIcon: {fileID: 1821668838913166679, guid: 5b4488cd45c23944e8c314bfa7e70b4b, type: 3}
+  yokaiDamageIcon: {fileID: 9070994925374598596, guid: 407e84dee25d37945ab16b0d7ce843b5, type: 3}
+  burnStatusIcon: {fileID: 4019775761413358926, guid: 618f67915c9758642bd07033ac0305a8, type: 3}
+  sealLeakStatusIcon: {fileID: 8984095946335967113, guid: c1480365b78ffec49a11ec1efdb8e080, type: 3}
+  sealLeakStaticMarker: {fileID: -8505115595386005379, guid: 0a0271c126b10014b913d19ebfa88f80, type: 3}
+  goalDirectionArrow: {fileID: -3833979646922085508, guid: eee3cbf1cf83eb8468544751475026d8, type: 3}
+  sealLeakMarkerFrames:
+  - {fileID: 21300000, guid: 27a81d3b5e42cd846b760ed451d40ef5, type: 3}
+  - {fileID: 21300000, guid: 39ed3c5fc7db0f14da67ae6510195d05, type: 3}
+  - {fileID: 21300000, guid: 49ffd71f21d893843b1a394a7e066e1f, type: 3}
+  - {fileID: 21300000, guid: a5bcbb86ad072c243ad7310f975746fd, type: 3}
+  - {fileID: 21300000, guid: 5c3f83b92b062df4d8c85356c2c90eea, type: 3}
+  - {fileID: 21300000, guid: 4bf4edfec0bbf784393cb72d95d4ee65, type: 3}
+  sealRepairCheck: {fileID: 2556307783843066106, guid: e7a13db4d91502b499f0ab35d034b66d, type: 3}
+  sealSuccessFrames:
+  - {fileID: 21300000, guid: af2d016ee42f1dd4b8841f2fcb15f923, type: 3}
+  - {fileID: 21300000, guid: 023a11512c2b8304a894bf5f6e875351, type: 3}
+  - {fileID: 21300000, guid: 43dbab86376b3ec45b907deb83f11a6c, type: 3}
+  - {fileID: 21300000, guid: 3dfff5ae347a54a4a8e89a1ec8efaa57, type: 3}
+  - {fileID: 21300000, guid: b3bf75581af7464418a7f7bb4e5893c2, type: 3}
+  - {fileID: 21300000, guid: aaa3c4ffd101145478a09237260d7561, type: 3}
+  - {fileID: 21300000, guid: d9c4ce933fc400e4e87abdf7b29c05b0, type: 3}
+  - {fileID: 21300000, guid: f42dcec297a74ea45b9de079d41ad06d, type: 3}
+  - {fileID: 21300000, guid: 362ef663c8b0c4a47ac9b1b43cb45167, type: 3}
+  - {fileID: 21300000, guid: 5fb665e53a445e64da1909a10969183b, type: 3}
+  hypothermiaStatusIcon: {fileID: 3269218813956921848, guid: 0077b6e3650405d45964581b333fb047, type: 3}
+  nightSpawnBlockedIcon: {fileID: -1279190295927003375, guid: 3179805dc46f03f4b98529e158e193e1, type: 3}
+  deathTearPouch: {fileID: 2628922703091145929, guid: 56c0c5355b02b1241ae44473fdbb45a6, type: 3}
   bossWarningLarge: {fileID: -5218591732139051355, guid: be5c714da4f8b324e932ba1c069c442c, type: 3}
   bossWarningSmall: {fileID: 5143714742549247459, guid: b646ba39a938a2e4f99d6ea9d8e39782, type: 3}
   bossHealthFrame: {fileID: -3631641534334911012, guid: 48fda1d1e3264834393466dbbd900ba6, type: 3}
+  bossHealthGaekgwi: {fileID: 21300000, guid: 25ce1bcc682701b478406d435b0f0195, type: 3}
+  resultContinue: {fileID: 21300000, guid: 04919b80c72f13e4fbf3c930a18ac8a6, type: 3}
   bossHealthGangcheol: {fileID: -3907475943721765262, guid: ba3a20869887ab8419188f03b16729e6, type: 3}
   bossHealthKingDokkaebi: {fileID: -4723297385178878477, guid: 739aefd932324ae4c996b9e63d3da8e8, type: 3}
   bossHealthMotherBulgasari: {fileID: -5371275645215204617, guid: 82cda2fde5eb4294db37b388610ce3d7, type: 3}

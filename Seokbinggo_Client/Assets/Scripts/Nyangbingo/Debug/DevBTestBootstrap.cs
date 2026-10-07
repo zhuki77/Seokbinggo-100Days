@@ -397,13 +397,24 @@ namespace Nyangbingo.Debugging
             var restored = restoredRuntime.TryRestore(exported, new[] { objectId }) &&
                            restoredRuntime.TryGet(objectId, out var restoredStorage) &&
                            restoredStorage.Capacity == 40 && restoredStorage.Count(wood?.Id) == 7 &&
-                           !restoredRuntime.CanRecover(objectId) && restoredStorage.TryTransferSlotTo(0, player) &&
+                           restoredRuntime.CanRecover(objectId) && restoredStorage.TryTransferSlotTo(0, player) &&
                            restoredRuntime.CanRecover(objectId) && restoredRuntime.TryRemoveEmpty(objectId);
             var duplicateRejected = exported.Count == 1 &&
                                     !new JangdokStorageRuntime(gameDataCatalog.FindItem,
                                         JangdokStorageRuntime.SlotCount).TryRestore(
                                         new[] { exported[0], exported[0] }, new[] { objectId });
-            if (registered && restored && duplicateRejected && player.Count(wood?.Id) == 7)
+            const string filledId = "jangdok_filled_removal_test";
+            var filledRemoval = wood != null && restoredRuntime.TryRegister(filledId) &&
+                restoredRuntime.TryGet(filledId, out var filled) &&
+                filled.TryAddWithStorageState(wood.Id, 7, true, .7f, .2f) &&
+                restoredRuntime.CanRecover(filledId) &&
+                restoredRuntime.TryTakeContentsAndRemove(filledId, out var contents) &&
+                contents.Count == 1 && contents[0].itemId == wood.Id && contents[0].amount == 7 &&
+                contents[0].hasStorageCondition && Mathf.Approximately(contents[0].storageCondition01, .7f) &&
+                Mathf.Approximately(contents[0].storageMeltRemainder, .2f) && filled.IsEmpty &&
+                !restoredRuntime.TryGet(filledId, out _) &&
+                !restoredRuntime.TryTakeContentsAndRemove(filledId, out _);
+            if (registered && restored && duplicateRejected && filledRemoval && player.Count(wood?.Id) == 7)
                 Debug.Log("[Nyangbingo] v29 jangdok uses 40 independent slots, transfers atomically, blocks non-empty recovery, and saves by placed-object ID.");
             else Debug.LogError("[Nyangbingo] v29 jangdok storage contract test failed.");
         }
@@ -869,8 +880,8 @@ namespace Nyangbingo.Debugging
 
             var valid = gameDataCatalog.Items.Count == 86 && gameDataCatalog.Recipes.Count == 53 &&
                         gameDataCatalog.Globals.Count == 100 && gameDataCatalog.SealWhitelist.Count == 23 &&
-                        scopeACount == 51 && scopeBCount == 2 && productVisibleCount == 53 &&
-                        productScopeBLeak &&
+                        scopeACount == 51 && scopeBCount == 2 && productVisibleCount == 51 &&
+                        !productScopeBLeak &&
                         wallpaperItem != null && wallpaperItem.Category == ItemCategory.Placeable &&
                         wallpaperItem.MvpScope == ItemMvpScope.A &&
                         wallpaperRecipe != null && wallpaperRecipe.Station == CraftingStation.Workbench &&
@@ -2979,7 +2990,7 @@ namespace Nyangbingo.Debugging
                 sealPct = 87.5f,
                 modulesDone = new System.Collections.Generic.List<string>
                 {
-                    "insulated_wall", "insulated_door", "insulated_roof", "jar_storage", "ice_storage"
+                    "insul_wall", "door", "roof", "jangdok", "ice_core"
                 },
                 dogam = new System.Collections.Generic.List<CodexRecord>
                 {
@@ -5249,11 +5260,15 @@ namespace Nyangbingo.Debugging
             var definition = YokaiDefinition.CreateRuntime(YokaiKind.Yagwanggwi, 10, 3.5f, 12, 0f,
                 new ItemAmount[0], inventoryStealSlots: 1, inventoryStealMaxItems: 10);
 
+            var theftItem = ItemDefinition.CreateRuntime("debug_theft_item", "Debug theft", 99);
+
             var groundTargetObject = new GameObject("TemporaryGroundLootTarget");
             groundTargetObject.transform.position = Vector3.right * .5f;
             var groundTarget = groundTargetObject.AddComponent<DevBTestYokaiTarget>();
             groundTarget.HasGroundLoot = true;
             var groundThief = new GameObject("TemporaryGroundThief");
+            groundTarget.TheftItem = theftItem;
+            groundThief.AddComponent<YokaiLoot>().ConfigureForRuntime(definition);
             var groundBrain = groundThief.AddComponent<YokaiBrain>();
             groundBrain.ConfigureForRuntime(definition, groundTarget);
             groundBrain.Tick(0f);
@@ -5263,6 +5278,8 @@ namespace Nyangbingo.Debugging
             inventoryTargetObject.transform.position = Vector3.right * .5f;
             var inventoryTarget = inventoryTargetObject.AddComponent<DevBTestYokaiTarget>();
             var inventoryThief = new GameObject("TemporaryInventoryThief");
+            inventoryTarget.TheftItem = theftItem;
+            inventoryThief.AddComponent<YokaiLoot>().ConfigureForRuntime(definition);
             var inventoryBrain = inventoryThief.AddComponent<YokaiBrain>();
             inventoryBrain.ConfigureForRuntime(definition, inventoryTarget);
             inventoryBrain.Tick(0f);
@@ -5273,6 +5290,8 @@ namespace Nyangbingo.Debugging
             var protectedTarget = protectedTargetObject.AddComponent<DevBTestYokaiTarget>();
             protectedTarget.IsInventoryTheftBlocked = true;
             var blockedThief = new GameObject("TemporaryBlockedThief");
+            protectedTarget.TheftItem = theftItem;
+            blockedThief.AddComponent<YokaiLoot>().ConfigureForRuntime(definition);
             var blockedBrain = blockedThief.AddComponent<YokaiBrain>();
             blockedBrain.ConfigureForRuntime(definition, protectedTarget);
             blockedBrain.Tick(0f);
@@ -5292,6 +5311,8 @@ namespace Nyangbingo.Debugging
             Destroy(inventoryThief);
             Destroy(protectedTargetObject);
             Destroy(blockedThief);
+            Destroy(theftItem);
+            Destroy(definition);
         }
 
         private void TestImportedYokaiSpawnTracksAndDawnFlee()

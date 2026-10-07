@@ -99,6 +99,9 @@ namespace Nyangbingo.Bosses
         private float openingDodgeRemaining;
         private WorldMobPhysicsBody physicsBody;
         private RuntimeCharacterSpriteAnimator characterAnimator;
+        private RectInt? arena;
+
+        public void ConfigureArena(RectInt bounds) => arena = bounds.width > 0 ? bounds : null;
 
         public BossDefinition Definition => definition;
         public bool IsOpeningDodgeActive => openingDodgeRemaining > 0f;
@@ -226,6 +229,11 @@ namespace Nyangbingo.Bosses
             TickOpeningDodge(deltaGameSeconds);
             TickSpecialEffect(deltaGameSeconds);
 
+            // The day-30 encounter belongs to its surface arena, including when the player is underground.
+            if (arena.HasValue && (targetTransform.position.x < arena.Value.xMin ||
+                targetTransform.position.x >= arena.Value.xMax || targetTransform.position.y < arena.Value.yMin))
+                return;
+
             contactAttackRemaining = Mathf.Max(0f, contactAttackRemaining - deltaGameSeconds);
             if (specialActive)
             {
@@ -255,6 +263,7 @@ namespace Nyangbingo.Bosses
                 ? physicsBody != null ? physicsBody.NavigationDirection(targetOffset) : navigationOffset / navigationDistance
                 : lockedAim;
             var hasAttackLine = physicsBody == null || physicsBody.HasClearAttackLine(targetTransform.position);
+            if (!hasAttackLine && TryAttackBlockingStructure(direction, contactRange)) return;
             var recognitionOriginLocalOffset = ResolveSpecialOriginLocalOffset(direction);
             var recognitionOriginWorld =
                 (Vector2)transform.TransformPoint(recognitionOriginLocalOffset);
@@ -272,10 +281,20 @@ namespace Nyangbingo.Bosses
             {
                 var travel = Mathf.Min(MoveSpeedTilesPerGameSecond * deltaGameSeconds,
                     Mathf.Max(0f, navigationDistance - contactRange));
+                if (arena.HasValue && Mathf.Abs(direction.x) > .0001f)
+                {
+                    var edge = direction.x > 0f ? arena.Value.xMax - .5f : arena.Value.xMin + .5f;
+                    travel = Mathf.Min(travel, Mathf.Max(0f, (edge - transform.position.x) / direction.x));
+                }
+                if (arena.HasValue && direction.y < -.0001f)
+                    travel = Mathf.Min(travel, Mathf.Max(0f,
+                        (arena.Value.yMin + .5f - transform.position.y) / direction.y));
                 var actualTravel = physicsBody != null
                     ? physicsBody.Move(direction * travel)
                     : MoveWithoutPhysics(direction * travel);
                 if (actualTravel > Mathf.Epsilon) SetAnimationMovement(direction);
+                else if (travel > Mathf.Epsilon && physicsBody?.IsKnockbackActive != true &&
+                         TryAttackBlockingStructure(direction, contactRange)) return;
                 targetOffset = (Vector2)(targetTransform.position - transform.position);
                 distance = targetOffset.magnitude;
                 navigationOffset = physicsBody != null ? physicsBody.NavigationOffset(targetOffset) : targetOffset;
@@ -298,6 +317,27 @@ namespace Nyangbingo.Bosses
             openingDodgeRemaining = Mathf.Max(0f, openingDodgeRemaining - deltaGameSeconds);
             if (openingDodgeRemaining > 0f) return;
             health.SetDamageTakenMultiplier(1f);
+        }
+
+        private bool TryAttackBlockingStructure(Vector2 approachDirection, float attackRange)
+        {
+            if (targetComponent is not IYokaiBarrierTarget barrier ||
+                physicsBody == null ||
+                !physicsBody.TryFindBlockingStructure(approachDirection, attackRange,
+                    out var cell, out var material)) return false;
+            var dps = definition.WallDamageFor(material);
+            if (dps <= 0f || float.IsNaN(dps) || float.IsInfinity(dps)) return false;
+            // Use the authoritative durability path (including door footprints and pace modifiers).
+            // Contact cooldown is shared so opening a door cannot produce an extra immediate hit.
+            characterAnimator?.SetFacing(ResolveFacingDirection(approachDirection));
+            if (contactAttackRemaining <= .0001f &&
+                barrier.TryDamageBlockingWall(cell, dps * ContactAttackIntervalGameSeconds))
+            {
+                contactAttackRemaining = ContactAttackIntervalGameSeconds;
+                Attacked?.Invoke();
+                GameEvents.RaiseWallDamaged();
+            }
+            return true;
         }
 
         private float ResolveContactRange() =>

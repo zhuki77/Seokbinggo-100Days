@@ -127,7 +127,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: bokjumeoni
     originalName: 
-    pivot: {x: 0.4615385, y: -0.071428575}
+    pivot: {x: 0.5, y: 0}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -135,8 +135,8 @@ ScriptedImporter:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 13
-      height: 14
+      width: 16
+      height: 16
     spriteID: 3ac10694d9bc9ab4faf4de0fd8e66ff5
     spriteBone: []
     spriteOutline: []
@@ -165,10 +165,10 @@ ScriptedImporter:
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
-        x: 2
-        y: 1
-        width: 13
-        height: 14
+        x: 0
+        y: 0
+        width: 16
+        height: 16
       spriteId: 3ac10694d9bc9ab4faf4de0fd8e66ff5
     linkedCells: []
     tileCells: []

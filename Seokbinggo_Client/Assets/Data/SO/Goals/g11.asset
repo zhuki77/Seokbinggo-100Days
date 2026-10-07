@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g11
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g11
+  order: 11
+  phase: P1
+  track: select
+  displayName: "\uB3C4\uAE68\uBE44 \uB300\uC7A5 \uACA9\uD30C"
+  iconRef: king_dokkaebi
+  completeState: boss_defeated
+  completeParam: king_dokkaebi
+  guideTarget: summon:ssireum_satba
+  hintMessageId: goal_king
+  mvpScope: A
+  note: "\uAD8C\uC7A5 8\uC77C\uCC28 \xB7 \uC528\uB984 \uC0C5\uBC14 = \uBC29\uB9DD\uC774
+    \uC870\uAC011\xB7\uC0BC\uC904\uAE3010\xB7\uB098\uBB345 \xB7 \uD3ED\uC5FC 1\u21922"

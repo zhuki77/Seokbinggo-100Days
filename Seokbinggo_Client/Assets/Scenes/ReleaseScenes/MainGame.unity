@@ -10148,6 +10148,18 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 26980fc3e58a59a4cba0577293a53927, type: 2}
   - elementType: wallpaper
     tile: {fileID: 0}
+  - elementType: seonge_ore
+    tile: {fileID: 11400000, guid: 484e8a856dc320746aba5a2b980625f7, type: 2}
+  - elementType: cold_wave_ore
+    tile: {fileID: 11400000, guid: c6556fb2c7c6443429f98f40fda1e3e6, type: 2}
+  - elementType: oyster_mushroom
+    tile: {fileID: 11400000, guid: 845e1385a4e58fd4d8b674181b0f693e, type: 2}
+  - elementType: shiitake
+    tile: {fileID: 11400000, guid: 64103e49eb9dcba4a908981c1145fd65, type: 2}
+  - elementType: ice_root
+    tile: {fileID: 11400000, guid: b2698217b1bd13c41a2fbc81c9c6d0e9, type: 2}
+  - elementType: seogi
+    tile: {fileID: 11400000, guid: 31da8d9c69225604a80dc189aaf02c95, type: 2}
   iceAltarQuadrantTiles:
   - {fileID: 11400000, guid: c751d131fa93ebd4292a61f9ca2f164c, type: 2}
   - {fileID: 11400000, guid: 178d779bcbd0b8e4982d70fc2ab373cc, type: 2}
@@ -21127,8 +21139,8 @@ MonoBehaviour:
   knockback: 0.5
   combatProfile: {fileID: 0}
   clawProfile: {fileID: 0}
---- !u!58 &2135433845
-CircleCollider2D:
+--- !u!61 &2135433845
+BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -21161,8 +21173,9 @@ CircleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
-  m_Radius: 0.5
+  m_Offset: {x: 0, y: 0.52}
+  m_Size: {x: 0.9, y: 1.8}
+  m_EdgeRadius: 0
 --- !u!50 &2135433846
 Rigidbody2D:
   serializedVersion: 5

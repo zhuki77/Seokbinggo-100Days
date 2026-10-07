@@ -16,12 +16,28 @@ namespace Nyangbingo.World
         private readonly HeatStageService heatStage;
         private readonly GameDataCatalog catalog;
         private readonly MainGameEnvironmentState environmentState;
+        private readonly SealSystem sealSystem;
+        private readonly Func<bool> sunlightImmune;
         private float fractionalDamage;
         private bool disposed;
 
+        public bool IsBurnActive
+        {
+            get
+            {
+                if (!IsSunlightExposed()) return false;
+                DayCurveCombatRules.ResolveHeatStageModifiers(catalog, timeService.Day,
+                    environmentState?.HeatStageReduction ?? 0, out var reduction, out var escalation);
+                var rate = heatStage.ResolveDayFireDamagePerSecond(timeService.Day, reduction, escalation) *
+                    health.DamageTakenMultiplier * health.FireDamageMultiplier;
+                return rate > 0f && !float.IsNaN(rate) && !float.IsInfinity(rate);
+            }
+        }
+
         public DayHeatDamageService(Health playerHealth, Transform playerTransform,
             DayNightService clock, WorldSessionController worldSession, HeatStageService stages,
-            GameDataCatalog data, MainGameEnvironmentState environment = null)
+            GameDataCatalog data, MainGameEnvironmentState environment = null,
+            SealSystem seals = null, Func<bool> isSunlightImmune = null)
         {
             health = playerHealth ?? throw new ArgumentNullException(nameof(playerHealth));
             player = playerTransform ?? throw new ArgumentNullException(nameof(playerTransform));
@@ -30,6 +46,8 @@ namespace Nyangbingo.World
             heatStage = stages ?? throw new ArgumentNullException(nameof(stages));
             catalog = data;
             environmentState = environment;
+            sealSystem = seals;
+            sunlightImmune = isSunlightImmune;
             health.Died += ResetExposure;
         }
 
@@ -37,9 +55,7 @@ namespace Nyangbingo.World
         {
             if (disposed || deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) ||
                 float.IsInfinity(deltaGameSeconds)) return;
-            if (health.IsDead || timeService.IsNight || !session.HasWorld ||
-                !WorldExposureRules.TryIsSurfaceExposed(
-                    player.position, session.LastResult.surfaceHeights, out var exposed) || !exposed)
+            if (!IsSunlightExposed())
             {
                 fractionalDamage = 0f;
                 return;
@@ -70,5 +86,12 @@ namespace Nyangbingo.World
         }
 
         private void ResetExposure() => fractionalDamage = 0f;
+
+        private bool IsSunlightExposed() =>
+            !disposed && !health.IsDead && sunlightImmune?.Invoke() != true &&
+            !timeService.IsNight && session.HasWorld &&
+            WorldExposureRules.TryIsSurfaceExposed(
+                player.position, session.LastResult.surfaceHeights, out var exposed) && exposed &&
+            sealSystem?.IsInsideSealedArea(player.position) != true;
     }
 }

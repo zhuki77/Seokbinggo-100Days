@@ -1,0 +1,699 @@
+[
+  {
+    "path": "player_frostclaw.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 29,
+    "depth": 32,
+    "tags": [
+      {
+        "name": "idle",
+        "from": 0,
+        "to": 5
+      },
+      {
+        "name": "walk",
+        "from": 6,
+        "to": 11
+      },
+      {
+        "name": "Jump",
+        "from": 12,
+        "to": 17
+      },
+      {
+        "name": "die",
+        "from": 18,
+        "to": 23
+      },
+      {
+        "name": "attack",
+        "from": 24,
+        "to": 28
+      }
+    ],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 5,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 6,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          1,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 7,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 8,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          3,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 9,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 10,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 11,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          3,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 12,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          4,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 13,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 14,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 15,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 16,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 17,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 18,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          4,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 19,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          5,
+          23,
+          32
+        ]
+      },
+      {
+        "frame": 20,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          2,
+          7,
+          21,
+          32
+        ]
+      },
+      {
+        "frame": 21,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          0,
+          13,
+          22,
+          32
+        ]
+      },
+      {
+        "frame": 22,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          0,
+          15,
+          23,
+          32
+        ]
+      },
+      {
+        "frame": 23,
+        "duration_ms": 200,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          0,
+          16,
+          23,
+          32
+        ]
+      },
+      {
+        "frame": 24,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 25,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 26,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 27,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 28,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "247ef880a58f2c21dcdb551c0c623300e5ce48861ecc46de588e7c65bf1f4df7",
+      "8933277046e516e19e87b4b8a7a3f89bf5975e8fbc0410f8a00b97c719222887",
+      "342387cdb8a1194e5938f2e018d8e18381f87980cd8a7dfd0610686b139079a7",
+      "342387cdb8a1194e5938f2e018d8e18381f87980cd8a7dfd0610686b139079a7",
+      "35b22fd6b7e3a1fa8882dee0b659ed633d5199d7d276942dfe1aa5c843754202",
+      "c039f58c3395e1460be13f901fd92a086e3bb6706048623fb2374b36f3084598",
+      "fa2e552bec4336724439eacb49a8727ce901b284935fa7416814bc99bc19661c",
+      "a344bdaecf17c018ecad9332167997fe10a10c8de1a8ae7f997eda098a396171",
+      "86b0b99100b12a306f3ca8e40989ca2cd6928bc6cda3228aa359e60e10fbf0d3",
+      "088db6b40771861382fda48676f609bcfee9b7feda9f245bd932fd5527510460",
+      "b1d543f95c3e85b8d229a8a1793baedf836928cb4c52a4a124889310eec3efa7",
+      "d81be4aa620ec8339967e25c7142e5caa84493cc55ffde59a1dde4db172c1f94",
+      "341a2c00fca042f25ab8d9ecc8fd5f3648e8f7fb419904b2acc680fcd4aa1d99",
+      "ab035036c31b2c490539ef73c1ea60ea67b621bf25aa76bd583046f871808c3b",
+      "6b3c720d441be298f5f347e5b4a66dc844409a44f7cad6c318b562798d4c7b70",
+      "98bc2d989833093b5e8f6e9c420f05080f4d82732bd254f0c7fadd231adce71d",
+      "cf6a8ba448ed6e9d5f3fa59ad4614a241e508d4d0457d447a8866be2c4cda823",
+      "381acf64e0caf5ba0f461914f89a9002b7b9841136588774797d0e6bab971008",
+      "486f9d2713e811b9b6fc19adb04f11649733f0f11a011aac84b1fd1cd3e94741",
+      "b6d89756da9ccf75219846bcd0a2a6107438163812f69e89cedfa763fc966f19",
+      "3143a3457f2945ebce3ec43a90a0a794045127fd069c44f066739ff0129ad666",
+      "3c7a15f9f30d9427823f8bf073e9b0760246a00f21b34f970842ecb8380e4c77",
+      "150eaa2040dd850c5480b7fd10cff8de9d72a901cec7f0a497921d8d5d1dba9a",
+      "9916bebae9a7771d37f8c46cff0118c9b1aac115484bc5d37f10dffd641b29de",
+      "28ff109d596912d38214426c82cace88d67b90716b378012eef32490180fc1f7",
+      "93a1d30b425fd1db5d9fe9b1b66b9062b4d7ffd2acda9e37a6916bb5a23ddb17",
+      "34ee5e432d4afb0e680c34fe01229ba5fc4b286df3c8b4d1bd9153bbb85f09ec",
+      "661cab9b2e65cc77a9994b353dd2ac03d74e5727186b3f3aee4edf9b7b3b2d22",
+      "313bb85f6539520c904ba94d2d887a79778cb7ca470119b95d83db4d77bab3a3"
+    ]
+  },
+  {
+    "path": "player_attack.aseprite",
+    "canvas": [
+      32,
+      16
+    ],
+    "frames": 4,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          9
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          7,
+          5,
+          24,
+          14
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          8,
+          12,
+          21,
+          14
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          8,
+          12,
+          21,
+          14
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "6e9701b48f4319c14601818e4ae85aa75a397d8c8825cb29fbe1bbb6ef6b1b26",
+      "f3f55371a3c8902f4c4276a88d0d212971b08d67bac416571704385554c8e0c8",
+      "21f25355336eee3f8c8e431ca469c3f47afeeafbefc1508e6032fce6988c3c7b",
+      "d4378d9f1d8e6cbfcbfe0a852cc68f04ee2c7064246d27ac833e4f1351c24399"
+    ]
+  },
+  {
+    "path": "player_rope.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 4,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          4,
+          25,
+          31
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          4,
+          25,
+          31
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          8,
+          3,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "413b5c92edeaa795a9ebf6a61495e5df1f141db610872e4b905d607cdddbb3f1",
+      "1109eed9272dec66ff3fd78733cbf88678ea967baca740e5fbf15eebf227e198",
+      "2f3e3e606d5635e4ce113344eb4e0b64d711aef86c4d3c2e76bc3613b992dead",
+      "e6124e0ddac6a5843f640284233f94d2d7b07f238db6cfe8c9d6eac0623498fa"
+    ]
+  }
+]

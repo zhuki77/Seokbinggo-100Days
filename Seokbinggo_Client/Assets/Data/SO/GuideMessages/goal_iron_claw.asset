@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: goal_iron_claw
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: goal_iron_claw
+  tier: 4
+  triggerState: goal:g10
+  text: "\uD654\uB85C\uC5D0\uC11C \uBB34\uC1E0 \uBC1C\uD1B1\uC744 \uB9CC\uB4DC\uC138\uC694.
+    \uB354 \uB2E8\uB2E8\uD55C \uAD11\uC11D\uC744 \uCE98 \uC218 \uC788\uC5B4\uC694."
+  variables: 
+  clearWhen: goal_done
+  repeat: while_active
+  source: "[\uAC00\uC548 \uBB38\uAD6C]"
+  note: 

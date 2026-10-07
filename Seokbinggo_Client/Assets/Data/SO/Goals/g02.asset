@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g02
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g02
+  order: 2
+  phase: P0
+  track: auto
+  displayName: "\uD654\uB85C \uB9CC\uB4E4\uAE30"
+  iconRef: furnace
+  completeState: station_installed
+  completeParam: furnace
+  guideTarget: nearest:iron_ore
+  hintMessageId: goal_furnace
+  mvpScope: A
+  note: "\uCF54\uC5B4 \uC7AC\uB8CC \uCCA0 \uC8FC\uAD34 \uB54C\uBB38\uC5D0 \uD544\uC694
+    \u2014 \uC815\uBCF8 seal_penalty_start_day \uC8FC\uC11D \u300C\uCF54\uC5B4 \uC2E4\uC81C
+    \uD558\uD55C 3\uC77C\uCC28(\uCCA0 \uC8FC\uAD34=\uD654\uB85C \uD544\uC694)\u300D.
+    \uC7AC\uB8CC \uB3CC22\xB7\uD7598\xB7\uCCA0 \uAD11\uC11D6\xB7\uAD6C\uB9AC \uAD11\uC11D4"

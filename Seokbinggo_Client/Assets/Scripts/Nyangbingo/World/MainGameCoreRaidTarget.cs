@@ -9,24 +9,32 @@ namespace Nyangbingo.World
     /// 성벽 파괴만 기존 권위 경로에 위임하며, 경로가 열린 뒤 코어 도달을 침투로 기록한다.
     /// </summary>
     public sealed class MainGameCoreRaidTarget : MonoBehaviour, IYokaiTarget,
-        IWallMaterialTarget, IYokaiBarrierTarget, IYokaiInfiltrationTarget
+        IWallMaterialTarget, IYokaiBarrierTarget, IYokaiInfiltrationTarget, IYokaiCoreTheftTarget, IYokaiCoreTarget
     {
         private MainGameRaidTarget wallAuthority;
         private InvasionService invasion;
+        private IYokaiCoreRoute coreRoute;
 
         public Transform TargetTransform => transform;
+        public IYokaiTarget TheftTarget => wallAuthority;
+        public IYokaiTarget PlayerTarget => wallAuthority;
+        public Vector3Int CoreCell { get; private set; }
+        public bool IsAvailable => coreRoute == null || coreRoute.ResolveCore(CoreCell) != null;
         public YokaiWallMaterial WallMaterial => wallAuthority != null
             ? wallAuthority.WallMaterial
             : YokaiWallMaterial.Ice;
 
-        public void Configure(MainGameRaidTarget authority, InvasionService invasionService)
+        public void Configure(MainGameRaidTarget authority, InvasionService invasionService,
+            IYokaiCoreRoute route = null)
         {
             wallAuthority = authority;
             invasion = invasionService;
+            coreRoute = route;
         }
 
         public void SetCorePosition(TileService tiles, Vector3Int coreCell)
         {
+            CoreCell = coreCell;
             transform.position = tiles != null
                 ? tiles.GetCellCenterWorld(coreCell)
                 : new Vector3(coreCell.x + .5f, coreCell.y + .5f, 0f);

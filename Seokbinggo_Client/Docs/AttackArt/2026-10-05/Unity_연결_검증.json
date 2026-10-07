@@ -1,0 +1,95 @@
+{
+  "playing": false,
+  "compiling": false,
+  "attacks": [
+    {
+      "id": "dokkaebi_club",
+      "count": 6,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "gakgung",
+      "count": 6,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "ice_root_bow",
+      "count": 9,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "seonge_gakgung",
+      "count": 6,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "straw_sling",
+      "count": 7,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "hapjukseon",
+      "count": 5,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "cheolseon",
+      "count": 5,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "seolpungseon",
+      "count": 5,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "seonge_fan",
+      "count": 5,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    },
+    {
+      "id": "cold_wave_fan",
+      "count": 5,
+      "nullFrames": 0,
+      "correctSource": true,
+      "point16": true
+    }
+  ],
+  "playerCounts": [
+    6,
+    6,
+    6,
+    5,
+    6,
+    4
+  ],
+  "ropeGuid": "d16bcf964c9e6104e9ca1e81501f496e",
+  "projectiles": [
+    {
+      "path": "Assets/Art/Gameplay/arrow_projectile.aseprite",
+      "point16": true
+    },
+    {
+      "path": "Assets/Art/Gameplay/sling_stone_projectile.aseprite",
+      "point16": true
+    }
+  ]
+}

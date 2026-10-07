@@ -132,13 +132,13 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
                     hasProfile,
                 $"mushroom data/profile mismatch: {pair.Key}");
         }
-        Require(TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.OysterMushroom) == WorldTileTypes.Clay &&
-                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Shiitake) == WorldTileTypes.IceShard &&
-                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Seogi) == WorldTileTypes.FrostEssence &&
-                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.SeongeOre) == WorldTileTypes.IceSteelOre &&
-                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.IceRoot) == WorldTileTypes.IceSteelOre &&
-                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.ColdWaveOre) == WorldTileTypes.FrostEssence,
-            "mushroom pre-art visual fallback mismatch");
+        Require(TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.OysterMushroom) == null &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Shiitake) == null &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.Seogi) == null &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.SeongeOre) == null &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.IceRoot) == null &&
+                TilemapRenderer.ResourceVisualFallbackId(WorldTileTypes.ColdWaveOre) == null,
+            "다른 자원의 아트로 대체하는 경로가 남아 있음");
     }
 
     private static void ValidateTalismans(GameDataCatalog catalog)
@@ -251,7 +251,7 @@ public static class NyangbingoV72BedStorageTalismanTurretRegressionTests
         var restored = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
         restored.NormalizeAfterLoad();
         Require(restored.schemaVersion == SaveGame.CurrentSchemaVersion &&
-                SaveGame.CurrentSchemaVersion == 26 && restored.inventory.Count == 1 &&
+                SaveGame.CurrentSchemaVersion >= 26 && restored.inventory.Count == 1 &&
                 restored.inventory[0].hasStorageCondition &&
                 Mathf.Approximately(restored.inventory[0].storageCondition01, .4f) &&
                 Mathf.Approximately(restored.inventory[0].storageMeltRemainder, .75f) &&

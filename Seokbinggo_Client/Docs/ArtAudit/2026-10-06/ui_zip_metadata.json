@@ -1,0 +1,97 @@
+[
+  {
+    "file": "ui/check.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "ui/check2.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "ui/ui_raid_arrow.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "ui/공격 2icon.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "ui/공격 icon.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "ui/화상icon.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "찬바람/이거 맞는지 모르겠는데 그냥 둘다 드려요 찬바람 새는 아이콘.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "찬바람/찬바람 새는 마커.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  },
+  {
+    "file": "찬바람/찬바람 새는 이펙트.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 6,
+    "durations_ms": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ]
+  },
+  {
+    "file": "vault_seal.aseprite",
+    "width": 16,
+    "height": 16,
+    "frames": 1,
+    "durations_ms": [
+      100
+    ]
+  }
+]

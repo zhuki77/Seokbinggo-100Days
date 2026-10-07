@@ -86,7 +86,7 @@ namespace Nyangbingo.World
                 var (itemId, amount) = materials[i];
                 if (!inventory.Has(itemId, amount))
                 {
-                    reason = $"재료 부족: {itemId} ×{amount}";
+                    reason = $"재료 부족: {catalog?.ItemDisplayName(itemId, "재료") ?? "재료"} ×{amount}";
                     return false;
                 }
             }
@@ -118,7 +118,7 @@ namespace Nyangbingo.World
                 {
                     for (var r = 0; r < removed.Count; r++)
                         inventory.TryAdd(removed[r].itemId, removed[r].amount);
-                    message = $"재료 소모 실패: {itemId}";
+                    message = $"재료 소모 실패: {catalog?.ItemDisplayName(itemId, "재료") ?? "재료"}";
                     return false;
                 }
 

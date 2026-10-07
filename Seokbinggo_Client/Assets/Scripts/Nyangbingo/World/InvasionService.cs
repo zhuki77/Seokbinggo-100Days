@@ -21,6 +21,7 @@ namespace Nyangbingo.World
         private readonly int offsetDays;
         private readonly float risePerTear;
         private readonly string recoolItemId;
+        private readonly string recoolItemName;
         private readonly int recoolItemsPerDegree;
         private bool disposed;
 
@@ -38,6 +39,9 @@ namespace Nyangbingo.World
             if (!TryParseRecoolCost(catalog.FindGlobal(GlobalKeys.RecoolCost)?.Value,
                     out recoolItemId, out recoolItemsPerDegree))
                 throw new InvalidOperationException("recool_cost는 item_id:positive_int 형식이어야 합니다.");
+            var recoolItem = catalog.FindItem(recoolItemId);
+            recoolItemName = string.IsNullOrWhiteSpace(recoolItem?.DisplayName)
+                ? "재냉각 재료" : recoolItem.DisplayName;
             if (!string.Equals(catalog.FindGlobal(GlobalKeys.InvasionTemperatureRiseSource)?.Value,
                     "yokai-stats.csv:tears", StringComparison.Ordinal) ||
                 !string.Equals(catalog.FindGlobal(GlobalKeys.RecoolWhen)?.Value,
@@ -56,6 +60,17 @@ namespace Nyangbingo.World
                                      RecoolAvailableDay > 0 && time.Day >= RecoolAvailableDay;
         public bool IsCurrentInvasionNight => time.IsNight &&
             InvasionScheduleRules.IsInvasionNight(time.Day, periodDays, offsetDays);
+
+        /// <summary>직전에 끝난 정규 침공 일자. 피해가 없어도 다음 낮부터 복구 상태를 확인한다.</summary>
+        public int LastFinishedInvasionDay
+        {
+            get
+            {
+                var previousDay = Math.Min(time.Day - 1, InvasionScheduleRules.MaxScheduledInvasionDay);
+                if (previousDay < offsetDays) return 0;
+                return previousDay - (previousDay - offsetDays) % periodDays;
+            }
+        }
 
         public bool RecordInfiltration(YokaiDefinition definition)
         {
@@ -89,7 +104,7 @@ namespace Nyangbingo.World
             var required = checked(degrees * recoolItemsPerDegree);
             if (!inventory.TryRemove(recoolItemId, required))
             {
-                reason = $"재냉각 재료 부족: {recoolItemId} ×{required}";
+                reason = $"재냉각 재료 부족: {recoolItemName} ×{required}";
                 return false;
             }
 
@@ -97,7 +112,7 @@ namespace Nyangbingo.World
             cooledDegrees = TemperatureRiseCelsius;
             TemperatureRiseCelsius = 0f;
             RecoolAvailableDay = 0;
-            reason = $"얼음 조각 {required}개로 침공 열기 {cooledDegrees:0.#}℃를 복구했습니다.";
+            reason = $"{recoolItemName} {required}개로 침공 열기 {cooledDegrees:0.#}℃를 복구했습니다.";
             return true;
         }
 

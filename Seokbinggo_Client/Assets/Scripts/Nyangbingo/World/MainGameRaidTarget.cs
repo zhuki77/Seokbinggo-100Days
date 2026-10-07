@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Data;
 using Nyangbingo.Combat;
@@ -14,7 +14,7 @@ namespace Nyangbingo.World
     /// </summary>
     [RequireComponent(typeof(Health))]
     public sealed class MainGameRaidTarget : MonoBehaviour, IYokaiTarget, IWallMaterialTarget, IYokaiCombatTarget,
-        IYokaiLootTarget, IYokaiTheftReceiptSource, IYokaiCounterSource,
+        IYokaiLootTarget, IYokaiAtomicLootTarget, IYokaiTheftReceiptSource, IYokaiCounterSource,
         IYokaiBarrierTarget, IYokaiStealthTarget, Nyangbingo.Bosses.IBossCombatTarget
     {
         [SerializeField] private YokaiWallMaterial wallMaterial = YokaiWallMaterial.Ice;
@@ -96,6 +96,30 @@ namespace Nyangbingo.World
                     pendingStolenItems.Add(new ItemAmount { item = item, amount = stack.amount });
             }
             return pendingStolenItems.Count > 0;
+        }
+
+        public bool TryStealGroundLoot(Vector2 origin, float range, YokaiLoot recipient)
+        {
+            return recipient != null && worldDrops != null &&
+                worldDrops.TryStealNearestStack(origin, out _, out _, range,
+                    (item, amount) => recipient.RecordStolenItems(
+                        new[] { new ItemAmount { item = item, amount = amount } }));
+        }
+
+        public bool TryStealInventory(int maxSlots, int maxAmount, YokaiLoot recipient)
+        {
+            if (recipient == null || IsInventoryTheftBlocked || playerInventory == null) return false;
+            return playerInventory.TryRemoveFromOccupiedSlots(maxSlots, maxAmount, out _, stacks =>
+            {
+                var receipt = new List<ItemAmount>(stacks.Count);
+                foreach (var stack in stacks)
+                {
+                    var item = playerInventory.FindItem(stack.itemId);
+                    if (item == null || stack.amount <= 0) return false;
+                    receipt.Add(new ItemAmount { item = item, amount = stack.amount });
+                }
+                return recipient.RecordStolenItems(receipt);
+            });
         }
 
         public IReadOnlyList<ItemAmount> TakeStolenItems()

@@ -127,7 +127,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: wind_daenggi
     originalName: 
-    pivot: {x: 0.4666667, y: 0}
+    pivot: {x: 0.5, y: 0}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -135,7 +135,7 @@ ScriptedImporter:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 15
+      width: 16
       height: 16
     spriteID: a75c072e93b0e85499cd7f859ffd0b31
     spriteBone: []
@@ -165,9 +165,9 @@ ScriptedImporter:
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
-        x: 1
+        x: 0
         y: 0
-        width: 15
+        width: 16
         height: 16
       spriteId: a75c072e93b0e85499cd7f859ffd0b31
     linkedCells: []

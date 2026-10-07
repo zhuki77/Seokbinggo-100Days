@@ -34,7 +34,7 @@ namespace Nyangbingo.Crafting
 
     /// <summary>
     /// 제작대 근접 필터와 별개로 유지되는 진행도 잠금 규칙.
-    /// v34에서는 강철이 최초 처치 뒤 얼음 제단 봉헌만 영구 해금된다.
+    /// v34에서는 이무기 최초 처치 뒤 얼음 제단 봉헌만 영구 해금된다.
     /// </summary>
     public static class RecipeUnlockPolicy
     {

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g04
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g04
+  order: 4
+  phase: P0
+  track: auto
+  displayName: "\uC5BC\uC74C \uC800\uC7A5\uACE0 \uC124\uCE58"
+  iconRef: ice_core
+  completeState: module_installed
+  completeParam: ice_core
+  guideTarget: nearest:ice_shard
+  hintMessageId: goal_core
+  mvpScope: A
+  note: "\uC7AC\uB8CC \uC5BC\uC74C \uC870\uAC0120\xB7\uB3CC10\xB7\uCCA0 \uC8FC\uAD342.
+    \uBB38 \uC7AC\uB8CC(\uC5BC\uC74C \uC870\uAC014)\uB3C4 \uD568\uAED8 \uC548\uB0B4
+    \u2014 Codex \uAD00\uCE21: \uCF54\uC5B4\uB9CC \uB9CC\uB4E4\uACE0 \uBB38 \uC5BC\uC74C\uC744
+    \uB2E4\uC2DC \uCE90\uB7EC \uAC10"

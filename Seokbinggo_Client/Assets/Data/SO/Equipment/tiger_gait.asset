@@ -32,4 +32,4 @@ MonoBehaviour:
   activationCondition: Surface
   hasColdTolerance: 0
   coldToleranceC: 0
-  coldNote:
+  coldNote: 

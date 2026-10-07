@@ -55,6 +55,12 @@ namespace Nyangbingo.Data
         public float WallDamageDefault => wallDamageDefault;
         public float WallDamageIce => wallDamageIce;
         public float WallDamageIronWall => wallDamageIronWall;
+        public float WallDamageFor(YokaiWallMaterial material) => material switch
+        {
+            YokaiWallMaterial.Ice => wallDamageIce,
+            YokaiWallMaterial.IronHeatWall => wallDamageIronWall,
+            _ => wallDamageDefault
+        };
         public int ContactDamage => contactDamage;
         public string SpecialDescription => specialDescription;
         public float TelegraphSeconds => telegraphSeconds;

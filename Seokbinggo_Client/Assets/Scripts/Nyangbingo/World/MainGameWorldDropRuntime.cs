@@ -12,6 +12,15 @@ namespace Nyangbingo.World
     {
         public static event Action<ItemDefinition, int, Vector2, Vector3Int?> Requested;
 
+        public static event Action<ItemDefinition, int, Vector2> ReturnedTheftRequested;
+
+        public static void RequestReturnedTheft(ItemDefinition item, int amount, Vector2 position)
+        {
+            if (item == null || amount <= 0) return;
+            if (ReturnedTheftRequested != null) ReturnedTheftRequested.Invoke(item, amount, position);
+            else Request(item, amount, position);
+        }
+
         public static void Request(ItemDefinition item, int amount, Vector2 position,
             Vector3Int? minedCell = null)
         {
@@ -31,10 +40,16 @@ namespace Nyangbingo.World
         {
             public ItemDefinition Item;
             public int Amount;
+            public InventorySlot StorageState;
             public GameObject Root;
             public Rigidbody2D Body;
             public Collider2D Collider;
             public float PickupDelay;
+            public bool TheftProtected;
+            public bool Escaping;
+            public int EscapeRevision = -1;
+            public int EscapeIndex;
+            public readonly List<Vector2> EscapePath = new List<Vector2>();
         }
 
         public const float MagnetRadius = 1.5f;
@@ -42,6 +57,15 @@ namespace Nyangbingo.World
         // because vegetation and drop rendering use the same surface contract.
         public const float VisualSurfaceOffset = 0f;
         public const float DropColliderRadius = .22f;
+        private const float EscapeGridStepTiles = .25f;
+        private const float EscapeClearance = .02f;
+        private const float EscapeSpeed = 4f;
+        private const int MaximumEscapeSearchNodes = 8192;
+        private int escapeWorldRevision;
+        private static readonly Vector2Int[] EscapeDirections =
+        {
+            Vector2Int.up, Vector2Int.left, Vector2Int.right, Vector2Int.down
+        };
         public const bool DropToDropCollisionResponseEnabled = false;
         private const float MinimumLaunchAngle = 25f;
         private const float MaximumLaunchAngle = 155f;
@@ -55,6 +79,7 @@ namespace Nyangbingo.World
         private const float InitialPickupDelay = .45f;
 
         private readonly List<Entry> drops = new List<Entry>();
+        private readonly List<Collider2D> escapeOverlapResults = new List<Collider2D>();
         private static readonly HashSet<Collider2D> ActiveDropColliders = new HashSet<Collider2D>();
         private Transform player;
         private Nyangbingo.Inventory.Inventory inventory;
@@ -112,25 +137,27 @@ namespace Nyangbingo.World
         }
 
         public bool TryStealNearestStack(Vector2 origin,
-            out ItemDefinition stolenItem, out int stolenAmount)
+            out ItemDefinition stolenItem, out int stolenAmount, float radius = 1f,
+            Func<ItemDefinition, int, bool> acceptTheft = null)
         {
             stolenItem = null;
             stolenAmount = 0;
-            if (!IsFinite(origin)) return false;
+            if (!IsFinite(origin) || !IsFiniteNonNegative(radius)) return false;
             Entry nearest = null;
             var nearestIndex = -1;
-            var nearestDistance = float.PositiveInfinity;
+            var nearestDistance = radius * radius;
             for (var index = 0; index < drops.Count; index++)
             {
                 var entry = drops[index];
-                if (entry?.Item == null || entry.Root == null || entry.Amount <= 0) continue;
+                if (entry?.Item == null || entry.Root == null || entry.Amount <= 0 || entry.TheftProtected || entry.Escaping) continue;
                 var distance = ((Vector2)entry.Root.transform.position - origin).sqrMagnitude;
-                if (distance >= nearestDistance) continue;
+                if (distance > nearestDistance) continue;
                 nearest = entry;
                 nearestIndex = index;
                 nearestDistance = distance;
             }
             if (nearest == null || nearestIndex < 0) return false;
+            if (acceptTheft != null && !acceptTheft(nearest.Item, nearest.Amount)) return false;
             stolenItem = nearest.Item;
             stolenAmount = nearest.Amount;
             if (nearest.Collider != null) ActiveDropColliders.Remove(nearest.Collider);
@@ -149,7 +176,7 @@ namespace Nyangbingo.World
             for (var index = 0; index < drops.Count; index++)
             {
                 var entry = drops[index];
-                if (entry?.Item == null || entry.Root == null || entry.Amount <= 0) continue;
+                if (entry?.Item == null || entry.Root == null || entry.Amount <= 0 || entry.Escaping) continue;
                 var distance = ((Vector2)entry.Root.transform.position - origin).sqrMagnitude;
                 if (distance > nearestDistance) continue;
                 if (nearest != null && (distance > nearestDistance ||
@@ -166,15 +193,22 @@ namespace Nyangbingo.World
         private bool TryCollectEntry(Entry entry, int index,
             Nyangbingo.Inventory.Inventory destination, bool notifyPlayerAcquisition)
         {
-            if (entry == null || index < 0 || index >= drops.Count ||
+            if (entry == null || entry.Escaping || index < 0 || index >= drops.Count ||
                 drops[index] != entry || destination == null ||
-                !destination.TryAdd(entry.Item.Id, entry.Amount))
+                !destination.TryAddWithStorageState(entry.Item.Id, entry.Amount,
+                    entry.StorageState.hasStorageCondition, entry.StorageState.EffectiveStorageCondition,
+                    entry.StorageState.storageMeltRemainder))
                 return false;
 
             if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
             Destroy(entry.Root);
             drops.RemoveAt(index);
-            if (notifyPlayerAcquisition) GameEvents.RaiseItemAcquired();
+            if (notifyPlayerAcquisition)
+            {
+                GameEvents.RaiseItemAcquired();
+                GameEvents.RaiseWorldItemPickedUp(entry.Item, entry.Amount,
+                    player != null ? (Vector2)player.position : Vector2.zero);
+            }
             return true;
         }
 
@@ -189,9 +223,14 @@ namespace Nyangbingo.World
                 {
                     itemId = entry.Item.Id,
                     amount = entry.Amount,
+                    hasStorageCondition = entry.StorageState.hasStorageCondition,
+                    storageCondition01 = entry.StorageState.storageCondition01,
+                    storageMeltRemainder = entry.StorageState.storageMeltRemainder,
                     position = entry.Root.transform.position,
                     velocity = entry.Body != null ? entry.Body.linearVelocity : Vector2.zero,
-                    pickupDelay = entry.PickupDelay
+                    pickupDelay = entry.PickupDelay,
+                    theftProtected = entry.TheftProtected,
+                    escapingTiles = entry.Escaping
                 });
             }
             return result;
@@ -207,7 +246,9 @@ namespace Nyangbingo.World
                 var item = findItem(record.itemId);
                 if (item == null || record.amount <= 0 || record.amount > item.MaxStack ||
                     !IsFinite(record.position) ||
-                    !IsFinite(record.velocity) || !IsFiniteNonNegative(record.pickupDelay))
+                    !IsFinite(record.velocity) || !IsFiniteNonNegative(record.pickupDelay) ||
+                    !IsFiniteNonNegative(record.storageCondition01) || record.storageCondition01 > 1f ||
+                    !IsFiniteNonNegative(record.storageMeltRemainder) || record.storageMeltRemainder >= 1f)
                     return false;
                 validated.Add((record, item));
             }
@@ -223,9 +264,17 @@ namespace Nyangbingo.World
                     return false;
                 }
                 entry.Amount = pair.record.amount;
+                entry.StorageState = new InventorySlot { itemId = pair.record.itemId, amount = pair.record.amount,
+                    hasStorageCondition = pair.record.hasStorageCondition,
+                    storageCondition01 = pair.record.storageCondition01,
+                    storageMeltRemainder = pair.record.storageMeltRemainder };
                 entry.Root.transform.position = pair.record.position;
                 entry.PickupDelay = pair.record.pickupDelay;
+                entry.TheftProtected = pair.record.theftProtected;
                 if (entry.Body != null) entry.Body.linearVelocity = pair.record.velocity;
+                if (entry.Body != null) entry.Body.position = pair.record.position;
+                if (tileService != null && HasPhysicalObstruction(entry, pair.record.position, -.01f))
+                    BeginEscape(entry);
             }
             Physics2D.SyncTransforms();
             return true;
@@ -251,12 +300,173 @@ namespace Nyangbingo.World
             }
         }
 
-        private void OnEnable() => WorldItemDropRequest.Requested += Spawn;
-        private void OnDisable() => WorldItemDropRequest.Requested -= Spawn;
+        private void OnEnable()
+        {
+            WorldItemDropRequest.Requested += Spawn;
+            WorldItemDropRequest.ReturnedTheftRequested += SpawnReturnedTheft;
+            GameEvents.OnTilePlaced += HandleTilePlaced;
+            GameEvents.OnTileBroken += HandleEscapeTileBroken;
+            GameEvents.OnSealChanged += HandleEscapeSealChanged;
+        }
+        private void OnDisable()
+        {
+            WorldItemDropRequest.Requested -= Spawn;
+            WorldItemDropRequest.ReturnedTheftRequested -= SpawnReturnedTheft;
+            GameEvents.OnTilePlaced -= HandleTilePlaced;
+            GameEvents.OnTileBroken -= HandleEscapeTileBroken;
+            GameEvents.OnSealChanged -= HandleEscapeSealChanged;
+        }
+
+        private void HandleTilePlaced(Vector3Int cell)
+        {
+            escapeWorldRevision++;
+            if (tileService == null) return;
+            Physics2D.SyncTransforms();
+            var bounds = tileService.GetCellWorldBounds(cell);
+            foreach (var entry in drops)
+            {
+                if (entry?.Root == null || entry.Escaping) continue;
+                if (DropOverlapsCell(entry.Root.transform.position, bounds) &&
+                    HasPhysicalObstruction(entry, entry.Root.transform.position, -.01f)) BeginEscape(entry);
+            }
+        }
+
+        private void HandleEscapeTileBroken(Vector3Int cell) => escapeWorldRevision++;
+        private void HandleEscapeSealChanged() => escapeWorldRevision++;
+
+        private void BeginEscape(Entry entry)
+        {
+            entry.Escaping = true;
+            entry.EscapeRevision = -1;
+            entry.EscapePath.Clear();
+            if (entry.Body == null) return;
+            entry.Body.linearVelocity = Vector2.zero;
+            entry.Body.interpolation = RigidbodyInterpolation2D.None;
+            // 겹침을 물리 엔진이 강제로 해소하지 않도록 탈출 중에는 경로 이동만 적용한다.
+            entry.Body.simulated = false;
+        }
+
+        private void RebuildEscapePath(Entry entry)
+        {
+            entry.EscapePath.Clear();
+            entry.EscapeIndex = 0;
+            entry.EscapeRevision = escapeWorldRevision;
+            var origin = (Vector2)entry.Root.transform.position;
+            var cellSize = tileService.GetCellWorldBounds(tileService.WorldToCell(origin)).size;
+            var stepSize = new Vector2(cellSize.x, cellSize.y) * EscapeGridStepTiles;
+            var queue = new Queue<Vector2Int>();
+            var previous = new Dictionary<Vector2Int, Vector2Int>();
+            queue.Enqueue(Vector2Int.zero);
+            previous.Add(Vector2Int.zero, Vector2Int.zero);
+            // 이미 매몰된 상태에서 출발하므로 막힌 격자도 탐색한다. 첫 열린 격자가 최단 탈출점이다.
+            while (queue.Count > 0 && previous.Count <= MaximumEscapeSearchNodes)
+            {
+                var node = queue.Dequeue();
+                var point = origin + Vector2.Scale(node, stepSize);
+                if (IsEscapeDestinationClear(entry, point))
+                {
+                    while (node != Vector2Int.zero)
+                    {
+                        entry.EscapePath.Add(origin + Vector2.Scale(node, stepSize));
+                        node = previous[node];
+                    }
+                    entry.EscapePath.Reverse();
+                    return;
+                }
+                foreach (var direction in EscapeDirections)
+                {
+                    var next = node + direction;
+                    if (previous.ContainsKey(next)) continue;
+                    var nextPoint = origin + Vector2.Scale(next, stepSize);
+                    if (!tileService.InBounds(tileService.WorldToCell(nextPoint))) continue;
+                    previous.Add(next, node);
+                    queue.Enqueue(next);
+                }
+            }
+            // 출구를 못 찾은 경우 제자리에서 보존한다. 지형 변경 때만 다시 탐색한다.
+        }
+
+        private void TickEscape(Entry entry, float deltaSeconds)
+        {
+            if (!HasPhysicalObstruction(entry, entry.Root.transform.position, -.01f))
+            {
+                entry.Escaping = false;
+                entry.EscapePath.Clear();
+                if (entry.Body != null)
+                {
+                    entry.Body.position = entry.Root.transform.position;
+                    entry.Body.gravityScale = ResolveGravityScale();
+                    entry.Body.simulated = true;
+                    entry.Body.linearVelocity = Vector2.zero;
+                    entry.Body.interpolation = RigidbodyInterpolation2D.Interpolate;
+                }
+                return;
+            }
+            if (entry.EscapeRevision != escapeWorldRevision) RebuildEscapePath(entry);
+            var budget = EscapeSpeed * Mathf.Min(deltaSeconds, .05f);
+            while (budget > 0f && entry.EscapeIndex < entry.EscapePath.Count)
+            {
+                var current = (Vector2)entry.Root.transform.position;
+                var next = Vector2.MoveTowards(current, entry.EscapePath[entry.EscapeIndex], budget);
+                budget -= Vector2.Distance(current, next);
+                var z = entry.Root.transform.position.z;
+                entry.Root.transform.position = new Vector3(next.x, next.y, z);
+                if (entry.Body != null) entry.Body.position = next;
+                if ((next - entry.EscapePath[entry.EscapeIndex]).sqrMagnitude > .000001f) break;
+                entry.EscapeIndex++;
+            }
+        }
+
+        private bool IsEscapeDestinationClear(Entry entry, Vector2 position)
+        {
+            var radius = DropColliderRadius + EscapeClearance;
+            return tileService.InBounds(tileService.WorldToCell(position - Vector2.one * radius)) &&
+                   tileService.InBounds(tileService.WorldToCell(position + Vector2.one * radius)) &&
+                   !HasPhysicalObstruction(entry, position, EscapeClearance);
+        }
+
+        private bool HasPhysicalObstruction(Entry entry, Vector2 position, float clearance)
+        {
+            if (entry.Collider == null || !entry.Collider.enabled) return false;
+            var filter = new ContactFilter2D
+            {
+                useTriggers = false,
+                useLayerMask = true,
+                layerMask = Physics2D.GetLayerCollisionMask(entry.Collider.gameObject.layer)
+            };
+            escapeOverlapResults.Clear();
+            Physics2D.OverlapCircle(position, DropColliderRadius + clearance, filter, escapeOverlapResults);
+            foreach (var obstacle in escapeOverlapResults)
+            {
+                if (obstacle == null || obstacle == entry.Collider || !obstacle.enabled || obstacle.isTrigger ||
+                    ActiveDropColliders.Contains(obstacle) || Array.IndexOf(playerColliders, obstacle) >= 0 ||
+                    obstacle.GetComponentInParent<WorldMobPhysicsBody>() != null ||
+                    Physics2D.GetIgnoreCollision(entry.Collider, obstacle)) continue;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool DropOverlapsCell(Vector2 center, Bounds bounds, float radius = DropColliderRadius)
+        {
+            var closest = new Vector2(Mathf.Clamp(center.x, bounds.min.x, bounds.max.x),
+                Mathf.Clamp(center.y, bounds.min.y, bounds.max.y));
+            return (center - closest).sqrMagnitude < radius * radius;
+        }
+
+        private void SpawnReturnedTheft(ItemDefinition item, int amount, Vector2 position)
+        {
+            if (item == null || amount <= 0) return;
+            for (var index = 0; index < amount; index++)
+            {
+                var entry = SpawnSingle(item, position, index, amount, null);
+                if (entry != null) entry.TheftProtected = true;
+            }
+        }
 
         private void Update()
         {
-            if (player == null || inventory == null || Time.deltaTime <= 0f) return;
+            if (Time.deltaTime <= 0f) return;
             var acquiredAny = false;
             for (var index = drops.Count - 1; index >= 0; index--)
             {
@@ -268,6 +478,17 @@ namespace Nyangbingo.World
                     continue;
                 }
 
+                if (tileService != null)
+                {
+                    if (!entry.Escaping && HasPhysicalObstruction(entry, entry.Root.transform.position, -.01f))
+                        BeginEscape(entry);
+                    if (entry.Escaping)
+                    {
+                        TickEscape(entry, Time.deltaTime);
+                        continue;
+                    }
+                }
+                if (player == null || inventory == null) continue;
                 var delta = (Vector2)player.position - (Vector2)entry.Root.transform.position;
                 entry.PickupDelay = Mathf.Max(0f, entry.PickupDelay - Time.deltaTime);
                 var magnetActive = entry.PickupDelay <= 0f && delta.sqrMagnitude <= MagnetRadius * MagnetRadius;
@@ -282,13 +503,26 @@ namespace Nyangbingo.World
                 if (!magnetActive) continue;
                 if (((Vector2)player.position - (Vector2)entry.Root.transform.position).sqrMagnitude >
                     PickupRadius * PickupRadius) continue;
-                if (!inventory.TryAdd(entry.Item.Id, entry.Amount)) continue;
+                if (!inventory.TryAddWithStorageState(entry.Item.Id, entry.Amount,
+                        entry.StorageState.hasStorageCondition, entry.StorageState.EffectiveStorageCondition,
+                        entry.StorageState.storageMeltRemainder)) continue;
                 acquiredAny = true;
                 if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
                 Destroy(entry.Root);
                 drops.RemoveAt(index);
+                GameEvents.RaiseWorldItemPickedUp(entry.Item, entry.Amount, player.position);
             }
             if (acquiredAny) GameEvents.RaiseItemAcquired();
+        }
+
+        public void SpawnStoredStack(ItemDefinition item, InventorySlot slot, Vector2 position,
+            int batchIndex, int batchCount)
+        {
+            if (item == null || slot.amount <= 0) return;
+            // One physical drop per stored stack, rather than one per unit in a large stack.
+            var entry = SpawnSingle(item, position, batchIndex, batchCount, null);
+            entry.Amount = slot.amount;
+            entry.StorageState = slot;
         }
 
         private void Spawn(ItemDefinition item, int amount, Vector2 position, Vector3Int? minedCell)
@@ -433,8 +667,10 @@ namespace Nyangbingo.World
                         entry.Root.transform.position, surfaceHeights, out var exposed) || !exposed)
                     continue;
                 var wholeLoss = StorageTemperatureService.CalculateIceMelt(
-                    entry.Amount, 0f, meltPerDay, out var remainingAmount, out _);
+                    entry.Amount, entry.StorageState.storageMeltRemainder, meltPerDay,
+                    out var remainingAmount, out var remainder);
                 entry.Amount = remainingAmount;
+                entry.StorageState.storageMeltRemainder = remainder;
                 melted += wholeLoss;
                 if (entry.Amount <= 0)
                 {

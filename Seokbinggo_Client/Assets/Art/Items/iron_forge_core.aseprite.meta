@@ -127,7 +127,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: iron_forge_core
     originalName: 
-    pivot: {x: 0.5, y: 0}
+    pivot: {x: 0.53846157, y: 0}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -135,7 +135,7 @@ ScriptedImporter:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 16
+      width: 13
       height: 16
     spriteID: 498c33ed21c5b344e906e3eb63c3e638
     spriteBone: []
@@ -165,9 +165,9 @@ ScriptedImporter:
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
-        x: 0
+        x: 1
         y: 0
-        width: 16
+        width: 13
         height: 16
       spriteId: 498c33ed21c5b344e906e3eb63c3e638
     linkedCells: []

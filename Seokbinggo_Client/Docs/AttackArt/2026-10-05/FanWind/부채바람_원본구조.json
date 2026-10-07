@@ -1,0 +1,278 @@
+[
+  {
+    "path": "바닥바람불가살.aseprite",
+    "canvas": [
+      32,
+      16
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          27,
+          16
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          3,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          5,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          14,
+          3,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          26,
+          9,
+          32,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "path": "바닥_바람.aseprite",
+    "canvas": [
+      32,
+      16
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          27,
+          16
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          3,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          5,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          14,
+          3,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          26,
+          9,
+          32,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "path": "바닥_바람_부채용.aseprite",
+    "canvas": [
+      32,
+      16
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          27,
+          16
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          3,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          5,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          14,
+          3,
+          32,
+          16
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          16
+        ],
+        "opaque_bounds": [
+          26,
+          9,
+          32,
+          15
+        ]
+      }
+    ]
+  }
+]

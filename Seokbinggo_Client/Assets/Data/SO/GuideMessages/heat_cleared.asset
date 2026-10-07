@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: heat_cleared
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: heat_cleared
+  tier: 3
+  triggerState: invasion_heat_cleared
+  text: "\uC5F4\uAE30\uB97C \uC81C\uAC70\uD588\uC5B4\uC694. \uB0A8\uC740 \uBB38\xB7\uBCBD
+    \uC190\uC0C1\uC744 \uC810\uAC80\uD558\uC138\uC694."
+  variables: 
+  clearWhen: damage_repaired
+  repeat: once_per_event
+  source: "\uC624\uB108 2026-10-03"
+  note: 

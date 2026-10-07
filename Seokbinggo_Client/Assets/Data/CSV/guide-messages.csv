@@ -1,0 +1,39 @@
+id,tier,trigger_state,text_ko,vars,clear_when,repeat,source,note
+hypo_danger,1,hypothermia_active,저체온 위험! 따뜻한 곳으로 이동하세요.,,body_temp_recovering,while_active,오너 2026-10-03,실온 −10 이하에서 체온 하강(hypothermia_room_temp). 밀폐 성공과 동시에 뜰 수 있다 — 보관 성공 ≠ 캐릭터 안전
+burn_danger,1,burn_active,햇볕에 타고 있어요! 그늘이나 지하로 들어가세요.,,burn_end,while_active,[가안 문구],낮 지상 화상(day_fire_dmg_by_stage)
+invasion_tonight,2,invasion_tonight,오늘 밤 요괴가 기지로 와요. 문을 닫고 대비하세요.,,night_start,once_per_day,[가안 문구],invasion_announce=1 예고. 짧게 강조 후 작은 배지(Codex P1)
+invasion_active,2,invasion_active,요괴가 기지를 공격하고 있어요!,,dawn,while_active,[가안 문구],침공 밤 침대 잠금(bed_locked_on_invasion)
+baekjung_tonight,2,baekjung_tonight,오늘 밤은 백중날이에요. 요괴가 평소보다 많이 나와요.,,night_start,once_per_day,[가안 문구],baekjung_day=15 · 휴식 잠금 없음
+boss_tonight,2,boss_tonight,오늘 밤 {boss}가 {place}에 나타나요. 회복품과 장비를 챙기세요.,boss|place,night_start,once_per_day,[가안 문구],강철이 30일 — place = 얼음 호수(imugi_arena=surface_ice_lake · D2 확정)
+boss_active,2,boss_fight_active,{boss}와 싸우는 중이에요. 지금은 저장할 수 없어요.,boss,boss_end,while_active,[가안 문구],boss_save_policy=no_serialize
+core_unsealed,3,core_unsealed,냉기가 새고 있어요. 작은 방을 만들고 문을 닫아보세요.,,core_sealed,while_active,오너 2026-10-03,g05 안내 겸용
+door_open,3,seal_blocked_by_open_door,문을 닫으면 밀폐 상태를 확인할 수 있어요.,,door_closed,while_active,오너 2026-10-03,누출 원인이 열린 문이면 먼 누출 좌표보다 먼저
+placed_block_not_seal,3,placing_non_seal_block,놓은 {block}은 밀폐 벽으로 인정되지 않아요. 차열벽을 사용하세요.,block,placement_end,while_active,오너 2026-10-03,오너 문구 「놓은 돌은」 — 흙도 같은 규칙이라 {block}=돌/흙. seal-whitelist: 자연 지형은 인정 · 플레이어가 놓은 흙·돌은 불인정
+seal_success,3,core_sealed_now,밀폐됐어요! 장독의 얼음 보관 조건을 확인하세요.,,shown,once_per_event,오너 2026-10-03,
+storage_below,3,storage_condition_unmet,지금 {temp}°C · 얼음 보존에는 {req}°C 이하가 필요해요.,temp|req,storage_condition_met,while_active,오너 2026-10-03,오너 예시 「현재 −5°C / 얼음 보존에 필요한 온도 −10°C 이하」. req = storage_band_frozen — 코드에 −10을 쓰지 말 것. g07 안내 겸용
+storage_ok,3,storage_condition_met_now,보관 조건 충족! 이제 얼음이 녹지 않아요.,,shown,once_per_event,[가안 문구],문을 닫아 조건을 충족하는 순간의 성공 피드백(오너)
+cold_bed,3,bed_too_cold,여기는 너무 추워서 쉴 수 없어요. {req}°C보다 따뜻한 곳에 보금자리를 두세요.,req,bed_used,on_each,[가안 문구],req = bed_sleep_room_temp_max
+seal_boundary_dig,3,mining_seal_boundary,이 칸을 캐면 밀폐가 깨져요.,,aim_changed,while_active,[가안 문구],Codex: 출입 중 자연 흙을 캐고 돌을 놓아 밀폐가 깨짐(P1 거점 유지)
+heat_cleared,3,invasion_heat_cleared,열기를 제거했어요. 남은 문·벽 손상을 점검하세요.,,damage_repaired,once_per_event,오너 2026-10-03,
+base_damaged,3,base_damaged,문·벽 {n}칸이 부서졌어요. 고친 뒤 밀폐를 확인하세요.,n,damage_repaired,while_active,[가안 문구],재냉각과 구조 수리를 별도 체크(오너 P1 거점 유지)
+dawn_kept,3,dawn_storage_kept,얼음 {n}개 유지 · 보관 조건 충족,n,shown,once_per_dawn,오너 2026-10-03,새벽 결과 패널
+dawn_lost,3,dawn_storage_lost,얼음 {lost}개가 녹았어요. {cause},lost|cause,shown,once_per_dawn,[가안 문구],cause = dawn_cause_* 문구 중 하나(손실이면 원인과 다음 행동 — 오너)
+dawn_cause_unsealed,3,cause:unsealed,밀폐가 열려 있었어요. 문·벽을 점검하세요.,,,fragment,[가안 문구],dawn_lost 조각
+dawn_cause_outside,3,cause:outside_cold_area,장독이 냉기 범위 밖에 있어요. 얼음 저장고 가까이 옮기세요.,,,fragment,[가안 문구],dawn_lost 조각
+dawn_cause_heat,3,cause:invasion_heat,침공 열기가 남아 있었어요. 얼음 저장고를 다시 냉각하세요.,,,fragment,[가안 문구],dawn_lost 조각
+club_shard_missing,3,material_missing:club_shard,밤의 방망이 도깨비에게서 조각을 얻을 수 있어요. 매번 나오지는 않아요.,,item_owned,while_active,오너 2026-10-03,drops.csv club_shard 확률 0.25 — 확률 드롭과 채집을 구분(오너 P1 재료 획득처)
+goal_workbench,4,goal:g01,흙 8개와 돌 12개를 모아 작업대를 만드세요.,,goal_done,while_active,[가안 문구],
+goal_furnace,4,goal:g02,철 광석과 구리 광석을 모아 화로를 만드세요.,,goal_done,while_active,[가안 문구],부족 재료는 제작 UI에서 수량 표시
+goal_iron_ingot,4,goal:g03,화로에서 철 주괴 2개를 녹이세요. 얼음 저장고 재료예요.,,goal_done,while_active,[가안 문구],
+goal_core,4,goal:g04,얼음 조각 20개를 모아 얼음 저장고를 설치하세요. 문에 쓸 얼음 4개도 함께 챙기세요.,,goal_done,while_active,[가안 문구],
+goal_jangdok,4,goal:g06,방 안에 장독을 두고 얼음을 넣어보세요.,,goal_done,while_active,[가안 문구],
+goal_rest,4,goal:g08,보관실은 너무 추워요. 따뜻한 곳에 보금자리를 두고 쉬세요.,,goal_done,while_active,[가안 문구],
+goal_dawn,4,goal:g09,새벽이 되면 얼음이 남았는지 확인해 보세요.,,goal_done,while_active,[가안 문구],
+goal_iron_claw,4,goal:g10,화로에서 무쇠 발톱을 만드세요. 더 단단한 광석을 캘 수 있어요.,,goal_done,while_active,[가안 문구],
+goal_king,4,goal:g11,씨름 샅바를 만들어 밤에 도깨비 대장을 불러내세요.,,goal_done,while_active,[가안 문구],소환은 밤에만
+goal_anvil,4,goal:g12,용광로에서 얼음강철 주괴를 녹여 얼음 모루를 만드세요.,,goal_done,while_active,[가안 문구],
+goal_icesteel_claw,4,goal:g13,얼음 모루에서 얼음강철 발톱을 만드세요.,,goal_done,while_active,[가안 문구],
+goal_core_modules,4,goal:g14,석빙고 핵심 모듈 {n}/{total} — 남은 모듈을 지으세요.,n|total,goal_done,while_active,[가안 문구],total = win_modules
+goal_imugi,4,goal:g15,30일째 밤에 강철이가 나타나요. 준비를 마치세요.,,goal_done,while_active,[가안 문구],
+reward_crafting,3,reward_picked_up,{item} → {recipes} · 제작 연결 {n}종,item|recipes|n,shown,event,[가안 문구],S8 실제 보상 줍기 후 아이템별 1회. 앞 3종 표시. 전투와 메뉴 종료 후 노출
+storage_cooler,3,cooler_protected,빙정 냉각로가 얼음 용해를 막고 있어요.,,,fragment,[가안 문구],S8 밀폐 영역 장독이 냉각로 유효 반경 안일 때 표시

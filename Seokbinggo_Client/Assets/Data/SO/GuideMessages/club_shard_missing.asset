@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: club_shard_missing
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: club_shard_missing
+  tier: 3
+  triggerState: material_missing:club_shard
+  text: "\uBC24\uC758 \uBC29\uB9DD\uC774 \uB3C4\uAE68\uBE44\uC5D0\uAC8C\uC11C \uC870\uAC01\uC744
+    \uC5BB\uC744 \uC218 \uC788\uC5B4\uC694. \uB9E4\uBC88 \uB098\uC624\uC9C0\uB294
+    \uC54A\uC544\uC694."
+  variables: 
+  clearWhen: item_owned
+  repeat: while_active
+  source: "\uC624\uB108 2026-10-03"
+  note: "drops.csv club_shard \uD655\uB960 0.25 \u2014 \uD655\uB960 \uB4DC\uB86D\uACFC
+    \uCC44\uC9D1\uC744 \uAD6C\uBD84(\uC624\uB108 P1 \uC7AC\uB8CC \uD68D\uB4DD\uCC98)"

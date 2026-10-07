@@ -127,16 +127,16 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: gangcheol
     originalName: 
-    pivot: {x: 0.5, y: 0}
+    pivot: {x: 0.5, y: -0.15384616}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
     rect:
       serializedVersion: 2
-      x: 4
+      x: 78
       y: 4
-      width: 14
-      height: 15
+      width: 30
+      height: 26
     spriteID: 6ad079a693266a3448428cc75962ce48
     spriteBone: []
     spriteOutline: []
@@ -145,7 +145,70 @@ ScriptedImporter:
     indices: 
     edges: []
     tessellationDetail: 0
+    uvTransform: {x: 78, y: 4}
+  - name: Frame_1
+    originalName: 
+    pivot: {x: 0.51724136, y: -0.14814815}
+    alignment: 9
+    border: {x: 0, y: 0, z: 0, w: 0}
+    customData: 
+    rect:
+      serializedVersion: 2
+      x: 4
+      y: 4
+      width: 29
+      height: 27
+    spriteID: fe4e7c0ace80229488634e784aa4e208
+    spriteBone: []
+    spriteOutline: []
+    vertices: []
+    spritePhysicsOutline: []
+    indices: 
+    edges: []
+    tessellationDetail: 0
     uvTransform: {x: 4, y: 4}
+  - name: Frame_2
+    originalName: 
+    pivot: {x: 0.5, y: -0.15384616}
+    alignment: 9
+    border: {x: 0, y: 0, z: 0, w: 0}
+    customData: 
+    rect:
+      serializedVersion: 2
+      x: 4
+      y: 39
+      width: 30
+      height: 26
+    spriteID: 626282508e87bce4ea34c25f1b798485
+    spriteBone: []
+    spriteOutline: []
+    vertices: []
+    spritePhysicsOutline: []
+    indices: 
+    edges: []
+    tessellationDetail: 0
+    uvTransform: {x: 4, y: 39}
+  - name: Frame_3
+    originalName: 
+    pivot: {x: 0.51724136, y: -0.14814815}
+    alignment: 9
+    border: {x: 0, y: 0, z: 0, w: 0}
+    customData: 
+    rect:
+      serializedVersion: 2
+      x: 41
+      y: 4
+      width: 29
+      height: 27
+    spriteID: 7c11ae77a2abf2e4093c57f581cc7b36
+    spriteBone: []
+    spriteOutline: []
+    vertices: []
+    spritePhysicsOutline: []
+    indices: 
+    edges: []
+    tessellationDetail: 0
+    uvTransform: {x: 41, y: 4}
   spriteSheetImportData: []
   tileSetImportData: []
   asepriteLayers:
@@ -161,15 +224,42 @@ ScriptedImporter:
     layerType: 0
     blendMode: 0
     cells:
-    - name: gangcheol
+    - name: Frame_0
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
         x: 1
-        y: 0
-        width: 14
-        height: 15
+        y: 4
+        width: 30
+        height: 26
       spriteId: 6ad079a693266a3448428cc75962ce48
+    - name: Frame_1
+      frameIndex: 1
+      additiveSortOrder: 0
+      cellRect:
+        x: 1
+        y: 4
+        width: 29
+        height: 27
+      spriteId: fe4e7c0ace80229488634e784aa4e208
+    - name: Frame_2
+      frameIndex: 2
+      additiveSortOrder: 0
+      cellRect:
+        x: 1
+        y: 4
+        width: 30
+        height: 26
+      spriteId: 626282508e87bce4ea34c25f1b798485
+    - name: Frame_3
+      frameIndex: 3
+      additiveSortOrder: 0
+      cellRect:
+        x: 1
+        y: 4
+        width: 29
+        height: 27
+      spriteId: 7c11ae77a2abf2e4093c57f581cc7b36
     linkedCells: []
     tileCells: []
     tileSetIndex: 0
@@ -178,5 +268,5 @@ ScriptedImporter:
   platformSettings: []
   generatePhysicsShape: 0
   secondarySpriteTextures: []
-  previousTextureSize: {x: 32, y: 32}
-  canvasSize: {x: 16, y: 16}
+  previousTextureSize: {x: 128, y: 128}
+  canvasSize: {x: 32, y: 32}

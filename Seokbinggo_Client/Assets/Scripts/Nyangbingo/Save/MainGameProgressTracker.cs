@@ -56,7 +56,7 @@ namespace Nyangbingo.Save
             runStatsBinding = new RunStatsBinding(state);
             goalBadgeProgress = new GoalBadgeProgress(timeSource,
                 ResolvePositiveGlobal(catalog, GlobalKeys.BadgeWallCount, 1),
-                ResolvePositiveGlobal(catalog, GlobalKeys.BadgeWindowDays, 3));
+                ResolvePositiveGlobal(catalog, GlobalKeys.BadgeWindowDays, 3), catalog.Goals.Count == 0);
             GameEvents.OnYokaiKilled += HandleProgressChanged;
             GameEvents.OnTileBroken += HandleProgressChanged;
             GameEvents.OnPlayerDied += HandleProgressChanged;
@@ -137,6 +137,7 @@ namespace Nyangbingo.Save
         private readonly ITimeSource timeSource;
         private readonly int requiredWallCount;
         private readonly int lastVisibleDay;
+        private readonly bool publishCompletionEffects;
         private readonly GoalBadgeRecord state = new GoalBadgeRecord();
         private bool disposed;
 
@@ -177,11 +178,12 @@ namespace Nyangbingo.Save
         }
 
         public GoalBadgeProgress(ITimeSource source, int wallCount = 1,
-            int visibleThroughDay = DefaultLastVisibleDay)
+            int visibleThroughDay = DefaultLastVisibleDay, bool publishEffects = true)
         {
             timeSource = source ?? throw new ArgumentNullException(nameof(source));
             requiredWallCount = Math.Max(1, wallCount);
             lastVisibleDay = Math.Max(1, visibleThroughDay);
+            publishCompletionEffects = publishEffects;
             GameEvents.OnRecipeCrafted += HandleRecipeCrafted;
             GameEvents.OnPlacedObjectBuilt += HandlePlacedObjectBuilt;
             timeSource.Dawn += HandleDawn;
@@ -232,7 +234,7 @@ namespace Nyangbingo.Save
             {
                 if (state.dismissed || InsulationWallPlaced) return;
                 state.insulationWallsPlaced = Math.Min(requiredWallCount, state.insulationWallsPlaced + 1);
-                if (InsulationWallPlaced) GameEvents.RaiseGoalBadgeCompleted();
+                if (InsulationWallPlaced && publishCompletionEffects) GameEvents.RaiseGoalBadgeCompleted();
                 if (AllCompleted) state.dismissed = true;
                 Changed?.Invoke();
             }
@@ -244,7 +246,7 @@ namespace Nyangbingo.Save
             if (badge || state.dismissed) return;
             badge = true;
             if (AllCompleted) state.dismissed = true;
-            GameEvents.RaiseGoalBadgeCompleted();
+            if (publishCompletionEffects) GameEvents.RaiseGoalBadgeCompleted();
             Changed?.Invoke();
         }
 

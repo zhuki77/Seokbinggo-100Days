@@ -1,5 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Nyangbingo.Data;
+using Nyangbingo.Save;
 
 namespace Nyangbingo.World
 {
@@ -108,4 +111,58 @@ namespace Nyangbingo.World
             return true;
         }
     }
+
+    /// <summary>S5 achievements use live core modules, while completion remains an attained record.</summary>
+    public static class DemoAchievementRules
+    {
+        private static readonly string[] LegacyCoreIds = { "insul_wall", "door", "roof", "jangdok", "ice_core" };
+        public const string StorageGoalId = "g09";
+
+        public static ModuleDefinition[] CoreModules(GameDataCatalog catalog) =>
+            catalog?.Modules.Where(module => module != null && module.Item != null &&
+                !SeokbinggoRules.IsUpgradeModuleId(module.Id)).ToArray() ?? Array.Empty<ModuleDefinition>();
+
+        public static int RequiredCoreModuleCount(GameDataCatalog catalog)
+        {
+            if (catalog == null) return LegacyCoreIds.Length;
+            var value = catalog.FindGlobal("win_modules");
+            var modules = CoreModules(catalog);
+            if (value == null || !value.TryGetInt(out var total) || total <= 0 ||
+                modules.Select(module => module.Id).Distinct(StringComparer.Ordinal).Count() != total)
+                throw new InvalidOperationException("Core module catalog must match win_modules.");
+            return total;
+        }
+
+        public static IReadOnlyList<string> InstalledCoreModuleIds(IEnumerable<string> installed,
+            GameDataCatalog catalog = null)
+        {
+            var valid = new HashSet<string>(catalog != null
+                ? CoreModules(catalog).Select(module => module.Id) : LegacyCoreIds, StringComparer.Ordinal);
+            return (installed ?? Array.Empty<string>()).Where(id => id != null && valid.Contains(id))
+                .Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal).ToArray();
+        }
+
+        public static string DemoGateId(GameDataCatalog catalog) =>
+            catalog?.FindGlobal("win_gate_demo")?.Value ?? "imugi_boss";
+
+        public static bool BossDefeated(SaveGame save, GameDataCatalog catalog = null) =>
+            save?.bossRecords?.Any(record => record.bossId == DemoGateId(catalog) && record.count > 0) == true;
+
+        public static bool HasStorageSuccess(SaveGame save) => save != null &&
+            (save.storageSuccess || save.goalProgress?.completedGoalIds?.Contains(StorageGoalId) == true);
+
+        public static bool MeetsCompletion(bool bossDefeated, int installed, int required) =>
+            bossDefeated && required > 0 && installed == required;
+
+        public static void UpdateSavedAchievements(SaveGame save, GameDataCatalog catalog = null)
+        {
+            if (save == null) throw new ArgumentNullException(nameof(save));
+            if (catalog != null && catalog.FindGlobal("demo_complete_rule")?.Value != "boss_and_core_modules")
+                throw new InvalidOperationException("Unsupported demo completion rule.");
+            save.storageSuccess = HasStorageSuccess(save);
+            save.demoComplete |= MeetsCompletion(BossDefeated(save, catalog),
+                InstalledCoreModuleIds(save.modulesDone, catalog).Count, RequiredCoreModuleCount(catalog));
+        }
+    }
+
 }

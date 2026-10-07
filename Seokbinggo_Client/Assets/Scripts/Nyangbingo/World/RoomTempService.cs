@@ -5,7 +5,7 @@ namespace Nyangbingo.World
 {
     /// <summary>
     /// v72 A-1: 플레이어 위치의 절대 실온(℃).
-    /// 자연 실온(깊이 비율·폭염 단계)과 범위를 덮는 모든 얼음 저장고 코어의 냉각량을 합산한다.
+    /// 자연 실온과 냉각 범위를 덮는 코어의 냉각량을 합산한다. 밀폐 코어는 같은 실내에만 적용한다.
     /// </summary>
     public sealed class RoomTempService
     {
@@ -18,6 +18,9 @@ namespace Nyangbingo.World
         private readonly System.Collections.Generic.List<Vector3Int> iceCoreCells =
             new System.Collections.Generic.List<Vector3Int>();
         private readonly float warmEndStageOne;
+        private readonly System.Collections.Generic.List<Vector3Int> coldDeviceCells =
+            new System.Collections.Generic.List<Vector3Int>();
+        private readonly bool coldDeviceCoreEquivalent;
         private readonly float coldEndStageOne;
         private readonly float bandShiftPerStage;
         private readonly float frozenDepthMinimum;
@@ -47,10 +50,31 @@ namespace Nyangbingo.World
             coreRangeHeight = Mathf.Max(1, ReadThreshold(GlobalKeys.CoreRangeHeight, 10));
             coreDeltaPlain = ReadThreshold(GlobalKeys.CoreDeltaPlain, -5);
             coreDeltaInsulated = ReadThreshold(GlobalKeys.CoreDeltaInsulated, -10);
+            coldDeviceCoreEquivalent = catalog?.FindGlobal("cold_device_effect")?.Value == "core_equivalent";
         }
 
         public int ColdEnterCelsius => ReadThreshold("room_temp_cold_enter", -5);
         public int FrozenEnterCelsius => ReadThreshold("room_temp_frozen_enter", -10);
+
+        // 용기 위치의 실제 냉각 판정과 같은 코어 목록을 사용한다. 가까운 코어 하나로 한정하지 않는다.
+        public void InspectStorageEnvironment(Vector3 position, out bool sealedArea, out bool inColdRange,
+            out float invasionHeat)
+        {
+            var cell = worldSession?.TileService != null ? worldSession.TileService.WorldToCell(position) :
+                new Vector3Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), 0);
+            iceCoreCells.Clear(); environmentState?.CopyIceCoreCells(iceCoreCells);
+            inColdRange = false;
+            foreach (var core in iceCoreCells)
+            {
+                if (!CanReceiveCoreCooling(cell, core)) continue;
+                inColdRange = true;
+            }
+            sealedArea = sealSystem != null && sealSystem.IsInsideSealedArea(position);
+            invasionHeat = inColdRange ? invasion?.TemperatureRiseCelsius ?? 0f : 0f;
+            CopyColdDevices();
+            foreach (var device in coldDeviceCells)
+                if (CanReceiveCoreCooling(cell, device)) inColdRange = true;
+        }
 
         public readonly struct ShelterInspection
         {
@@ -78,12 +102,13 @@ namespace Nyangbingo.World
             var core = iceCoreCells[0];
             foreach (var candidate in iceCoreCells)
                 if ((candidate - cell).sqrMagnitude < (core - cell).sqrMagnitude) core = candidate;
-            var inRange = IsInsideCoreRange(cell, core, coreRangeWidth, coreRangeHeight);
+            var inRange = CanReceiveCoreCooling(cell, core);
             var sealedRoom = sealSystem != null && sealSystem.IsCoreWindowSealed(core);
             var leak = default(Vector3Int);
             var hasLeak = sealSystem != null && sealSystem.TryGetCoreLeakCell(core, out leak);
             return new ShelterInspection(true, inRange, sealedRoom, hasLeak, core, leak,
-                sealedRoom ? coreDeltaInsulated : coreDeltaPlain, coreRangeWidth, coreRangeHeight);
+                inRange ? (sealedRoom ? coreDeltaInsulated : coreDeltaPlain) : 0,
+                coreRangeWidth, coreRangeHeight);
         }
 
         public int Resolve(Vector3 worldPosition)
@@ -111,7 +136,7 @@ namespace Nyangbingo.World
             for (var index = 0; index < iceCoreCells.Count; index++)
             {
                 var core = iceCoreCells[index];
-                if (!IsInsideCoreRange(cell, core, coreRangeWidth, coreRangeHeight)) continue;
+                if (!CanReceiveCoreCooling(cell, core)) continue;
                 insideCoreRange = true;
                 temperature += sealSystem != null && sealSystem.IsCoreWindowSealed(core)
                     ? coreDeltaInsulated
@@ -119,7 +144,28 @@ namespace Nyangbingo.World
             }
             if (insideCoreRange && invasion != null)
                 temperature += invasion.TemperatureRiseCelsius;
+            CopyColdDevices();
+            foreach (var device in coldDeviceCells)
+            {
+                if (!CanReceiveCoreCooling(cell, device)) continue;
+                temperature += sealSystem != null && sealSystem.IsCoreWindowSealed(device)
+                    ? coreDeltaInsulated : coreDeltaPlain;
+            }
             return temperature;
+        }
+
+        private void CopyColdDevices()
+        {
+            coldDeviceCells.Clear();
+            if (coldDeviceCoreEquivalent) environmentState?.CopyColdDeviceCells(coldDeviceCells);
+        }
+
+        private bool CanReceiveCoreCooling(Vector3Int cell, Vector3Int core)
+        {
+            if (!IsInsideCoreRange(cell, core, coreRangeWidth, coreRangeHeight)) return false;
+            // 실내 영역은 SealSystem의 캐시를 재사용한다. 다른 방이나 벽 밖에는 밀폐 냉기가 새지 않는다.
+            return sealSystem == null || !sealSystem.IsCoreWindowSealed(core) ||
+                sealSystem.IsInsideCoreSealedArea(core, cell);
         }
 
         public static int Natural(float depthNorm, int heatStage, float warmEndStageOne = .333f,
