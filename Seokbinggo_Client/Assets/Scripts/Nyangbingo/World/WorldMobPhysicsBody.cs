@@ -39,6 +39,8 @@ namespace Nyangbingo.World
         private const int MaximumDepenetrationPasses = 3;
         public const float KnockbackDurationSeconds = .24f;
         private readonly RaycastHit2D[] castHits = new RaycastHit2D[16];
+        private readonly RaycastHit2D[] groundProbeHits = new RaycastHit2D[16];
+        private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[16];
         private readonly Collider2D[] overlapHits = new Collider2D[16];
         private Rigidbody2D body;
         private WorldMobLocomotion locomotion;
@@ -46,6 +48,8 @@ namespace Nyangbingo.World
         private Collider2D attachedCollider;
         private TileService navigationTiles;
         private System.Func<YokaiWallMaterial, bool> canDestroyWallMaterial;
+        private bool requireFullBodyClearance;
+        private bool wallBreachAllowed = true;
         private readonly HashSet<Collider2D> ignoredCollisionColliders = new HashSet<Collider2D>();
         private readonly List<Vector3Int> path = new List<Vector3Int>();
         private readonly List<Vector3Int> groundPath = new List<Vector3Int>();
@@ -111,6 +115,8 @@ namespace Nyangbingo.World
             locomotion = value;
             navigationTiles = tiles;
             canDestroyWallMaterial = destroyableWallMaterial;
+            wallBreachAllowed = true;
+            requireFullBodyClearance = false;
             path.Clear();
             pathIndex = 0;
             groundPath.Clear();
@@ -149,7 +155,11 @@ namespace Nyangbingo.World
             if (IsFlying) body.linearVelocity = Vector2.zero;
 
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
-            if (attachedCollider != null) attachedCollider.isTrigger = false;
+            if (attachedCollider != null)
+            {
+                attachedCollider.isTrigger = false;
+                attachedCollider.sharedMaterial = PlayerMovementPhysics.ActorMovementMaterial;
+            }
             RegisterMobCollisionIgnores();
             MainGameWorldDropRuntime.IgnoreCollisionWithActiveDrops(this);
         }
@@ -295,7 +305,7 @@ namespace Nyangbingo.World
         private Vector2 GroundNavigationDirection(Vector2 targetOffset)
         {
             var directHorizontal = new Vector2(Mathf.Sign(targetOffset.x), 0f);
-            if (navigationTiles == null || Mathf.Abs(targetOffset.y) <= 1f)
+            if (navigationTiles == null || !requireFullBodyClearance && Mathf.Abs(targetOffset.y) <= 1f)
                 return WithNavigationFacing(
                     Mathf.Abs(targetOffset.x) > .05f
                         ? directHorizontal
@@ -660,6 +670,15 @@ namespace Nyangbingo.World
         {
             if (!IsNavigationPassableCell(cell)) return false;
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
+            if (requireFullBodyClearance && attachedCollider != null)
+            {
+                var current = body != null ? body.position : (Vector2)transform.position;
+                var centerOffset = (Vector2)attachedCollider.bounds.center - current;
+                var cellCenter = CellCenter(cell);
+                var standingPosition = new Vector2(cellCenter.x,
+                    cellCenter.y - .5f + attachedCollider.bounds.extents.y + CollisionSkin) - centerOffset;
+                return IsPositionClear(standingPosition);
+            }
             var colliderHeight = attachedCollider != null
                 ? attachedCollider.bounds.size.y
                 : .84f;
@@ -709,6 +728,131 @@ namespace Nyangbingo.World
             return direction;
         }
 
+        /// <summary>중심점이 아니라 전체 몸집이 진행 방향에서 마주칠 설치 벽을 선택한다.</summary>
+        public bool TryFindBodyBlockingWall(Vector2 direction, float range,
+            out Vector3Int cell, out YokaiWallMaterial material)
+        {
+            cell = default;
+            material = default;
+            if (!wallBreachAllowed || navigationTiles == null || attachedCollider == null ||
+                !IsFinite(direction) || direction.sqrMagnitude <= Mathf.Epsilon ||
+                float.IsNaN(range) || float.IsInfinity(range) || range < 0f) return false;
+            direction.Normalize();
+            var bounds = attachedCollider.bounds;
+            var origin = (Vector2)bounds.center;
+            var extent = new Vector2(Mathf.Max(0f, bounds.extents.x - CollisionSkin),
+                Mathf.Max(0f, bounds.extents.y - CollisionSkin));
+            var end = origin + direction * range;
+            var minimum = ToCell(Vector2.Min(origin, end) - extent);
+            var maximum = ToCell(Vector2.Max(origin, end) + extent);
+            var nearest = float.PositiveInfinity;
+            var found = false;
+            for (var y = minimum.y; y <= maximum.y; y++)
+            for (var x = minimum.x; x <= maximum.x; x++)
+            {
+                var candidate = new Vector3Int(x, y, 0);
+                if (!navigationTiles.TryGetDamageableWallMaterial(candidate, out var candidateMaterial) ||
+                    canDestroyWallMaterial?.Invoke(candidateMaterial) != true) continue;
+                var tileBounds = navigationTiles.GetCellWorldBounds(candidate);
+                var entry = 0f;
+                var exit = range;
+                if (!IntersectSweepAxis(origin.x, direction.x, tileBounds.min.x - extent.x,
+                        tileBounds.max.x + extent.x, ref entry, ref exit) ||
+                    !IntersectSweepAxis(origin.y, direction.y, tileBounds.min.y - extent.y,
+                        tileBounds.max.y + extent.y, ref entry, ref exit) || entry >= nearest) continue;
+                nearest = entry;
+                cell = candidate;
+                material = candidateMaterial;
+                found = true;
+            }
+            return found;
+        }
+
+        private static bool IntersectSweepAxis(float origin, float direction, float minimum, float maximum,
+            ref float entry, ref float exit)
+        {
+            if (Mathf.Abs(direction) <= Mathf.Epsilon) return origin >= minimum && origin <= maximum;
+            var first = (minimum - origin) / direction;
+            var second = (maximum - origin) / direction;
+            entry = Mathf.Max(entry, Mathf.Min(first, second));
+            exit = Mathf.Min(exit, Mathf.Max(first, second));
+            return entry <= exit;
+        }
+
+        public void SetWallBreachAllowed(bool allowed)
+        {
+            if (wallBreachAllowed == allowed) return;
+            wallBreachAllowed = allowed;
+            requireFullBodyClearance = !allowed;
+            path.Clear();
+            groundPath.Clear();
+            pathIndex = groundPathIndex = 0;
+            groundRouteReachesTarget = false;
+            groundDropCommitted = false;
+            nextPathRebuildTime = nextGroundRouteRetryTime = float.NegativeInfinity;
+            stableNavigationDirection = Vector2.zero;
+            directPathClearSince = -1f;
+        }
+
+        /// <summary>벽 파괴를 가정하지 않고 현재 몸집으로 코어까지 통과 가능한지 확인한다.</summary>
+        public bool HasOpenRouteTo(Vector2 worldTarget)
+        {
+            if (navigationTiles == null || !IsFinite(worldTarget)) return false;
+            var wallPermission = canDestroyWallMaterial;
+            var previousClearance = requireFullBodyClearance;
+            canDestroyWallMaterial = null;
+            requireFullBodyClearance = true;
+            try
+            {
+                var current = body != null ? body.position : (Vector2)transform.position;
+                if (IsFlying)
+                {
+                    var start = ToCell(current);
+                    var end = ToCell(worldTarget);
+                    RebuildPath(start, end);
+                    return IsTraversable(start) && IsTraversable(end) &&
+                           (start == end || path.Count > 0 && path[path.Count - 1] == end);
+                }
+                var groundStart = ResolveGroundStandingCell(ToCell(current), 3);
+                var groundEnd = ResolveGroundStandingCell(ToCell(worldTarget), GroundRouteMaximumDropCells);
+                if (!IsGroundStandingCell(groundStart) || !IsGroundStandingCell(groundEnd)) return false;
+                RebuildGroundRoute(groundStart, groundEnd);
+                return groundStart == groundEnd || groundRouteReachesTarget;
+            }
+            finally
+            {
+                canDestroyWallMaterial = wallPermission;
+                requireFullBodyClearance = previousClearance;
+                nextGroundRouteRetryTime = float.NegativeInfinity;
+            }
+        }
+
+        /// <summary>대기 중 한 걸음은 벽을 파괴하지 않으며 지상형은 발밑 지지대가 끊기면 멈춘다.</summary>
+        public bool CanWanderTo(Vector2 worldTarget)
+        {
+            if (navigationTiles == null || !IsFinite(worldTarget)) return false;
+            var wallPermission = canDestroyWallMaterial;
+            canDestroyWallMaterial = null;
+            try
+            {
+                var current = body != null ? body.position : (Vector2)transform.position;
+                if (!HasClearNavigationLine(current, worldTarget)) return false;
+                if (IsFlying) return true;
+                if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
+                if (attachedCollider == null) return false;
+                var footOffset = (Vector2)attachedCollider.bounds.center - current +
+                                 Vector2.down * (attachedCollider.bounds.extents.y + GroundProbeDepth);
+                var steps = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(current, worldTarget) * 4f));
+                for (var step = 1; step <= steps; step++)
+                {
+                    var point = Vector2.Lerp(current, worldTarget, step / (float)steps);
+                    if (IsNavigationPassableCell(ToCell(point + footOffset))) return false;
+                }
+                return true;
+            }
+            finally { canDestroyWallMaterial = wallPermission; }
+        }
+
         public bool HasClearAttackLine(Vector2 worldTarget)
         {
             if (navigationTiles == null) return true;
@@ -731,12 +875,17 @@ namespace Nyangbingo.World
         }
 
         public bool TryApplyKnockback(Vector2 requestedDisplacement)
+            => TryApplyKnockback(requestedDisplacement, 1f);
+
+        public bool TryApplyKnockback(Vector2 requestedDisplacement, float durationMultiplier)
         {
             if (body == null || !body.simulated || !IsFinite(requestedDisplacement) ||
-                requestedDisplacement.sqrMagnitude <= Mathf.Epsilon) return false;
+                requestedDisplacement.sqrMagnitude <= Mathf.Epsilon ||
+                float.IsNaN(durationMultiplier) || float.IsInfinity(durationMultiplier) ||
+                durationMultiplier <= 0f) return false;
             body.linearVelocity = Vector2.zero;
             knockbackRemainingDisplacement = requestedDisplacement;
-            knockbackRemainingSeconds = KnockbackDurationSeconds;
+            knockbackRemainingSeconds = KnockbackDurationSeconds * durationMultiplier;
             knockbackGrabRemainingSeconds = 0f;
             return true;
         }
@@ -900,9 +1049,8 @@ namespace Nyangbingo.World
             if (navigationTiles == null || body == null || Mathf.Abs(direction.x) <= .1f ||
                 Time.unscaledTime < nextStepJumpTime || !IsGroundedOnTiles()) return false;
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
-            var bounds = attachedCollider != null
-                ? attachedCollider.bounds
-                : new Bounds(body.position, Vector3.one * .8f);
+            if (attachedCollider == null) return false;
+            var bounds = attachedCollider.bounds;
             var extents = bounds.extents;
             var horizontalSign = direction.x > 0f ? 1 : -1;
             // Probe from the collider centre, not the Rigidbody pivot. Ground bosses use a
@@ -913,11 +1061,19 @@ namespace Nyangbingo.World
             var blockingCell = ToCell(forwardProbe);
             if (IsAirCell(blockingCell)) return false;
 
-            // Jump even when the obstacle is taller than one tile. Collision still prevents the
-            // mob from passing through an uncleared wall, but repeated attempts look intentional
-            // instead of leaving grounded pursuers walking against it forever.
+            var jumpVelocity = StepJumpVelocityForCollider(extents.x);
+            var gravity = Mathf.Abs(Physics2D.gravity.y * body.gravityScale);
+            if (gravity <= Mathf.Epsilon) return false;
+            var jumpHeight = jumpVelocity * jumpVelocity / (2f * gravity);
+            // Sweep the whole movement collider to the jump apex. A point above the pivot
+            // misses low ceilings over the boss's shoulders and causes repeated head bumps.
+            var ceilingHitCount = attachedCollider.Cast(
+                Vector2.up, movementFilter, castHits, jumpHeight + CollisionSkin);
+            for (var index = 0; index < ceilingHitCount; index++)
+                if (IsBlockingHit(castHits[index], Vector2.up)) return false;
+
             body.linearVelocity = new Vector2(body.linearVelocity.x,
-                StepJumpVelocityForCollider(extents.x));
+                jumpVelocity);
             nextStepJumpTime = Time.unscaledTime + StepJumpCooldownSeconds;
             return true;
         }
@@ -925,14 +1081,43 @@ namespace Nyangbingo.World
         public static float StepJumpVelocityForCollider(float horizontalExtent) =>
             horizontalExtent > .5f ? GroundBossStepJumpVelocity : StepJumpVelocity;
 
+        public bool TryFindBlockingStructure(Vector2 direction, float attackRange,
+            out Vector3Int cell, out YokaiWallMaterial material)
+        {
+            cell = default;
+            material = YokaiWallMaterial.Default;
+            if (navigationTiles == null || attachedCollider == null ||
+                !IsFinite(direction) || direction.sqrMagnitude <= Mathf.Epsilon ||
+                float.IsNaN(attackRange) || float.IsInfinity(attackRange) ||
+                attackRange <= 0f) return false;
+            direction.Normalize();
+            var bounds = attachedCollider.bounds;
+            var extent = Mathf.Abs(direction.x) * bounds.extents.x +
+                         Mathf.Abs(direction.y) * bounds.extents.y;
+            var castDistance = Mathf.Max(0f, attackRange - extent) + CollisionSkin;
+            var hitCount = attachedCollider.Cast(direction, movementFilter, castHits, castDistance);
+            var nearestDistance = float.PositiveInfinity;
+            var nearestHit = default(RaycastHit2D);
+            for (var index = 0; index < hitCount; index++)
+            {
+                var hit = castHits[index];
+                if (!IsBlockingHit(hit, direction) || hit.distance >= nearestDistance) continue;
+                nearestDistance = hit.distance;
+                nearestHit = hit;
+            }
+            if (nearestHit.collider == null) return false;
+            // Select the first actual obstruction. Never search around it for another wall:
+            // natural terrain must also prevent attacking a structure hidden behind it.
+            cell = ToCell(nearestHit.point - nearestHit.normal * CollisionSkin);
+            return navigationTiles.GetTile(cell).BlocksMovement &&
+                   navigationTiles.TryGetDamageableWallMaterial(cell, out material);
+        }
+
         private bool IsGroundedOnTiles()
         {
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
-            var groundProbe = attachedCollider != null
-                ? new Vector2(attachedCollider.bounds.center.x,
-                    attachedCollider.bounds.min.y - GroundProbeDepth)
-                : body.position + Vector2.down * (.4f + GroundProbeDepth);
-            return !IsAirCell(ToCell(groundProbe));
+            return PlayerMovementPhysics.HasForegroundGroundSupport(attachedCollider, GroundProbeDepth,
+                groundProbeHits, groundContacts);
         }
 
         public static WorldMobLocomotion ForYokai(YokaiKind kind)
@@ -1082,14 +1267,14 @@ namespace Nyangbingo.World
         public bool IsNavigationPassableCell(Vector3Int cell)
         {
             if (navigationTiles == null || !navigationTiles.InBounds(cell)) return false;
-            if (navigationTiles.GetTile(cell).IsAir || navigationTiles.IsDoorOpen(cell)) return true;
-            return canDestroyWallMaterial != null &&
+            if (!navigationTiles.GetTile(cell).BlocksMovement || navigationTiles.IsDoorOpen(cell)) return true;
+            return wallBreachAllowed && canDestroyWallMaterial != null &&
                    navigationTiles.TryGetDamageableWallMaterial(cell, out var material) &&
                    canDestroyWallMaterial(material);
         }
 
         private bool IsAirCell(Vector3Int cell) =>
-            navigationTiles != null && navigationTiles.InBounds(cell) && navigationTiles.GetTile(cell).IsAir;
+            navigationTiles != null && navigationTiles.InBounds(cell) && !navigationTiles.GetTile(cell).BlocksMovement;
 
         private Vector3Int ToCell(Vector2 position) => navigationTiles != null
             ? navigationTiles.WorldToCell(position)

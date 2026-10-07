@@ -21,6 +21,7 @@ namespace Nyangbingo.World
     /// </summary>
     public sealed class TileService : ITileDiffSource, IWorldSafeSpawnResolver, IBackgroundPlacementService
     {
+        public event Action<Vector3Int, int> WallDestroyedByDamage;
         private readonly TileData[,] tiles;
         private TilemapRenderer renderer;
         private readonly GameDataCatalog catalog;
@@ -59,6 +60,7 @@ namespace Nyangbingo.World
 
         private static readonly Dictionary<string, int> PlacementHardness = new Dictionary<string, int>(StringComparer.Ordinal)
         {
+            { WorldTileTypes.Rope, 1 },
             { WorldTileTypes.Dirt, 1 }, { WorldTileTypes.Clay, 1 }, { WorldTileTypes.Coal, 1 },
             // The inventory "stone" item is the upper-layer T1 block. Player-placed stone must
             // remain removable with the default claw just like the natural block it came from.
@@ -100,22 +102,32 @@ namespace Nyangbingo.World
         public void SetClayPlasterResolver(Func<Vector3Int, bool> resolver) =>
             clayPlasterResolver = resolver;
 
-        public void SetForegroundPlacementBlocker(Func<Vector3Int, bool> blocker)
+        private readonly List<Func<Vector3Int, bool>> solidForegroundPlacementBlockers = new();
+
+        public void SetForegroundPlacementBlocker(Func<Vector3Int, bool> blocker, bool solidOnly = false)
         {
-            if (blocker != null && !foregroundPlacementBlockers.Contains(blocker))
-                foregroundPlacementBlockers.Add(blocker);
+            var blockers = solidOnly ? solidForegroundPlacementBlockers : foregroundPlacementBlockers;
+            if (blocker != null && !blockers.Contains(blocker)) blockers.Add(blocker);
         }
 
         public void ClearForegroundPlacementBlocker(Func<Vector3Int, bool> blocker)
         {
-            if (blocker != null) foregroundPlacementBlockers.Remove(blocker);
+            if (blocker == null) return;
+            foregroundPlacementBlockers.Remove(blocker);
+            solidForegroundPlacementBlockers.Remove(blocker);
         }
 
-        public bool IsForegroundPlacementBlocked(Vector3Int cell)
+        public bool IsForegroundPlacementBlocked(Vector3Int cell) =>
+            IsForegroundPlacementBlocked(cell, null);
+
+        public bool IsForegroundPlacementBlocked(Vector3Int cell, string elementType)
         {
             for (var index = 0; index < foregroundPlacementBlockers.Count; index++)
                 if (foregroundPlacementBlockers[index]?.Invoke(cell) == true)
                     return true;
+            if (!WorldTileTypes.IsPassableForeground(elementType))
+                for (var index = 0; index < solidForegroundPlacementBlockers.Count; index++)
+                    if (solidForegroundPlacementBlockers[index]?.Invoke(cell) == true) return true;
             return false;
         }
 
@@ -150,6 +162,18 @@ namespace Nyangbingo.World
                 cellBounds.center.x - spriteBounds.center.x,
                 cellBounds.min.y - spriteBounds.min.y,
                 0f);
+        }
+
+        /// <summary>Resolve the same registered world tile used on placement, including depth-specific wallpaper.</summary>
+        public Sprite ResolvePlacementPreviewSprite(Vector3Int cell, string itemId)
+        {
+            if (renderer == null || string.IsNullOrEmpty(itemId)) return null;
+            TileBase tile;
+            var found = string.Equals(TileIdAlias.ToCanonical(itemId), WorldTileTypes.Wallpaper,
+                StringComparison.Ordinal)
+                ? renderer.TryGetWallpaperTileBase(cell.y, out tile)
+                : renderer.TryGetTileBase(itemId, out tile);
+            return found && tile is Tile worldTile ? worldTile.sprite : null;
         }
 
         public Bounds GetCellWorldBounds(Vector3Int cell) => renderer != null
@@ -207,12 +231,15 @@ namespace Nyangbingo.World
                 return false;
 
             var maximum = ResolveWallHitPoints(cell);
+            var doorFootprint = IsDoorFootprintElement(GetTile(cell).elementType);
+            var destructionAnchor = doorFootprint ? ResolveDoorBaseCell(cell, GetTile(cell).elementType) : cell;
             wallDamageTaken.TryGetValue(cell, out var currentDamage);
             var remaining = Mathf.Max(0f, maximum - currentDamage);
             if (remaining <= Mathf.Epsilon)
             {
                 wallDamageTaken.Remove(cell);
                 destroyed = DestroyWallWithoutDrop(cell);
+                if (destroyed) WallDestroyedByDamage?.Invoke(destructionAnchor, doorFootprint ? 2 : 1);
                 return destroyed;
             }
             appliedDamage = Mathf.Min(amount, remaining);
@@ -228,7 +255,10 @@ namespace Nyangbingo.World
             wallDamageTaken.Remove(cell);
             destroyed = DestroyWallWithoutDrop(cell);
             if (destroyed)
+            {
                 GameEvents.RaiseWallDurabilityChanged(cell, 0f, maximum, true);
+                WallDestroyedByDamage?.Invoke(destructionAnchor, doorFootprint ? 2 : 1);
+            }
             return destroyed;
         }
 
@@ -534,14 +564,19 @@ namespace Nyangbingo.World
                           $"foregroundCollision={renderer.HasForegroundCollision(cell)}");
 #endif
 
+            RecordChange(cell, minedElementType, placed: false);
+            DropUnsupportedMushroomAbove(cell);
+            var detachedRopes = DetachRopeBelow(cell);
+            if (minedElementType != WorldTileTypes.Rope)
+                RequestDetachedRopeDrop(cell, detachedRopes);
             if (TryResolveDrop(minedElementType, out var item, out var amount))
             {
+                if (minedElementType == WorldTileTypes.Rope) amount += detachedRopes;
                 ItemAcquisition.Request(item, amount);
                 droppedItemId = item.Id;
                 droppedAmount = amount;
             }
 
-            RecordChange(cell, minedElementType, placed: false);
             GameEvents.RaiseTileBroken(cell);
             return true;
         }
@@ -559,8 +594,7 @@ namespace Nyangbingo.World
             if (string.Equals(elementType, DoorElementType, StringComparison.Ordinal))
                 return TryPlaceDoorFootprint(cell, consumeFrom, hardnessOverride, sourceSlot);
 
-            var current = tiles[cell.x, cell.y];
-            if (!current.IsAir || IsForegroundPlacementBlocked(cell)) return false;
+            if (!CanPlaceForeground(cell, elementType)) return false;
 
             if (consumeFrom != null && !consumeFrom.TryRemove(elementType, 1, sourceSlot)) return false;
 
@@ -650,7 +684,51 @@ namespace Nyangbingo.World
             itemId = TileIdAlias.ToCanonical(itemId);
             if (string.Equals(itemId, DoorElementType, StringComparison.Ordinal))
                 return CanPlaceDoorFootprint(cell) && !IsForegroundPlacementBlocked(cell);
-            return GetTile(cell).IsAir && !IsForegroundPlacementBlocked(cell);
+            return GetTile(cell).IsAir && !IsForegroundPlacementBlocked(cell, itemId) &&
+                   (itemId != WorldTileTypes.Rope || HasRopeSupportAbove(cell));
+        }
+
+        /// <summary>로프는 바로 위의 충돌 타일에 매달리거나 고정된 로프 아래에만 연장한다.</summary>
+        public bool HasRopeSupportAbove(Vector3Int cell)
+        {
+            var above = cell + Vector3Int.up;
+            while (InBounds(above))
+            {
+                var tile = GetTile(above);
+                if (tile.elementType != WorldTileTypes.Rope)
+                    return tile.BlocksMovement && !IsDoorOpen(above);
+                above += Vector3Int.up;
+            }
+            return false;
+        }
+
+        // 반복문으로 끊긴 지점 아래의 연속 구간만 제거한다. 저장 이력 재생에서는 호출하지 않는다.
+        private int DetachRopeBelow(Vector3Int removedCell)
+        {
+            var count = 0;
+            for (var cell = removedCell + Vector3Int.down;
+                 InBounds(cell) && GetTile(cell).elementType == WorldTileTypes.Rope;
+                 cell += Vector3Int.down)
+            {
+                var cleared = GetTile(cell).WithoutForeground();
+                tiles[cell.x, cell.y] = cleared;
+                wallDamageTaken.Remove(cell);
+                ApplyForegroundVisual(cell, null);
+                ApplyBackgroundVisual(cell, cleared.HasBackground ? cleared.backgroundElementType : null);
+                RefreshEdgeOverlayAround(cell);
+                RecordChange(cell, WorldTileTypes.Rope, placed: false);
+                GameEvents.RaiseTileBroken(cell);
+                count++;
+            }
+            if (count > 0) renderer?.NotifyForegroundCollisionDirty();
+            return count;
+        }
+
+        private void RequestDetachedRopeDrop(Vector3Int removedCell, int count)
+        {
+            if (count <= 0 || !TryResolveDrop(WorldTileTypes.Rope, out var item, out _)) return;
+            WorldItemDropRequest.Request(item, count,
+                ResolveForegroundMiningDropWorldPosition(removedCell + Vector3Int.down));
         }
 
         public static bool IsDoorFootprintElement(string elementType) =>
@@ -816,6 +894,12 @@ namespace Nyangbingo.World
             RefreshEdgeOverlayAround(cell);
             renderer?.NotifyForegroundCollisionDirty();
             RecordChange(cell, clearedElementType, placed: false);
+            // 문 상태 복원처럼 이벤트 없는 데이터 정리에서는 드롭·추가 이력을 만들지 않는다.
+            if (raiseBrokenEvent)
+            {
+                DropUnsupportedMushroomAbove(cell);
+                RequestDetachedRopeDrop(cell, DetachRopeBelow(cell));
+            }
             if (raiseBrokenEvent) GameEvents.RaiseTileBroken(cell);
             return true;
         }
@@ -1078,6 +1162,33 @@ namespace Nyangbingo.World
                 results.Add(candidate);
             }
             return results;
+        }
+
+        /// <summary>Place the entire yokai collider above its floor, not just its pivot.</summary>
+        public bool TryGetYokaiSpawnPosition(Vector3Int feetCell, float radius, out Vector3 position)
+        {
+            position = default;
+            if (float.IsNaN(radius) || float.IsInfinity(radius) || radius <= 0f ||
+                !InBounds(feetCell) || !InBounds(feetCell + Vector3Int.down)) return false;
+            var floor = feetCell + Vector3Int.down;
+            if (!GetTile(floor).BlocksMovement || IsDoorOpen(floor)) return false;
+            var feetBounds = GetCellWorldBounds(feetCell);
+            var center = new Vector2(feetBounds.center.x, feetBounds.min.y + radius + .02f);
+            var min = WorldToCell(center - Vector2.one * radius);
+            var max = WorldToCell(center + Vector2.one * radius);
+            for (var x = min.x; x <= max.x; x++)
+                for (var y = min.y; y <= max.y; y++)
+                {
+                    var cell = new Vector3Int(x, y, feetCell.z);
+                    if (!InBounds(cell)) return false;
+                    if (!GetTile(cell).BlocksMovement || IsDoorOpen(cell)) continue;
+                    var bounds = GetCellWorldBounds(cell);
+                    var closest = new Vector2(Mathf.Clamp(center.x, bounds.min.x, bounds.max.x),
+                        Mathf.Clamp(center.y, bounds.min.y, bounds.max.y));
+                    if ((center - closest).sqrMagnitude < radius * radius) return false;
+                }
+            position = new Vector3(center.x, center.y, feetBounds.center.z);
+            return true;
         }
 
         private bool IsSafeGroundSpawn(Vector3Int cell)
@@ -1398,8 +1509,22 @@ namespace Nyangbingo.World
             RefreshEdgeOverlayAround(cell);
             renderer?.NotifyForegroundCollisionDirty();
             RecordChange(cell, destroyedId, placed: false);
+            DropUnsupportedMushroomAbove(cell);
             GameEvents.RaiseTileBroken(cell);
             return true;
+        }
+
+        private void DropUnsupportedMushroomAbove(Vector3Int supportCell)
+        {
+            if (GetTile(supportCell).BlocksMovement) return;
+            var mushroomCell = supportCell + Vector3Int.up;
+            if (!InBounds(mushroomCell)) return;
+            var id = GetTile(mushroomCell).elementType;
+            if (!WorldTileTypes.IsPassableMushroom(id)) return;
+            if (!ClearForegroundCell(mushroomCell, id, raiseBrokenEvent: true)) return;
+            if (TryResolveDrop(id, out var item, out var amount))
+                WorldItemDropRequest.Request(item, amount,
+                    ResolveForegroundMiningDropWorldPosition(mushroomCell));
         }
 
         private static bool IsFinite(float value) =>

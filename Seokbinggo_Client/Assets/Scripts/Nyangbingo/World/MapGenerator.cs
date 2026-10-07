@@ -23,6 +23,7 @@ namespace Nyangbingo.World
     public static class WorldTileTypes
     {
         public const string Air = "air";
+        public const string Rope = "rope";
 
         // 상층 (T1)
         public const string Dirt = "dirt";
@@ -43,6 +44,10 @@ namespace Nyangbingo.World
         public const string IceSteelOre = "icesteel_ore";
         public const string FrostEssence = "frost_essence";
         public const string Seogi = "seogi";
+        /// <summary>채굴 대상은 유지하지만 캐릭터·드롭 이동을 막지 않는 버섯 3종.</summary>
+        public static bool IsPassableMushroom(string id) =>
+            id == OysterMushroom || id == Shiitake || id == Seogi;
+        public static bool IsPassableForeground(string id) => id == Rope || IsPassableMushroom(id);
         /// <summary>서리 1차 봉헌 치환(T4). 월드젠 광맥 없음.</summary>
         public const string SeongeOre = "seonge_ore";
         /// <summary>서리 2차 봉헌 치환(T5). 월드젠 광맥 없음.</summary>
@@ -76,6 +81,7 @@ namespace Nyangbingo.World
         /// </summary>
         public static readonly HashSet<string> AllElementTypes = new HashSet<string>(StringComparer.Ordinal)
         {
+            Rope,
             Dirt, Stone, Coal, Clay, OysterMushroom,
             StoneMid, IronOre, CopperOre, IceShard, Shiitake,
             StoneDeep, IceSteelOre, FrostEssence, Seogi,
@@ -239,8 +245,9 @@ namespace Nyangbingo.World
             naturalBackgroundElementType = string.IsNullOrEmpty(naturalBackgroundElementType) ? WorldTileTypes.Air : naturalBackgroundElementType
         };
 
-        /// <summary>전경에 파괴/채굴 대상이 없는(통행 가능한) 칸인지. 배경벽 유무와 무관하게 hardness로만 판별한다.</summary>
+        /// <summary>전경에 파괴/채굴 대상이 없는 칸인지. 버섯의 통행 여부와는 구분한다.</summary>
         public bool IsAir => hardness <= 0;
+        public bool BlocksMovement => !IsAir && !WorldTileTypes.IsPassableForeground(elementType);
     }
 
     /// <summary>Pass 3 광맥(Vein) 하나의 배치 규칙. mineral-tiers.csv의 "빈도(개/100타일)"를 그대로 옮겨온다.</summary>
@@ -314,6 +321,7 @@ namespace Nyangbingo.World
     /// </summary>
     public sealed class MapGenerator : IChestSource
     {
+        public const int CurrentResourceGenerationVersion = 2;
         private static readonly Vector2Int[] FourNeighbors =
         {
             new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1)
@@ -417,7 +425,30 @@ namespace Nyangbingo.World
         public WorldGenerationResult GenerateForNewGame(int seed)
             => GenerateDetailed(seed, true);
 
-        private WorldGenerationResult GenerateDetailed(int seed, bool requireStartingLandmarks)
+        /// <summary>
+        /// 구버전의 빈 제단 발밑에 설치한 이력은 공기 상태에서 재생해야 한다.
+        /// 첫 이력이 채굴이면 새 바닥에서 채굴한 저장이므로 정상 보강한다.
+        /// </summary>
+        public WorldGenerationResult GenerateForRestore(int seed,
+            IEnumerable<Nyangbingo.Save.TileChangeRecord> changes, int resourceGenerationVersion = 0)
+        {
+            var visited = new HashSet<Vector2Int>();
+            var initiallyPlacedCells = new HashSet<Vector2Int>();
+            if (changes != null)
+                foreach (var change in changes)
+                {
+                    if (change.z != 0) continue;
+                    var cell = new Vector2Int(change.x, change.y);
+                    if (visited.Add(cell) && change.placed) initiallyPlacedCells.Add(cell);
+                }
+            if (resourceGenerationVersion < 0 || resourceGenerationVersion > CurrentResourceGenerationVersion)
+                throw new InvalidOperationException("지원하지 않는 자원 생성 버전입니다.");
+            return GenerateDetailed(seed, false, initiallyPlacedCells, resourceGenerationVersion);
+        }
+
+        private WorldGenerationResult GenerateDetailed(int seed, bool requireStartingLandmarks,
+            ISet<Vector2Int> initiallyPlacedCells = null,
+            int resourceGenerationVersion = CurrentResourceGenerationVersion)
         {
             var attempt = 0;
             WorldGenerationResult result;
@@ -426,7 +457,8 @@ namespace Nyangbingo.World
             {
                 var candidateSeed = seed + attempt;
                 result = GenerateSingleAttempt(
-                    candidateSeed, config, mineralHardnessById, mineralProfiles, boundaryIceRockHardness);
+                    candidateSeed, config, mineralHardnessById, mineralProfiles, boundaryIceRockHardness,
+                    resourceGenerationVersion);
                 result.requestedSeed = seed;
                 result.rerollAttempts = attempt;
 
@@ -448,8 +480,33 @@ namespace Nyangbingo.World
                 attempt++;
             }
 
+            // 검증/재시도 결과를 먼저 확정한다. 바닥 보강으로 기존 저장 시드의
+            // acceptedSeed가 달라져 타일 변경 이력을 복원하지 못하는 일을 막는다.
+            ReinforceAltarFooting(result.tiles, result.surfaceHeights, result.altarPosition,
+                config, boundaryIceRockHardness, initiallyPlacedCells);
             CacheResult(result);
             return result;
+        }
+
+        /// <summary>
+        /// 제단 주변 공기 확보가 지운 발밑만 복구한다. 제단 좌표와 접근 통로는 유지한다.
+        /// 저장 불러오기는 이 생성 바닥 위에 기존 채굴/설치 이력을 그대로 재생한다.
+        /// </summary>
+        private static void ReinforceAltarFooting(TileData[,] grid, int[] surfaceHeights,
+            Vector2Int altarOrigin, WorldGenerationConfig config, int boundaryHardness,
+            ISet<Vector2Int> initiallyPlacedCells)
+        {
+            var floorY = altarOrigin.y - 1;
+            for (var dx = 0; dx < config.AltarSize; dx++)
+            {
+                var x = altarOrigin.x + dx;
+                if (!InBounds(x, floorY, grid.GetLength(0), grid.GetLength(1))) continue;
+                // 광물·호수 등 이미 존재하는 바닥은 덮어쓰지 않는다.
+                if (!grid[x, floorY].IsAir) continue;
+                if (initiallyPlacedCells != null &&
+                    initiallyPlacedCells.Contains(new Vector2Int(x, floorY))) continue;
+                SealCaveCellWithRock(grid, x, floorY, surfaceHeights[x], config, boundaryHardness);
+            }
         }
 
         public static bool HasStartingLandmarks(WorldGenerationResult result, WorldGenerationConfig config)
@@ -547,7 +604,7 @@ namespace Nyangbingo.World
         // ==============================================================
         private static WorldGenerationResult GenerateSingleAttempt(int seed, WorldGenerationConfig config,
             IReadOnlyDictionary<string, int> hardnessById,
-            IReadOnlyList<OreVeinProfile> profiles, int boundaryHardness)
+            IReadOnlyList<OreVeinProfile> profiles, int boundaryHardness, int resourceGenerationVersion)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
@@ -568,7 +625,8 @@ namespace Nyangbingo.World
             // Pass 2 — 펄린 동굴(후처리 없음)
             CarveCaves(grid, surfaceHeights, caveRng, config);
             // Pass 3 — 광맥(돌·석탄 포함, 지표 ban depth 아래)
-            PlaceOreVeins(grid, surfaceHeights, resourceRng, config, hardnessById, profiles);
+            PlaceOreVeins(grid, surfaceHeights, resourceRng, config, hardnessById, profiles,
+                resourceGenerationVersion >= 1 ? new System.Random(seed + 8) : null);
             // Pass 4 — 구조물·스폰·얕은 입구 (상자는 대형 동굴 개척 이후)
             var structures = PlaceStructures(grid, surfaceHeights, structureRng, config, protectedAir);
             // Pass 4b — 심층 제단 접근(지표·crust 절대 미개척). 스폰 연결은 PostProcess 이후 4c에서 보장.
@@ -591,6 +649,9 @@ namespace Nyangbingo.World
             ReinforceSafeSpawnFooting(grid, surfaceHeights, structures.spawnPoint, config);
             PopulateNaturalCaveBackgrounds(grid, surfaceHeights, config);
             EnsureChestCellsHaveNoForeground(grid, structures.chests);
+            if (resourceGenerationVersion >= 1)
+                PlaceCaveMushrooms(grid, surfaceHeights, new System.Random(seed + 7), config,
+                    hardnessById, profiles, structures.chests, resourceGenerationVersion);
 
             return new WorldGenerationResult
             {
@@ -1972,7 +2033,7 @@ namespace Nyangbingo.World
         // ==============================================================
         private static void PlaceOreVeins(TileData[,] grid, int[] surfaceHeights, System.Random rng,
             WorldGenerationConfig config, IReadOnlyDictionary<string, int> hardnessById,
-            IReadOnlyList<OreVeinProfile> profiles)
+            IReadOnlyList<OreVeinProfile> profiles, System.Random amountRng)
         {
             var width = config.MapWidth;
             var height = config.MapHeight;
@@ -2004,9 +2065,118 @@ namespace Nyangbingo.World
                     if (IsInSurfaceMineralBan(seedY, surfaceHeights[x], config)) continue;
 
                     GrowVeinCluster(grid, new Vector2Int(x, seedY), width, height, profile, hardness,
-                        surfaceHeights, config, rng);
+                        surfaceHeights, config, rng, amountRng);
                 }
             }
+        }
+
+        private static bool IsCaveMushroom(string id) =>
+            id == WorldTileTypes.OysterMushroom || id == WorldTileTypes.Shiitake || id == WorldTileTypes.Seogi;
+
+        private static void PlaceCaveMushrooms(TileData[,] grid, int[] surfaceHeights, System.Random rng,
+            WorldGenerationConfig config, IReadOnlyDictionary<string, int> hardnessById,
+            IReadOnlyList<OreVeinProfile> profiles, List<ChestSpawnPoint> chests,
+            int resourceGenerationVersion)
+        {
+            var width = grid.GetLength(0);
+            var height = grid.GetLength(1);
+            var visited = new bool[width, height];
+            var queue = new Queue<Vector2Int>();
+            var candidates = new Dictionary<Vector2Int, string>();
+            var reserved = new HashSet<Vector2Int>();
+            if (chests != null)
+                foreach (var chest in chests)
+                    for (var dx = 0; dx < 2; dx++)
+                        for (var dy = 0; dy < 2; dy++)
+                            reserved.Add(chest.position + new Vector2Int(dx, dy));
+
+            bool IsCaveAir(int x, int y) => x >= 0 && x < width && y > 0 && y < height &&
+                grid[x, y].IsAir && grid[x, y].HasNaturalBackground &&
+                y <= surfaceHeights[x] - config.CaveSurfaceCrustThickness;
+
+            // 최종 동굴만 한 번 순회한다. 지형을 추가로 뚫거나 광맥/상자 RNG를 소비하지 않는다.
+            for (var x = 0; x < width; x++)
+                for (var y = 1; y < height; y++)
+                {
+                    if (visited[x, y] || !IsCaveAir(x, y)) continue;
+                    candidates.Clear();
+                    visited[x, y] = true;
+                    queue.Enqueue(new Vector2Int(x, y));
+                    while (queue.Count > 0)
+                    {
+                        var cell = queue.Dequeue();
+                        var floor = grid[cell.x, cell.y - 1];
+                        // Mushrooms are passable. Existing ceilings remain untouched; a
+                        // one-cell pocket at either end of the cave is a valid spawn site.
+                        var hasHeadroomOrCaveEdge = IsCaveAir(cell.x, cell.y + 1) ||
+                            !IsCaveAir(cell.x - 1, cell.y) || !IsCaveAir(cell.x + 1, cell.y);
+                        // A seeded save replays mining against its original spawn positions.
+                        // Keep version 1 candidates (and therefore RNG order) unchanged.
+                        var validSupport = resourceGenerationVersion >= 2
+                            ? floor.BlocksMovement : floor.hardness > 0;
+                        var validSpace = resourceGenerationVersion >= 2
+                            ? hasHeadroomOrCaveEdge
+                            : IsCaveAir(cell.x, cell.y + 1) && IsCaveAir(cell.x, cell.y + 2);
+                        if (!reserved.Contains(cell) && validSupport && floor.isNaturalTerrain &&
+                            floor.elementType != WorldTileTypes.IceAltar &&
+                            floor.elementType != WorldTileTypes.IceLake &&
+                            validSpace)
+                        {
+                            foreach (var profile in profiles)
+                            {
+                                if (!IsCaveMushroom(profile.elementType)) continue;
+                                var range = profile.depthMax > 0
+                                    ? GetDepthRange(cell.x, profile.depthMin, profile.depthMax, surfaceHeights, config)
+                                    : GetLayerRange(cell.x, profile.layer, surfaceHeights, config);
+                                if (cell.y < range.Item1 || cell.y > range.Item2) continue;
+                                candidates[cell] = profile.elementType;
+                                break;
+                            }
+                        }
+                        foreach (var direction in FourNeighbors)
+                        {
+                            var next = cell + direction;
+                            if (!IsCaveAir(next.x, next.y) || visited[next.x, next.y]) continue;
+                            visited[next.x, next.y] = true;
+                            queue.Enqueue(next);
+                        }
+                    }
+                    if (candidates.Count < 2) continue;
+                    var centers = new List<Vector2Int>(candidates.Keys);
+                    for (var i = centers.Count - 1; i > 0; i--)
+                    {
+                        var j = rng.Next(i + 1);
+                        var swap = centers[i]; centers[i] = centers[j]; centers[j] = swap;
+                    }
+                    foreach (var center in centers)
+                    {
+                        var group = new List<Vector2Int> { center };
+                        // 같은 동굴의 가까운 바닥에 각각 한 개씩, 붙어 있는 광맥 모양은 피한다.
+                        for (var dx = -5; dx <= 5 && group.Count < 3; dx++)
+                            for (var dy = -2; dy <= 2 && group.Count < 3; dy++)
+                            {
+                                var next = center + new Vector2Int(dx, dy);
+                                if (!candidates.ContainsKey(next)) continue;
+                                var separated = true;
+                                foreach (var chosen in group)
+                                    if (Mathf.Abs(next.x - chosen.x) + Mathf.Abs(next.y - chosen.y) < 2)
+                                        separated = false;
+                                if (separated) group.Add(next);
+                            }
+                        if (group.Count < 2) continue;
+                        var count = Mathf.Min(group.Count, rng.Next(2, 4));
+                        for (var i = 0; i < count; i++)
+                        {
+                            var cell = group[i];
+                            var id = candidates[cell];
+                            if (!hardnessById.TryGetValue(id, out var hardness))
+                                throw new InvalidOperationException($"버섯 경도 정의 누락: '{id}'.");
+                            grid[cell.x, cell.y] = TileData.CreateNaturalWithBackground(
+                                id, hardness, grid[cell.x, cell.y].naturalBackgroundElementType);
+                        }
+                        break;
+                    }
+                }
         }
 
         private static int EstimateArea(OreVeinProfile profile, int[] surfaceHeights, WorldGenerationConfig config)
@@ -2033,10 +2203,19 @@ namespace Nyangbingo.World
         /// </summary>
         private static void GrowVeinCluster(TileData[,] grid, Vector2Int seed, int width, int height,
             OreVeinProfile profile, int hardness, int[] surfaceHeights, WorldGenerationConfig config,
-            System.Random rng)
+            System.Random rng, System.Random amountRng)
         {
             var hasExplicitDepth = profile.depthMax > 0;
             var size = rng.Next(profile.minClusterSize, profile.maxClusterSize + 1);
+            // 생성 횟수 산식과 기존 RNG 보행은 유지하고 배치량만 줄인다.
+            var writeSize = size;
+            if (amountRng != null)
+            {
+                var scaled = size * .85f;
+                writeSize = Mathf.FloorToInt(scaled);
+                if (amountRng.NextDouble() < scaled - writeSize) writeSize++;
+                writeSize = Mathf.Max(1, writeSize);
+            }
             var current = seed;
             // 같은 방향을 이어가기 쉽게 해 방울보다 광맥처럼 보이게 한다.
             var direction = FourNeighbors[rng.Next(FourNeighbors.Length)];
@@ -2054,7 +2233,8 @@ namespace Nyangbingo.World
                 if (high >= low)
                 {
                     current.y = Mathf.Clamp(current.y, low, high);
-                    if (InBounds(current, width, height) &&
+                    if (i < writeSize && (amountRng == null || !IsCaveMushroom(profile.elementType)) &&
+                        InBounds(current, width, height) &&
                         !grid[current.x, current.y].IsAir &&
                         !IsInSurfaceMineralBan(current.y, surfaceHeights[current.x], config))
                     {
@@ -2340,7 +2520,7 @@ namespace Nyangbingo.World
             return false;
         }
 
-        /// <summary>심층 얼음 호수 + 이무기 소환용 얼음 제단(2×2, 파괴 불가 취급 · hardness=altarHardness).</summary>
+        /// <summary>심층 얼음 호수 + 강철이 소환용 얼음 제단(2×2, 파괴 불가 취급 · hardness=altarHardness).</summary>
         private static Vector2Int PlaceDeepAltarAndLake(TileData[,] grid, int[] surfaceHeights, System.Random rng, WorldGenerationConfig config, HashSet<Vector2Int> occupied)
         {
             var width = config.MapWidth;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
@@ -19,7 +19,7 @@ namespace Nyangbingo.World
     ///  1) 저장된 seed로 월드를 깨끗하게 재생성한다.
     ///  2) TileService.RestoreTileChanges로 타일 변경 이력을 그대로 재생해 타일맵을 복원한다.
     ///  3) WorldSaveAdapter.RestoreChests로 20개 상자의 열림 상태를 복원한다
-    ///     (이무기 제단은 파괴 불가 + 시드로만 결정되는 타일이라 재생성만으로 이미 원상 복구됨).
+    ///     (강철이 제단은 파괴 불가 + 시드로만 결정되는 타일이라 재생성만으로 이미 원상 복구됨).
     ///  4) 타일맵 렌더러를 갱신하고, SealSystem.InvalidateAll()로 밀폐 캐시를 초기화한다.
     ///
     /// "개발 A 보완 작업 명세서" §5(개발 B와의 연결 계약) 대응: 이 클래스가 개발 B가 참조해야 하는
@@ -35,6 +35,7 @@ namespace Nyangbingo.World
         private readonly GameDataCatalog catalog;
 
         private MapGenerator generator;
+        private int resourceGenerationVersion;
         private TileService tileService;
         private SealSystem sealSystem;
         private WallpaperCoverageService wallpaperCoverage;
@@ -59,6 +60,9 @@ namespace Nyangbingo.World
         // 장식 배치는 채굴 diff가 아닌 최초 지형을 기준으로 재현해야 저장 ID가 유지된다.
         public WorldGenerationResult DecorationBaseline { get; private set; }
         public bool HasWorld => tileService != null;
+        public RectInt SurfaceIceLakeBounds { get; private set; }
+        public Vector2 SurfaceIceLakeArrival => new Vector2(SurfaceIceLakeBounds.center.x,
+            SurfaceIceLakeBounds.yMax + .05f);
 
         /// <summary>
         /// §5 항목 1/8: game seconds·낮/밤 이벤트의 단일 기준. <see cref="BindTimeService"/>로 세션 생성
@@ -173,6 +177,8 @@ namespace Nyangbingo.World
             }
 
             seed = result.acceptedSeed; // 리롤이 있었을 수 있으므로 항상 확정 시드를 세이브 기준으로 삼는다.
+            resourceGenerationVersion = MapGenerator.CurrentResourceGenerationVersion;
+            SurfaceIceLakeBounds = AddSurfaceIceLake(result, null);
             LastResult = result;
 
             DecorationBaseline = CaptureDecorationBaseline(result);
@@ -189,6 +195,11 @@ namespace Nyangbingo.World
         {
             if (save == null || !HasWorld) return false;
             save.seed = seed;
+            save.resourceGenerationVersion = resourceGenerationVersion;
+            save.hasSurfaceIceLakeArena = SurfaceIceLakeBounds.width > 0;
+            save.surfaceIceLakeOrigin = SurfaceIceLakeBounds.position;
+            save.surfaceIceLakeWidth = SurfaceIceLakeBounds.width;
+            save.surfaceIceLakeHeight = SurfaceIceLakeBounds.height;
             if (!Nyangbingo.Save.WorldSaveAdapter.CaptureWorld(save, tileService.GetTileChangeRecords(),
                     Array.Empty<PlacedObjectRecord>(), generator, chestProgress))
                 return false;
@@ -215,7 +226,8 @@ namespace Nyangbingo.World
             if (!Nyangbingo.Save.WorldSaveAdapter.ValidateWorldRecords(save)) return false;
 
             var loadedGenerator = new MapGenerator(config, catalog);
-            var result = loadedGenerator.GenerateDetailed(save.seed);
+            var result = loadedGenerator.GenerateForRestore(save.seed, save.tileChanges,
+                save.resourceGenerationVersion);
             if (result.acceptedSeed != save.seed)
             {
                 // 저장된 시드가 더 이상 같은 검증 통과 맵을 재현하지 못한다 — 월드 생성 룰/크기가 바뀌었거나
@@ -231,6 +243,13 @@ namespace Nyangbingo.World
             // 그리지 않는다. RestoreTileChanges 내부의 보호 타일/알려진 tileId/좌표 검증(TileService.cs) 중
             // 하나라도 실패하면 이 인스턴스와 result.tiles는 그냥 버려지고, 기존 라이브 상태·화면은 손끝 하나
             // 닿지 않는다.
+            RectInt surfaceLake;
+            try { surfaceLake = AddSurfaceIceLake(result, save); }
+            catch (InvalidOperationException exception)
+            {
+                Debug.LogError("[Nyangbingo] WorldSessionController: " + exception.Message);
+                return false;
+            }
             var decorationBaseline = CaptureDecorationBaseline(result);
             var loadedTileService = new TileService(result.tiles, null, catalog, result.acceptedSeed);
             var chestCells = new HashSet<Vector3Int>();
@@ -256,7 +275,7 @@ namespace Nyangbingo.World
                 return false;
             }
 
-            // 2) 이무기 제단은 파괴 불가 + 시드로만 결정되는 타일이라 재생성만으로 이미 원상 복구돼 있다.
+            // 2) 강철이 제단은 파괴 불가 + 시드로만 결정되는 타일이라 재생성만으로 이미 원상 복구돼 있다.
             // 상자는 사용자 상호작용 결과(열림 여부)가 시드로 재현되지 않으므로 별도 복원이 필요하다.
             var loadedChestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
             if (!Nyangbingo.Save.WorldSaveAdapter.RestoreChests(save, loadedGenerator, loadedChestProgress))
@@ -271,6 +290,12 @@ namespace Nyangbingo.World
             tileService.BindRenderer(renderer); // 검증 동안 꺼두었던 렌더러를 이제서야 연결한다.
             chestProgress = loadedChestProgress;
             seed = result.acceptedSeed;
+            resourceGenerationVersion = save.resourceGenerationVersion;
+            SurfaceIceLakeBounds = surfaceLake;
+            save.hasSurfaceIceLakeArena = surfaceLake.width > 0;
+            save.surfaceIceLakeOrigin = surfaceLake.position;
+            save.surfaceIceLakeWidth = surfaceLake.width;
+            save.surfaceIceLakeHeight = surfaceLake.height;
             LastResult = result;
             DecorationBaseline = decorationBaseline;
 
@@ -297,6 +322,96 @@ namespace Nyangbingo.World
 
             WorldLoaded?.Invoke(); // §5 항목 7 — 라이브 참조 교체가 전부 끝난 뒤에만 통지한다.
             return true;
+        }
+
+        private RectInt AddSurfaceIceLake(WorldGenerationResult result, SaveGame save)
+        {
+            if (catalog?.FindGlobal("imugi_arena")?.Value != "surface_ice_lake") return default;
+            RectInt lake;
+            if (save?.hasSurfaceIceLakeArena == true)
+            {
+                lake = new RectInt(save.surfaceIceLakeOrigin.x, save.surfaceIceLakeOrigin.y,
+                    save.surfaceIceLakeWidth, save.surfaceIceLakeHeight);
+                if (lake.width < 6 || lake.height < 1 || lake.xMin < 1 || lake.xMax >= result.width ||
+                    lake.yMin < 1 || lake.yMax + 4 >= result.height)
+                    throw new InvalidOperationException("지상 얼음 호수 저장 좌표가 맵 범위를 벗어났습니다.");
+            }
+            else
+            {
+                lake = FindSurfaceIceLakeSite(result, save);
+                if (lake.width == 0)
+                    throw new InvalidOperationException("기존 건축물을 보존할 지상 얼음 호수 자리를 찾지 못했습니다.");
+            }
+            // Applied before saved diffs, after seed validation. No seed reroll or old underground changes.
+            for (var x = lake.xMin; x < lake.xMax; x++)
+            {
+                for (var y = lake.yMin; y < lake.yMax; y++)
+                {
+                    var tile = result.tiles[x, y];
+                    tile.elementType = WorldTileTypes.IceLake;
+                    tile.isNaturalTerrain = false;
+                    tile.hardness = 1;
+                    result.tiles[x, y] = tile;
+                }
+                for (var y = lake.yMax; y < result.height; y++)
+                    result.tiles[x, y] = result.tiles[x, y].WithoutForeground();
+            }
+            return lake;
+        }
+
+        private RectInt FindSurfaceIceLakeSite(WorldGenerationResult result, SaveGame save)
+        {
+            var width = Mathf.Min(config.SurfaceIceLakeArenaWidth, result.width - 2);
+            var preferred = Mathf.Clamp(Mathf.RoundToInt(result.width * .75f), 1, result.width - width - 1);
+            for (var distance = 0; distance < result.width; distance++)
+                for (var side = 0; side < (distance == 0 ? 1 : 2); side++)
+                {
+                    var left = preferred + (side == 0 ? distance : -distance);
+                    if (left < 1 || left + width >= result.width ||
+                        Mathf.Abs(left + width / 2 - result.spawnPoint.x) < config.StartingLandmarkRadius + width / 2)
+                        continue;
+                    var floor = 0;
+                    var lowestSurface = result.height;
+                    for (var x = left; x < left + width; x++)
+                    {
+                        floor = Mathf.Max(floor, result.surfaceHeights[x]);
+                        lowestSurface = Mathf.Min(lowestSurface, result.surfaceHeights[x]);
+                    }
+                    if (floor - lowestSurface > config.IceLakeHeight) continue;
+                    var lake = new RectInt(left, floor - config.IceLakeHeight + 1, width, config.IceLakeHeight);
+                    if (lake.yMin < 1 || lake.yMax + 4 >= result.height) continue;
+                    var occupied = false;
+                    for (var x = lake.xMin; x < lake.xMax && !occupied; x++)
+                        for (var y = lake.yMin; y < result.height; y++)
+                        {
+                            var tile = result.tiles[x, y];
+                            if (!tile.IsAir && !tile.isNaturalTerrain) { occupied = true; break; }
+                        }
+                    if (occupied) continue;
+                    // A legacy save may have developed this area. Never overwrite its construction or excavation.
+                    if (save != null)
+                    {
+                        foreach (var change in save.tileChanges)
+                            if (change.x >= lake.xMin - 2 && change.x < lake.xMax + 2 && change.y >= lake.yMin - 2)
+                                occupied = true;
+                        foreach (var change in save.backgroundChanges)
+                            if (change.x >= lake.xMin - 2 && change.x < lake.xMax + 2 && change.y >= lake.yMin - 2)
+                                occupied = true;
+                        foreach (var placed in save.placedObjectRecords)
+                            if (placed.position.x >= lake.xMin - 4 && placed.position.x < lake.xMax + 4 &&
+                                placed.position.y >= lake.yMin - 4) occupied = true;
+                        foreach (var drop in save.worldDrops)
+                            if (drop.position.x >= lake.xMin - 2 && drop.position.x < lake.xMax + 2 &&
+                                drop.position.y >= lake.yMin - 2) occupied = true;
+                        foreach (var pouch in save.deathTearPouches)
+                            if (pouch.position.x >= lake.xMin - 2 && pouch.position.x < lake.xMax + 2 &&
+                                pouch.position.y >= lake.yMin - 2) occupied = true;
+                        if (save.playerState.position.x >= lake.xMin - 2 && save.playerState.position.x < lake.xMax + 2 &&
+                            save.playerState.position.y >= lake.yMin - 2) occupied = true;
+                    }
+                    if (!occupied) return lake;
+                }
+            return default;
         }
 
         /// <summary>

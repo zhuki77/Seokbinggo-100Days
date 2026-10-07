@@ -53,6 +53,30 @@ namespace Nyangbingo.World
         public int TreePatchCount => treePatches.Count;
         public int RebarPatchCount => rebarPatches.Count;
 
+        public bool TryFindNearestMaterial(string itemId, Vector2 origin, out Vector2 position)
+        {
+            var found = false;
+            var nearest = Vector2.zero;
+            var distance = float.PositiveInfinity;
+            void Consider(Vector3Int support, SpriteRenderer renderer, bool harvested)
+            {
+                if (harvested) return;
+                var point = renderer != null ? (Vector2)renderer.transform.position :
+                    (Vector2)bootstrap.TileService.GetCellCenterWorld(support + Vector3Int.up);
+                var delta = (point - origin).sqrMagnitude;
+                if (delta >= distance) return;
+                distance = delta; nearest = point; found = true;
+            }
+            if (itemId == WoodItemId)
+                foreach (var patch in treePatches.Values) Consider(patch.SupportCell, patch.Renderer, patch.Harvested);
+            else if (itemId == HempItemId)
+                foreach (var patch in hempPatches.Values) Consider(patch.SupportCell, patch.Renderer, patch.Harvested);
+            else if (itemId == RebarItemId)
+                foreach (var patch in rebarPatches.Values) Consider(patch.SupportCell, patch.Renderer, patch.Harvested);
+            position = nearest;
+            return found;
+        }
+
         private sealed class CatnipPatch
         {
             public string Id;
@@ -62,7 +86,10 @@ namespace Nyangbingo.World
             public int RespawnDays;
             public int HealHitPoints;
             public bool Planted;
+            public bool NaturalSiteAllowed;
         }
+
+        private bool[,] naturalCatnipSites;
 
         private sealed class HempPatch
         {
@@ -262,12 +289,65 @@ namespace Nyangbingo.World
             var random = new System.Random(result.acceptedSeed ^ DecorationSeedSalt);
             PlaceSurfaceDecorations(result, random);
             PlaceRuinDecorations(result, random);
+            naturalCatnipSites = BuildNaturalCatnipSites(result, bootstrap.CaveSurfaceCrustThickness);
             PlaceCatnipPatches(result, random);
             PlaceHempPatches(result, new System.Random(result.acceptedSeed ^ HempSeedSalt));
             PlaceChests(result);
             Debug.Log($"[Nyangbingo] World decorations rendered: objects={DecorationCount}, " +
                       $"catnip={CatnipPatchCount}, hemp={HempPatchCount}, chests={ChestCount} " +
                       $"(seed={result.acceptedSeed}).");
+        }
+
+        // Filter the seeded slots without changing RNG consumption or patch IDs: saved
+        // harvest/respawn records must still refer to the same original positions.
+        private static bool[,] BuildNaturalCatnipSites(WorldGenerationResult result, int crust)
+        {
+            var tiles = result.tiles;
+            var width = tiles.GetLength(0);
+            var height = tiles.GetLength(1);
+            var allowed = new bool[width, height];
+            var visited = new bool[width, height];
+            var queue = new Queue<Vector2Int>();
+            var floors = new List<Vector2Int>();
+            var directions = new[] { Vector2Int.left, Vector2Int.right, Vector2Int.up, Vector2Int.down };
+            // Mushrooms are already placed in the baseline; they remain part of their
+            // cave's passable space but cannot themselves be occupied by catnip.
+            bool CaveAir(int x, int y) => x >= 0 && x < width && y > 0 && y < height &&
+                (tiles[x, y].IsAir || WorldTileTypes.IsPassableMushroom(tiles[x, y].elementType)) &&
+                tiles[x, y].HasNaturalBackground && y <= result.surfaceHeights[x] - crust;
+
+            for (var x = 0; x < width; x++)
+                for (var y = 1; y < height; y++)
+                {
+                    // Outdoor surface sites retain their existing eligibility.
+                    if (tiles[x, y].IsAir && y > result.surfaceHeights[x]) allowed[x, y] = true;
+                    if (visited[x, y] || !CaveAir(x, y)) continue;
+                    floors.Clear();
+                    visited[x, y] = true;
+                    queue.Enqueue(new Vector2Int(x, y));
+                    while (queue.Count > 0)
+                    {
+                        var cell = queue.Dequeue();
+                        var floor = tiles[cell.x, cell.y - 1];
+                        var space = CaveAir(cell.x, cell.y + 1) ||
+                            !CaveAir(cell.x - 1, cell.y) || !CaveAir(cell.x + 1, cell.y);
+                        if (floor.BlocksMovement && floor.isNaturalTerrain && space &&
+                            floor.elementType != WorldTileTypes.IceAltar && floor.elementType != WorldTileTypes.IceLake)
+                            floors.Add(cell);
+                        foreach (var direction in directions)
+                        {
+                            var next = cell + direction;
+                            if (!CaveAir(next.x, next.y) || visited[next.x, next.y]) continue;
+                            visited[next.x, next.y] = true;
+                            queue.Enqueue(next);
+                        }
+                    }
+                    // Like mushrooms, reject isolated pockets with fewer than two floors.
+                    if (floors.Count < 2) continue;
+                    foreach (var cell in floors)
+                        if (tiles[cell.x, cell.y].IsAir) allowed[cell.x, cell.y] = true;
+                }
+            return allowed;
         }
 
         private void PlaceCatnipPatches(WorldGenerationResult result, System.Random random)
@@ -365,7 +445,7 @@ namespace Nyangbingo.World
                 for (var offset = 0; offset < surfaceY - lowerY; offset++)
                 {
                     var y = lowerY + (start - lowerY + offset) % (surfaceY - lowerY);
-                    if (tiles[x, y].IsAir || !tiles[x, y + 1].IsAir) continue;
+                    if (!CanSupportPlants(tiles[x, y]) || !tiles[x, y + 1].IsAir) continue;
                     var candidate = new Vector3Int(x, y, 0);
                     if (occupied.Contains(candidate) || IsChestPlantCell(result, candidate) ||
                         IsNearSurfaceDecoration(candidate, 2f)) continue;
@@ -409,13 +489,21 @@ namespace Nyangbingo.World
                 HarvestedDay = Mathf.Max(0, harvestedDay),
                 RespawnDays = crop != null && crop.RespawnDays > 0 ? crop.RespawnDays : 0,
                 HealHitPoints = crop != null && crop.HealHitPoints > 0 ? crop.HealHitPoints : 0,
-                Planted = planted
+                Planted = planted,
+                NaturalSiteAllowed = naturalCatnipSites != null && supportCell.x >= 0 &&
+                    supportCell.x < naturalCatnipSites.GetLength(0) && supportCell.y >= 0 &&
+                    supportCell.y + 1 < naturalCatnipSites.GetLength(1) &&
+                    naturalCatnipSites[supportCell.x, supportCell.y + 1]
             });
-            visual.SetActive(HasSolidRuntimeSupport(supportCell) && harvestedDay <= 0);
+            // 생성 RNG/패치 ID는 저장 호환을 위해 유지하고, 버섯 위 패치는 표시하지 않는다.
+            visual.SetActive(IsCatnipAvailable(catnipPatches[id]));
         }
 
+        private static bool CanSupportPlants(TileData tile) =>
+            tile.BlocksMovement;
+
         private bool HasSolidRuntimeSupport(Vector3Int supportCell) =>
-            bootstrap?.TileService?.GetTile(supportCell).IsAir == false;
+            bootstrap?.TileService != null && CanSupportPlants(bootstrap.TileService.GetTile(supportCell));
 
         private void PlaceHempPatches(WorldGenerationResult result, System.Random random)
         {
@@ -579,7 +667,7 @@ namespace Nyangbingo.World
             {
                 var candidate = candidates[index];
                 var plantCell = candidate + Vector3Int.up;
-                if (tileService.GetTile(candidate).IsAir || !tileService.GetTile(plantCell).IsAir)
+                if (!CanSupportPlants(tileService.GetTile(candidate)) || !tileService.GetTile(plantCell).IsAir)
                     continue;
                 if (IsCatnipSupportOccupied(candidate)) continue;
                 var center = tileService.GetCellCenterWorld(plantCell);
@@ -1040,7 +1128,8 @@ namespace Nyangbingo.World
 
         private bool IsCatnipAvailable(CatnipPatch patch) =>
             patch != null && patch.HarvestedDay == 0 &&
-            bootstrap?.TileService?.GetTile(patch.SupportCell).IsAir == false &&
+            (patch.Planted || patch.NaturalSiteAllowed) &&
+            HasSolidRuntimeSupport(patch.SupportCell) &&
             bootstrap?.TileService?.GetTile(patch.SupportCell + Vector3Int.up).IsAir == true;
 
         private bool IsHempInCurrentStage(HempPatch patch) =>
@@ -1049,7 +1138,7 @@ namespace Nyangbingo.World
 
         private bool IsHempAvailable(HempPatch patch) =>
             IsHempInCurrentStage(patch) && !patch.Harvested &&
-            bootstrap?.TileService?.GetTile(patch.SupportCell).IsAir == false;
+            HasSolidRuntimeSupport(patch.SupportCell);
 
         private bool IsTreeAvailable(TreePatch tree) =>
             tree != null && !tree.Harvested &&
@@ -1484,7 +1573,7 @@ namespace Nyangbingo.World
         private static int FindSurface(TileData[,] tiles, int x, int height)
         {
             for (var y = height - 2; y >= 0; y--)
-                if (tiles[x, y].hardness > 0) return y;
+                if (CanSupportPlants(tiles[x, y])) return y;
             return -1;
         }
 
@@ -1495,6 +1584,7 @@ namespace Nyangbingo.World
             if (grassSurfaceTile != null) Destroy(grassSurfaceTile);
             if (dryGrassSurfaceTile != null) Destroy(dryGrassSurfaceTile);
             decorationRoot = null;
+            naturalCatnipSites = null;
             groundCoverRoot = null;
             surfaceGroundCoverTilemap = null;
             grassSurfaceTile = null;
