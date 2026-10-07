@@ -127,7 +127,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: ruin_wall
     originalName: 
-    pivot: {x: 0.516129, y: 0}
+    pivot: {x: 0.48387095, y: 0}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -165,7 +165,7 @@ ScriptedImporter:
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
-        x: 0
+        x: 1
         y: 0
         width: 31
         height: 16

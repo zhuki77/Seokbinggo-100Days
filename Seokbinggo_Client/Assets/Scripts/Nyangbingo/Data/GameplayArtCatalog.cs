@@ -7,6 +7,35 @@ namespace Nyangbingo.Data
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Gameplay Art Catalog")]
     public sealed class GameplayArtCatalog : ScriptableObject
     {
+        [Serializable]
+        public sealed class WeaponAttackArt
+        {
+            [SerializeField] private string itemId;
+            [SerializeField] private Sprite[] frames = Array.Empty<Sprite>();
+            public string ItemId => itemId;
+            public IReadOnlyList<Sprite> Frames => frames ?? Array.Empty<Sprite>();
+        }
+
+        [SerializeField] private WeaponAttackArt[] weaponAttackAnimations = Array.Empty<WeaponAttackArt>();
+        [SerializeField] private Sprite arrowProjectile;
+        [SerializeField] private Sprite slingStoneProjectile;
+        [SerializeField] private Sprite[] fanWindFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] openingIllustrations = Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> OpeningIllustrations => openingIllustrations ?? Array.Empty<Sprite>();
+
+        public IReadOnlyList<Sprite> FindWeaponAttackFrames(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId) || weaponAttackAnimations == null) return Array.Empty<Sprite>();
+            foreach (var animation in weaponAttackAnimations)
+                if (animation != null && string.Equals(animation.ItemId, itemId, StringComparison.Ordinal))
+                    return animation.Frames;
+            return Array.Empty<Sprite>();
+        }
+
+        public Sprite ArrowProjectile => arrowProjectile;
+        public Sprite SlingStoneProjectile => slingStoneProjectile;
+        public IReadOnlyList<Sprite> FanWindFrames => fanWindFrames ?? Array.Empty<Sprite>();
+
         [SerializeField] private Sprite[] temperatureFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] playerAttackFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] miningCrackFrames = Array.Empty<Sprite>();
@@ -29,9 +58,22 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite[] button1x6Frames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] shellNumberGlyphs = Array.Empty<Sprite>();
         [SerializeField] private Sprite dangerIcon;
+        [SerializeField] private Sprite yokaiDamageIcon;
+        [SerializeField] private Sprite burnStatusIcon;
+        [SerializeField] private Sprite sealLeakStatusIcon;
+        [SerializeField] private Sprite sealLeakStaticMarker;
+        [SerializeField] private Sprite goalDirectionArrow;
+        [SerializeField] private Sprite[] sealLeakMarkerFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite sealRepairCheck;
+        [SerializeField] private Sprite[] sealSuccessFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite hypothermiaStatusIcon;
+        [SerializeField] private Sprite nightSpawnBlockedIcon;
+        [SerializeField] private Sprite deathTearPouch;
         [SerializeField] private Sprite bossWarningLarge;
         [SerializeField] private Sprite bossWarningSmall;
         [SerializeField] private Sprite bossHealthFrame;
+        [SerializeField] private Sprite bossHealthGaekgwi;
+        [SerializeField] private Sprite resultContinue;
         [SerializeField] private Sprite bossHealthGangcheol;
         [SerializeField] private Sprite bossHealthKingDokkaebi;
         [SerializeField] private Sprite bossHealthMotherBulgasari;
@@ -103,9 +145,22 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> Button1x6Frames => button1x6Frames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> ShellNumberGlyphs => shellNumberGlyphs ?? Array.Empty<Sprite>();
         public Sprite DangerIcon => dangerIcon;
+        public Sprite YokaiDamageIcon => yokaiDamageIcon;
+        public Sprite BurnStatusIcon => burnStatusIcon;
+        public Sprite SealLeakStatusIcon => sealLeakStatusIcon;
+        public Sprite SealLeakStaticMarker => sealLeakStaticMarker;
+        public Sprite GoalDirectionArrow => goalDirectionArrow;
+        public IReadOnlyList<Sprite> SealLeakMarkerFrames => sealLeakMarkerFrames ?? Array.Empty<Sprite>();
+        public Sprite SealRepairCheck => sealRepairCheck;
+        public IReadOnlyList<Sprite> SealSuccessFrames => sealSuccessFrames ?? Array.Empty<Sprite>();
+        public Sprite HypothermiaStatusIcon => hypothermiaStatusIcon;
+        public Sprite NightSpawnBlockedIcon => nightSpawnBlockedIcon;
+        public Sprite DeathTearPouch => deathTearPouch;
         public Sprite BossWarningLarge => bossWarningLarge;
         public Sprite BossWarningSmall => bossWarningSmall;
         public Sprite BossHealthFrame => bossHealthFrame;
+        public Sprite BossHealthGaekgwi => bossHealthGaekgwi;
+        public Sprite ResultContinue => resultContinue;
         public Sprite BossHealthGangcheol => bossHealthGangcheol;
         public Sprite BossHealthKingDokkaebi => bossHealthKingDokkaebi;
         public Sprite BossHealthMotherBulgasari => bossHealthMotherBulgasari;

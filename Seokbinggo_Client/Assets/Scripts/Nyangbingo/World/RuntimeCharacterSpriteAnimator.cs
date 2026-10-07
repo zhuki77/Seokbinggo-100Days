@@ -24,25 +24,31 @@ namespace Nyangbingo.World
         private Vector3 previousPosition;
         private int frameIndex;
         private float frameRemaining;
+        private float activeFrameSeconds = FrameSeconds;
         private float actionRemaining;
         private float hitFlashRemaining;
         private Color baseSpriteColor = Color.white;
         private bool holdFinalFrame;
         private bool deathLocked;
         private bool specialActionPlaying;
+        private bool attackFacingLocked;
         private bool hasExplicitMovementState;
         private bool explicitlyMoving;
         private bool airborne;
         private bool airborneAscending;
+        private bool ropeClimbing;
+        private bool ropeMoving;
         private bool configured;
 
         public SpriteRenderer Renderer => spriteRenderer;
 
         public static float CalculateGroundedVisualLocalY(
-            CircleCollider2D movementCollider, SpriteRenderer renderer)
+            Collider2D movementCollider, SpriteRenderer renderer)
         {
             if (movementCollider == null) return 0f;
-            var colliderBottom = movementCollider.offset.y - movementCollider.radius;
+            var halfHeight = movementCollider is BoxCollider2D box ? box.size.y * .5f
+                : movementCollider is CircleCollider2D circle ? circle.radius : 0f;
+            var colliderBottom = movementCollider.offset.y - halfHeight;
             if (renderer?.sprite == null) return colliderBottom;
             var spriteBottom = renderer.sprite.bounds.min.y * renderer.transform.localScale.y;
             return colliderBottom - spriteBottom;
@@ -57,6 +63,8 @@ namespace Nyangbingo.World
             singleFrame = entry.Sprite != null ? new[] { entry.Sprite } : System.Array.Empty<Sprite>();
             previousPosition = transform.position;
             configured = true;
+            ropeClimbing = false;
+            ropeMoving = false;
             deathLocked = false;
             specialActionPlaying = false;
             airborne = false;
@@ -69,8 +77,19 @@ namespace Nyangbingo.World
 
         public void SetFacing(Vector2 direction)
         {
+            if (attackFacingLocked) return;
             if (!configured || spriteRenderer == null || Mathf.Abs(direction.x) <= Mathf.Epsilon) return;
             spriteRenderer.flipX = ShouldFlipX(entry.SourceFacesRight, direction.x);
+        }
+
+        public void HoldAttackFacing(Vector2 direction)
+        {
+            if (!configured || spriteRenderer == null || deathLocked || specialActionPlaying ||
+                actionRemaining <= 0f) return;
+            // 몸체만 공격 방향으로 고정한다. 이동 방향·속도는 변경하지 않는다.
+            attackFacingLocked = true;
+            if (Mathf.Abs(direction.x) > Mathf.Epsilon)
+                spriteRenderer.flipX = ShouldFlipX(entry.SourceFacesRight, direction.x);
         }
 
         public static bool ShouldFlipX(bool sourceFacesRight, float directionX) =>
@@ -80,6 +99,12 @@ namespace Nyangbingo.World
         {
             hasExplicitMovementState = true;
             explicitlyMoving = moving;
+        }
+
+        public void SetRopeClimbing(bool climbing, bool moving)
+        {
+            ropeClimbing = climbing;
+            ropeMoving = moving;
         }
 
         /// <summary>지상/공중 이동 상태. ascending=true면 jump, false면 fall 클립.</summary>
@@ -95,6 +120,24 @@ namespace Nyangbingo.World
         {
             if (specialActionPlaying) return;
             PlayAction(entry?.AttackFrames);
+        }
+
+        public void PlayWeaponAttack(IReadOnlyList<Sprite> frames, float maximumSeconds = 0f)
+        {
+            if (specialActionPlaying || deathLocked) return;
+            if (frames == null || frames.Count == 0)
+            {
+                PlayAttack();
+                return;
+            }
+            if (!PlayAction(frames)) return;
+            if (maximumSeconds > 0f && !float.IsNaN(maximumSeconds) && !float.IsInfinity(maximumSeconds))
+            {
+                actionRemaining = Mathf.Min(actionRemaining, maximumSeconds);
+                activeFrameSeconds = actionRemaining / frames.Count;
+                frameRemaining = activeFrameSeconds;
+            }
+            holdFinalFrame = true;
         }
 
         public void PlayLand()
@@ -119,8 +162,10 @@ namespace Nyangbingo.World
         {
             if (!configured || entry == null || entry.DeathFrames.Count == 0) return;
             deathLocked = true;
+            attackFacingLocked = false;
             specialActionPlaying = false;
             activeFrames = entry.DeathFrames;
+            activeFrameSeconds = FrameSeconds;
             frameIndex = 0;
             frameRemaining = FrameSeconds;
             actionRemaining = 0f;
@@ -132,10 +177,12 @@ namespace Nyangbingo.World
         {
             if (!configured || entry == null) return;
             deathLocked = false;
+            attackFacingLocked = false;
             specialActionPlaying = false;
             airborne = false;
             airborneAscending = false;
             hitFlashRemaining = 0f;
+            ropeClimbing = false;
             if (spriteRenderer != null) spriteRenderer.color = baseSpriteColor;
             PlayLoop(entry.IdleFrames);
         }
@@ -187,7 +234,7 @@ namespace Nyangbingo.World
             // Player movement supplies an explicit facing direction. Dynamic Rigidbody2D contact
             // correction can move the body by tiny alternating X deltas while idle, so only infer
             // facing from transform movement for actors that do not supply that explicit state.
-            if (!hasExplicitMovementState && Mathf.Abs(delta.x) > Mathf.Epsilon)
+            if (!hasExplicitMovementState && !attackFacingLocked && Mathf.Abs(delta.x) > Mathf.Epsilon)
                 spriteRenderer.flipX = ShouldFlipX(entry.SourceFacesRight, delta.x);
 
             if (deathLocked)
@@ -201,7 +248,11 @@ namespace Nyangbingo.World
             {
                 actionRemaining = Mathf.Max(0f, actionRemaining - Time.deltaTime);
                 TickFrames(Time.deltaTime);
-                if (actionRemaining <= 0f) specialActionPlaying = false;
+                if (actionRemaining <= 0f)
+                {
+                    specialActionPlaying = false;
+                    attackFacingLocked = false;
+                }
                 TickHitFlash(Time.deltaTime);
                 return;
             }
@@ -210,12 +261,13 @@ namespace Nyangbingo.World
             var targetFrames = ResolveLocomotionFrames(moving);
             if (targetFrames == null || targetFrames.Count == 0) targetFrames = SingleFrame();
             if (!ReferenceEquals(activeFrames, targetFrames)) PlayLoop(targetFrames);
-            TickFrames(Time.deltaTime);
+            if (!ropeClimbing || ropeMoving) TickFrames(Time.deltaTime);
             TickHitFlash(Time.deltaTime);
         }
 
         private IReadOnlyList<Sprite> ResolveLocomotionFrames(bool moving)
         {
+            if (ropeClimbing && entry.RopeFrames.Count > 0) return entry.RopeFrames;
             if (airborne)
             {
                 if (airborneAscending && entry.JumpFrames.Count > 0) return entry.JumpFrames;
@@ -239,6 +291,8 @@ namespace Nyangbingo.World
 
         private void PlayLoop(IReadOnlyList<Sprite> frames)
         {
+            attackFacingLocked = false;
+            activeFrameSeconds = FrameSeconds;
             activeFrames = frames != null && frames.Count > 0 ? frames : SingleFrame();
             frameIndex = 0;
             frameRemaining = FrameSeconds;
@@ -249,6 +303,8 @@ namespace Nyangbingo.World
         private bool PlayAction(IReadOnlyList<Sprite> frames)
         {
             if (!configured || deathLocked || frames == null || frames.Count == 0) return false;
+            attackFacingLocked = false;
+            activeFrameSeconds = FrameSeconds;
             activeFrames = frames;
             frameIndex = 0;
             frameRemaining = FrameSeconds;
@@ -272,7 +328,7 @@ namespace Nyangbingo.World
                 frameIndex = holdFinalFrame
                     ? Mathf.Min(frameIndex + 1, activeFrames.Count - 1)
                     : (frameIndex + 1) % activeFrames.Count;
-                frameRemaining += FrameSeconds;
+                frameRemaining += activeFrameSeconds;
                 ApplyFrame();
             }
         }

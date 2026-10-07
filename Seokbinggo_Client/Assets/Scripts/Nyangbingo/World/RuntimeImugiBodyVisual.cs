@@ -177,17 +177,19 @@ namespace Nyangbingo.World
         private bool segmentPositionsInitialized;
         private bool configured;
 
+        private readonly SpriteRenderer[] hands = new SpriteRenderer[2];
+
         public void Configure(Sprite bodySprite, Sprite preTailSprite, Sprite postTailSprite,
-            int sortingOrder)
+            int sortingOrder, Sprite handSprite = null, bool completeTailSprites = false)
         {
             if (bodySprite == null) return;
             // Unity's Aseprite importer keeps the full 32px cel even though the
             // delivered 16px canvas selects only one half. The right half is the
             // larger pre-tail and the left half is the smaller post-tail.
-            preTailVisual = RuntimeTailSpriteCropper.CropHorizontalHalf(
-                preTailSprite, rightHalf: true);
-            postTailVisual = RuntimeTailSpriteCropper.CropHorizontalHalf(
-                postTailSprite, rightHalf: false);
+            preTailVisual = completeTailSprites ? preTailSprite :
+                RuntimeTailSpriteCropper.CropHorizontalHalf(preTailSprite, rightHalf: true);
+            postTailVisual = completeTailSprites ? postTailSprite :
+                RuntimeTailSpriteCropper.CropHorizontalHalf(postTailSprite, rightHalf: false);
             for (var index = 0; index < segments.Length; index++)
             {
                 var sprite = index < BodySegmentCount
@@ -207,12 +209,20 @@ namespace Nyangbingo.World
                 RuntimePlaceholderVisual.ConfigureSprite(
                     renderer,
                     sprite,
-                    sortingOrder - (SegmentCount - 1 - index));
+                    sortingOrder - index);
                 segmentObject.AddComponent<RuntimeSpriteBoundsHurtbox>().Configure(renderer);
                 segments[index] = segmentObject.transform;
                 segmentRenderers[index] = renderer;
             }
 
+            if (handSprite != null)
+                for (var index = 0; index < hands.Length; index++)
+                {
+                    var hand = new GameObject($"Hand_{index + 1}");
+                    hand.transform.SetParent(transform, false);
+                    hands[index] = hand.AddComponent<SpriteRenderer>();
+                    RuntimePlaceholderVisual.ConfigureSprite(hands[index], handSprite, sortingOrder + 1);
+                }
             previousPosition = transform.position;
             configured = true;
             InitializeSegmentPositions();
@@ -298,6 +308,10 @@ namespace Nyangbingo.World
                     isTail
                         ? horizontal ? 0f : -HorizontalBodyRotation
                         : horizontal ? HorizontalBodyRotation : 0f);
+                // Keep the bottom-pivot sprite centre behind its link in all four
+                // display directions, including upward movement (unrotated sprite).
+                if (!isTail && segmentRenderers[index] != null)
+                    segmentRenderers[index].flipY = horizontal ? axis.x < 0f : axis.y > 0f;
                 if (isTail && segmentRenderers[index] != null)
                 {
                     segmentRenderers[index].sprite =
@@ -306,6 +320,17 @@ namespace Nyangbingo.World
                         horizontal ? axis.x > 0f : axis.y < 0f;
                 }
                 predecessor = segmentWorldPositions[index];
+            }
+            for (var index = 0; index < hands.Length; index++)
+            {
+                var hand = hands[index];
+                if (hand == null) continue;
+                var anchor = segmentRenderers[index == 0 ? 1 : 7];
+                if (anchor == null) continue;
+                hand.flipX = facing.x > 0f;
+                hand.transform.position = new Vector3(anchor.bounds.center.x,
+                    anchor.bounds.min.y + anchor.bounds.size.y * (2f / 3f) - hand.bounds.extents.y,
+                    anchor.transform.position.z - .01f);
             }
         }
 
@@ -392,7 +417,7 @@ namespace Nyangbingo.World
                 RuntimePlaceholderVisual.ConfigureSprite(
                     renderer,
                     sprite,
-                    sortingOrder - (SegmentCount - 1 - index));
+                    sortingOrder - index);
                 segmentObject.AddComponent<RuntimeSpriteBoundsHurtbox>().Configure(renderer);
                 segments[index] = segmentObject.transform;
                 segmentRenderers[index] = renderer;
@@ -471,6 +496,9 @@ namespace Nyangbingo.World
                     isTail
                         ? horizontal ? 0f : -HorizontalBodyRotation
                         : horizontal ? HorizontalBodyRotation : 0f);
+                // Mirror the bottom-pivot body offset horizontally and vertically.
+                if (!isTail && segmentRenderers[index] != null)
+                    segmentRenderers[index].flipY = horizontal ? axis.x < 0f : axis.y > 0f;
                 if (isTail && segmentRenderers[index] != null)
                 {
                     segmentRenderers[index].sprite =
@@ -480,6 +508,31 @@ namespace Nyangbingo.World
                 }
                 predecessor = segmentWorldPositions[index];
             }
+            AlignTailToLastBody(tailDirection, worldScale);
+        }
+
+        private void AlignTailToLastBody(Vector2 tailDirection, float worldScale)
+        {
+            var lastBody = segmentRenderers[BodySegmentCount - 1];
+            var middleTail = segmentRenderers[BodySegmentCount];
+            if (lastBody == null || middleTail == null ||
+                tailDirection.sqrMagnitude <= Mathf.Epsilon) return;
+            var direction = tailDirection.normalized;
+            var bodyBounds = lastBody.bounds;
+            var tailBounds = middleTail.bounds;
+            var reach = Mathf.Abs(direction.x) * (bodyBounds.extents.x + tailBounds.extents.x) +
+                        Mathf.Abs(direction.y) * (bodyBounds.extents.y + tailBounds.extents.y);
+            // Align visible sprite bounds, not pivots: the body uses an offset Aseprite
+            // pivot while the new tail uses a centred canvas. Keep all body links intact.
+            var targetCenter = (Vector2)bodyBounds.center +
+                               direction * Mathf.Max(0f, reach - worldScale / 16f);
+            // Only close the gap along the chain. Copying the body's perpendicular
+            // displacement cancels the middle tail's own wave phase and locks them together.
+            var offset = direction * Vector2.Dot(
+                targetCenter - (Vector2)tailBounds.center, direction);
+            for (var index = BodySegmentCount; index < SegmentCount; index++)
+                if (segments[index] != null)
+                    segments[index].position += (Vector3)offset;
         }
 
         private void InitializeSegmentPositions()

@@ -106,7 +106,7 @@ MonoBehaviour:
   - id: sieve
     sprite: {fileID: 5337172156447446269, guid: f4c53e1b911cc944b87fc50b4f4e659f, type: 3}
   - id: haetae_statue
-    sprite: {fileID: -2793458600998904553, guid: 20642c64c855912468a2a083c73274f9, type: 3}
+    sprite: {fileID: 5602995909880326300, guid: c952169d8c477b54c8da28da7ffc80e5, type: 3}
   - id: nest_bed
     sprite: {fileID: -478405983634418135, guid: 88c5050e992d6c542a4a08e513251694, type: 3}
   - id: magpie_nest
@@ -122,11 +122,11 @@ MonoBehaviour:
   - id: insul_wall
     sprite: {fileID: -763224725659438747, guid: 39f5fdcf377562042aeb8006d00ff413, type: 3}
   - id: door
-    sprite: {fileID: 1521505466157775540, guid: ddc111710fddc824a9ac6a79bd740746, type: 3}
+    sprite: {fileID: 4779443212894484370, guid: b741aa5c60023ed4c9b710267b4cf0d6, type: 3}
   - id: roof
     sprite: {fileID: 7487074851105840937, guid: 32260bd7de0e2694fa413d5c58fd098d, type: 3}
   - id: jangdok
-    sprite: {fileID: -52303854080169221, guid: f0ff94d9e2aff4940be25ce3c694fb74, type: 3}
+    sprite: {fileID: 1381814897268092768, guid: 91787998205035d479c8cb562390b7c6, type: 3}
   - id: ice_core
     sprite: {fileID: -2300316391141292056, guid: d545cc52e1d47154cb1354eef5796384, type: 3}
   - id: iron_insul_wall
@@ -134,9 +134,9 @@ MonoBehaviour:
   - id: cold_device
     sprite: {fileID: 919377384590954209, guid: cd51c23c96c7fc44e9b8eff13d8f3ebd, type: 3}
   - id: dokkaebi_fire_tower
-    sprite: {fileID: -4454016649895686910, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
+    sprite: {fileID: 8443847433572830821, guid: 1ddc827083550d543b6bf1bfb1f17bc9, type: 3}
   - id: singijeon_cart
-    sprite: {fileID: -7113672782228819212, guid: 88d37f4d342467445b30c1f7391c201d, type: 3}
+    sprite: {fileID: 8624853299706318747, guid: 1052514afa7990b4dbc9ddb9756d0b12, type: 3}
   - id: ice_crystal_cooler
     sprite: {fileID: -2820593926446459367, guid: d626475221934ac4d81f9153675698ec, type: 3}
   - id: cold_wave_core
@@ -144,7 +144,7 @@ MonoBehaviour:
   - id: water_jar
     sprite: {fileID: -3846027468599889998, guid: 5bd09244df74caf4ca71f45cce1e11e4, type: 3}
   - id: ice_jar
-    sprite: {fileID: -925931431505757242, guid: 985c539f9f8891a44bb29d5072532220, type: 3}
+    sprite: {fileID: 4542881201753549503, guid: 1be82acfc65fac9468c41f94eaee4617, type: 3}
   - id: straw_insul
     sprite: {fileID: 6020582326159984030, guid: 0c55bd0476722104fb924670ca4d0603, type: 3}
   - id: clay_plaster
@@ -194,42 +194,168 @@ MonoBehaviour:
   - id: catnip
     sprite: {fileID: 2943590112692646875, guid: 019840ff016e77f43a85c1bca444283b, type: 3}
   - id: ssireum_knot
-    sprite: {fileID: -4789564392577086773, guid: f8e65023324def4469768759b4c61ab6, type: 3}
+    sprite: {fileID: 2364363758983898375, guid: a10c53ea3c73754478cc5e7ea68f4a17, type: 3}
   - id: iron_appetite
-    sprite: {fileID: 3014366921870239792, guid: 83966a29249c24b40b8b38f6f28f5877, type: 3}
+    sprite: {fileID: -8272417842755197792, guid: 01603dd983060344e878b823dce934c0, type: 3}
   - id: yeouiju_shard
-    sprite: {fileID: -6519206505240377793, guid: 893b0f91be5ea0346bb8e6b81ec38d93, type: 3}
+    sprite: {fileID: 5446678303440559195, guid: f1ddb44b98e068347b9936f7f8b9c04c, type: 3}
   - id: jigwi_ember
-    sprite: {fileID: -1226543796841951702, guid: 167f0ddf45410d842814f3c7cac3a44a, type: 3}
+    sprite: {fileID: 8153404699726518838, guid: 5cc0b546736078347a1b8678539d1e10, type: 3}
   - id: drought_heart_shard
-    sprite: {fileID: 5068518710447696915, guid: 41158da986d670e4292c2ceaeff209cb, type: 3}
+    sprite: {fileID: 7263680264032254532, guid: 8b5d277e737bcd64db0a9ba55eea2c4a, type: 3}
   - id: tiger_gait
-    sprite: {fileID: -2136581596903892600, guid: 2e3425a72a91cfb439b402f2df976c32, type: 3}
+    sprite: {fileID: -4733796610574116631, guid: bc9e2da578d526a4a9dd13a6afcd36c1, type: 3}
   - id: three_horn
-    sprite: {fileID: 4534529900422791100, guid: 539c838e67adff441a321054da9440fb, type: 3}
+    sprite: {fileID: -2303022703950700912, guid: 2ba0ab4aa1722684da87a5801b8abac4, type: 3}
   - id: eop_scale
-    sprite: {fileID: -6421563326968154241, guid: db7222984a239b24a9d758eaacd49561, type: 3}
+    sprite: {fileID: 996542990641914290, guid: 4f3435f978e33c74fa0b5d6067e121a8, type: 3}
   - id: yeongno_mask
-    sprite: {fileID: -6519206505240377793, guid: 893b0f91be5ea0346bb8e6b81ec38d93, type: 3}
+    sprite: {fileID: 4823867152636104309, guid: fded7f74b737b764dba803e294e27902, type: 3}
   - id: perfect_core
-    sprite: {fileID: 2800340530316660160, guid: 241a0dbcdb9f2ff47ba06c0582d1dd50, type: 3}
+    sprite: {fileID: -5903788839948979045, guid: 9b4ef13a8f993594c86ca117d807e522, type: 3}
   - id: clay_hand
-    sprite: {fileID: 4435367028424857646, guid: 6775af95da65d4e4a8f30fa532210731, type: 3}
+    sprite: {fileID: -3477159379355728358, guid: 5d44f4f0286906f499e3dd1cb3fa6a3a, type: 3}
   - id: skate_pad
-    sprite: {fileID: 1238311553344376276, guid: c150b64428b417c41bc93348dc793a8d, type: 3}
+    sprite: {fileID: -3276126412974510475, guid: 9afb539cef67bb042a8f498938818b9b, type: 3}
   - id: magpie_bell
-    sprite: {fileID: 838726891366919000, guid: 779eb720205e1d642981353b078193cf, type: 3}
+    sprite: {fileID: 7212617400034624432, guid: 7d853bbc1dd1ce0439ec6cd7cb57def8, type: 3}
   - id: old_key
-    sprite: {fileID: 7259331501261611562, guid: 28ce00cf0dffa864a86bf8e2f4fe2b7a, type: 3}
+    sprite: {fileID: -2752200800956441380, guid: efd2756f25cdc6e4194c4f3cd77fc9c3, type: 3}
   - id: minhwa_ink
-    sprite: {fileID: 2812874859036319154, guid: a6b6d5da2bc6ffe45b2c906ef174b823, type: 3}
+    sprite: {fileID: -7552900889399083831, guid: 05a1c99dbeafdf7469beba577d960055, type: 3}
   - id: vault_seal
-    sprite: {fileID: 7259331501261611562, guid: 28ce00cf0dffa864a86bf8e2f4fe2b7a, type: 3}
+    sprite: {fileID: -7514969050213595913, guid: 8b1ac2106d47f4e4bba01f422d5b4f76, type: 3}
   - id: gate_mark
-    sprite: {fileID: -612776767698426218, guid: 146967aeda3cd2844855482056a6fb5e, type: 3}
+    sprite: {fileID: 4756946300107850187, guid: a1f6f860a6c9e424c93ee754268adf5d, type: 3}
   - id: dry_trace
-    sprite: {fileID: -5399225537425003476, guid: a4ab74dc0d7c1cf47b3dd43bc009075e, type: 3}
+    sprite: {fileID: 343106251417162610, guid: 14ff98f4cc58d0841819cc1a3eb7ab35, type: 3}
   - id: altar_echo
-    sprite: {fileID: 2812874859036319154, guid: a6b6d5da2bc6ffe45b2c906ef174b823, type: 3}
+    sprite: {fileID: 5391752300876368098, guid: dcdc9fb892590d34081682e2e49de8f7, type: 3}
   - id: frost_map
-    sprite: {fileID: -7911935547710846901, guid: 8f8f996a80f898841800b30f466ddafd, type: 3}
+    sprite: {fileID: -212456891234820471, guid: 0de6798ed85315643bfff8aa456e6f24, type: 3}
+  - id: oyster_mushroom
+    sprite: {fileID: -5758151522911314809, guid: dbea9757f3fa1e0418bf35141a1e968f, type: 3}
+  - id: shiitake
+    sprite: {fileID: 3913804465403339514, guid: 2f761c96a66c7de438a52aac2b5845e8, type: 3}
+  - id: smithy
+    sprite: {fileID: -1162261604867527211, guid: a9697823a7630824ca98aad3dcfd5ca2, type: 3}
+  - id: tal_frost
+    sprite: {fileID: -1266335583567213459, guid: 54730eeadae43d54ba005404811d462a, type: 3}
+  - id: tal_hide
+    sprite: {fileID: -1014121065118429070, guid: 78280f9b63578764c97662d3242f1656, type: 3}
+  - id: tal_return
+    sprite: {fileID: -3441586379939737543, guid: cd643a9a73bd0604aa85b080522f8663, type: 3}
+  - id: tal_stride
+    sprite: {fileID: 3273712374032856900, guid: e772d3c1d65b0cd49ab409e80f3583f0, type: 3}
+  - id: tal_waypoint
+    sprite: {fileID: -1533201260215289139, guid: d9683b19eb22c4a44a91bf0567fc4e95, type: 3}
+  - id: cold_wave_armor
+    sprite: {fileID: -1575511551332563025, guid: e9c27ac5f39c3954bbb5667ca45a5e02, type: 3}
+  - id: cold_wave_boots
+    sprite: {fileID: 2925328990329617133, guid: aafb9a3a455b19e4a866d56d31baf8bb, type: 3}
+  - id: cold_wave_helm
+    sprite: {fileID: 2330627667415680089, guid: da9954eace6bf024ba098f59f0267bc5, type: 3}
+  - id: ice_root_armor
+    sprite: {fileID: -6505740697682848947, guid: 02ad7bdd3282e8940857e130f4b4be35, type: 3}
+  - id: ice_root_boots
+    sprite: {fileID: -4270363010242966004, guid: cc3ad88d979d9ab40bf10bda48dd04d9, type: 3}
+  - id: ice_root_helm
+    sprite: {fileID: -3349861024613370670, guid: eed9e2a50f08f994c9fbef06fda1c87a, type: 3}
+  - id: seonge_armor
+    sprite: {fileID: -8255664256923160588, guid: f1d0ab9f8ab308447a20f2e4db2a44f5, type: 3}
+  - id: seonge_boots
+    sprite: {fileID: -1683713389006862832, guid: b7f30769fc4315c469be90e482134885, type: 3}
+  - id: seonge_helm
+    sprite: {fileID: 490559287782849250, guid: ee7cedaaba8fbaf4a8b5e460ff9704d4, type: 3}
+  - id: blaze_yeokrin
+    sprite: {fileID: 1684169019910603219, guid: 89a7a6981a8cb7b408f434efb4277caa, type: 3}
+  - id: cold_wave_ingot
+    sprite: {fileID: -5988922644387935318, guid: 1ef6100b32d7adc409bfb99ee86daac9, type: 3}
+  - id: eop_scale_mat
+    sprite: {fileID: 996542990641914290, guid: 4f3435f978e33c74fa0b5d6067e121a8, type: 3}
+  - id: ice_root_bundle
+    sprite: {fileID: -1000392471038159805, guid: 487fb86095204bf47ae2eeb482d1645f, type: 3}
+  - id: perfect_heart
+    sprite: {fileID: 3513254381136348075, guid: 6744bd30cb94eaf4fae927044bfd0ef0, type: 3}
+  - id: sangun_talon
+    sprite: {fileID: 3358174464914654547, guid: b52cfd2fad3d3bd4c96aa133fb4300e1, type: 3}
+  - id: seonge_ingot
+    sprite: {fileID: 5156691603603667142, guid: a3d1587d93f15274badc773f947d4761, type: 3}
+  - id: three_horn_mat
+    sprite: {fileID: -2303022703950700912, guid: 2ba0ab4aa1722684da87a5801b8abac4, type: 3}
+  - id: arrow_supply
+    sprite: {fileID: 8141561538192024658, guid: 997e7dcc8d5616f49aa231af70ad0010, type: 3}
+  - id: cold_wave_tower
+    sprite: {fileID: 2179666682734032565, guid: 65583e6bc12ed46418da52ab0f020bd0, type: 3}
+  - id: frost_bell_rope
+    sprite: {fileID: 8979487119435667072, guid: 2d2d6136f5d9921418d15e341e9eb144, type: 3}
+  - id: gong_tower
+    sprite: {fileID: -7247884180401989012, guid: cc6d8e46772b057419102e3b8671dc7a, type: 3}
+  - id: ice_trap
+    sprite: {fileID: -3777218218153608614, guid: b15972be2942c1246827fd66bbe9ff02, type: 3}
+  - id: scarecrow
+    sprite: {fileID: 8890575170108895376, guid: 2a025f45c3c0349498cf2332cc569314, type: 3}
+  - id: seonge_tower
+    sprite: {fileID: -563470667771800937, guid: b3f82267b72273e46aa30aedf3bcf55e, type: 3}
+  - id: cold_wave_ore
+    sprite: {fileID: -1460476323599479925, guid: c3dbdef11932c5a49887f7e0873368c0, type: 3}
+  - id: ice_root
+    sprite: {fileID: -8535107987457653574, guid: 404f673495bc6a841a3fbfd18026fe00, type: 3}
+  - id: eop_summon
+    sprite: {fileID: -4501306030406823548, guid: 6ebfc05bd4d8c3d428d22a0d3c4adb85, type: 3}
+  - id: jigwi_summon
+    sprite: {fileID: 7451061957489623490, guid: 977aa7a898be9c84fb1120438a73057a, type: 3}
+  - id: samdugumi_summon
+    sprite: {fileID: 8835585966499550895, guid: 0304ed8098bcc5342a2941f951d59d0d, type: 3}
+  - id: baekjung_bundle
+    sprite: {fileID: -7945697100588364244, guid: bbf8a08d163db5b458ca0f19d8f91874, type: 3}
+  - id: cold_wave_fan
+    sprite: {fileID: 5007994873637011766, guid: 3cc8b2d29cd597c49abd0aa77988a1a6, type: 3}
+  - id: first_frost_claw
+    sprite: {fileID: -4160797743456815777, guid: 69ca11f247092cf4ba4bd8f9df492244, type: 3}
+  - id: gakgung
+    sprite: {fileID: -6871222281534092660, guid: 6e15ab432ba231d48b5a2eacf95b087b, type: 3}
+  - id: ice_root_bow
+    sprite: {fileID: 9052846452936164733, guid: 74dece43be9e8004c93f8928a3b229f7, type: 3}
+  - id: ice_root_whipfan
+    sprite: {fileID: -1352327065603573592, guid: 5f22ce6ded0266d4d993d199c392838d, type: 3}
+  - id: jigwi_ash
+    sprite: {fileID: -6678963753818266196, guid: cf706a896a5323348901fec919ebce98, type: 3}
+  - id: perfect_claw
+    sprite: {fileID: 9114674323118033568, guid: abbc28b1d47bb6540967c86b1c5cf775, type: 3}
+  - id: sangun_claw
+    sprite: {fileID: -7319597436976353022, guid: 5036a58cdd5d5c9428a78fdc0085e957, type: 3}
+  - id: sangun_whisker
+    sprite: {fileID: 2338496693566588407, guid: 94dcab4e6aa723a4a936e6707c8ed00f, type: 3}
+  - id: seolpungseon
+    sprite: {fileID: 1707502358306782641, guid: 59ef21545de3ffc40aa8dd6542e6f4bd, type: 3}
+  - id: seonge_fan
+    sprite: {fileID: -6932725107778960541, guid: 33a1b4cf9d51a384da1559097e2d2719, type: 3}
+  - id: seonge_gakgung
+    sprite: {fileID: -2339246340778967805, guid: b97d93052b92a1c419f7758997def257, type: 3}
+  - id: straw_sling
+    sprite: {fileID: 2865722326760306241, guid: bdc2cd9417c7c6842bf6b8951f7d59cd, type: 3}
+  - id: yeongno_tooth
+    sprite: {fileID: 4152527720904455415, guid: 16fc0b40c9b4f2245a243b81abd892e6, type: 3}
+  - id: yeouiju_claw
+    sprite: {fileID: -5221731392075379632, guid: d349bbf9b357e7347a2dabfd1a4f54a6, type: 3}
+  - id: seonge_ore
+    sprite: {fileID: 3204670705488790767, guid: 09811930fc444fd41984cdc20f2f8cc0, type: 3}
+  - id: jigwi_ember_mat
+    sprite: {fileID: 8153404699726518838, guid: 5cc0b546736078347a1b8678539d1e10, type: 3}
+  - id: yeongno_mask_mat
+    sprite: {fileID: 4823867152636104309, guid: fded7f74b737b764dba803e294e27902, type: 3}
+  - id: singijeon_sondae
+    sprite: {fileID: -3517113054787361449, guid: 48033bbb07739f94592a3ee81bfd1613, type: 3}
+  - id: cold_wave_singijeon
+    sprite: {fileID: 713790713706040502, guid: c117d52c4d7f86743a1afc63318695df, type: 3}
+  - id: seogi
+    sprite: {fileID: -6080404717927740233, guid: a8f07e3901d12e6478387c52c4147336, type: 3}
+  - id: plaster_doll
+    sprite: {fileID: 843337769211203230, guid: afe000143d8a35c4e9627069dbfb816c, type: 3}
+  - id: cold_wave_battery
+    sprite: {fileID: 2469486277111627264, guid: 766abc822d0ac924d998019b972a8452, type: 3}
+  - id: ice_root_battery
+    sprite: {fileID: 4940622699154063002, guid: 73b8854534981f541932b4cd561fe0f8, type: 3}
+  - id: rope
+    sprite: {fileID: -2391460369877762261, guid: 7ca1e50256b23e949bd6ac26459821f6, type: 3}

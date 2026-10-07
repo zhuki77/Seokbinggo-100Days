@@ -27,10 +27,10 @@ MonoBehaviour:
     - {fileID: 9132841010233309246, guid: 138702973861c08499483c0e7bc7ea40, type: 3}
   - id: tree_1
     frames:
-    - {fileID: -1942695413404272156, guid: 1df921e2d35805e42913152e3d044e91, type: 3}
+    - {fileID: 9132841010233309246, guid: 138702973861c08499483c0e7bc7ea40, type: 3}
   - id: tree_2
     frames:
-    - {fileID: -7680031594133325465, guid: 24ba45c35adc2e64084bd52707c94be7, type: 3}
+    - {fileID: 9132841010233309246, guid: 138702973861c08499483c0e7bc7ea40, type: 3}
   - id: ruin_pillar
     frames:
     - {fileID: 1288656957261631572, guid: ce8480a9611549b4e8e01d6648b1faa5, type: 3}

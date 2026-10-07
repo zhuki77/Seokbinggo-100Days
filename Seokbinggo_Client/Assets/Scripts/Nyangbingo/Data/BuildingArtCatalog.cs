@@ -12,10 +12,12 @@ namespace Nyangbingo.Data
         {
             [SerializeField] private string id;
             [SerializeField] private Sprite[] frames = Array.Empty<Sprite>();
+            [SerializeField] private Sprite[] attackFrames = Array.Empty<Sprite>();
 
             public string Id => id;
             public IReadOnlyList<Sprite> Frames => frames ?? Array.Empty<Sprite>();
             public Sprite Sprite => Frames.Count > 0 ? Frames[0] : null;
+            public IReadOnlyList<Sprite> AttackFrames => attackFrames ?? Array.Empty<Sprite>();
         }
 
         [SerializeField] private Entry[] entries = Array.Empty<Entry>();

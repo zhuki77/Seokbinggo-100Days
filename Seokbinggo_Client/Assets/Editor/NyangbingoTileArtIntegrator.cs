@@ -5,6 +5,7 @@ using Nyangbingo.Data;
 using Nyangbingo.World;
 using UnityEditor;
 using UnityEditor.U2D.Aseprite;
+using UnityEditor.U2D.Sprites;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -46,6 +47,7 @@ namespace Nyangbingo.Editor
         private static readonly IReadOnlyDictionary<string, string> TileArtFiles =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["rope"] = "rope.aseprite",
                 ["bedrock"] = "bedrock.aseprite",
                 ["bg_dirt"] = "t_bg_dirt.aseprite",
                 ["bg_stone"] = "t_bg_stone.aseprite",
@@ -55,11 +57,18 @@ namespace Nyangbingo.Editor
                 ["clay"] = "clay.aseprite",
                 ["dirt"] = "dirt.aseprite",
                 ["frost_essence"] = "frost_essence.aseprite",
+                ["cold_wave_ore"] = "cold_wave_ore.aseprite",
+                ["seonge_ore"] = "seonge_ore.aseprite",
+                ["oyster_mushroom"] = "oyster_mushroom_block.png",
+                ["shiitake"] = "shiitake_block.png",
+                ["ice_root"] = "ice_root.aseprite",
+                ["seogi"] = "seogi.aseprite",
                 ["ice_lake"] = "ice_lake.aseprite",
                 ["ice_shard"] = "ice_shard.aseprite",
                 ["icesteel_ore"] = "icesteel_ore.aseprite",
                 ["iron_ore"] = "iron_ore.aseprite",
                 ["ruin_wall"] = "ruin_wall.aseprite",
+                ["ice_altar"] = "t_altar.aseprite",
                 ["stone"] = "stone.aseprite",
                 ["stone_mid"] = "stone_mid.aseprite",
                 ["stone_deep"] = "stone_deep.aseprite"
@@ -74,18 +83,17 @@ namespace Nyangbingo.Editor
                 ["yakwang"] = "yakwang.aseprite",
                 ["eoduksini"] = "eoduksini.aseprite",
                 ["gangcheol"] = "gangcheol.aseprite",
-                ["gangcheol_body"] = "gangcheol_body.png",
-                // The delivered Gangcheol filenames are reversed by physical role:
-                // post_tail is the larger proximal piece and pre_tail is the smaller tip.
-                ["gangcheol_pre_tail"] = "gangcheol_post_tail.aseprite",
-                ["gangcheol_post_tail"] = "gangcheol_pre_tail.aseprite",
+                ["gangcheol_body"] = "gangcheol_body.aseprite",
+                ["gangcheol_pre_tail"] = "gangcheol_mid_body_canvas.png",
+                ["gangcheol_post_tail"] = "gangcheol_last_body_canvas.png",
+                ["gangcheol_hand"] = "gangcheol_hand_canvas.png",
                 ["king_dokkaebi"] = "king_dokkaebi.aseprite",
                 ["mother_bulgasari"] = "mother_bulgasari.aseprite",
                 ["gangcheol_boss"] = "gangcheol.aseprite",
                 ["imugi"] = "imugi_head2.aseprite",
                 ["imugi_body"] = "imugi_body.aseprite",
-                ["imugi_pre_tail"] = "imugi_pre_tail.aseprite",
-                ["imugi_post_tail"] = "imugi_post_tail.aseprite",
+                ["imugi_pre_tail"] = "imugi_mid_body_canvas.png",
+                ["imugi_post_tail"] = "imugi_last_body_canvas.png",
                 ["gaekgwi"] = "gaekgwi.aseprite",
                 ["magpie"] = "magpie.aseprite"
             };
@@ -101,6 +109,28 @@ namespace Nyangbingo.Editor
         private static readonly IReadOnlyDictionary<string, string> ItemArtFiles =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["vault_seal"] = "DeliveredFinal/vault_seal.aseprite",
+                ["rope"] = "Assets/Art/Tiles/rope.aseprite",
+                ["yokai_tear"] = "Assets/Art/UI/yokai_tear_balance.aseprite",
+                ["dokkaebi_fire_tower"] = "DeliveredFinal/dokkaebi_fire_tower_icon.aseprite",
+                ["haetae_statue"] = "DeliveredFinal/haetae_statue_icon.aseprite",
+                ["door"] = "DeliveredFinal/door_icon.aseprite",
+                ["singijeon_cart"] = "DeliveredFinal/singijeon_cart_icon.aseprite",
+                ["yeouiju_shard"] = "DeliveredFinal/yeouiju_shard.aseprite",
+                ["tiger_gait"] = "DeliveredFinal/tiger_gait.aseprite",
+                ["ssireum_knot"] = "DeliveredFinal/ssireum_knot.aseprite",
+                ["skate_pad"] = "DeliveredFinal/skate_pad.aseprite",
+                ["perfect_core"] = "DeliveredFinal/perfect_core.aseprite",
+                ["old_key"] = "DeliveredFinal/old_key.aseprite",
+                ["minhwa_ink"] = "DeliveredFinal/minhwa_ink.aseprite",
+                ["magpie_bell"] = "DeliveredFinal/magpie_bell.aseprite",
+                ["iron_appetite"] = "DeliveredFinal/iron_appetite.aseprite",
+                ["gate_mark"] = "DeliveredFinal/gate_mark.aseprite",
+                ["frost_map"] = "DeliveredFinal/frost_map.aseprite",
+                ["dry_trace"] = "DeliveredFinal/dry_trace.aseprite",
+                ["drought_heart_shard"] = "DeliveredFinal/drought_heart_shard.aseprite",
+                ["clay_hand"] = "DeliveredFinal/clay_hand.aseprite",
+                ["altar_echo"] = "DeliveredFinal/altar_echo.aseprite",
                 ["bare_claw"] = "bare_claw.aseprite",
                 ["iron_claw"] = "iron_claw.aseprite",
                 ["icesteel_claw"] = "icesteel_claw.aseprite",
@@ -135,6 +165,75 @@ namespace Nyangbingo.Editor
                 ["ice_altar_offering"] = "ice_altar_offering.aseprite",
                 ["drought_talisman"] = "drought_talisman.aseprite",
                 ["catnip"] = "catnip.aseprite",
+                // Confirmed requested icons from the final art delivery; retain the source Aseprite files.
+                ["jangdok"] = "DeliveredFinal/jangdok_icon.aseprite",
+                ["ice_jar"] = "DeliveredFinal/ice_jar_icon.aseprite",
+                ["oyster_mushroom"] = "DeliveredFinal/oyster_mushroom.aseprite",
+                ["shiitake"] = "DeliveredFinal/shiitake.aseprite",
+                ["smithy"] = "DeliveredFinal/smithy.aseprite",
+                ["tal_frost"] = "DeliveredFinal/tal_frost.aseprite",
+                ["tal_hide"] = "DeliveredFinal/tal_hide.aseprite",
+                ["tal_return"] = "DeliveredFinal/tal_return.aseprite",
+                ["tal_stride"] = "DeliveredFinal/tal_stride.aseprite",
+                ["tal_waypoint"] = "DeliveredFinal/tal_waypoint_icon.aseprite",
+                ["cold_wave_armor"] = "DeliveredFinal/cold_wave_armor.aseprite",
+                ["cold_wave_boots"] = "DeliveredFinal/cold_wave_boots.aseprite",
+                ["cold_wave_helm"] = "DeliveredFinal/cold_wave_helm.aseprite",
+                ["ice_root_armor"] = "DeliveredFinal/ice_root_armor.aseprite",
+                ["ice_root_boots"] = "DeliveredFinal/ice_root_boots.aseprite",
+                ["ice_root_helm"] = "DeliveredFinal/ice_root_helm.aseprite",
+                ["seonge_armor"] = "DeliveredFinal/seonge_armor.aseprite",
+                ["seonge_boots"] = "DeliveredFinal/seonge_boots.aseprite",
+                ["seonge_helm"] = "DeliveredFinal/seonge_helm.aseprite",
+                ["blaze_yeokrin"] = "DeliveredFinal/blaze_yeokrin.aseprite",
+                ["cold_wave_ingot"] = "DeliveredFinal/cold_wave_ingot.aseprite",
+                ["eop_scale_mat"] = "DeliveredFinal/eop_scale_mat.aseprite",
+                ["eop_scale"] = "DeliveredFinal/eop_scale_mat.aseprite",
+                ["ice_root_bundle"] = "DeliveredFinal/ice_root_bundle.aseprite",
+                ["perfect_heart"] = "DeliveredFinal/perfect_heart.aseprite",
+                ["sangun_talon"] = "DeliveredFinal/sangun_talon.aseprite",
+                ["seonge_ingot"] = "DeliveredFinal/seonge_ingot.aseprite",
+                ["three_horn_mat"] = "DeliveredFinal/three_horn_mat.aseprite",
+                ["three_horn"] = "DeliveredFinal/three_horn_mat.aseprite",
+                ["arrow_supply"] = "DeliveredFinal/arrow_supply.aseprite",
+                ["cold_wave_tower"] = "DeliveredFinal/cold_wave_tower_icon.aseprite",
+                ["frost_bell_rope"] = "DeliveredFinal/frost_bell_rope.aseprite",
+                ["gong_tower"] = "DeliveredFinal/gong_tower_icon.aseprite",
+                ["ice_trap"] = "DeliveredFinal/ice_trap.aseprite",
+                ["scarecrow"] = "DeliveredFinal/scarecrow_icon.aseprite",
+                ["seonge_tower"] = "DeliveredFinal/seonge_tower_icon.aseprite",
+                ["cold_wave_ore"] = "DeliveredFinal/cold_wave_ore.aseprite",
+                ["seonge_ore"] = "Assets/Art/Tiles/seonge_ore.aseprite",
+                ["ice_root"] = "DeliveredFinal/ice_root.aseprite",
+                ["eop_summon"] = "DeliveredFinal/eop_summon.aseprite",
+                ["jigwi_summon"] = "DeliveredFinal/jigwi_summon.aseprite",
+                ["samdugumi_summon"] = "DeliveredFinal/samdugumi_summon.aseprite",
+                ["baekjung_bundle"] = "DeliveredFinal/baekjung_bundle.aseprite",
+                ["cold_wave_fan"] = "DeliveredFinal/cold_wave_fan.aseprite",
+                ["first_frost_claw"] = "DeliveredFinal/first_frost_claw.aseprite",
+                ["gakgung"] = "DeliveredFinal/gakgung.aseprite",
+                ["ice_root_bow"] = "DeliveredFinal/ice_root_bow.aseprite",
+                ["ice_root_whipfan"] = "DeliveredFinal/ice_root_whipfan.aseprite",
+                ["jigwi_ash"] = "DeliveredFinal/jigwi_ash.aseprite",
+                ["jigwi_ember_mat"] = "DeliveredFinal/jigwi_ember_mat.aseprite",
+                ["jigwi_ember"] = "DeliveredFinal/jigwi_ember_mat.aseprite",
+                ["yeongno_mask_mat"] = "DeliveredFinal/yeongno_mask_mat.aseprite",
+                ["yeongno_mask"] = "DeliveredFinal/yeongno_mask_mat.aseprite",
+                ["singijeon_sondae"] = "DeliveredFinal/singijeon_sondae.aseprite",
+                ["cold_wave_singijeon"] = "DeliveredFinal/cold_wave_singijeon.aseprite",
+                ["cold_wave_battery"] = "DeliveredFinal/cold_wave_battery_icon.aseprite",
+                ["ice_root_battery"] = "DeliveredFinal/ice_root_battery_icon.aseprite",
+                ["plaster_doll"] = "DeliveredFinal/plaster_doll_icon.aseprite",
+                ["seogi"] = "DeliveredFinal/seogi.aseprite",
+                ["perfect_claw"] = "DeliveredFinal/perfect_claw.aseprite",
+                ["sangun_claw"] = "DeliveredFinal/sangun_claw.aseprite",
+                ["sangun_whisker"] = "DeliveredFinal/sangun_whisker.aseprite",
+                ["seolpungseon"] = "DeliveredFinal/seolpungseon.aseprite",
+                ["seonge_fan"] = "DeliveredFinal/seonge_fan.aseprite",
+                ["seonge_gakgung"] = "DeliveredFinal/seonge_gakgung.aseprite",
+                ["straw_sling"] = "DeliveredFinal/straw_sling.aseprite",
+                ["yeongno_tooth"] = "DeliveredFinal/yeongno_tooth.aseprite",
+                ["yeouiju_claw"] = "DeliveredFinal/yeouiju_claw.aseprite",
                 // v29: wallpaper has no dedicated icon art. Use the delivered upper-layer background tile.
                 ["wallpaper"] = "Assets/Art/Tiles/t_bg_dirt.aseprite"
             };
@@ -142,9 +241,20 @@ namespace Nyangbingo.Editor
         private static readonly IReadOnlyDictionary<string, string> BuildingArtFiles =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["rope"] = "Assets/Art/Tiles/rope.aseprite",
                 ["workbench"] = "workbench.aseprite",
                 ["furnace"] = "furnace.aseprite",
                 ["blast_furnace"] = "blast_furnace.aseprite",
+                ["smithy"] = "smithy.aseprite",
+                ["arrow_supply"] = "arrow_supply.aseprite",
+                ["gong_tower"] = "gong_tower.aseprite",
+                ["scarecrow"] = "scarecrow.aseprite",
+                ["tal_waypoint"] = "tal_waypoint.aseprite",
+                ["water_jar"] = "Assets/Art/Items/water_jar.aseprite",
+                ["frost_bell_rope"] = "Assets/Art/Items/DeliveredFinal/frost_bell_rope.aseprite",
+                ["seonge_tower"] = "Assets/Art/Items/DeliveredFinal/seonge_tower.aseprite",
+                ["cold_wave_tower"] = "Assets/Art/Items/DeliveredFinal/cold_wave_tower.aseprite",
+                ["ice_trap"] = "Assets/Art/Items/DeliveredFinal/ice_trap.aseprite",
                 ["ice_anvil"] = "ice_anvil.aseprite",
                 ["lantern"] = "lantern.aseprite",
                 ["frost_lantern"] = "frost_lantern.aseprite",
@@ -165,6 +275,9 @@ namespace Nyangbingo.Editor
                 ["chest"] = "chest.aseprite",
                 ["dokkaebi_fire_tower"] = "dokkaebi_fire_tower.aseprite",
                 ["singijeon_cart"] = "singijeon_cart.aseprite",
+                ["ice_root_battery"] = "ice_root_battery.aseprite",
+                ["cold_wave_battery"] = "cold_wave_battery.aseprite",
+                ["plaster_doll"] = "plaster_doll.aseprite",
                 ["ice_crystal_cooler"] = "ice_crystal_cooler.aseprite",
                 ["cold_wave_core"] = "cold_wave_core.aseprite",
                 ["ice_jar"] = "ice_jar.aseprite",
@@ -189,8 +302,10 @@ namespace Nyangbingo.Editor
                 ["grass_dry"] = "grass_dry.aseprite",
                 ["hemp"] = "hemp.aseprite",
                 ["tree_0"] = "tree.aseprite",
-                ["tree_1"] = "tree_0.aseprite",
-                ["tree_2"] = "tree_1.aseprite",
+                // The final tree_down/tree_up files are sections, not complete tree variants.
+                // Keep seeded variant IDs stable while displaying the complete delivered tree.
+                ["tree_1"] = "tree.aseprite",
+                ["tree_2"] = "tree.aseprite",
                 ["ruin_pillar"] = "ruin_pillar.aseprite",
                 ["ruin_rebar"] = "ruin_rebar.aseprite"
             };
@@ -207,7 +322,12 @@ namespace Nyangbingo.Editor
                 var artPath = $"{ArtFolder}/{pair.Value}";
                 var tilePath = $"{TileFolder}/{tileId}.asset";
 
-                if (!ConfigureAsepriteImporter(artPath, failures))
+                // These delivered mushroom files contain four cels across a one-cell canvas.
+                // Use the exact canvas export instead of the importer's oversized cel sprite.
+                var configured = artPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                    ? ConfigureCharacterPngImporter(artPath, failures)
+                    : ConfigureAsepriteImporter(artPath, failures);
+                if (!configured)
                 {
                     continue;
                 }
@@ -381,6 +501,10 @@ namespace Nyangbingo.Editor
 
             foreach (var pair in GaekgwiEffectArtFiles)
                 ConfigureAsepriteImporter($"{CharacterArtFolder}/{pair.Value}", failures);
+            var ropeArtPath = $"{CharacterArtFolder}/player_rope.aseprite";
+            ConfigureAsepriteImporter(ropeArtPath, failures);
+            var ropeFrames = FindLongestAnimationFrames(ropeArtPath);
+            if (ropeFrames.Count != 4) failures.Add("player_rope: 로프 애니메이션 4프레임 필요");
             var imugiElectricFrames = LoadImugiElectricAttackFrames(failures);
 
             if (failures.Count > 0)
@@ -411,7 +535,9 @@ namespace Nyangbingo.Editor
                     string.Equals(pair.Key, "mother_bulgasari", StringComparison.Ordinal) ||
                     string.Equals(pair.Key, "gaekgwi", StringComparison.Ordinal);
                 var artPath = $"{CharacterArtFolder}/{pair.Value}";
-                var idleTag = string.Equals(pair.Key, "imugi", StringComparison.Ordinal)
+                var idleTag = string.Equals(pair.Key, "imugi", StringComparison.Ordinal) ||
+                              string.Equals(pair.Key, "gangcheol", StringComparison.Ordinal) ||
+                              string.Equals(pair.Key, "gangcheol_boss", StringComparison.Ordinal)
                     ? "default"
                     : "idle";
                 var specialTag = string.Equals(pair.Key, "imugi", StringComparison.Ordinal)
@@ -427,6 +553,9 @@ namespace Nyangbingo.Editor
                         "Frame_2",
                         "Frame_3")
                     : FindAnimationFrames(artPath, idleTag);
+                // The final Imugi head is a single static frame without animation tags.
+                if (pair.Key == "imugi" && idleFrames.Count == 0)
+                    idleFrames = new[] { sprites[pair.Key] };
                 var isMagpie = string.Equals(pair.Key, "magpie", StringComparison.Ordinal);
                 SetSpriteArray(entry.FindPropertyRelative("idleFrames"),
                     isMagpie && idleFrames.Count > 0
@@ -442,6 +571,8 @@ namespace Nyangbingo.Editor
                     FindAnimationFrames(artPath, "fall"));
                 SetSpriteArray(entry.FindPropertyRelative("landFrames"),
                     FindAnimationFrames(artPath, "up"));
+                SetSpriteArray(entry.FindPropertyRelative("ropeFrames"),
+                    pair.Key == "player" ? ropeFrames : Array.Empty<Sprite>());
                 SetSpriteArray(entry.FindPropertyRelative("attackFrames"),
                     isMagpie && idleFrames.Count > 3
                         ? new[] { idleFrames[3] }
@@ -706,6 +837,299 @@ namespace Nyangbingo.Editor
                       "legacy sky 2/2, underground 1/1, title background 1/1, title 10/10.");
         }
 
+        // 기획 대응을 확인한 전용 원본 경로만 전달한다. 일부 미제공이면 기존 연결을 보존한다.
+        public static void ApplyS1S3GuideArt(string arrowPath, string leakPath, string repairPath, string successPath)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("S1~S3 아트 연결은 비플레이 상태에서만 가능합니다.");
+            var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            if (catalog == null) throw new InvalidOperationException("GameplayArtCatalog 없음");
+            var failures = new List<string>();
+            var paths = new[] { arrowPath, leakPath, repairPath, successPath };
+            var fields = new[] { "goalDirectionArrow", "sealLeakMarkerFrames", "sealRepairCheck", "sealSuccessFrames" };
+            var selected = new IReadOnlyList<Sprite>[paths.Length];
+            for (var i = 0; i < paths.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(paths[i])) continue;
+                if (!paths[i].StartsWith("Assets/", StringComparison.Ordinal))
+                {
+                    failures.Add($"{fields[i]}는 Assets/ 아래의 전용 원본 경로가 필요합니다.");
+                    continue;
+                }
+                if (!ConfigureAsepriteImporter(paths[i], failures)) continue;
+                var frames = FindLongestAnimationFrames(paths[i]);
+                var valid = i == 1 ? frames.Count > 0 : i == 3 ? frames.Count >= 3 && frames.Count <= 4 : frames.Count == 1;
+                if (!valid || frames.Any(frame => frame == null))
+                    failures.Add($"{fields[i]} 프레임 수 오류: {frames.Count} ({paths[i]})");
+                else selected[i] = frames;
+            }
+            if (failures.Count > 0) throw new InvalidOperationException(string.Join("\n", failures));
+            var serialized = new SerializedObject(catalog);
+            for (var i = 0; i < selected.Length; i++)
+            {
+                if (selected[i] == null) continue;
+                if (i == 0 || i == 2) serialized.FindProperty(fields[i]).objectReferenceValue = selected[i][0];
+                else SetSpriteArray(serialized.FindProperty(fields[i]), selected[i]);
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+        }
+
+        public static void ApplyDeliveredMisc1Art()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("전달 아트 연결은 비플레이 상태에서만 가능합니다.");
+            var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            if (catalog == null) throw new InvalidOperationException("GameplayArtCatalog 없음");
+            var failures = new List<string>();
+            var names = new[] { "seal_success_wave", "result_continue", "gaekgwi_boss_bar",
+                "singijeon_sondae_attack", "cold_wave_singijeon_attack", "ice_root_whipfan_attack" };
+            var counts = new[] { 10, 1, 1, 8, 9, 7 };
+            var frames = new IReadOnlyList<Sprite>[names.Length];
+            for (var index = 0; index < names.Length; index++)
+            {
+                ConfigureAsepriteImporter($"{GameplayArtFolder}/DeliveredMisc1/{names[index]}.aseprite", failures);
+                frames[index] = LoadDeliveredMiscFrames(names[index], counts[index], failures);
+            }
+            if (failures.Count > 0) throw new InvalidOperationException(string.Join("\n", failures));
+            var serialized = new SerializedObject(catalog);
+            SetSpriteArray(serialized.FindProperty("sealSuccessFrames"), frames[0]);
+            serialized.FindProperty("resultContinue").objectReferenceValue = frames[1][0];
+            serialized.FindProperty("bossHealthGaekgwi").objectReferenceValue = frames[2][0];
+            var weapons = serialized.FindProperty("weaponAttackAnimations");
+            var ids = new[] { "singijeon_sondae", "cold_wave_singijeon", "ice_root_whipfan" };
+            for (var index = 0; index < ids.Length; index++)
+            {
+                var entryIndex = -1;
+                for (var existing = 0; existing < weapons.arraySize; existing++)
+                    if (weapons.GetArrayElementAtIndex(existing).FindPropertyRelative("itemId").stringValue == ids[index])
+                        entryIndex = existing;
+                if (entryIndex < 0) { entryIndex = weapons.arraySize; weapons.arraySize++; }
+                var entry = weapons.GetArrayElementAtIndex(entryIndex);
+                entry.FindPropertyRelative("itemId").stringValue = ids[index];
+                SetSpriteArray(entry.FindPropertyRelative("frames"), frames[index + 3]);
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static IReadOnlyList<Sprite> LoadDeliveredMiscFrames(string name, int count, ICollection<string> failures)
+        {
+            var frames = new List<Sprite>();
+            for (var index = 0; index < count; index++)
+            {
+                var path = $"{GameplayArtFolder}/DeliveredMisc1/{name}_frame_{index:00}.png";
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer == null) { failures.Add($"PNG importer 없음: {path}"); continue; }
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = PixelsPerUnit;
+                importer.filterMode = FilterMode.Point;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+                if (name == "singijeon_sondae_attack" || name == "cold_wave_singijeon_attack" ||
+                    name == "ice_root_whipfan_attack")
+                    AlignWeaponAttackPivot(importer);
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (sprite == null) failures.Add($"Sprite 없음: {path}");
+                else frames.Add(sprite);
+            }
+            return frames;
+        }
+
+        private static void AlignWeaponAttackPivot(TextureImporter importer)
+        {
+            var factories = new SpriteDataProviderFactories();
+            factories.Init();
+            var provider = factories.GetSpriteEditorDataProviderFromObject(importer);
+            if (provider == null)
+                throw new InvalidOperationException($"Sprite data provider 없음: {importer.assetPath}");
+            provider.InitSpriteEditorDataProvider();
+            var editable = provider.GetDataProvider<ISpriteFrameEditCapability>();
+            if (editable == null || !editable.GetEditCapability().HasCapability(EEditCapability.EditPivot))
+                throw new InvalidOperationException($"공격 피벗 편집 불가: {importer.assetPath}");
+            var rects = provider.GetSpriteRects();
+            if (rects.Length != 1)
+                throw new InvalidOperationException($"공격 PNG는 단일 Sprite여야 합니다: {importer.assetPath}");
+            // These 32x32 canvases retain the feet at the bottom edge, like the
+            // existing Aseprite attack art. Keep the physics root and visual scale unchanged.
+            var pivot = new Vector2(.5f, 0f);
+            if (rects[0].pivot == pivot && rects[0].alignment == SpriteAlignment.Custom) return;
+            rects[0].alignment = SpriteAlignment.Custom;
+            rects[0].pivot = pivot;
+            provider.SetSpriteRects(rects);
+            provider.Apply();
+            importer.SaveAndReimport();
+        }
+
+        public static void ApplyDeliveredUiArt()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("UI 아트 연결은 비플레이 상태에서만 가능합니다.");
+            const string folder = "Assets/Art/Gameplay/DeliveredUi/";
+            var failures = new List<string>();
+            var fieldFiles = new Dictionary<string, string>
+            {
+                ["goalDirectionArrow"] = "ui_raid_arrow.aseprite",
+                ["sealRepairCheck"] = "check.aseprite",
+                ["yokaiDamageIcon"] = "yokai_damage.aseprite",
+                ["burnStatusIcon"] = "burn_status.aseprite",
+                ["sealLeakStatusIcon"] = "seal_leak_icon.aseprite",
+                ["sealLeakStaticMarker"] = "seal_leak_marker.aseprite"
+            };
+            var sprites = new Dictionary<string, Sprite>();
+            foreach (var pair in fieldFiles)
+            {
+                var path = folder + pair.Value;
+                ConfigureAsepriteImporter(path, failures);
+                var frames = FindLongestAnimationFrames(path);
+                if (frames.Count != 1) failures.Add($"{pair.Value}: 1프레임 필요, 실제 {frames.Count}");
+                else sprites[pair.Key] = frames[0];
+            }
+            var effectPath = folder + "seal_leak_effect.aseprite";
+            ConfigureAsepriteImporter(effectPath, failures);
+            // Aseprite trims transparent cel margins. Preserve the delivered 16x16
+            // canvas so uGUI does not enlarge each small animation cel differently.
+            var effectFrames = new List<Sprite>();
+            for (var index = 0; index < 6; index++)
+            {
+                var path = folder + $"seal_leak_frame_{index}.png";
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer == null) { failures.Add($"{path}: TextureImporter 없음"); continue; }
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = PixelsPerUnit;
+                importer.filterMode = FilterMode.Point;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (sprite != null) effectFrames.Add(sprite);
+                else failures.Add($"{path}: Sprite 없음");
+            }
+            if (effectFrames.Count != 6) failures.Add($"찬바람 누출: 6프레임 필요, 실제 {effectFrames.Count}");
+            var vaultPath = ItemArtFolder + "/DeliveredFinal/vault_seal.aseprite";
+            ConfigureAsepriteImporter(vaultPath, failures);
+            var vault = FindDefaultSprite(vaultPath);
+            if (vault == null) failures.Add("창고 봉인 Sprite 없음");
+            // Import unselected variants too, but never silently change the chosen check.
+            ConfigureAsepriteImporter(folder + "check2.aseprite", failures);
+            ConfigureAsepriteImporter(folder + "yokai_damage_alt.aseprite", failures);
+            var gameplay = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            var items = AssetDatabase.LoadAssetAtPath<ItemArtCatalog>(ItemArtCatalogPath);
+            if (gameplay == null || items == null) failures.Add("아트 카탈로그 없음");
+            if (failures.Count > 0) throw new InvalidOperationException(string.Join("\n", failures));
+            var serialized = new SerializedObject(gameplay);
+            foreach (var pair in sprites) serialized.FindProperty(pair.Key).objectReferenceValue = pair.Value;
+            SetSpriteArray(serialized.FindProperty("sealLeakMarkerFrames"), effectFrames);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            var itemSerialized = new SerializedObject(items);
+            var entry = FindOrAddItemEntry(itemSerialized.FindProperty("entries"), "vault_seal");
+            entry.FindPropertyRelative("id").stringValue = "vault_seal";
+            entry.FindPropertyRelative("sprite").objectReferenceValue = vault;
+            itemSerialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(gameplay);
+            EditorUtility.SetDirty(items);
+            AssetDatabase.SaveAssets();
+        }
+
+        public static void ApplyFanWindArt()
+        {
+            var failures = new List<string>();
+            var path = $"{GameplayArtFolder}/fan_wind.aseprite";
+            ConfigureAsepriteImporter(path, failures);
+            var frames = FindLongestAnimationFrames(path);
+            if (frames.Count != 5) failures.Add($"부채 바람 5프레임 필요, 실제 {frames.Count}");
+            var catalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            if (catalog == null) failures.Add("GameplayArtCatalog 없음");
+            if (failures.Count > 0) throw new InvalidOperationException(string.Join("\n", failures));
+            var serialized = new SerializedObject(catalog);
+            SetSpriteArray(serialized.FindProperty("fanWindFrames"), frames);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+        }
+
+        // 공격 원본 수신분만 갱신한다. 다른 캐릭터·로프·월드 아트의 연결은 보존한다.
+        public static void ApplyPlayerWeaponArt()
+        {
+            var failures = new List<string>();
+            var ids = new[] { "dokkaebi_club", "gakgung", "ice_root_bow", "seonge_gakgung",
+                "straw_sling", "hapjukseon", "cheolseon", "seolpungseon", "seonge_fan", "cold_wave_fan",
+                "singijeon_sondae", "cold_wave_singijeon", "ice_root_whipfan" };
+            var expectedCounts = new[] { 6, 6, 9, 6, 7, 5, 5, 5, 5, 5, 8, 9, 7 };
+            var attackFrames = new List<IReadOnlyList<Sprite>>();
+            for (var index = 0; index < ids.Length; index++)
+            {
+                if (index >= 10)
+                {
+                    attackFrames.Add(LoadDeliveredMiscFrames(ids[index] + "_attack", expectedCounts[index], failures));
+                    continue;
+                }
+                var path = $"{GameplayArtFolder}/WeaponAttacks/{ids[index]}_attack.aseprite";
+                ConfigureAsepriteImporter(path, failures);
+                var frames = FindLongestAnimationFrames(path);
+                if (frames.Count != expectedCounts[index])
+                    failures.Add($"{ids[index]}: {expectedCounts[index]}프레임 필요, 실제 {frames.Count}");
+                attackFrames.Add(frames);
+            }
+            var playerPath = $"{CharacterArtFolder}/player_frostclaw.aseprite";
+            ConfigureAsepriteImporter(playerPath, failures);
+            var tags = new[] { "idle", "walk", "jump", "die", "attack" };
+            var fields = new[] { "idleFrames", "walkFrames", "jumpFrames", "deathFrames", "attackFrames" };
+            var playerFrames = tags.Select(tag => FindAnimationFrames(playerPath, tag)).ToArray();
+            for (var i = 0; i < tags.Length; i++)
+                if (playerFrames[i].Count != (i == 4 ? 5 : 6)) failures.Add($"player {tags[i]} 프레임 수 불일치");
+            var arrowPath = $"{GameplayArtFolder}/arrow_projectile.aseprite";
+            var stonePath = $"{GameplayArtFolder}/sling_stone_projectile.aseprite";
+            ConfigureAsepriteImporter(arrowPath, failures);
+            ConfigureAsepriteImporter(stonePath, failures);
+            var arrowFrames = FindLongestAnimationFrames(arrowPath);
+            var stoneFrames = FindLongestAnimationFrames(stonePath);
+            if (arrowFrames.Count != 1 || stoneFrames.Count != 1) failures.Add("투사체 각 1프레임 필요");
+            var characterCatalog = AssetDatabase.LoadAssetAtPath<CharacterArtCatalog>(CharacterArtCatalogPath);
+            var gameplayCatalog = AssetDatabase.LoadAssetAtPath<GameplayArtCatalog>(GameplayArtCatalogPath);
+            if (characterCatalog == null || gameplayCatalog == null) failures.Add("기존 아트 카탈로그 없음");
+            if (failures.Count > 0) throw new InvalidOperationException(string.Join("\n", failures));
+            var characters = new SerializedObject(characterCatalog);
+            var entries = characters.FindProperty("entries");
+            SerializedProperty player = null;
+            for (var i = 0; i < entries.arraySize; i++)
+            {
+                var candidate = entries.GetArrayElementAtIndex(i);
+                if (candidate.FindPropertyRelative("id").stringValue == "player") player = candidate;
+            }
+            if (player == null) throw new InvalidOperationException("player 카탈로그 항목 없음");
+            player.FindPropertyRelative("sprite").objectReferenceValue = playerFrames[0][0];
+            for (var i = 0; i < fields.Length; i++)
+                SetSpriteArray(player.FindPropertyRelative(fields[i]), playerFrames[i]);
+            characters.ApplyModifiedPropertiesWithoutUndo();
+            var gameplay = new SerializedObject(gameplayCatalog);
+            var weapons = gameplay.FindProperty("weaponAttackAnimations");
+            weapons.arraySize = ids.Length;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                var weapon = weapons.GetArrayElementAtIndex(i);
+                weapon.FindPropertyRelative("itemId").stringValue = ids[i];
+                SetSpriteArray(weapon.FindPropertyRelative("frames"), attackFrames[i]);
+            }
+            gameplay.FindProperty("arrowProjectile").objectReferenceValue = arrowFrames[0];
+            gameplay.FindProperty("slingStoneProjectile").objectReferenceValue = stoneFrames[0];
+            gameplay.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(characterCatalog);
+            EditorUtility.SetDirty(gameplayCatalog);
+            AssetDatabase.SaveAssets();
+        }
+
         [MenuItem("Nyangbingo/Art/Apply Combat and Temperature Art")]
         public static void ApplyCombatAndTemperatureArt()
         {
@@ -787,9 +1211,13 @@ namespace Nyangbingo.Editor
             {
                 var path = ResolveArtPath(BuildingArtFolder, file);
                 ConfigureAsepriteImporter(path, failures);
+                var attackBuilding = IsAttackBuildingFile(file);
                 var frames = file == "door.aseprite"
                     ? FindNamedSpriteFrames(path, "Frame_0", "Frame_1", "Frame_2", "Frame_3", "Frame_4", "Frame_5")
+                    : attackBuilding ? FindNamedSpriteFrames(path, "Frame_0")
                     : FindLongestAnimationFrames(path);
+                if (attackBuilding && FindNamedSpriteFrames(path, "Frame_1", "Frame_2", "Frame_3").Count != 3)
+                    failures.Add($"{file}: 공격 프레임 1~3이 필요합니다.");
                 if (file == "door.aseprite" && frames.Count != 6)
                     failures.Add($"{file}: 개폐 프레임은 0~5 전체가 필요합니다 (현재 {frames.Count}).");
                 if (frames.Count == 0) failures.Add($"{file}: Sprite 프레임이 없습니다.");
@@ -817,6 +1245,10 @@ namespace Nyangbingo.Editor
                 var entry = entries.GetArrayElementAtIndex(index++);
                 entry.FindPropertyRelative("id").stringValue = pair.Key;
                 SetSpriteArray(entry.FindPropertyRelative("frames"), framesByFile[pair.Value]);
+                SetSpriteArray(entry.FindPropertyRelative("attackFrames"),
+                    IsAttackBuildingFile(pair.Value)
+                        ? FindNamedSpriteFrames(ResolveArtPath(BuildingArtFolder, pair.Value), "Frame_1", "Frame_2", "Frame_3")
+                        : Array.Empty<Sprite>());
             }
             serializedCatalog.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
@@ -900,6 +1332,8 @@ namespace Nyangbingo.Editor
                              StringComparison.Ordinal))
                     failures.Add(
                         $"{pair.Key}: expected '{expectedPath}', actual '{AssetDatabase.GetAssetPath(art.Sprite)}'");
+                if (IsAttackBuildingFile(pair.Value) && !HasCurrentAttackFrames(art, expectedPath))
+                    failures.Add($"{pair.Key}: 기본 1프레임/발사 3프레임 연결 불일치");
             }
             if (failures.Count > 0)
             {
@@ -924,7 +1358,20 @@ namespace Nyangbingo.Editor
                     !string.Equals(AssetDatabase.GetAssetPath(sprite),
                         ResolveArtPath(BuildingArtFolder, pair.Value), StringComparison.Ordinal))
                     return false;
+                if (IsAttackBuildingFile(pair.Value) &&
+                    !HasCurrentAttackFrames(catalog.Find(pair.Key), ResolveArtPath(BuildingArtFolder, pair.Value)))
+                    return false;
             }
+            return true;
+        }
+
+        private static bool HasCurrentAttackFrames(BuildingArtCatalog.Entry entry, string path)
+        {
+            if (entry == null || entry.Frames.Count != 1 || entry.Sprite == null ||
+                entry.Sprite.name != "Frame_0" || entry.AttackFrames.Count != 3) return false;
+            for (var index = 0; index < 3; index++)
+                if (entry.AttackFrames[index] == null || entry.AttackFrames[index].name != $"Frame_{index + 1}" ||
+                    AssetDatabase.GetAssetPath(entry.AttackFrames[index]) != path) return false;
             return true;
         }
 
@@ -1014,9 +1461,8 @@ namespace Nyangbingo.Editor
                     RequireFrames(id, "idle", entry.IdleFrames, 6, failures);
                     RequireFrames(id, "walk", entry.WalkFrames, 6, failures);
                     RequireFrames(id, "jump", entry.JumpFrames, 6, failures);
-                    RequireFrames(id, "fall", entry.FallFrames, 3, failures);
-                    RequireFrames(id, "up", entry.LandFrames, 5, failures);
-                    RequireFrames(id, "attack", entry.AttackFrames, 4, failures);
+                    // Final delivery has no fall/up clips; runtime already falls back to jump/no landing action.
+                    RequireFrames(id, "attack", entry.AttackFrames, 5, failures);
                     RequireFrames(id, "die", entry.DeathFrames, 6, failures);
                     break;
                 case "club":
@@ -1051,8 +1497,7 @@ namespace Nyangbingo.Editor
                     RequireFrames(id, "attack", entry.AttackFrames, 2, failures);
                     break;
                 case "imugi":
-                    RequireFrames(id, "default", entry.IdleFrames, 2, failures);
-                    RequireFrames(id, "marble", entry.SpecialFrames, 2, failures);
+                    RequireFrames(id, "static head", entry.IdleFrames, 1, failures);
                     break;
                 case "gaekgwi":
                     RequireFrames(id, "idle", entry.IdleFrames, 3, failures);
@@ -1080,8 +1525,14 @@ namespace Nyangbingo.Editor
         private static Sprite FindDefaultSprite(string artPath)
         {
             var assets = AssetDatabase.LoadAllAssetsAtPath(artPath);
+            if (IsAttackBuildingFile(System.IO.Path.GetFileName(artPath)))
+                return assets.OfType<Sprite>().FirstOrDefault(sprite => sprite.name == "Frame_0");
             var idleClip = assets.OfType<AnimationClip>()
                 .FirstOrDefault(clip => string.Equals(clip.name, "idle", StringComparison.OrdinalIgnoreCase));
+            // Final boss heads use a default tag instead of idle.
+            if (idleClip == null)
+                idleClip = assets.OfType<AnimationClip>()
+                    .FirstOrDefault(clip => string.Equals(clip.name, "default", StringComparison.OrdinalIgnoreCase));
             if (idleClip != null)
             {
                 foreach (var binding in AnimationUtility.GetObjectReferenceCurveBindings(idleClip))
@@ -1140,6 +1591,10 @@ namespace Nyangbingo.Editor
                     frames.Add(sprite);
             return frames;
         }
+
+        private static bool IsAttackBuildingFile(string file) =>
+            file == "singijeon_cart.aseprite" || file == "ice_root_battery.aseprite" ||
+            file == "cold_wave_battery.aseprite";
 
         private static IReadOnlyList<Sprite> FindLongestAnimationFrames(string artPath)
         {
