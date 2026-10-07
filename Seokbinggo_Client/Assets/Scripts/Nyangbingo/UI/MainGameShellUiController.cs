@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Nyangbingo.Audio;
 using Nyangbingo.Bosses;
 using Nyangbingo.Data;
@@ -51,6 +51,11 @@ namespace Nyangbingo.UI
         private Text resultTeaserText;
         private Button resultGoTitleButton;
         private GameObject traitSelectPanel;
+        private Image openingImage;
+        private Text openingPageText;
+        private int openingPageIndex;
+        private int openingPageCount;
+        private int openingInputFrame = -1;
         private Image bgmSpeakerImage;
         private Image sfxSpeakerImage;
         private Button pauseSaveButton;
@@ -58,7 +63,14 @@ namespace Nyangbingo.UI
         private string pendingEndingBossId;
         private RectTransform pauseHoverIndicator;
         private string pauseStatusMessage = string.Empty;
-        private const string BossSaveRestrictionHint = "보스 전투 중 · 저장 불가\n처치하거나 새벽까지 기다리세요";
+        private const string BossSaveRestrictionTitle = "보스 전투 중 · 저장 불가";
+        private const string BossSaveRestrictionDetail = "처치하거나 새벽까지 기다리세요";
+        private RectTransform pauseBossWarningRow;
+        private Image pauseBossWarningIcon;
+        private Text pauseBossWarningTitle;
+        public bool HasPauseBossWarning => shell != null && shell.Screen == GameShellScreen.Pause &&
+            bossManager?.IsBossActive == true && statusText != null;
+        public bool IsPauseMenuOpen => shell != null && shell.Screen == GameShellScreen.Pause;
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
         public bool IsInitialized { get; private set; }
@@ -122,6 +134,7 @@ namespace Nyangbingo.UI
             shell.ConfigureForRuntime(audioService, saveCoordinator.CaptureSnapshot(), Application.isMobilePlatform);
             shell.TitleRequested += HandleTitleRequested;
             gameDataCatalog = FindAnyObjectByType<MainGameBootstrap>()?.GameDataCatalog;
+            shell.ConfigureResultCatalog(gameDataCatalog);
             bossManager = FindAnyObjectByType<BossManager>();
             frostSpread = FindAnyObjectByType<MainGameRuntimeServices>()?.FrostSpread;
             if (frostSpread != null) frostSpread.EndingReached += HandleEndingReached;
@@ -136,11 +149,12 @@ namespace Nyangbingo.UI
                 Debug.LogError("[Nyangbingo] MainGameShellUiController: gameplayArtCatalog 배선이 비어 있습니다.");
             ApplyDeliveredShellArt();
 
+            var isNewGame = MainGameLaunchRequest.RequestedMode == MainGameLaunchRequest.Mode.NewGame;
             MainGameLaunchRequest.Reset();
             shell.EnterGameplay(launchSave);
             BuildTraitSelectView();
-            TryOpenTraitSelectIfNeeded(launchSave);
-            Time.timeScale = shell.Screen == GameShellScreen.TraitSelect ? 0f : 1f;
+            if (!isNewGame || !TryOpenOpening()) TryOpenTraitSelectIfNeeded(launchSave);
+            Time.timeScale = GameShellController.ResolveTimeScaleAfterLoading(shell.Screen);
             SetStatus(string.Empty);
             IsInitialized = true;
             LoadingOverlayRequest.MarkReady();
@@ -153,6 +167,69 @@ namespace Nyangbingo.UI
             if (traits == null || !traits.NeedsSelection) return;
             if (!shell.OpenTraitSelect())
                 Debug.LogError("[Nyangbingo] 시작 특성 선택 화면을 열지 못했습니다.");
+        }
+
+        private bool TryOpenOpening()
+        {
+            openingPageCount = 3;
+            var pages = gameDataCatalog?.FindGlobal("opening_illust_pages");
+            if (pages != null && pages.TryGetInt(out var count)) openingPageCount = Mathf.Max(1, count);
+            var art = gameplayArtCatalog?.OpeningIllustrations;
+            // Art is still pending. Never show blank pages or block the new-game trait selection.
+            if (art == null || art.Count < openingPageCount) return false;
+            for (var i = 0; i < openingPageCount; i++) if (art[i] == null) return false;
+            var panel = new GameObject("OpeningPanel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(traitSelectPanel.transform.parent, false);
+            var rect = (RectTransform)panel.transform;
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            panel.GetComponent<Image>().color = Color.black;
+            var image = new GameObject("Illustration", typeof(RectTransform), typeof(Image));
+            image.transform.SetParent(rect, false);
+            openingImage = image.GetComponent<Image>();
+            openingImage.preserveAspect = true;
+            openingImage.raycastTarget = false;
+            openingImage.rectTransform.anchorMin = Vector2.zero;
+            openingImage.rectTransform.anchorMax = Vector2.one;
+            openingImage.rectTransform.offsetMin = new Vector2(8f, 42f);
+            openingImage.rectTransform.offsetMax = new Vector2(-8f, -8f);
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            openingPageText = CreateTraitText(rect, "Page", font, 11, TextAnchor.MiddleCenter,
+                Vector2.zero, new Vector2(280f, 22f));
+            openingPageText.rectTransform.anchorMin = openingPageText.rectTransform.anchorMax = new Vector2(.5f, 0f);
+            openingPageText.rectTransform.anchoredPosition = new Vector2(0f, 20f);
+            var next = new GameObject("Next", typeof(RectTransform), typeof(Image), typeof(Button));
+            next.transform.SetParent(rect, false);
+            var nextRect = (RectTransform)next.transform;
+            nextRect.anchorMin = nextRect.anchorMax = new Vector2(1f, 0f);
+            nextRect.pivot = new Vector2(1f, 0f);
+            nextRect.anchoredPosition = new Vector2(-12f, 10f);
+            nextRect.sizeDelta = new Vector2(80f, 24f);
+            next.GetComponent<Image>().color = new Color(.12f, .2f, .28f);
+            next.GetComponent<Button>().onClick.AddListener(AdvanceOpening);
+            var label = CreateTraitText(nextRect, "Label", font, 11, TextAnchor.MiddleCenter,
+                Vector2.zero, nextRect.sizeDelta);
+            label.text = "다음";
+            panel.SetActive(false);
+            shell.ConfigureOpeningPanel(panel);
+            openingPageIndex = 0;
+            openingInputFrame = Time.frameCount;
+            RefreshOpeningPage();
+            return shell.OpenOpening();
+        }
+
+        private void RefreshOpeningPage()
+        {
+            openingImage.sprite = gameplayArtCatalog.OpeningIllustrations[openingPageIndex];
+            openingPageText.text = $"{openingPageIndex + 1} / {openingPageCount} · E 다음 · Esc 건너뛰기";
+        }
+
+        private void AdvanceOpening()
+        {
+            if (shell.Screen != GameShellScreen.Opening || openingInputFrame == Time.frameCount) return;
+            openingInputFrame = Time.frameCount;
+            if (++openingPageIndex >= openingPageCount) shell.CompleteOpening();
+            else RefreshOpeningPage();
         }
 
         private void BuildTraitSelectView()
@@ -353,6 +430,7 @@ namespace Nyangbingo.UI
             ApplyButtonLabelArt(settingsButton, gameplayArtCatalog.ShellSettings);
             ApplyButtonLabelArt(returnTitleButton, gameplayArtCatalog.ShellReturnTitle);
             ApplyButtonLabelArt(resultGoTitleButton, gameplayArtCatalog.ShellReturnTitle);
+            ApplyButtonLabelArt(resultTitleButton, gameplayArtCatalog.ResultContinue);
             ApplyButtonLabelArt(settingsApplyButton, gameplayArtCatalog.ShellApply);
             ApplyButtonLabelArt(settingsBackButton, gameplayArtCatalog.ShellBack);
             ApplyShellTextArt(resumeButton?.transform.parent?.Find("Title"),
@@ -620,7 +698,23 @@ namespace Nyangbingo.UI
         private void Update()
         {
             if (!IsInitialized) return;
+            if (shell.Screen == GameShellScreen.Opening)
+            {
+                if (Input.TryConsumeEscape()) shell.CompleteOpening();
+                else if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Space)) AdvanceOpening();
+                return;
+            }
             RefreshPauseControls();
+            if (confirmationText != null && shell.Screen == GameShellScreen.Confirmation)
+                confirmationText.text = shell.PendingConfirmation == GameShellConfirmation.Rest
+                    ? "정말 휴식하시겠습니까?"
+                    : "타이틀로 돌아갈까요? 저장하지 않은 진행은 사라집니다.";
+        }
+
+        private void ProcessEscapeFallback()
+        {
+            if (!IsInitialized || shell == null) return;
+            // All Update cancellation handlers get first refusal, independent of script execution order.
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 !SceneTransitionRequest.IsTransitionActive &&
                 !MainGameBossSummonUiController.ConsumeEscapeIfDebugHelpOpen() &&
@@ -628,7 +722,7 @@ namespace Nyangbingo.UI
                 !MainGameCraftingUiController.ConsumedEscapeThisFrame &&
                 !MainGameTurretRuntime.ConsumedEscapeThisFrame &&
                 !MainGameTilePaletteController.ConsumedEscapeThisFrame &&
-                (codex == null || !codex.IsOpen))
+                (codex == null || !codex.IsOpen) && Input.TryConsumeEscape())
             {
                 switch (shell.Screen)
                 {
@@ -639,10 +733,6 @@ namespace Nyangbingo.UI
                     case GameShellScreen.Confirmation: shell.CancelConfirmation(); break;
                 }
             }
-            if (confirmationText != null && shell.Screen == GameShellScreen.Confirmation)
-                confirmationText.text = shell.PendingConfirmation == GameShellConfirmation.Rest
-                    ? "정말 휴식하시겠습니까?"
-                    : "타이틀로 돌아갈까요? 저장하지 않은 진행은 사라집니다.";
         }
 
         private void BindButtons()
@@ -871,9 +961,52 @@ namespace Nyangbingo.UI
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause);
-                statusText.text = bossManager != null && bossManager.IsBossActive
-                    ? BossSaveRestrictionHint : pauseStatusMessage;
+                statusText.text = HasPauseBossWarning ? BossSaveRestrictionDetail : pauseStatusMessage;
+                statusText.rectTransform.anchoredPosition = new Vector2(0f, HasPauseBossWarning ? -90f : -83f);
+                statusText.rectTransform.sizeDelta = new Vector2(166f, HasPauseBossWarning ? 12f : 28f);
+                RefreshPauseBossWarning();
             }
+        }
+
+        private void RefreshPauseBossWarning()
+        {
+            if (pauseBossWarningRow == null)
+            {
+                var row = new GameObject("PauseBossSaveWarning", typeof(RectTransform));
+                pauseBossWarningRow = row.GetComponent<RectTransform>();
+                pauseBossWarningRow.SetParent(statusText.transform.parent, false);
+                pauseBossWarningRow.anchorMin = pauseBossWarningRow.anchorMax = pauseBossWarningRow.pivot = Vector2.one * .5f;
+                pauseBossWarningRow.anchoredPosition = new Vector2(0f, -77f);
+                pauseBossWarningTitle = Instantiate(statusText, pauseBossWarningRow);
+                pauseBossWarningTitle.name = "WarningTitle";
+                pauseBossWarningTitle.text = BossSaveRestrictionTitle;
+                pauseBossWarningTitle.alignment = TextAnchor.MiddleCenter;
+                pauseBossWarningTitle.raycastTarget = false;
+                pauseBossWarningTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
+                var image = new GameObject("BossCombatIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                image.transform.SetParent(pauseBossWarningRow, false);
+                pauseBossWarningIcon = image.GetComponent<Image>();
+                pauseBossWarningIcon.sprite = gameplayArtCatalog?.NightSpawnBlockedIcon;
+                pauseBossWarningIcon.preserveAspect = true;
+                pauseBossWarningIcon.raycastTarget = false;
+            }
+            pauseBossWarningRow.gameObject.SetActive(HasPauseBossWarning);
+            if (!HasPauseBossWarning) return;
+            pauseBossWarningTitle.gameObject.SetActive(true);
+            var iconSize = pauseBossWarningIcon.sprite != null ? 14f : 0f;
+            var gap = iconSize > 0f ? 4f : 0f;
+            var textWidth = Mathf.Ceil(pauseBossWarningTitle.preferredWidth);
+            var total = iconSize + gap + textWidth;
+            pauseBossWarningRow.sizeDelta = new Vector2(total, 16f);
+            var titleRect = pauseBossWarningTitle.rectTransform;
+            titleRect.anchorMin = titleRect.anchorMax = titleRect.pivot = Vector2.one * .5f;
+            titleRect.anchoredPosition = new Vector2((iconSize + gap) * .5f, 0f);
+            titleRect.sizeDelta = new Vector2(textWidth, 16f);
+            var iconRect = pauseBossWarningIcon.rectTransform;
+            iconRect.anchorMin = iconRect.anchorMax = iconRect.pivot = Vector2.one * .5f;
+            iconRect.anchoredPosition = new Vector2(-total * .5f + iconSize * .5f, 0f);
+            iconRect.sizeDelta = Vector2.one * iconSize;
+            pauseBossWarningIcon.enabled = iconSize > 0f;
         }
 
         private void SaveCurrentProgress()
@@ -920,6 +1053,7 @@ namespace Nyangbingo.UI
 
         private void LateUpdate()
         {
+            ProcessEscapeFallback();
             if (!IsInitialized || string.IsNullOrEmpty(pendingEndingBossId)) return;
             var bossId = pendingEndingBossId;
             pendingEndingBossId = null;
@@ -946,7 +1080,7 @@ namespace Nyangbingo.UI
 
             if (resultHeaderText != null)
             {
-                resultHeaderText.text = "이무기 격파";
+                resultHeaderText.text = "강철이 격파";
                 resultHeaderText.fontSize = 18;
                 resultHeaderText.fontStyle = FontStyle.Bold;
                 var headerRect = resultHeaderText.rectTransform;
@@ -954,14 +1088,14 @@ namespace Nyangbingo.UI
                 headerRect.sizeDelta = new Vector2(340f, 26f);
             }
 
-            // 실온(도) 대형 표기
+            // Persisted demo completion is separate from current construction progress.
             resultTempText = CreateResultText(panel, "Temperature", font, 16, TextAnchor.MiddleCenter,
-                new Vector2(0f, 68f), new Vector2(200f, 22f));
+                new Vector2(0f, 68f), new Vector2(340f, 22f));
             resultTempText.fontStyle = FontStyle.Bold;
 
-            // 모듈 체크리스트 + 통계 3줄
-            resultSummaryText = CreateResultText(panel, "Summary", font, 9, TextAnchor.UpperLeft,
-                new Vector2(0f, 6f), new Vector2(340f, 108f));
+            // Three separate achievements, five core modules, reward and run statistics.
+            resultSummaryText = CreateResultText(panel, "Summary", font, 10, TextAnchor.UpperLeft,
+                new Vector2(0f, -4f), new Vector2(340f, 114f));
 
             // Teaser 비활성 유지(D-카운터 폐지)
             resultTeaserText = CreateResultText(panel, "Teaser", font, 15, TextAnchor.MiddleCenter,
@@ -1018,35 +1152,35 @@ namespace Nyangbingo.UI
             var result = shell.Result;
             if (result == null || resultSummaryText == null || resultTeaserText == null) return;
 
-            // 실온(도) 대형 표기
             if (resultTempText != null)
-                resultTempText.text = $"실온 {result.RoomTemperatureCelsius}°C";
+                resultTempText.text = result.DemoComplete ? "데모 완성" : "석빙고 완성을 이어가세요";
 
             var completed = new HashSet<string>(result.CompletedModuleIds ?? Array.Empty<string>(),
                 StringComparer.Ordinal);
-            var modules = gameDataCatalog?.Modules;
-            var totalModules = modules?.Count ?? 0;
-            var installedModules = 0;
-            if (modules != null)
-                for (var index = 0; index < modules.Count; index++)
-                    if (modules[index] != null && completed.Contains(modules[index].Id)) installedModules++;
-
+            var modules = DemoAchievementRules.CoreModules(gameDataCatalog);
             var builder = new StringBuilder();
-            builder.AppendLine($"핵심 모듈 {installedModules}/{totalModules}");
-            if (modules != null)
+            builder.AppendLine(result.DemoBossDefeated ? "보스 격파     ✓ 강철이" : "보스 격파     □ 미달성");
+            builder.Append("석빙고 ").Append(result.CoreModulesComplete ? "완공" : "미완공")
+                .Append("   핵심 모듈 ").Append(result.CoreModulesInstalled).Append(" / ")
+                .AppendLine(result.CoreModulesRequired.ToString());
+            builder.AppendLine(result.StorageSuccess ? "보관 성공     ✓ 새벽 보존 확인" : "보관 성공     □ 새벽 보존 미확인");
+            builder.AppendLine();
+            for (var index = 0; index < modules.Length; index++)
             {
-                for (var index = 0; index < modules.Count; index++)
-                {
-                    var module = modules[index];
-                    if (module == null) continue;
-                    builder.Append(completed.Contains(module.Id) ? "✓ " : "□ ")
-                        .AppendLine(module.DisplayName);
-                }
+                if (index > 0) builder.Append(index == 3 ? "\n" : " · ");
+                builder.Append(completed.Contains(modules[index].Id) ? "✓ " : "□ ")
+                    .Append(modules[index].DisplayName);
             }
             builder.AppendLine();
-            builder.AppendLine($"요괴 처치 {result.YokaiKills}");
-            builder.AppendLine($"채굴 타일 {result.MinedTiles}");
-            builder.AppendLine($"사망 횟수 {result.Deaths}");
+            var boss = gameDataCatalog?.FindBoss(DemoAchievementRules.DemoGateId(gameDataCatalog));
+            var rewards = new List<string>();
+            foreach (var drop in boss?.GuaranteedDrops ?? Array.Empty<ItemAmount>())
+                if (drop.item != null && drop.amount > 0 && drop.item.Id != "yokai_tear")
+                    rewards.Add(drop.amount == 1 ? drop.item.DisplayName : $"{drop.item.DisplayName} ×{drop.amount}");
+            if (result.DemoBossDefeated && rewards.Count > 0)
+                builder.Append("보상  ").Append(string.Join(" · ", rewards)).AppendLine(" — 바닥에서 회수하세요");
+            builder.Append("요괴 처치 ").Append(result.YokaiKills).Append(" · 채굴 ").Append(result.MinedTiles)
+                .Append(" · 사망 ").Append(result.Deaths);
             resultSummaryText.text = builder.ToString().TrimEnd();
             if (resultTeaserText != null)
                 resultTeaserText.text = string.Empty;

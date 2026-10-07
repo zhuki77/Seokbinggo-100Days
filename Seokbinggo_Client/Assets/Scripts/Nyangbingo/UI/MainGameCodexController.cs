@@ -1,4 +1,4 @@
-using Nyangbingo.Data;
+﻿using Nyangbingo.Data;
 using Nyangbingo.Save;
 using UnityEngine;
 using UnityEngine.UI;
@@ -110,7 +110,7 @@ namespace Nyangbingo.UI
                 !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt) &&
                 (open || gameShell == null ||
                                                   gameShell.Screen == GameShellScreen.Gameplay)) SetOpen(!open);
-            else if (open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
+            else if (open && Nyangbingo.Core.GameplayInput.TryConsumeEscape()) SetOpen(false);
         }
 
         private void SetOpen(bool value)
@@ -222,7 +222,8 @@ namespace Nyangbingo.UI
         }
 
         private Sprite FindPortrait(string entryId) => characterArtCatalog != null
-            ? characterArtCatalog.FindSprite(entryId)
+            ? characterArtCatalog.FindSprite(entryId == "imugi" || entryId == "imugi_boss"
+                ? "gangcheol" : entryId == "gangcheol" ? "imugi" : entryId)
             : null;
 
         private void ConfigureNativeGrid()

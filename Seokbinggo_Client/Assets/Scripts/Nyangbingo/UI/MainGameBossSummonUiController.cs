@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Bosses;
 using Nyangbingo.Core;
@@ -28,28 +28,7 @@ namespace Nyangbingo.UI
             "iron_ingot", "water_jar"
         };
 
-        private const string DebugShortcutHelpText =
-            "보스·소환\n" +
-            "B  보스 선택 패널(다음 보스)  ·  Alt+C  선택 보스 소환 아이템 제작\n" +
-            "F6  소환 재료 지급  ·  Shift+F6  제작대로 이동\n" +
-            "Ctrl+F6  신규 아이템 아트 검증 지급\n" +
-            "F7  소환 아이템 지급  ·  Shift+F7  깊은 제단 이동\n" +
-            "F8  도깨비 대장  ·  Ctrl+F8  어미 불가사리  ·  Alt+F8  이무기\n" +
-            "Shift+F8  삼두구미  ·  Ctrl+Shift+F8  업구렁이\n" +
-            "F9  고정 내습 앵커 밤(50→60→90→100)\n" +
-            "Shift+F9  소환 앵커 밤(70→80) — B·F6·Alt+C·E 소환 경로\n" +
-            "Alt+J  일반 요괴 정리  ·  K  활성 보스 즉시 처치(회피 구간 무시)\n\n" +
-            "제작·설치·연출\n" +
-            "C 제작 탭 화로 필터 Q 제련↔제작(용광로 등)\n" +
-            "Ctrl+F5  선택 항목 재료 지급  ·  Shift+F5  필요 제작대로 이동\n" +
-            "Shift+F10  채굴 파괴 연출\n" +
-            "Ctrl+F10  채굴 치명타 연출\n" +
-            "F11  등탑 지급  ·  Shift+F11  등탑 재료 지급\n" +
-            "Ctrl+F11  등탑 연료 지급\n" +
-            "F12  어둑시니 소환  ·  Shift+F12  어둑시니 테스트 키트\n" +
-            "Alt+F12  강철이 소환  ·  Alt+Shift+F12  객귀 소환\n" +
-            "Ctrl+F12  차열 지붕 테스트 키트\n" +
-            "Alt+M  까치 테스트 활성/비활성";
+
 #endif
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
@@ -69,6 +48,9 @@ namespace Nyangbingo.UI
         private GameShellController gameShell;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private GameObject debugShortcutHelpRoot;
+        private Text debugShortcutHelpBody;
+        private Text debugShortcutHelpFooter;
+        private int debugShortcutHelpPage;
         private GameObject debugBossPickerRoot;
         private Text debugBossPickerBody;
         private bool debugBossPickerOpen;
@@ -94,8 +76,8 @@ namespace Nyangbingo.UI
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (debugShortcutHelpEscapeConsumedFrame == Time.frameCount) return true;
-            if (!debugShortcutHelpOpen || !Input.GetKeyDown(KeyCode.Escape) ||
-                debugShortcutHelpInstance == null) return false;
+            if (!debugShortcutHelpOpen || debugShortcutHelpInstance == null ||
+                !GameplayInput.TryConsumeEscape()) return false;
             debugShortcutHelpEscapeConsumedFrame = Time.frameCount;
             debugShortcutHelpInstance.SetDebugShortcutHelpOpen(false);
             return true;
@@ -123,6 +105,25 @@ namespace Nyangbingo.UI
             return range > 0f && (position - (Vector2)playerTarget.transform.position).sqrMagnitude <= range * range;
         }
         public bool IsNight => bootstrap?.TimeService?.IsNight == true;
+        public bool TryGetCraftingStationIdentity(CraftingStation station, string objectId,
+            out string resolvedId, out Vector2 position)
+        {
+            resolvedId = null;
+            position = default;
+            if (!initialized || environmentState == null || playerTarget == null) return false;
+            var bestDistance = MainGameTurretRuntime.InteractionRange * MainGameTurretRuntime.InteractionRange;
+            foreach (var record in environmentState.ExportPlacedObjects())
+            {
+                if (StationForDefinitionId(record.definitionId) != station ||
+                    !string.IsNullOrEmpty(objectId) && record.objectId != objectId) continue;
+                var distance = ((Vector2)playerTarget.transform.position - record.position).sqrMagnitude;
+                if (distance > bestDistance) continue;
+                bestDistance = distance;
+                resolvedId = record.objectId;
+                position = record.position;
+            }
+            return resolvedId != null;
+        }
         public bool HasSceneBindings => gameDataCatalog != null && bootstrap != null && runtimeServices != null &&
                                         environmentState != null && encounterCoordinator != null &&
                                         playerTarget != null && statusText != null;
@@ -173,7 +174,7 @@ namespace Nyangbingo.UI
             if (!initialized) return;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (ConsumeEscapeIfDebugHelpOpen()) return;
-            if (debugBossPickerOpen && Input.GetKeyDown(KeyCode.Escape))
+            if (debugBossPickerOpen && GameplayInput.TryConsumeEscape())
             {
                 SetDebugBossPickerOpen(false);
                 return;
@@ -187,40 +188,33 @@ namespace Nyangbingo.UI
                     SetDebugShortcutHelpOpen(!debugShortcutHelpOpen);
                 return;
             }
-            if (debugShortcutHelpOpen) return;
+            if (debugShortcutHelpOpen)
+            {
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.Tab))
+                    debugShortcutHelpPage = (debugShortcutHelpPage + 1) % DevelopmentShortcuts.HelpPageCount;
+                if (Input.GetKeyDown(KeyCode.LeftArrow))
+                    debugShortcutHelpPage = (debugShortcutHelpPage + DevelopmentShortcuts.HelpPageCount - 1) % DevelopmentShortcuts.HelpPageCount;
+                RefreshDebugShortcutHelp();
+                return;
+            }
 #endif
             if (Time.timeScale <= 0f) return;
             if (MainGameCraftingUiController.BlocksGameplayInput) return;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (Input.GetKeyDown(KeyCode.B))
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.SelectBoss))
             {
                 selectedIndex = (selectedIndex + 1) % BossIds.Length;
                 transientMessage = string.Empty;
                 SetDebugBossPickerOpen(true);
                 RefreshStatus();
-                var selected = SelectedBoss;
-                Debug.Log(selected != null
-                    ? $"[Nyangbingo] Boss test selection: {selected.Id} ({selectedIndex + 1}/{BossIds.Length})."
-                    : "[Nyangbingo] Boss test selection failed: boss definition missing.");
             }
-            if (Input.GetKeyDown(KeyCode.C) &&
-                (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) TryCraftSelectedSummonItem();
-            if (Input.GetKeyDown(KeyCode.F6))
-            {
-                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
-                    GrantDeliveredArtItemsForEditorTest();
-                else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                    TeleportToSelectedCraftingStationForEditorTest();
-                else
-                    GrantSelectedSummonMaterialsForEditorTest();
-            }
-            if (Input.GetKeyDown(KeyCode.F7))
-            {
-                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                    TeleportToDeepAltarForEditorTest();
-                else
-                    GrantSelectedSummonItemForEditorTest();
-            }
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.CraftSummon)) TryCraftSelectedSummonItem();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.SummonMaterials)) GrantSelectedSummonMaterialsForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.SummonItem)) GrantSelectedSummonItemForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.BossStation)) TeleportToSelectedCraftingStationForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.DeepAltar)) TeleportToDeepAltarForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.ArtItems)) GrantDeliveredArtItemsForEditorTest();
+            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Rope)) GrantRopeForEditorTest();
 #endif
             if (!string.IsNullOrEmpty(transientMessage) && Time.unscaledTime >= transientMessageUntil)
             {
@@ -363,7 +357,7 @@ namespace Nyangbingo.UI
         {
             var definition = SelectedBoss;
             if (definition == null || definition.SummonMaterials.Length == 0)
-            { ShowMessage("F6 재료 지급 실패: 제작 데이터가 없습니다."); return; }
+            { ShowMessage("Ctrl+F6 재료 지급 실패: 제작 데이터가 없습니다."); return; }
             var granted = new List<ItemAmount>();
             for (var index = 0; index < definition.SummonMaterials.Length; index++)
             {
@@ -376,10 +370,10 @@ namespace Nyangbingo.UI
                 for (var rollbackIndex = granted.Count - 1; rollbackIndex >= 0; rollbackIndex--)
                     runtimeServices.PlayerInventory.TryRemove(granted[rollbackIndex].item.Id,
                         granted[rollbackIndex].amount);
-                ShowMessage("F6 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                ShowMessage("Ctrl+F6 재료 지급 실패: 인벤토리 공간을 확인하세요.");
                 return;
             }
-            ShowMessage($"F6 테스트 재료 지급: {definition.DisplayName}");
+            ShowMessage($"Ctrl+F6 테스트 재료 지급: {definition.DisplayName}");
         }
 
         private void GrantDeliveredArtItemsForEditorTest()
@@ -397,10 +391,17 @@ namespace Nyangbingo.UI
                 if (runtimeServices.PlayerInventory.TryAdd(item.Id, 1)) granted++;
             }
 
-            var message = $"Ctrl+F6 신규 아이템 아트 검증 지급: {granted}/{DeliveredInventoryArtTestItemIds.Length}";
+            var message = $"F11 신규 아이템 아트 검증 지급: {granted}/{DeliveredInventoryArtTestItemIds.Length}";
             if (missing > 0) message += $" (정의 누락 {missing})";
             ShowMessage(message);
             Debug.Log($"[Nyangbingo] {message}");
+        }
+
+        private void GrantRopeForEditorTest()
+        {
+            var rope = gameDataCatalog.FindItem(WorldTileTypes.Rope);
+            var granted = rope != null && runtimeServices.PlayerInventory.TryAdd(rope.Id, 99);
+            ShowMessage(granted ? "로프 99개 테스트 지급" : "로프 지급 실패: 아이템 정의·인벤토리 공간을 확인하세요.");
         }
 
         private void TeleportToSelectedCraftingStationForEditorTest()
@@ -408,7 +409,7 @@ namespace Nyangbingo.UI
             var definition = SelectedBoss;
             if (definition == null || !TeleportToCraftingStationForEditorTest(definition.SummonStation))
             { ShowMessage("선택한 제작대를 찾을 수 없습니다."); return; }
-            ShowMessage($"Shift+F6: {StationLabel(definition.SummonStation)} 앞으로 이동했습니다.");
+            ShowMessage($"Ctrl+Shift+F6: {StationLabel(definition.SummonStation)} 앞으로 이동했습니다.");
         }
 
         private void GrantSelectedSummonItemForEditorTest()
@@ -417,10 +418,10 @@ namespace Nyangbingo.UI
             if (definition?.SummonItem == null ||
                 !runtimeServices.PlayerInventory.TryAdd(definition.SummonItem.Id, 1))
             {
-                ShowMessage("F7 소환 아이템 지급 실패: 인벤토리 공간을 확인하세요.");
+                ShowMessage("Alt+F6 소환 아이템 지급 실패: 인벤토리 공간을 확인하세요.");
                 return;
             }
-            ShowMessage($"F7 테스트 지급: {definition.SummonItem.DisplayName} x1");
+            ShowMessage($"Alt+F6 테스트 지급: {definition.SummonItem.DisplayName} x1");
         }
 
         private void TeleportToDeepAltarForEditorTest()
@@ -433,7 +434,7 @@ namespace Nyangbingo.UI
                     new Vector3Int(altar.x, altar.y, 0))
                 : new Vector2(altar.x + .5f, altar.y + .5f);
             MovePlayerForEditorTest(position);
-            ShowMessage("Shift+F7: 깊은 얼음 제단으로 이동했습니다.");
+            ShowMessage("Alt+Shift+F6: 깊은 얼음 제단으로 이동했습니다.");
         }
 
         private void MovePlayerForEditorTest(Vector2 position)
@@ -580,10 +581,10 @@ namespace Nyangbingo.UI
                 : "없음";
             var night = IsNight ? "밤" : "낮";
             return
-                $"▶ {definition.DisplayName} ({definition.Id})\n" +
+                $"▶ {definition.DisplayName}\n" +
                 $"권장 {definition.RecommendedDay}일 · {night} · 근처 제작대 {nearby}\n" +
                 $"소환 아이템: {summonItem} · 제작 {station}\n" +
-                "B 다음 보스 · Alt+C 제작 · F6 재료 · F7 지급 · Esc 닫기";
+                "F6 다음 보스 · Shift+F6 제작 · Ctrl+F6 재료 · Alt+F6 지급 · Esc 닫기";
         }
 
         private void RefreshDebugBossPickerBody()
@@ -666,17 +667,26 @@ namespace Nyangbingo.UI
             var body = CreateDebugHelpText(panel.transform, "Shortcuts", DebugShortcutHelpBodyFontSize,
                 TextAnchor.UpperLeft,
                 new Vector2(205f, 155f), new Vector2(0f, -.5f));
-            body.text = DebugShortcutHelpText;
+            debugShortcutHelpBody = body;
             body.lineSpacing = .92f;
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
             body.verticalOverflow = VerticalWrapMode.Truncate;
 
             var footer = CreateDebugHelpText(panel.transform, "Footer", 6, TextAnchor.MiddleCenter,
                 new Vector2(210f, 10f), new Vector2(0f, -86.5f));
-            footer.text = "F5 · 닫기";
+            debugShortcutHelpFooter = footer;
+            RefreshDebugShortcutHelp();
 
             debugShortcutHelpRoot.SetActive(false);
             debugShortcutHelpOpen = false;
+        }
+
+        private void RefreshDebugShortcutHelp()
+        {
+            if (debugShortcutHelpBody != null)
+                debugShortcutHelpBody.text = DevelopmentShortcuts.GetHelpText(debugShortcutHelpPage);
+            if (debugShortcutHelpFooter != null)
+                debugShortcutHelpFooter.text = $"←/→·Tab  {debugShortcutHelpPage + 1}/{DevelopmentShortcuts.HelpPageCount}  · F5/Esc 닫기";
         }
 
         private void SetDebugShortcutHelpOpen(bool value)

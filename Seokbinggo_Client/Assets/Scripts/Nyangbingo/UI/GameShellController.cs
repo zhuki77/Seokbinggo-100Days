@@ -1,13 +1,14 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Nyangbingo.Audio;
 using Nyangbingo.Data;
 using Nyangbingo.Save;
+using Nyangbingo.World;
 using UnityEngine;
 
 namespace Nyangbingo.UI
 {
-    public enum GameShellScreen { Gameplay, Pause, Settings, Result, Confirmation, TraitSelect }
+    public enum GameShellScreen { Gameplay, Pause, Settings, Result, Confirmation, TraitSelect, Opening }
     public enum GameShellConfirmation { None, ReturnToTitle, Rest }
 
     public sealed class DemoResultState
@@ -19,6 +20,12 @@ namespace Nyangbingo.UI
         public float SealPercentage { get; internal set; }
         public IReadOnlyList<string> CompletedModuleIds { get; internal set; }
         public bool ImugiDefeated { get; internal set; }
+        public bool DemoBossDefeated => ImugiDefeated; // Retain the legacy technical property for existing consumers.
+        public int CoreModulesInstalled => CompletedModuleIds?.Count ?? 0;
+        public int CoreModulesRequired { get; internal set; }
+        public bool CoreModulesComplete => CoreModulesInstalled == CoreModulesRequired;
+        public bool StorageSuccess { get; internal set; }
+        public bool DemoComplete { get; internal set; }
         public int YokaiKills { get; internal set; }
         public int MinedTiles { get; internal set; }
         public int Deaths { get; internal set; }
@@ -42,6 +49,8 @@ namespace Nyangbingo.UI
 
         private Action pendingRest;
         private SaveGame activeSave;
+        private GameDataCatalog resultCatalog;
+        public void ConfigureResultCatalog(GameDataCatalog catalog) => resultCatalog = catalog;
         private float resumeTimeScale = 1f;
         private bool isMobile;
 
@@ -73,6 +82,29 @@ namespace Nyangbingo.UI
         {
             traitSelectPanel = traitSelect;
             ApplyViewState();
+        }
+
+        private GameObject openingPanel;
+        public void ConfigureOpeningPanel(GameObject panel)
+        {
+            openingPanel = panel;
+            ApplyViewState();
+        }
+
+        public bool OpenOpening()
+        {
+            if (Screen != GameShellScreen.Gameplay) return false;
+            resumeTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
+            Time.timeScale = 0f;
+            SetScreen(GameShellScreen.Opening);
+            return true;
+        }
+
+        public void CompleteOpening()
+        {
+            if (Screen != GameShellScreen.Opening) return;
+            SetScreen(GameShellScreen.Gameplay);
+            OpenTraitSelect();
         }
 
         public void ConfigureViews(GameObject pause, GameObject result, GameObject settings, GameObject confirmation,
@@ -207,7 +239,7 @@ namespace Nyangbingo.UI
         public void ShowResult(SaveGame save)
         {
             activeSave = save ?? activeSave;
-            Result = BuildResult(activeSave);
+            Result = BuildResult(activeSave, resultCatalog);
             Time.timeScale = 0f;
             SetScreen(GameShellScreen.Result);
         }
@@ -234,23 +266,16 @@ namespace Nyangbingo.UI
 
         public static bool ShouldEndDemoAtDay(int day) => false;
 
-        public static DemoResultState BuildResult(SaveGame save)
+        public static DemoResultState BuildResult(SaveGame save, GameDataCatalog catalog = null)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
             save.NormalizeAfterLoad();
-            var modules = new List<string>();
-            var uniqueModules = new HashSet<string>(StringComparer.Ordinal);
-            for (var i = 0; i < save.modulesDone.Count; i++)
-                if (!string.IsNullOrWhiteSpace(save.modulesDone[i]) && uniqueModules.Add(save.modulesDone[i]))
-                    modules.Add(save.modulesDone[i]);
-
+            DemoAchievementRules.UpdateSavedAchievements(save, catalog);
+            var modules = DemoAchievementRules.InstalledCoreModuleIds(save.modulesDone, catalog);
             var kills = 0;
             for (var i = 0; i < save.dogam.Count; i++)
                 kills = save.dogam[i].kills > int.MaxValue - kills ? int.MaxValue : kills + save.dogam[i].kills;
-            var imugiDefeated = false;
-            for (var i = 0; i < save.bossRecords.Count; i++)
-                if (save.bossRecords[i].bossId == "imugi_boss" && save.bossRecords[i].count > 0)
-                    imugiDefeated = true;
+            var imugiDefeated = DemoAchievementRules.BossDefeated(save, catalog);
 
             var sealPct = Mathf.Clamp(save.sealPct, 0f, 100f);
             return new DemoResultState
@@ -259,6 +284,9 @@ namespace Nyangbingo.UI
                 SealPercentage = sealPct,
                 CompletedModuleIds = modules,
                 ImugiDefeated = imugiDefeated,
+                CoreModulesRequired = DemoAchievementRules.RequiredCoreModuleCount(catalog),
+                StorageSuccess = save.storageSuccess,
+                DemoComplete = save.demoComplete,
                 YokaiKills = Math.Max(0, kills),
                 MinedTiles = save.stats.minedTiles,
                 Deaths = save.stats.deaths
@@ -302,6 +330,7 @@ namespace Nyangbingo.UI
             if (settingsPanel != null) settingsPanel.SetActive(Screen == GameShellScreen.Settings);
             if (confirmationPanel != null) confirmationPanel.SetActive(Screen == GameShellScreen.Confirmation);
             if (traitSelectPanel != null) traitSelectPanel.SetActive(Screen == GameShellScreen.TraitSelect);
+            if (openingPanel != null) openingPanel.SetActive(Screen == GameShellScreen.Opening);
         }
     }
 }
