@@ -364,8 +364,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.RuntimeBuildingSpriteAnimator
   frames:
   - {fileID: 3697682232989579909, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
-  - {fileID: 7810959824578027923, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
-  - {fileID: -2348773844321905749, guid: 50c85fbaa64966b4a831cd89789bb165, type: 3}
   frameSeconds: 0.1
 --- !u!212 &420407831
 SpriteRenderer:
@@ -901,7 +899,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.RuntimeBuildingSpriteAnimator
   frames:
   - {fileID: -2793458600998904553, guid: 20642c64c855912468a2a083c73274f9, type: 3}
-  - {fileID: -4156846078950972819, guid: 20642c64c855912468a2a083c73274f9, type: 3}
   frameSeconds: 0.1
 --- !u!212 &1352587632
 SpriteRenderer:
@@ -1115,8 +1112,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.World.RuntimeBuildingSpriteAnimator
   frames:
   - {fileID: -4454016649895686910, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
-  - {fileID: 5723570758100185672, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
-  - {fileID: 768278795270256770, guid: 10574c408df2e544bbdab5e722d9d0a2, type: 3}
   frameSeconds: 0.1
 --- !u!212 &1477681659
 SpriteRenderer:
