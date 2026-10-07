@@ -54,6 +54,8 @@ public static class NyangbingoDataMenu
         var codexEntries = LoadAssets<CodexEntryDefinition>(rootDirectory + "/Codex");
         var traits = LoadAssets<TraitDefinition>(rootDirectory + "/Traits");
         var crops = LoadAssets<CropDefinition>(rootDirectory + "/Crops");
+        var goals = LoadAssets<GoalDefinition>(rootDirectory + "/Goals");
+        var guideMessages = LoadAssets<GuideMessageDefinition>(rootDirectory + "/GuideMessages");
 
         if (!ValidateAssetIds(items, value => value.Id, "items") ||
             !ValidateAssetIds(recipes, value => value.Id, "recipes") ||
@@ -77,7 +79,9 @@ public static class NyangbingoDataMenu
             !ValidateAssetIds(talismans, value => value.Id, "talismans") ||
             !ValidateAssetIds(codexEntries, value => value.Id, "codex") ||
             !ValidateAssetIds(traits, value => value.Id, "traits") ||
-            !ValidateAssetIds(crops, value => value.Id, "crops"))
+            !ValidateAssetIds(crops, value => value.Id, "crops") ||
+            !ValidateAssetIds(goals, value => value.Id, "goals") ||
+            !ValidateAssetIds(guideMessages, value => value.Id, "guide messages"))
             return;
 
         Debug.Log("[Nyangbingo] Game data catalog source ID validation completed.");
@@ -106,6 +110,8 @@ public static class NyangbingoDataMenu
         SetObjectReferences(serialized.FindProperty("codexEntries"), codexEntries);
         SetObjectReferences(serialized.FindProperty("traits"), traits);
         SetObjectReferences(serialized.FindProperty("crops"), crops);
+        SetObjectReferences(serialized.FindProperty("goals"), goals);
+        SetObjectReferences(serialized.FindProperty("guideMessages"), guideMessages);
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
@@ -144,6 +150,7 @@ public static class NyangbingoDataMenu
             }
 
             NyangbingoV72ContentImporter.ReimportAllFromCommandLine();
+            if (!importHadErrors) NyangbingoV86GuideImporter.Reimport();
             if (!importHadErrors) RebuildGameDataCatalog();
         }
         finally
@@ -1443,7 +1450,7 @@ public static class NyangbingoDataMenu
             FanItemIds.Cheolseon, "frostclaw_gauntlet", FanItemIds.Hapjukseon,
             "straw_sling", "gakgung", "singijeon_sondae", "seonge_gakgung",
             "ice_root_bow", "cold_wave_singijeon", "seonge_fan",
-            "ice_root_whipfan", "cold_wave_fan", "sangun_claw", "perfect_claw"
+            "ice_root_whipfan", "cold_wave_fan", "sangun_claw", "perfect_claw", "seolpungseon"
         };
         var ids = new string[rows.Count];
         var tiers = new string[rows.Count];
@@ -2106,7 +2113,7 @@ public static class NyangbingoDataMenu
 
         var textUnits = new HashSet<string>(System.StringComparer.Ordinal)
             { "ore:ingot", "recipe", "rule", "scope", "file", "curve", "list", "ref", "sum", "mult", "배", "식", "-",
-              "boss_id", "HP", "HP/초", "item_id", "비율", "초/밴드", "개/도" };
+              "boss_id", "HP", "HP/초", "item_id", "비율", "초/밴드", "개/도", "table", "enum", "tiles" };
         var integerUnits = new HashSet<string>(System.StringComparer.Ordinal)
             { "count", "day", "일", "단", "단계", "gauge", "hp", "person", "px", "tile",
               "타일", "개", "종" };

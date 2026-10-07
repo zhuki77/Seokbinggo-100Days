@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: gangcheol
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.YokaiDefinition
   id: gangcheol
-  displayName: "\uAC15\uCCA0\uC774"
+  displayName: "\uC774\uBB34\uAE30"
   appearanceHint: "18\uC77C\uCC28~ \uC2EC\uCE35 \uC0C1\uC8FC(\uC815\uC608)"
-  codexNote: "\uC815\uC608 \uBAB9(v34 \uC774\uBB34\uAE30\uC640 \uAD50\uCCB4\xB7\uBCF4\uC2A4\u2192\uACA9\uD558)
+  codexNote: "\uC815\uC608 \uBAB9(v34 \uAC15\uCCA0\uC774\uC640 \uAD50\uCCB4\xB7\uBCF4\uC2A4\u2192\uACA9\uD558)
     \u2014 \uCD95\uC18C\uD310 \uC5F4\uAE30 \uBE0C\uB808\uC2A4 \uC608\uACE01.5\uCD08\xB7\uBD80\uCC44\uAF34
     3\uD0C0\uC77C \uC5F4\uB380 18(1\uD68C \uC989\uBC1C\xB7\uD654\uC5FC\uD0DC\uADF8=\uD574\uD0DC-50%/\uC124\uD55C\uD48D-25%
     \uACF1\uC5F0\uC0B0)+\uB109\uBC312\xB7\uCFE812\uCD08(v34.1 \uD655\uC815). resident:

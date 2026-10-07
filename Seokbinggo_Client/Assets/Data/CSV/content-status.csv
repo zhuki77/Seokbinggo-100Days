@@ -1,13 +1,13 @@
 file,row_key,row_id,status,since,note
-accessories.csv,id,bell_norigae,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,wind_daenggi,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,tiger_eye_bead,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,ice_heart_norigae,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,bokjumeoni,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,dokkaebi_gamtu,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,ssireum_knot,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,iron_appetite,구현됨,v70,v63~ 대개편 대상
-accessories.csv,id,yeouiju_shard,구현됨,v70,v63~ 대개편 대상
+accessories.csv,id,bell_norigae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,wind_daenggi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,tiger_eye_bead,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,ice_heart_norigae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,bokjumeoni,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,dokkaebi_gamtu,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,ssireum_knot,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,iron_appetite,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+accessories.csv,id,yeouiju_shard,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 accessories.csv,id,jigwi_ember,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,drought_heart_shard,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,tiger_gait,수정예정,v70,v63~ 대개편 대상
@@ -17,7 +17,7 @@ accessories.csv,id,yeongno_mask,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,perfect_core,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,clay_hand,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,skate_pad,수정예정,v70,v63~ 대개편 대상
-accessories.csv,id,magpie_bell,구현됨,v70,v63~ 대개편 대상
+accessories.csv,id,magpie_bell,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 accessories.csv,id,old_key,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,minhwa_ink,수정예정,v70,v63~ 대개편 대상
 accessories.csv,id,vault_seal,수정예정,v70,v63~ 대개편 대상
@@ -28,47 +28,48 @@ accessories.csv,id,frost_map,수정예정,v70,v63~ 대개편 대상
 bosses.csv,id,king_dokkaebi,수정예정,v70,v63~ 대개편 대상
 bosses.csv,id,mother_bulgasari,수정예정,v70,v63~ 대개편 대상
 bosses.csv,id,imugi_boss,수정예정,v70,v63~ 대개편 대상
-bosses.csv,id,jigwi,구현됨,,
-bosses.csv,id,gangcheol_blaze,구현됨,,
-bosses.csv,id,sangun,구현됨,,
-bosses.csv,id,samdugumi,구현됨,,
-bosses.csv,id,eop_guryeongi,구현됨,,
-bosses.csv,id,yeongno,구현됨,,
-bosses.csv,id,gangcheol_perfect,구현됨,,
+bosses.csv,id,jigwi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+bosses.csv,id,gangcheol_blaze,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+bosses.csv,id,sangun,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+bosses.csv,id,samdugumi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+bosses.csv,id,eop_guryeongi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+bosses.csv,id,yeongno,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+bosses.csv,id,gangcheol_perfect,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 chests.csv,pool,지상 폐허,구현됨,,
 chests.csv,pool,상층,구현됨,,
 chests.csv,pool,중층,구현됨,,
 chests.csv,pool,심층,구현됨,,
-codex.csv,id,club,구현됨,,
-codex.csv,id,bulgasari,구현됨,,
-codex.csv,id,yakwang,구현됨,,
-codex.csv,id,eoduksini,구현됨,,
-codex.csv,id,gaekgwi,구현됨,,
-codex.csv,id,imugi,구현됨,,
-codex.csv,id,gangcheol,구현됨,,
-codex.csv,id,king_dokkaebi,구현됨,,
-codex.csv,id,mother_bulgasari,구현됨,,
-codex.csv,id,imugi_boss,구현됨,,
-codex.csv,id,jigwi,구현됨,,
-codex.csv,id,gangcheol_blaze,구현됨,,
-codex.csv,id,sangun,구현됨,,
-codex.csv,id,samdugumi,구현됨,,
-codex.csv,id,eop_guryeongi,구현됨,,
-codex.csv,id,yeongno,구현됨,,
-codex.csv,id,gangcheol_perfect,구현됨,,
+codex.csv,id,club,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,bulgasari,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,yakwang,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,eoduksini,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,gaekgwi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,imugi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,gangcheol,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,king_dokkaebi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,mother_bulgasari,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,imugi_boss,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,jigwi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,gangcheol_blaze,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,sangun,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,samdugumi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,eop_guryeongi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,yeongno,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+codex.csv,id,gangcheol_perfect,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 crafting-ext.csv,id,seolpungseon,구현됨,,
 crafting-ext.csv,id,frost_bell_rope,구현됨,,
 crafting-tree.csv,id,workbench,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,furnace,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,blast_furnace,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,ice_anvil,수정예정,v70,v63~ 대개편 대상
+crafting-tree.csv,id,smithy,추가예정,v84,[v84] 대장간 제작 행 신설 — 유니티 임포트 대기(개발 A)
 crafting-tree.csv,id,iron_claw,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,icesteel_claw,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,lantern,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,sieve,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,haetae_statue,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,nest_bed,수정예정,v70,v63~ 대개편 대상
-crafting-tree.csv,id,magpie_nest,구현됨,v70,v63~ 대개편 대상
+crafting-tree.csv,id,magpie_nest,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 crafting-tree.csv,id,dokkaebi_club,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,frostclaw_gauntlet,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,iron_insul_wall,수정예정,v70,v63~ 대개편 대상
@@ -111,53 +112,53 @@ crafting-tree.csv,id,icesteel_boots,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,water_jar,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,ice_jar,수정예정,v70,v63~ 대개편 대상
 crafting-tree.csv,id,wallpaper,수정예정,v70,v63~ 대개편 대상
-crafting-tree.csv,id,seonge_ingot,구현됨,,
-crafting-tree.csv,id,ice_root_bundle,구현됨,,
-crafting-tree.csv,id,cold_wave_ingot,구현됨,,
-crafting-tree.csv,id,seonge_helm,구현됨,,
-crafting-tree.csv,id,seonge_armor,구현됨,,
-crafting-tree.csv,id,seonge_boots,구현됨,,
-crafting-tree.csv,id,ice_root_helm,구현됨,,
-crafting-tree.csv,id,ice_root_armor,구현됨,,
-crafting-tree.csv,id,ice_root_boots,구현됨,,
-crafting-tree.csv,id,cold_wave_helm,구현됨,,
-crafting-tree.csv,id,cold_wave_armor,구현됨,,
-crafting-tree.csv,id,cold_wave_boots,구현됨,,
-crafting-tree.csv,id,straw_sling,구현됨,,
-crafting-tree.csv,id,gakgung,구현됨,,
-crafting-tree.csv,id,singijeon_sondae,구현됨,,
-crafting-tree.csv,id,seonge_gakgung,구현됨,,
-crafting-tree.csv,id,ice_root_bow,구현됨,,
-crafting-tree.csv,id,cold_wave_singijeon,구현됨,,
-crafting-tree.csv,id,seonge_fan,구현됨,,
-crafting-tree.csv,id,ice_root_whipfan,구현됨,,
-crafting-tree.csv,id,cold_wave_fan,구현됨,,
-crafting-tree.csv,id,sangun_claw,구현됨,,
-crafting-tree.csv,id,perfect_claw,구현됨,,
-crafting-tree.csv,id,seonge_tower,구현됨,,
-crafting-tree.csv,id,cold_wave_tower,구현됨,,
-crafting-tree.csv,id,ice_root_battery,구현됨,,
-crafting-tree.csv,id,cold_wave_battery,구현됨,,
-crafting-tree.csv,id,scarecrow,구현됨,,
-crafting-tree.csv,id,ice_trap,구현됨,,
-crafting-tree.csv,id,arrow_supply,구현됨,,
-crafting-tree.csv,id,plaster_doll,구현됨,,
-crafting-tree.csv,id,gong_tower,구현됨,,
-crafting-tree.csv,id,jigwi_summon,구현됨,,
-crafting-tree.csv,id,samdugumi_summon,구현됨,,
-crafting-tree.csv,id,eop_summon,구현됨,,
-crafting-tree.csv,id,jukbuin,구현됨,,
-crafting-tree.csv,id,daebal,구현됨,,
-crops.csv,zone_id,zone01,구현됨,,
-crops.csv,zone_id,zone02,구현됨,,
-crops.csv,zone_id,zone03,구현됨,,
-crops.csv,zone_id,zone04,구현됨,,
-crops.csv,zone_id,zone05,구현됨,,
-crops.csv,zone_id,zone06,구현됨,,
-crops.csv,zone_id,zone07,구현됨,,
-crops.csv,zone_id,zone08,구현됨,,
-crops.csv,zone_id,zone09,구현됨,,
-crops.csv,zone_id,zone10,구현됨,,
+crafting-tree.csv,id,seonge_ingot,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_bundle,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_ingot,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,seonge_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,seonge_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,seonge_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,straw_sling,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,gakgung,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,singijeon_sondae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,seonge_gakgung,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_bow,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_singijeon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,seonge_fan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_whipfan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_fan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,sangun_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,perfect_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,seonge_tower,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_tower,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_root_battery,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,cold_wave_battery,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,scarecrow,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,ice_trap,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,arrow_supply,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,plaster_doll,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,gong_tower,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,jigwi_summon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,samdugumi_summon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,eop_summon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,jukbuin,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crafting-tree.csv,id,daebal,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone01,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone02,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone03,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone04,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone05,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone06,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone07,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone08,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone09,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+crops.csv,zone_id,zone10,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 day-curve-ext.csv,day,31,수정예정,v70,v63~ 대개편 대상
 day-curve-ext.csv,day,35,수정예정,v70,v63~ 대개편 대상
 day-curve-ext.csv,day,40,수정예정,v70,v63~ 대개편 대상
@@ -214,13 +215,13 @@ drops.csv,source_id,king_dokkaebi,구현됨,,
 drops.csv,source_id,mother_bulgasari,구현됨,,
 drops.csv,source_id,imugi,구현됨,,
 drops.csv,source_id,imugi_boss,구현됨,,
-drops.csv,source_id,jigwi,구현됨,,
-drops.csv,source_id,gangcheol_blaze,구현됨,,
-drops.csv,source_id,sangun,구현됨,,
-drops.csv,source_id,samdugumi,구현됨,,
-drops.csv,source_id,eop_guryeongi,구현됨,,
-drops.csv,source_id,yeongno,구현됨,,
-drops.csv,source_id,gangcheol_perfect,구현됨,,
+drops.csv,source_id,jigwi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+drops.csv,source_id,gangcheol_blaze,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+drops.csv,source_id,sangun,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+drops.csv,source_id,samdugumi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+drops.csv,source_id,eop_guryeongi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+drops.csv,source_id,yeongno,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+drops.csv,source_id,gangcheol_perfect,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 equipment.csv,id,straw_helm,수정예정,v70,v63~ 대개편 대상
 equipment.csv,id,straw_armor,수정예정,v70,v63~ 대개편 대상
 equipment.csv,id,straw_boots,수정예정,v70,v63~ 대개편 대상
@@ -230,21 +231,21 @@ equipment.csv,id,iron_boots,수정예정,v70,v63~ 대개편 대상
 equipment.csv,id,icesteel_helm,수정예정,v70,v63~ 대개편 대상
 equipment.csv,id,icesteel_armor,수정예정,v70,v63~ 대개편 대상
 equipment.csv,id,icesteel_boots,수정예정,v70,v63~ 대개편 대상
-equipment.csv,id,bell_norigae,구현됨,v70,v63~ 대개편 대상
-equipment.csv,id,ice_heart_norigae,구현됨,v70,v63~ 대개편 대상
-equipment.csv,id,bokjumeoni,구현됨,v70,v63~ 대개편 대상
-equipment.csv,id,wind_daenggi,구현됨,v70,v63~ 대개편 대상
-equipment.csv,id,tiger_eye_bead,구현됨,v70,v63~ 대개편 대상
-equipment.csv,id,dokkaebi_gamtu,구현됨,v70,v63~ 대개편 대상
-equipment.csv,id,seonge_helm,구현됨,,
-equipment.csv,id,seonge_armor,구현됨,,
-equipment.csv,id,seonge_boots,구현됨,,
-equipment.csv,id,ice_root_helm,구현됨,,
-equipment.csv,id,ice_root_armor,구현됨,,
-equipment.csv,id,ice_root_boots,구현됨,,
-equipment.csv,id,cold_wave_helm,구현됨,,
-equipment.csv,id,cold_wave_armor,구현됨,,
-equipment.csv,id,cold_wave_boots,구현됨,,
+equipment.csv,id,bell_norigae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,ice_heart_norigae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,bokjumeoni,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,wind_daenggi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,tiger_eye_bead,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,dokkaebi_gamtu,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,seonge_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,seonge_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,seonge_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,ice_root_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,ice_root_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,ice_root_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,cold_wave_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,cold_wave_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+equipment.csv,id,cold_wave_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 globals.csv,key,day_length_sec,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,night_length_sec,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,day_total_sec,수정예정,v70,v63~ 대개편 대상
@@ -275,9 +276,9 @@ globals.csv,key,baekjung_spawn_cap,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,baekjung_spawn_mult,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,baekjung_tears_mult,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,baekjung_sig_mult,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,magpie_join_kills,구현됨,v70,v63~ 대개편 대상
-globals.csv,key,magpie_magnet_radius,구현됨,v70,v63~ 대개편 대상
-globals.csv,key,magpie_magnet_interval,구현됨,v70,v63~ 대개편 대상
+globals.csv,key,magpie_join_kills,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+globals.csv,key,magpie_magnet_radius,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+globals.csv,key,magpie_magnet_interval,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 globals.csv,key,smelt_iron_ratio,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,smelt_icesteel_ratio,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,claw_t2_mine_crit,수정예정,v70,v63~ 대개편 대상
@@ -300,9 +301,9 @@ globals.csv,key,seal_target_cells,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,seal_penalty_start_day,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,muldanji_duration,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,icejar_fuel_sec,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,jukbuin_regen_mult,구현됨,v70,v63~ 대개편 대상
-globals.csv,key,daebal_flame_cut,구현됨,v70,v63~ 대개편 대상
-globals.csv,key,daebal_radius,구현됨,v70,v63~ 대개편 대상
+globals.csv,key,jukbuin_regen_mult,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+globals.csv,key,daebal_flame_cut,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
+globals.csv,key,daebal_radius,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 globals.csv,key,muldanji_mat,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,start_at_night,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,player_move_speed,수정예정,v70,v63~ 대개편 대상
@@ -315,7 +316,7 @@ globals.csv,key,multi_hit_defense,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,boss_save_policy,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,boss_night_spawn,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,baekjung_wave_overflow,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,magpie_nest_limit,구현됨,v70,v63~ 대개편 대상
+globals.csv,key,magpie_nest_limit,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상
 globals.csv,key,crafting_b_ui,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,baekjung_wave_size,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,baekjung_wave_times_sec,수정예정,v70,v63~ 대개편 대상
@@ -348,21 +349,21 @@ globals.csv,key,turret_slot_cap,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,turret_damage_slot_cap,수정예정,v70,v63~ 대개편 대상
 globals.csv,key,wave_mult_target,구현됨,v70,v77 — 파도 폐지에도 살아남은 키(침공 주기·변종 배율). 이름만 낡음
 globals.csv,key,day_brightness_by_stage,수정예정,v70,v63~ 대개편 대상
-globals.csv,key,magpie_guide_mode,구현됨,,
-globals.csv,key,magpie_guide_return_sec,구현됨,,
+globals.csv,key,magpie_guide_mode,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+globals.csv,key,magpie_guide_return_sec,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 globals.csv,key,world_half_width,추가예정,,
 globals.csv,key,spawn_x,추가예정,,
 globals.csv,key,zone_count,추가예정,,
 globals.csv,key,zone_table,추가예정,,
 globals.csv,key,altar_surface,추가예정,,
 globals.csv,key,altar_summon_daytime,추가예정,,
-globals.csv,key,crop_table,구현됨,,
-globals.csv,key,crop_plantable,구현됨,,
-globals.csv,key,trait_select_at_start,구현됨,,
-globals.csv,key,trait_table,구현됨,,
-globals.csv,key,shell_screen_count,구현됨,,
+globals.csv,key,crop_table,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+globals.csv,key,crop_plantable,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+globals.csv,key,trait_select_at_start,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+globals.csv,key,trait_table,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+globals.csv,key,shell_screen_count,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 globals.csv,key,opening_illust_pages,추가예정,,
-globals.csv,key,trait_melee_boss_exempt,구현됨,,
+globals.csv,key,trait_melee_boss_exempt,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 globals.csv,key,sky_gangcheol_trail,추가예정,,
 globals.csv,key,sky_gangcheol_trail_period_sec,추가예정,,
 globals.csv,key,yokai_path_target,추가예정,,
@@ -416,8 +417,8 @@ globals.csv,key,terrain_implemented,추가예정,,
 globals.csv,key,base_vicinity_radius,추가예정,,
 globals.csv,key,yokai_aggro_default,추가예정,,
 globals.csv,key,yokai_aggro_max,추가예정,,
-globals.csv,key,talisman_table,구현됨,,
-globals.csv,key,talisman_count,구현됨,,
+globals.csv,key,talisman_table,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+globals.csv,key,talisman_count,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 globals.csv,key,boss_arena_layer,추가예정,,
 globals.csv,key,altar_count,추가예정,,
 globals.csv,key,win_condition,추가예정,,
@@ -442,7 +443,7 @@ globals.csv,key,large_cavern_min_depth_below_crust,추가예정,,
 globals.csv,key,large_cavern_margin_from_spawn,추가예정,,
 globals.csv,key,large_cavern_margin_from_altar,추가예정,,
 globals.csv,key,large_cavern_enabled,추가예정,,
-globals.csv,key,difficulty_option,구현됨,,
+globals.csv,key,difficulty_option,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 globals.csv,key,difficulty_knobs,추가예정,,
 globals.csv,key,frost_spread_enabled,추가예정,,
 globals.csv,key,frost_spread_trigger,추가예정,,
@@ -478,8 +479,8 @@ globals.csv,key,storage_melt_per_day,추가예정,,
 globals.csv,key,storage_jangdok_band,추가예정,,
 globals.csv,key,storage_ice_core_band,추가예정,,
 globals.csv,key,storage_gear_band,추가예정,,
-globals.csv,key,mushroom_heal,구현됨,,
-globals.csv,key,mushroom_table,구현됨,,
+globals.csv,key,mushroom_heal,구현됨,v81,"오너 확정 2026-08-25 — 15/30/50. 개발 B 구현값과 일치, 코드 변경 0"
+globals.csv,key,mushroom_table,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 id-migration.csv,legacy_id,club_fragment,구현됨,,
 id-migration.csv,legacy_id,foundry,구현됨,,
 id-migration.csv,legacy_id,goblin_fire_essence,구현됨,,
@@ -593,47 +594,47 @@ items.csv,id,bokjumeoni,구현됨,,
 items.csv,id,dokkaebi_gamtu,구현됨,,
 items.csv,id,wallpaper,구현됨,,
 items.csv,id,smithy,구현됨,,
-items.csv,id,seonge_helm,구현됨,,
-items.csv,id,seonge_armor,구현됨,,
-items.csv,id,seonge_boots,구현됨,,
-items.csv,id,ice_root_helm,구현됨,,
-items.csv,id,ice_root_armor,구현됨,,
-items.csv,id,ice_root_boots,구현됨,,
-items.csv,id,cold_wave_helm,구현됨,,
-items.csv,id,cold_wave_armor,구현됨,,
-items.csv,id,cold_wave_boots,구현됨,,
-items.csv,id,straw_sling,구현됨,,
-items.csv,id,gakgung,구현됨,,
-items.csv,id,singijeon_sondae,구현됨,,
-items.csv,id,seonge_gakgung,구현됨,,
-items.csv,id,ice_root_bow,구현됨,,
-items.csv,id,cold_wave_singijeon,구현됨,,
-items.csv,id,seonge_fan,구현됨,,
-items.csv,id,ice_root_whipfan,구현됨,,
-items.csv,id,cold_wave_fan,구현됨,,
-items.csv,id,sangun_claw,구현됨,,
-items.csv,id,perfect_claw,구현됨,,
-items.csv,id,seonge_tower,구현됨,,
-items.csv,id,cold_wave_tower,구현됨,,
-items.csv,id,ice_root_battery,구현됨,,
-items.csv,id,cold_wave_battery,구현됨,,
-items.csv,id,scarecrow,구현됨,,
-items.csv,id,ice_trap,구현됨,,
-items.csv,id,arrow_supply,구현됨,,
-items.csv,id,plaster_doll,구현됨,,
-items.csv,id,gong_tower,구현됨,,
-items.csv,id,first_frost_claw,구현됨,,
-items.csv,id,baekjung_bundle,구현됨,,
-items.csv,id,yeouiju_claw,구현됨,,
-items.csv,id,jigwi_ash,구현됨,,
-items.csv,id,sangun_whisker,구현됨,,
-items.csv,id,yeongno_tooth,구현됨,,
-items.csv,id,seonge_ore,구현됨,,
-items.csv,id,seonge_ingot,구현됨,,
-items.csv,id,ice_root,구현됨,,
-items.csv,id,ice_root_bundle,구현됨,,
-items.csv,id,cold_wave_ore,구현됨,,
-items.csv,id,cold_wave_ingot,구현됨,,
+items.csv,id,seonge_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seonge_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seonge_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_helm,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_armor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_boots,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,straw_sling,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,gakgung,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,singijeon_sondae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seonge_gakgung,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root_bow,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_singijeon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seonge_fan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root_whipfan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_fan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,sangun_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,perfect_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seonge_tower,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_tower,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root_battery,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_battery,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,scarecrow,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_trap,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,arrow_supply,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,plaster_doll,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,gong_tower,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,first_frost_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,baekjung_bundle,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,yeouiju_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,jigwi_ash,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,sangun_whisker,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,yeongno_tooth,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seonge_ore,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 본선 이후로 연기(오너 확정 2026-08-18) — 생산처 미정. 이 3종이 막는 제작물 27종도 함께 동
+items.csv,id,seonge_ingot,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,ice_root,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 본선 이후로 연기(오너 확정 2026-08-18) — 생산처 미정. 이 3종이 막는 제작물 27종도 함께 동
+items.csv,id,ice_root_bundle,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,cold_wave_ore,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 본선 이후로 연기(오너 확정 2026-08-18) — 생산처 미정. 이 3종이 막는 제작물 27종도 함께 동
+items.csv,id,cold_wave_ingot,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 items.csv,id,jigwi_ember_mat,추가예정,,
 items.csv,id,blaze_yeokrin,추가예정,,
 items.csv,id,sangun_talon,추가예정,,
@@ -641,9 +642,9 @@ items.csv,id,three_horn_mat,추가예정,,
 items.csv,id,eop_scale_mat,추가예정,,
 items.csv,id,yeongno_mask_mat,추가예정,,
 items.csv,id,perfect_heart,추가예정,,
-items.csv,id,ssireum_knot,구현됨,,
-items.csv,id,iron_appetite,구현됨,,
-items.csv,id,yeouiju_shard,구현됨,,
+items.csv,id,ssireum_knot,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,iron_appetite,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,yeouiju_shard,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 items.csv,id,jigwi_ember,추가예정,,
 items.csv,id,drought_heart_shard,추가예정,,
 items.csv,id,tiger_gait,추가예정,,
@@ -653,7 +654,7 @@ items.csv,id,yeongno_mask,추가예정,,
 items.csv,id,perfect_core,추가예정,,
 items.csv,id,clay_hand,추가예정,,
 items.csv,id,skate_pad,추가예정,,
-items.csv,id,magpie_bell,구현됨,,
+items.csv,id,magpie_bell,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 items.csv,id,old_key,추가예정,,
 items.csv,id,minhwa_ink,추가예정,,
 items.csv,id,vault_seal,추가예정,,
@@ -661,14 +662,14 @@ items.csv,id,gate_mark,추가예정,,
 items.csv,id,dry_trace,추가예정,,
 items.csv,id,altar_echo,추가예정,,
 items.csv,id,frost_map,추가예정,,
-items.csv,id,jigwi_summon,구현됨,,
-items.csv,id,samdugumi_summon,구현됨,,
-items.csv,id,eop_summon,구현됨,,
-items.csv,id,jukbuin,구현됨,,
-items.csv,id,daebal,구현됨,,
-items.csv,id,oyster_mushroom,구현됨,,
-items.csv,id,shiitake,구현됨,,
-items.csv,id,seogi,구현됨,,
+items.csv,id,jigwi_summon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,samdugumi_summon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,eop_summon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,jukbuin,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,daebal,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,oyster_mushroom,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,shiitake,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+items.csv,id,seogi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 mineral-tiers.csv,resource_id,wood,구현됨,,
 mineral-tiers.csv,resource_id,hemp_stalk,구현됨,,
 mineral-tiers.csv,resource_id,rebar,구현됨,,
@@ -681,9 +682,9 @@ mineral-tiers.csv,resource_id,ice_shard,구현됨,,
 mineral-tiers.csv,resource_id,icesteel_ore,구현됨,,
 mineral-tiers.csv,resource_id,frost_essence,구현됨,,
 mineral-tiers.csv,resource_id,clay,구현됨,,
-mineral-tiers.csv,resource_id,oyster_mushroom,구현됨,,
-mineral-tiers.csv,resource_id,shiitake,구현됨,,
-mineral-tiers.csv,resource_id,seogi,구현됨,,
+mineral-tiers.csv,resource_id,oyster_mushroom,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+mineral-tiers.csv,resource_id,shiitake,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+mineral-tiers.csv,resource_id,seogi,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 modules.csv,id,insul_wall,구현됨,,
 modules.csv,id,door,구현됨,,
 modules.csv,id,roof,구현됨,,
@@ -702,17 +703,17 @@ player-combat.csv,item_id,dokkaebi_club,구현됨,,
 player-combat.csv,item_id,cheolseon,구현됨,,
 player-combat.csv,item_id,frostclaw_gauntlet,구현됨,,
 player-combat.csv,item_id,hapjukseon,구현됨,,
-player-combat.csv,item_id,straw_sling,구현됨,,
-player-combat.csv,item_id,gakgung,구현됨,,
-player-combat.csv,item_id,singijeon_sondae,구현됨,,
-player-combat.csv,item_id,seonge_gakgung,구현됨,,
-player-combat.csv,item_id,ice_root_bow,구현됨,,
-player-combat.csv,item_id,cold_wave_singijeon,구현됨,,
-player-combat.csv,item_id,seonge_fan,구현됨,,
-player-combat.csv,item_id,ice_root_whipfan,구현됨,,
-player-combat.csv,item_id,cold_wave_fan,구현됨,,
-player-combat.csv,item_id,sangun_claw,구현됨,,
-player-combat.csv,item_id,perfect_claw,구현됨,,
+player-combat.csv,item_id,straw_sling,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,gakgung,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,singijeon_sondae,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,seonge_gakgung,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,ice_root_bow,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,cold_wave_singijeon,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,seonge_fan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,ice_root_whipfan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,cold_wave_fan,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,sangun_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+player-combat.csv,item_id,perfect_claw,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 seal-whitelist.csv,element,차열벽,구현됨,,
 seal-whitelist.csv,element,무쇠 차열벽,구현됨,,
 seal-whitelist.csv,element,차열 지붕,구현됨,,
@@ -739,11 +740,11 @@ seal-whitelist.csv,element,배경벽(벽지),구현됨,,
 smelting.csv,id,smelt_iron,구현됨,,
 smelting.csv,id,smelt_copper,구현됨,,
 smelting.csv,id,smelt_icesteel,구현됨,,
-talismans.csv,id,tal_return,구현됨,v70,v63 신설
-talismans.csv,id,tal_stride,구현됨,v70,v63 신설
-talismans.csv,id,tal_waypoint,구현됨,v70,v63 신설
-talismans.csv,id,tal_hide,구현됨,v70,v63 신설
-talismans.csv,id,tal_frost,구현됨,v70,v63 신설
+talismans.csv,id,tal_return,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63 신설
+talismans.csv,id,tal_stride,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63 신설
+talismans.csv,id,tal_waypoint,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63 신설
+talismans.csv,id,tal_hide,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63 신설
+talismans.csv,id,tal_frost,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v63 신설
 terrain-spawn.csv,terrain_id,surface_line:club,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,surface_line:bulgasari,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,surface_line:yakwang,추가예정,v70,v63 신설
@@ -814,10 +815,10 @@ terrain-spawn.csv,terrain_id,base_inside:eoduksini,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,base_inside:gaekgwi,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,base_inside:gangcheol,추가예정,v70,v63 신설
 terrain-spawn.csv,terrain_id,base_inside:imugi,추가예정,v70,v63 신설
-traits.csv,id,trait_melee,구현됨,,
-traits.csv,id,trait_ranged,구현됨,,
-traits.csv,id,trait_labor,구현됨,,
-traits.csv,id,trait_cool,구현됨,,
+traits.csv,id,trait_melee,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+traits.csv,id,trait_ranged,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+traits.csv,id,trait_labor,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+traits.csv,id,trait_cool,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 utilities.csv,id,hapjukseon,구현됨,,
 utilities.csv,id,bell_rope,구현됨,,
 yokai-stats.csv,id,club,수정예정,v70,v63~ 대개편 대상
@@ -827,36 +828,119 @@ yokai-stats.csv,id,eoduksini,수정예정,v70,v63~ 대개편 대상
 yokai-stats.csv,id,gaekgwi,수정예정,v70,v63~ 대개편 대상
 yokai-stats.csv,id,imugi,수정예정,v70,v63~ 대개편 대상
 yokai-stats.csv,id,gangcheol,수정예정,v70,v63~ 대개편 대상
-zones.csv,zone_id,zone01,구현됨,,
-zones.csv,zone_id,zone02,구현됨,,
-zones.csv,zone_id,zone03,구현됨,,
-zones.csv,zone_id,zone04,구현됨,,
-zones.csv,zone_id,zone05,구현됨,,
-zones.csv,zone_id,zone06,구현됨,,
-zones.csv,zone_id,zone07,구현됨,,
-zones.csv,zone_id,zone08,구현됨,,
-zones.csv,zone_id,zone09,구현됨,,
-zones.csv,zone_id,zone10,구현됨,,
+zones.csv,zone_id,zone01,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone02,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone03,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone04,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone05,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone06,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone07,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone08,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone09,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
+zones.csv,zone_id,zone10,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — 
 globals.csv,key,boundary_ice_rock_hardness,수정예정,2026-08-11,v71 정정 — 코드/월드젠의 빙암 경도 3을 2로 내리고 이 키를 단일 출처로 읽을 것
 globals.csv,key,bed_enabled,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
 globals.csv,key,bed_item_id,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
 globals.csv,key,bed_sleep_room_temp_max,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
 globals.csv,key,bed_skip_mode,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
 globals.csv,key,bed_skip_applies_daily_tick,추가예정,2026-08-12,v72 침대 신설 — 개발 A. nest_bed에 기능만 추가(신규 아이템·아트 0)
+globals.csv,key,sun_scale_by_stage,구현됨,2026-08-12,개발 A가 이미 구현한 값을 정본화
 globals.csv,key,gear_mismatch_defense_mult,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
 globals.csv,key,gear_mismatch_defense_floor,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
 globals.csv,key,gear_mismatch_defense_per_degree,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
 globals.csv,key,gear_mismatch_stat_penalty,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
 globals.csv,key,gear_mismatch_set_bonus,추가예정,2026-08-12,장비 저온 페널티 — 오너 승인 2026-08-12. 개발 A T-6-1
-globals.csv,key,sun_scale_by_stage,구현됨,2026-08-12,개발 A가 이미 구현한 값을 정본화
-globals.csv,key,day_counter_display,구현됨,2026-08-12,v74 — 개발 B가 HUD에서 D-카운터를 끄는 근거 키
-globals.csv,key,win_gates,구현됨,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
-globals.csv,key,win_gate_demo,구현됨,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
-globals.csv,key,win_gate_final,구현됨,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,day_counter_display,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v74 — 개발 B가 HUD에서 D-카운터를 끄는 근거 키
+globals.csv,key,win_gates,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,win_gate_demo,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,win_gate_final,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12
 globals.csv,key,win_ending_mode,추가예정,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
-globals.csv,key,survival_continues_after_ending,구현됨,2026-08-12,v75 엔딩 확정 — 오너 2026-08-12
+globals.csv,key,survival_continues_after_ending,구현됨,v83,개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12
 id-migration.csv,legacy_id,wave_night_period,구현됨,v79,구 파도 키 → invasion_* 로 대체됨(오프셋은 5→6 교정). 되살리지 말 것
 id-migration.csv,legacy_id,wave_night_offset,구현됨,v79,구 파도 키 → invasion_* 로 대체됨(오프셋은 5→6 교정). 되살리지 말 것
 mineral-tiers.csv,resource_id,seonge_ore,구현됨,,
 mineral-tiers.csv,resource_id,ice_root,구현됨,,
 mineral-tiers.csv,resource_id,cold_wave_ore,구현됨,,
+equipment.csv,id,ssireum_knot,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,iron_appetite,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,yeouiju_shard,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,jigwi_ember,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,drought_heart_shard,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,tiger_gait,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,three_horn,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,eop_scale,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,yeongno_mask,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,perfect_core,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,clay_hand,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,skate_pad,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,magpie_bell,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,old_key,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,minhwa_ink,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,vault_seal,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,gate_mark,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,dry_trace,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,altar_echo,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+equipment.csv,id,frost_map,구현됨,v83,v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만
+items.csv,id,seolpungseon,추가예정,v83,"v83 — 3티어 진화 2종(GDD 6-12: 확장 31~50일 한정, 오너 승인 2026-07-14). mvp_scope=B"
+items.csv,id,frost_bell_rope,추가예정,v83,"v83 — 3티어 진화 2종(GDD 6-12: 확장 31~50일 한정, 오너 승인 2026-07-14). mvp_scope=B"
+player-combat.csv,item_id,seolpungseon,추가예정,v83,v83 — 설풍선 전투 수치. 확장 31~50일
+goals.csv,id,g01,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g02,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g03,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g04,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g05,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g06,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g07,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g08,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g09,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g10,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g11,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g12,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g13,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g14,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+goals.csv,id,g15,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,hypo_danger,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,burn_danger,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,invasion_tonight,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,invasion_active,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,baekjung_tonight,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,boss_tonight,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,boss_active,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,core_unsealed,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,door_open,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,placed_block_not_seal,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,seal_success,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,storage_below,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,storage_ok,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,cold_bed,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,seal_boundary_dig,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,heat_cleared,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,base_damaged,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,dawn_kept,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,dawn_lost,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,dawn_cause_unsealed,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,dawn_cause_outside,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,dawn_cause_heat,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,club_shard_missing,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_workbench,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_furnace,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_iron_ingot,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_core,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_jangdok,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_rest,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_dawn,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_iron_claw,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_king,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_anvil,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_icesteel_claw,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_core_modules,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+guide-messages.csv,id,goal_imugi,추가예정,v86,단계별 목표 추적·안내 우선순위(오너 2026-10-03)
+globals.csv,key,goal_table,추가예정,v86,안내 시스템(오너 2026-10-03)
+globals.csv,key,guide_message_table,추가예정,v86,안내 시스템(오너 2026-10-03)
+globals.csv,key,guide_priority_tiers,추가예정,v86,안내 시스템(오너 2026-10-03)
+globals.csv,key,guide_text_policy,추가예정,v86,안내 시스템(오너 2026-10-03)
+globals.csv,key,result_achievements,추가예정,v86,안내 시스템(오너 2026-10-03)
+globals.csv,key,shelter_outline_inner,추가예정,v86,첫 석빙고 건축 도우미(오너 2026-10-03)
+globals.csv,key,demo_complete_rule,추가예정,v86,오너 위임 결정(2026-10-03)
+globals.csv,key,imugi_arena,추가예정,v86,오너 위임 결정(2026-10-03)
+globals.csv,key,cold_device_effect,추가예정,v86,오너 위임 결정(2026-10-03)

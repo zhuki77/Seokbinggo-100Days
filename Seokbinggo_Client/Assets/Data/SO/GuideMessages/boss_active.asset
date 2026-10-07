@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: boss_active
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: boss_active
+  tier: 2
+  triggerState: boss_fight_active
+  text: "{boss}\uC640 \uC2F8\uC6B0\uB294 \uC911\uC774\uC5D0\uC694. \uC9C0\uAE08\uC740
+    \uC800\uC7A5\uD560 \uC218 \uC5C6\uC5B4\uC694."
+  variables: boss
+  clearWhen: boss_end
+  repeat: while_active
+  source: "[\uAC00\uC548 \uBB38\uAD6C]"
+  note: boss_save_policy=no_serialize

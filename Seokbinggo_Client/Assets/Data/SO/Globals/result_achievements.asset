@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d910a7e81ef04a986b773852538cc, type: 3}
+  m_Name: result_achievements
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GlobalDefinition
+  key: result_achievements
+  value: boss|build|storage
+  unit: list
+  note: "[v86 \uC624\uB108 \uD655\uC815 2026-10-03] 30\uC77C \uACB0\uACFC \uD654\uBA74\uC5D0
+    \uC131\uCDE8\uB97C \uB530\uB85C \uD45C\uC2DC \u2014 boss=\uAC15\uCCA0\uC774 \uACA9\uD30C
+    / build=\uC11D\uBE59\uACE0 \uD575\uC2EC \uBAA8\uB4C8 n/win_modules / storage=\uC0C8\uBCBD
+    \uBCF4\uC874 \uD655\uC778(g09) \uB2EC\uC131 \uC5EC\uBD80. \uC644\uC131 \uD310\uC815\uC740
+    demo_complete_rule(D1 \uD655\uC815 \u2014 \uC7A0\uAE08 \uC5C6\uC774 \uD45C\uC2DC)"

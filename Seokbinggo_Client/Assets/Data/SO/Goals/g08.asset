@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g08
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g08
+  order: 8
+  phase: P0
+  track: auto
+  displayName: "\uB530\uB73B\uD55C \uACF3\uC5D0\uC11C \uC26C\uAE30"
+  iconRef: nest_bed
+  completeState: slept
+  completeParam: room_temp_ge:bed_sleep_room_temp_max
+  guideTarget: none
+  hintMessageId: goal_rest
+  mvpScope: A
+  note: "\uC624\uB108 \uCCAB \uACBD\uD5D8 \uD750\uB984 \u300C\uB530\uB73B\uD55C \uACF3\uC5D0\uC11C
+    \uD734\uC2DD\u300D. \uBCF4\uAD00\uC2E4 \u221210\uC740 \uC800\uCCB4\uC628 \uC2DC\uC791
+    \uC628\uB3C4(hypothermia_room_temp)\uC640 \uAC19\uC544 \uCE68\uC2E4\uC744 \uBD84\uB9AC\uD574\uC57C
+    \uD55C\uB2E4. \uCE68\uB300 \u22124 \uC774\uC0C1. \uBCF4\uAE08\uC790\uB9AC \uB098\uBB346\xB7\uC0BC\uC904\uAE304"

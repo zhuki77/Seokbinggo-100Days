@@ -1,0 +1,16 @@
+id,order,phase,track,name_ko,icon_ref,complete_state,complete_param,guide_target,hint_msg,mvp_scope,note
+g01,1,P0,auto,작업대 만들기,workbench,station_installed,workbench,none,goal_workbench,A,오너 지시 첫 단계. 재료 흙8·돌12(crafting-tree workbench)
+g02,2,P0,auto,화로 만들기,furnace,station_installed,furnace,nearest:iron_ore,goal_furnace,A,코어 재료 철 주괴 때문에 필요 — 정본 seal_penalty_start_day 주석 「코어 실제 하한 3일차(철 주괴=화로 필요)」. 재료 돌22·흙8·철 광석6·구리 광석4
+g03,3,P0,auto,철 주괴 2개,iron_ingot,item_count_ge,iron_ingot:2,station:furnace,goal_iron_ingot,A,modules.csv ice_core 재료 iron_ingot:2 · 제련 철 광석2+석탄1=주괴1(smelting.csv)
+g04,4,P0,auto,얼음 저장고 설치,ice_core,module_installed,ice_core,nearest:ice_shard,goal_core,A,재료 얼음 조각20·돌10·철 주괴2. 문 재료(얼음 조각4)도 함께 안내 — Codex 관측: 코어만 만들고 문 얼음을 다시 캐러 감
+g05,5,P0,auto,작은 방 밀폐,door,core_sealed,true,core,core_unsealed,A,오너 「작은 방」. 밀폐 = flood-fill 경계가 seal-whitelist 인정 요소로만 닫힘. 코어 효과 core_delta_plain −5 → core_delta_insulated −10
+g06,6,P0,auto,장독에 얼음 넣기,jangdok,storage_contains,jangdok:ice_shard:1,core,goal_jangdok,A,오너 「보관함」. 장독 재료 흙10·돌8·나무6(modules.csv)
+g07,7,P0,auto,얼음 보관 조건 충족,ice_shard,storage_condition_met,ice_shard,core,storage_below,A,얼음 요구 실온 = storage_band_frozen(−10) 이하. 아이템별 요구 실온(storage_temp_system=1)
+g08,8,P0,auto,따뜻한 곳에서 쉬기,nest_bed,slept,room_temp_ge:bed_sleep_room_temp_max,none,goal_rest,A,오너 첫 경험 흐름 「따뜻한 곳에서 휴식」. 보관실 −10은 저체온 시작 온도(hypothermia_room_temp)와 같아 침실을 분리해야 한다. 침대 −4 이상. 보금자리 나무6·삼줄기4
+g09,9,P0,auto,새벽 보존 확인,ice_shard,dawn_storage_result,kept_ge:1,core,goal_dawn,A,오너 「보존 확인」. 새벽 일일 처리 후 결과 패널을 본 시점에 완료. 첫 석빙고 사슬의 끝
+g10,10,P1,select,무쇠 발톱,iron_claw,item_owned,iron_claw,station:furnace,goal_iron_claw,A,T2 — 얼음강철 원석·서리정수 채굴 조건(경도 2)
+g11,11,P1,select,도깨비 대장 격파,king_dokkaebi,boss_defeated,king_dokkaebi,summon:ssireum_satba,goal_king,A,권장 8일차 · 씨름 샅바 = 방망이 조각1·삼줄기10·나무5 · 폭염 1→2
+g12,12,P1,select,얼음 모루,ice_anvil,station_installed,ice_anvil,station:blast_furnace,goal_anvil,A,재료 철 주괴5·구리 주괴2·얼음강철 주괴4
+g13,13,P1,select,얼음강철 발톱,icesteel_claw,item_owned,icesteel_claw,station:ice_anvil,goal_icesteel_claw,A,T3
+g14,14,P1,select,핵심 모듈 5종,ice_core,core_modules_complete,win_modules,core,goal_core_modules,A,차열벽·단열 문·차열 지붕·장독 창고·얼음 저장고 — 결과 화면 「석빙고 완성」과 같은 값
+g15,15,P1,select,강철이 격파,imugi_boss,boss_defeated,imugi_boss,arena:imugi,goal_imugi,A,30일 관문(win_gate_demo) · 장소 = 지표선 얼음 호수(imugi_arena · D2 확정)

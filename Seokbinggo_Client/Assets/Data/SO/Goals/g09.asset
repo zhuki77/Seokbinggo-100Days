@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g09
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g09
+  order: 9
+  phase: P0
+  track: auto
+  displayName: "\uC0C8\uBCBD \uBCF4\uC874 \uD655\uC778"
+  iconRef: ice_shard
+  completeState: dawn_storage_result
+  completeParam: kept_ge:1
+  guideTarget: core
+  hintMessageId: goal_dawn
+  mvpScope: A
+  note: "\uC624\uB108 \u300C\uBCF4\uC874 \uD655\uC778\u300D. \uC0C8\uBCBD \uC77C\uC77C
+    \uCC98\uB9AC \uD6C4 \uACB0\uACFC \uD328\uB110\uC744 \uBCF8 \uC2DC\uC810\uC5D0
+    \uC644\uB8CC. \uCCAB \uC11D\uBE59\uACE0 \uC0AC\uC2AC\uC758 \uB05D"

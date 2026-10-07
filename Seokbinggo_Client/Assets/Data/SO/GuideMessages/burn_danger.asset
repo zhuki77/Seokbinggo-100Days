@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 764aaeb6da4c32d4497d4fe5bab56267, type: 3}
+  m_Name: burn_danger
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GuideMessageDefinition
+  id: burn_danger
+  tier: 1
+  triggerState: burn_active
+  text: "\uD587\uBCD5\uC5D0 \uD0C0\uACE0 \uC788\uC5B4\uC694! \uADF8\uB298\uC774\uB098
+    \uC9C0\uD558\uB85C \uB4E4\uC5B4\uAC00\uC138\uC694."
+  variables: 
+  clearWhen: burn_end
+  repeat: while_active
+  source: "[\uAC00\uC548 \uBB38\uAD6C]"
+  note: "\uB0AE \uC9C0\uC0C1 \uD654\uC0C1(day_fire_dmg_by_stage)"

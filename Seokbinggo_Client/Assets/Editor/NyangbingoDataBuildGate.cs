@@ -200,18 +200,20 @@ public static class NyangbingoDataBuildGate
             ["talismans"] = catalog.Talismans.Count,
             ["codex entries"] = catalog.CodexEntries.Count,
             ["traits"] = catalog.Traits.Count,
-            ["crops"] = catalog.Crops.Count
+            ["crops"] = catalog.Crops.Count,
+            ["goals"] = catalog.Goals.Count,
+            ["guide messages"] = catalog.GuideMessages.Count
         };
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["items"] = 170,
-            ["recipes"] = 97,
+            ["recipes"] = 98,
             ["modules"] = 11,
             ["mineral tiers"] = 18,
             ["seal rules"] = 23,
             ["ID migrations"] = 28,
             ["day curves"] = 30,
-            ["globals"] = 253,
+            ["globals"] = 265,
             ["smelting"] = 3,
             ["equipment"] = 44,
             ["utilities"] = 2,
@@ -225,7 +227,9 @@ public static class NyangbingoDataBuildGate
             ["talismans"] = 5,
             ["codex entries"] = 17,
             ["traits"] = 4,
-            ["crops"] = 10
+            ["crops"] = 10,
+            ["goals"] = 15,
+            ["guide messages"] = 38
         };
         var mismatches = expected
             .Where(pair => !actual.TryGetValue(pair.Key, out var count) || count != pair.Value)

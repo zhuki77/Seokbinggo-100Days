@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g12
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g12
+  order: 12
+  phase: P1
+  track: select
+  displayName: "\uC5BC\uC74C \uBAA8\uB8E8"
+  iconRef: ice_anvil
+  completeState: station_installed
+  completeParam: ice_anvil
+  guideTarget: station:blast_furnace
+  hintMessageId: goal_anvil
+  mvpScope: A
+  note: "\uC7AC\uB8CC \uCCA0 \uC8FC\uAD345\xB7\uAD6C\uB9AC \uC8FC\uAD342\xB7\uC5BC\uC74C\uAC15\uCCA0
+    \uC8FC\uAD344"

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d78c091df364d41be45fc534aba743, type: 3}
+  m_Name: g15
+  m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GoalDefinition
+  id: g15
+  order: 15
+  phase: P1
+  track: select
+  displayName: "\uAC15\uCCA0\uC774 \uACA9\uD30C"
+  iconRef: imugi_boss
+  completeState: boss_defeated
+  completeParam: imugi_boss
+  guideTarget: arena:imugi
+  hintMessageId: goal_imugi
+  mvpScope: A
+  note: "30\uC77C \uAD00\uBB38(win_gate_demo) \xB7 \uC7A5\uC18C = \uC9C0\uD45C\uC120
+    \uC5BC\uC74C \uD638\uC218(imugi_arena \xB7 D2 \uD655\uC815)"
