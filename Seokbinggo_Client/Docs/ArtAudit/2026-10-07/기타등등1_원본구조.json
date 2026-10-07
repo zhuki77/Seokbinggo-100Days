@@ -1,0 +1,152 @@
+[
+  {
+    "source": "cold_wave_singijeon_sondae_attack.aseprite",
+    "asset": "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack.aseprite",
+    "width": 32,
+    "height": 32,
+    "frames": 9,
+    "depth": 32,
+    "durations_ms": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ],
+    "sha256": "c8d1af57a9ecb626b488604e51f4c5280965055a33f85812769ea922f1112848",
+    "frame_assets": [
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_00.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_01.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_02.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_03.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_04.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_05.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_06.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_07.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/cold_wave_singijeon_attack_frame_08.png"
+    ]
+  },
+  {
+    "source": "ice_whip_fan_attack.aseprite",
+    "asset": "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack.aseprite",
+    "width": 32,
+    "height": 32,
+    "frames": 7,
+    "depth": 32,
+    "durations_ms": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ],
+    "sha256": "ed04c1a2320be5861eb46232d34639437d13ec6357b1e0f182f85a71d397cf05",
+    "frame_assets": [
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_00.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_01.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_02.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_03.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_04.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_05.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/ice_root_whipfan_attack_frame_06.png"
+    ]
+  },
+  {
+    "source": "singijeon_sondae_attack.aseprite",
+    "asset": "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack.aseprite",
+    "width": 32,
+    "height": 32,
+    "frames": 8,
+    "depth": 32,
+    "durations_ms": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ],
+    "sha256": "c25abb0a18b2066eb322307c17f556aafdb265d30e800d32aa553e5aaff8f6e4",
+    "frame_assets": [
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_00.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_01.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_02.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_03.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_04.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_05.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_06.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/singijeon_sondae_attack_frame_07.png"
+    ]
+  },
+  {
+    "source": "객귀 보스바.aseprite",
+    "asset": "Assets/Art/Gameplay/DeliveredMisc1/gaekgwi_boss_bar.aseprite",
+    "width": 128,
+    "height": 32,
+    "frames": 1,
+    "depth": 32,
+    "durations_ms": [
+      100
+    ],
+    "sha256": "b78086610181b3b386f651cf1a1a84ac8b9ae7a500b00910ebc26894998c260f",
+    "frame_assets": [
+      "Assets/Art/Gameplay/DeliveredMisc1/gaekgwi_boss_bar_frame_00.png"
+    ]
+  },
+  {
+    "source": "계속플레이.aseprite",
+    "asset": "Assets/Art/Gameplay/DeliveredMisc1/result_continue.aseprite",
+    "width": 58,
+    "height": 15,
+    "frames": 1,
+    "depth": 32,
+    "durations_ms": [
+      100
+    ],
+    "sha256": "6d990056741d44186aa4ddcf95d368d41094ce9018fc97dd58af209082d954ac",
+    "frame_assets": [
+      "Assets/Art/Gameplay/DeliveredMisc1/result_continue_frame_00.png"
+    ]
+  },
+  {
+    "source": "파동.aseprite",
+    "asset": "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave.aseprite",
+    "width": 80,
+    "height": 16,
+    "frames": 10,
+    "depth": 32,
+    "durations_ms": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ],
+    "sha256": "938f73490cb13d72d917d23ef4286cee21da6380568356fb41bdeaae1cd98875",
+    "frame_assets": [
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_00.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_01.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_02.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_03.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_04.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_05.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_06.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_07.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_08.png",
+      "Assets/Art/Gameplay/DeliveredMisc1/seal_success_wave_frame_09.png"
+    ]
+  }
+]

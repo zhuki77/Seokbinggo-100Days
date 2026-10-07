@@ -1,0 +1,11 @@
+{
+  "rope.aseprite_원본동일": true,
+  "Player_rope.aseprite_원본동일": true,
+  "아이콘_월드_타일_동일Sprite": true,
+  "로프_충돌없음": true,
+  "플레이어4프레임": true,
+  "데이터카탈로그_아이템참조": true,
+  "CSV_중복없음_99_A": true,
+  "Assets/Art/Tiles/rope.aseprite_PPU16_Point_MipOff": true,
+  "Assets/Art/Characters/player_rope.aseprite_PPU16_Point_MipOff": true
+}

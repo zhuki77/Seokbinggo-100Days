@@ -1,0 +1,122 @@
+[
+  {
+    "id": "altar_echo",
+    "path": "Assets/Art/Items/DeliveredFinal/altar_echo.aseprite"
+  },
+  {
+    "id": "clay_hand",
+    "path": "Assets/Art/Items/DeliveredFinal/clay_hand.aseprite"
+  },
+  {
+    "id": "drought_heart_shard",
+    "path": "Assets/Art/Items/DeliveredFinal/drought_heart_shard.aseprite"
+  },
+  {
+    "id": "dry_trace",
+    "path": "Assets/Art/Items/DeliveredFinal/dry_trace.aseprite"
+  },
+  {
+    "id": "frost_map",
+    "path": "Assets/Art/Items/DeliveredFinal/frost_map.aseprite"
+  },
+  {
+    "id": "gate_mark",
+    "path": "Assets/Art/Items/DeliveredFinal/gate_mark.aseprite"
+  },
+  {
+    "id": "iron_appetite",
+    "path": "Assets/Art/Items/DeliveredFinal/iron_appetite.aseprite"
+  },
+  {
+    "id": "magpie_bell",
+    "path": "Assets/Art/Items/DeliveredFinal/magpie_bell.aseprite"
+  },
+  {
+    "id": "minhwa_ink",
+    "path": "Assets/Art/Items/DeliveredFinal/minhwa_ink.aseprite"
+  },
+  {
+    "id": "old_key",
+    "path": "Assets/Art/Items/DeliveredFinal/old_key.aseprite"
+  },
+  {
+    "id": "perfect_core",
+    "path": "Assets/Art/Items/DeliveredFinal/perfect_core.aseprite"
+  },
+  {
+    "id": "skate_pad",
+    "path": "Assets/Art/Items/DeliveredFinal/skate_pad.aseprite"
+  },
+  {
+    "id": "ssireum_knot",
+    "path": "Assets/Art/Items/DeliveredFinal/ssireum_knot.aseprite"
+  },
+  {
+    "id": "tiger_gait",
+    "path": "Assets/Art/Items/DeliveredFinal/tiger_gait.aseprite"
+  },
+  {
+    "id": "yeouiju_shard",
+    "path": "Assets/Art/Items/DeliveredFinal/yeouiju_shard.aseprite"
+  },
+  {
+    "id": "cold_wave_battery",
+    "path": "Assets/Art/Items/DeliveredFinal/cold_wave_battery_icon.aseprite"
+  },
+  {
+    "id": "ice_root_battery",
+    "path": "Assets/Art/Items/DeliveredFinal/ice_root_battery_icon.aseprite"
+  },
+  {
+    "id": "singijeon_cart",
+    "path": "Assets/Art/Items/DeliveredFinal/singijeon_cart_icon.aseprite"
+  },
+  {
+    "id": "door",
+    "path": "Assets/Art/Items/DeliveredFinal/door_icon.aseprite"
+  },
+  {
+    "id": "gong_tower",
+    "path": "Assets/Art/Items/DeliveredFinal/gong_tower_icon.aseprite"
+  },
+  {
+    "id": "haetae_statue",
+    "path": "Assets/Art/Items/DeliveredFinal/haetae_statue_icon.aseprite"
+  },
+  {
+    "id": "jangdok",
+    "path": "Assets/Art/Items/DeliveredFinal/jangdok_icon.aseprite"
+  },
+  {
+    "id": "ice_jar",
+    "path": "Assets/Art/Items/DeliveredFinal/ice_jar_icon.aseprite"
+  },
+  {
+    "id": "plaster_doll",
+    "path": "Assets/Art/Items/DeliveredFinal/plaster_doll_icon.aseprite"
+  },
+  {
+    "id": "scarecrow",
+    "path": "Assets/Art/Items/DeliveredFinal/scarecrow_icon.aseprite"
+  },
+  {
+    "id": "tal_waypoint",
+    "path": "Assets/Art/Items/DeliveredFinal/tal_waypoint_icon.aseprite"
+  },
+  {
+    "id": "dokkaebi_fire_tower",
+    "path": "Assets/Art/Items/DeliveredFinal/dokkaebi_fire_tower_icon.aseprite"
+  },
+  {
+    "id": "seonge_tower",
+    "path": "Assets/Art/Items/DeliveredFinal/seonge_tower_icon.aseprite"
+  },
+  {
+    "id": "cold_wave_tower",
+    "path": "Assets/Art/Items/DeliveredFinal/cold_wave_tower_icon.aseprite"
+  },
+  {
+    "id": "yokai_tear",
+    "path": "Assets/Art/UI/yokai_tear_balance.aseprite"
+  }
+]

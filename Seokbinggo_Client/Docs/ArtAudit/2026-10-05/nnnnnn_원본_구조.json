@@ -1,0 +1,1110 @@
+[
+  {
+    "path": "altar_echo.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "clay_hand.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          2,
+          2,
+          15,
+          14
+        ]
+      }
+    ]
+  },
+  {
+    "path": "DeathTearPouch이거원한거 맞는지 모르겠는데 아니면 수정요청부탁드립니다.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "drought_heart_shard.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          14,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "dry_trace.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "frost_map.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          1,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "gate_mark.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "HypothermiaStatus_Icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "HypothermiaStatus_Icon2.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/cold_wave_battery_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 4,
+    "depth": 32,
+    "tags": [
+      {
+        "name": "attack",
+        "from": 1,
+        "to": 3
+      }
+    ],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          28,
+          24
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          28,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          32,
+          24
+        ],
+        "opaque_bounds": [
+          5,
+          0,
+          32,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          32,
+          24
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          32,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          32,
+          24
+        ],
+        "opaque_bounds": [
+          8,
+          0,
+          32,
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/door_open_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/gong_tower_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/haetae_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          2,
+          0,
+          14,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/ice_root_battery_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 4,
+    "depth": 32,
+    "tags": [
+      {
+        "name": "attack",
+        "from": 1,
+        "to": 3
+      }
+    ],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          28,
+          24
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          28,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          32,
+          24
+        ],
+        "opaque_bounds": [
+          5,
+          0,
+          32,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          32,
+          24
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          32,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          32,
+          24
+        ],
+        "opaque_bounds": [
+          8,
+          0,
+          32,
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/m_jangdok_3_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          14,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/m_jangdok_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          15,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/plaster_doll_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          2,
+          0,
+          14,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/scarecrow_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          2,
+          0,
+          14,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/t_altar_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          1,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/tal_waypoint_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          32
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          15,
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/turret_lantern_cold_wave_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          15,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/turret_lantern_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          14,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/turret_lantern_seonge_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          15,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "icon/신기전_icon.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          -8,
+          28,
+          24
+        ],
+        "opaque_bounds": [
+          0,
+          0,
+          28,
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "path": "iron_appetite.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "magpie_bell.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          2,
+          2,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "path": "minhwa_ink.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "old_key.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          1,
+          15,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "perfect_core.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          1,
+          15,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "path": "skate_pad.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "ssireum_knot.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          0,
+          15,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "path": "tiger_gait.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          0,
+          1,
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "path": "yeouiju_shard.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          1,
+          1,
+          15,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "path": "요괴 눈물.aseprite",
+    "canvas": [
+      16,
+      16
+    ],
+    "frames": 4,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          3,
+          1,
+          12,
+          16
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          3,
+          1,
+          12,
+          16
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          3,
+          1,
+          12,
+          16
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "opaque_bounds": [
+          3,
+          1,
+          12,
+          16
+        ]
+      }
+    ]
+  }
+]

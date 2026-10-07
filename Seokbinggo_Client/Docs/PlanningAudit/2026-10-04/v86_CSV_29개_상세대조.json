@@ -1,0 +1,7789 @@
+[
+  {
+    "file": "accessories.csv",
+    "newRows": 26,
+    "newSha256": "5bba3c06367c5937ff1e087acd85d9117d2d75c2e15ad32d96c72e604243b5c4",
+    "oldRows": 26,
+    "oldSha256": "590d514d43117cecbdb23b74324fcda8b9f078a87c6aac14981bbfa027e55a97",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "bosses.csv",
+    "newRows": 10,
+    "newSha256": "4370f9b3b81b14fa46922b72328201fe055151c2f3be385581c143ff3abfc53a",
+    "oldRows": 10,
+    "oldSha256": "ede9f3715109b2a32f7223d4c5124a91eced09761343dd38e4cea70aa5964199",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "chests.csv",
+    "newRows": 4,
+    "newSha256": "eb672161e44ab49bf6143b4453354a544f6261adcdde38275dd26d735ec381e4",
+    "oldRows": 4,
+    "oldSha256": "eb672161e44ab49bf6143b4453354a544f6261adcdde38275dd26d735ec381e4",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "codex.csv",
+    "newRows": 17,
+    "newSha256": "2be3deac5162f237bc98245222dacfc81dbd0906b2fb1fb264bd76875d5db51c",
+    "oldRows": 17,
+    "oldSha256": "f7b781707fe8429aea48ca1bc9428e2f28feae0a493791db49017ce154de42a2",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "content-status.csv",
+    "newRows": 945,
+    "newSha256": "43abc30b0e0f783b6b480eb6d411a61e0ed99fd3222b16457913c13da0bfcfe9",
+    "oldRows": 861,
+    "oldSha256": "6f5060893626319cbcec83a6954d2359751c02b128357a35f6924d5562fce5d0",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "accessories.csv",
+          "bell_norigae"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "wind_daenggi"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "tiger_eye_bead"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "ice_heart_norigae"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "bokjumeoni"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "dokkaebi_gamtu"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "ssireum_knot"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "iron_appetite"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "yeouiju_shard"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "accessories.csv",
+          "magpie_bell"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "jigwi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "gangcheol_blaze"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "sangun"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "samdugumi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "eop_guryeongi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "yeongno"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "bosses.csv",
+          "gangcheol_perfect"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "club"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "bulgasari"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "yakwang"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "eoduksini"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "gaekgwi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "imugi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "gangcheol"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "king_dokkaebi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "mother_bulgasari"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "imugi_boss"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "jigwi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "gangcheol_blaze"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "sangun"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "samdugumi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "eop_guryeongi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "yeongno"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "codex.csv",
+          "gangcheol_perfect"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "magpie_nest"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_ingot"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_bundle"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_ingot"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "straw_sling"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "gakgung"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "singijeon_sondae"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_gakgung"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_bow"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_singijeon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_fan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_whipfan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_fan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "sangun_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "perfect_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "seonge_tower"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_tower"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_root_battery"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "cold_wave_battery"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "scarecrow"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "ice_trap"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "arrow_supply"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "plaster_doll"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "gong_tower"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "jigwi_summon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "samdugumi_summon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "eop_summon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "jukbuin"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "daebal"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone01"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone02"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone03"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone04"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone05"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone06"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone07"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone08"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone09"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "crops.csv",
+          "zone10"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "jigwi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "gangcheol_blaze"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "sangun"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "samdugumi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "eop_guryeongi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "yeongno"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "drops.csv",
+          "gangcheol_perfect"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "bell_norigae"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "ice_heart_norigae"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "bokjumeoni"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "wind_daenggi"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "tiger_eye_bead"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "dokkaebi_gamtu"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "seonge_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "seonge_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "seonge_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "ice_root_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "ice_root_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "ice_root_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "cold_wave_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "cold_wave_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "cold_wave_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "magpie_join_kills"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "magpie_magnet_radius"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "magpie_magnet_interval"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "jukbuin_regen_mult"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "daebal_flame_cut"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "daebal_radius"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "magpie_nest_limit"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63~ 대개편 대상",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63~ 대개편 대상"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "magpie_guide_mode"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "magpie_guide_return_sec"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "crop_table"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "crop_plantable"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "trait_select_at_start"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "trait_table"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "shell_screen_count"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "trait_melee_boss_exempt"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "talisman_table"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "talisman_count"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "difficulty_option"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "mushroom_heal"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v81"
+          },
+          "note": {
+            "old": "",
+            "new": "오너 확정 2026-08-25 — 15/30/50. 개발 B 구현값과 일치, 코드 변경 0"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "mushroom_table"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_helm"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_armor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_boots"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "straw_sling"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "gakgung"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "singijeon_sondae"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_gakgung"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_bow"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_singijeon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_fan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_whipfan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_fan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "sangun_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "perfect_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_tower"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_tower"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_battery"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_battery"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "scarecrow"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_trap"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "arrow_supply"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "plaster_doll"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "gong_tower"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "first_frost_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "baekjung_bundle"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "yeouiju_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "jigwi_ash"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "sangun_whisker"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "yeongno_tooth"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_ore"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — 본선 이후로 연기(오너 확정 2026-08-18) — 생산처 미정. 이 3종이 막는 제작물 27종도 함께 동"
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seonge_ingot"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — 본선 이후로 연기(오너 확정 2026-08-18) — 생산처 미정. 이 3종이 막는 제작물 27종도 함께 동"
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ice_root_bundle"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_ore"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — 본선 이후로 연기(오너 확정 2026-08-18) — 생산처 미정. 이 3종이 막는 제작물 27종도 함께 동"
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "cold_wave_ingot"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "ssireum_knot"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "iron_appetite"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "yeouiju_shard"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "magpie_bell"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "jigwi_summon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "samdugumi_summon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "eop_summon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "jukbuin"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "daebal"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "oyster_mushroom"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "shiitake"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seogi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "mineral-tiers.csv",
+          "oyster_mushroom"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "mineral-tiers.csv",
+          "shiitake"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "mineral-tiers.csv",
+          "seogi"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "straw_sling"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "gakgung"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "singijeon_sondae"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "seonge_gakgung"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "ice_root_bow"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "cold_wave_singijeon"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "seonge_fan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "ice_root_whipfan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "cold_wave_fan"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "sangun_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "perfect_claw"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "talismans.csv",
+          "tal_return"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63 신설",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63 신설"
+          }
+        }
+      },
+      {
+        "key": [
+          "talismans.csv",
+          "tal_stride"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63 신설",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63 신설"
+          }
+        }
+      },
+      {
+        "key": [
+          "talismans.csv",
+          "tal_waypoint"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63 신설",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63 신설"
+          }
+        }
+      },
+      {
+        "key": [
+          "talismans.csv",
+          "tal_hide"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63 신설",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63 신설"
+          }
+        }
+      },
+      {
+        "key": [
+          "talismans.csv",
+          "tal_frost"
+        ],
+        "fields": {
+          "since": {
+            "old": "v70",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v63 신설",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v63 신설"
+          }
+        }
+      },
+      {
+        "key": [
+          "traits.csv",
+          "trait_melee"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "traits.csv",
+          "trait_ranged"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "traits.csv",
+          "trait_labor"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "traits.csv",
+          "trait_cool"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone01"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone02"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone03"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone04"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone05"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone06"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone07"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone08"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone09"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "zones.csv",
+          "zone10"
+        ],
+        "fields": {
+          "since": {
+            "old": "",
+            "new": "v83"
+          },
+          "note": {
+            "old": "",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — "
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "day_counter_display"
+        ],
+        "fields": {
+          "since": {
+            "old": "2026-08-12",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v74 — 개발 B가 HUD에서 D-카운터를 끄는 근거 키",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v74 — 개발 B가 HUD에서 D-카운터를 끄는 근거 키"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "win_gates"
+        ],
+        "fields": {
+          "since": {
+            "old": "2026-08-12",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v75 엔딩 확정 — 오너 2026-08-12",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "win_gate_demo"
+        ],
+        "fields": {
+          "since": {
+            "old": "2026-08-12",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v75 엔딩 확정 — 오너 2026-08-12",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "win_gate_final"
+        ],
+        "fields": {
+          "since": {
+            "old": "2026-08-12",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v75 엔딩 확정 — 오너 2026-08-12",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "survival_continues_after_ending"
+        ],
+        "fields": {
+          "since": {
+            "old": "2026-08-12",
+            "new": "v83"
+          },
+          "note": {
+            "old": "v75 엔딩 확정 — 오너 2026-08-12",
+            "new": "개발 B 실물 기준 동기화(2026-09-14) — v75 엔딩 확정 — 오너 2026-08-12"
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting-tree.csv",
+          "smithy"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "crafting-tree.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "smithy"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v84"
+          },
+          "note": {
+            "old": null,
+            "new": "[v84] 대장간 제작 행 신설 — 유니티 임포트 대기(개발 A)"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "ssireum_knot"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "ssireum_knot"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "iron_appetite"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "iron_appetite"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "yeouiju_shard"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "yeouiju_shard"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "jigwi_ember"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "jigwi_ember"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "drought_heart_shard"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "drought_heart_shard"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "tiger_gait"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "tiger_gait"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "three_horn"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "three_horn"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "eop_scale"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "eop_scale"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "yeongno_mask"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "yeongno_mask"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "perfect_core"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "perfect_core"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "clay_hand"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "clay_hand"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "skate_pad"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "skate_pad"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "magpie_bell"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "magpie_bell"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "old_key"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "old_key"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "minhwa_ink"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "minhwa_ink"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "vault_seal"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "vault_seal"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "gate_mark"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "gate_mark"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "dry_trace"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "dry_trace"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "altar_echo"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "altar_echo"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "equipment.csv",
+          "frost_map"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "equipment.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "frost_map"
+          },
+          "status": {
+            "old": null,
+            "new": "구현됨"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 아티팩트 20종이 equipment에 isAccessory=1로 등재됨(개발 B 63bbe32). 수치 0·동사만"
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "seolpungseon"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "items.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "seolpungseon"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 3티어 진화 2종(GDD 6-12: 확장 31~50일 한정, 오너 승인 2026-07-14). mvp_scope=B"
+          }
+        }
+      },
+      {
+        "key": [
+          "items.csv",
+          "frost_bell_rope"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "items.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "frost_bell_rope"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 3티어 진화 2종(GDD 6-12: 확장 31~50일 한정, 오너 승인 2026-07-14). mvp_scope=B"
+          }
+        }
+      },
+      {
+        "key": [
+          "player-combat.csv",
+          "seolpungseon"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "player-combat.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "item_id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "seolpungseon"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v83"
+          },
+          "note": {
+            "old": null,
+            "new": "v83 — 설풍선 전투 수치. 확장 31~50일"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g01"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g01"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g02"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g02"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g03"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g03"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g04"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g04"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g05"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g05"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g06"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g06"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g07"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g07"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g08"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g08"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g09"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g09"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g10"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g10"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g11"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g11"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g12"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g12"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g13"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g13"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g14"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g14"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "goals.csv",
+          "g15"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "g15"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "hypo_danger"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "hypo_danger"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "burn_danger"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "burn_danger"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "invasion_tonight"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "invasion_tonight"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "invasion_active"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "invasion_active"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "baekjung_tonight"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "baekjung_tonight"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "boss_tonight"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "boss_tonight"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "boss_active"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "boss_active"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "core_unsealed"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "core_unsealed"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "door_open"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "door_open"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "placed_block_not_seal"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "placed_block_not_seal"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "seal_success"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "seal_success"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "storage_below"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "storage_below"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "storage_ok"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "storage_ok"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "cold_bed"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "cold_bed"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "seal_boundary_dig"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "seal_boundary_dig"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "heat_cleared"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "heat_cleared"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "base_damaged"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "base_damaged"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "dawn_kept"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "dawn_kept"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "dawn_lost"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "dawn_lost"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "dawn_cause_unsealed"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "dawn_cause_unsealed"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "dawn_cause_outside"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "dawn_cause_outside"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "dawn_cause_heat"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "dawn_cause_heat"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "club_shard_missing"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "club_shard_missing"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_workbench"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_workbench"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_furnace"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_furnace"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_iron_ingot"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_iron_ingot"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_core"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_core"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_jangdok"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_jangdok"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_rest"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_rest"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_dawn"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_dawn"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_iron_claw"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_iron_claw"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_king"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_king"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_anvil"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_anvil"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_icesteel_claw"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_icesteel_claw"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_core_modules"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_core_modules"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide-messages.csv",
+          "goal_imugi"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "id"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_imugi"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "단계별 목표 추적·안내 우선순위(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "goal_table"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "goal_table"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "안내 시스템(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "guide_message_table"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "guide_message_table"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "안내 시스템(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "guide_priority_tiers"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "guide_priority_tiers"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "안내 시스템(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "guide_text_policy"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "guide_text_policy"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "안내 시스템(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "result_achievements"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "result_achievements"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "안내 시스템(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "shelter_outline_inner"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "shelter_outline_inner"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "첫 석빙고 건축 도우미(오너 2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "demo_complete_rule"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "demo_complete_rule"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "오너 위임 결정(2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "imugi_arena"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "imugi_arena"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "오너 위임 결정(2026-10-03)"
+          }
+        }
+      },
+      {
+        "key": [
+          "globals.csv",
+          "cold_device_effect"
+        ],
+        "fields": {
+          "file": {
+            "old": null,
+            "new": "globals.csv"
+          },
+          "row_key": {
+            "old": null,
+            "new": "key"
+          },
+          "row_id": {
+            "old": null,
+            "new": "cold_device_effect"
+          },
+          "status": {
+            "old": null,
+            "new": "추가예정"
+          },
+          "since": {
+            "old": null,
+            "new": "v86"
+          },
+          "note": {
+            "old": null,
+            "new": "오너 위임 결정(2026-10-03)"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "crafting-ext.csv",
+    "newRows": 2,
+    "newSha256": "224fccfb8796a41b7b1400d59458c4ea862cd63dde67ccaa94e7f84ae6496b64",
+    "oldRows": 2,
+    "oldSha256": "224fccfb8796a41b7b1400d59458c4ea862cd63dde67ccaa94e7f84ae6496b64",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "crafting-tree.csv",
+    "newRows": 91,
+    "newSha256": "4126ee47637681d2a74b7666974510afa8d81e285f6d5e0500ace7b675f347d9",
+    "oldRows": 90,
+    "oldSha256": "159c86827cec8eadc6f28c730ec70a856c4a779b01075a0d2cbb3d67e84a3958",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "smithy"
+        ],
+        "fields": {
+          "id": {
+            "old": null,
+            "new": "smithy"
+          },
+          "type": {
+            "old": null,
+            "new": "station"
+          },
+          "item_ko": {
+            "old": null,
+            "new": "대장간"
+          },
+          "station_id": {
+            "old": null,
+            "new": "ice_anvil"
+          },
+          "materials": {
+            "old": null,
+            "new": "stone:30,clay:20,iron_ingot:8,icesteel_ingot:6"
+          },
+          "output_count": {
+            "old": null,
+            "new": "1"
+          },
+          "craft_time_sec": {
+            "old": null,
+            "new": "90"
+          },
+          "mvp_scope": {
+            "old": null,
+            "new": "A"
+          },
+          "note": {
+            "old": null,
+            "new": "[v84] 제작 행 신설 — 오너 승인 2026-09-28. v39에서 대장간을 신설하며 이 행을 빠뜨려 인게임 획득 경로가 없었다(개발 A 발견). 막힌 자원(성에 주괴=빈도 0) 회피 — 얼음 모루 계열 재료만 사용"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "crops.csv",
+    "newRows": 10,
+    "newSha256": "c7946f9e7b74d6a90f28348efa18c5e5e6a660a034136aefc17f8fcb644352bf",
+    "oldRows": 10,
+    "oldSha256": "ecb1e52893056348d15558456a683deb9b587a57e7cf271d259cc913982646c0",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "day-curve-ext.csv",
+    "newRows": 15,
+    "newSha256": "20382e282d5e6d0ddaa5f40ef431522f690d86f2a6374182539e487b3a366c90",
+    "oldRows": 15,
+    "oldSha256": "20382e282d5e6d0ddaa5f40ef431522f690d86f2a6374182539e487b3a366c90",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "day-curve.csv",
+    "newRows": 30,
+    "newSha256": "7b06bce8828850b28b49d8bff746e51ded78917abc15eb2b72072189d1d4023a",
+    "oldRows": 30,
+    "oldSha256": "7b06bce8828850b28b49d8bff746e51ded78917abc15eb2b72072189d1d4023a",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "day-events.csv",
+    "newRows": 1,
+    "newSha256": "baab55495c066096819af38b0fb9390a6ec60be3ac1b121b189573f86d6f0030",
+    "oldRows": 1,
+    "oldSha256": "67e387a628b2c1cd5fcebe2cfdb5033ad69a84cf8a2a0fe74ee86a9dd07459a2",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "drops.csv",
+    "newRows": 17,
+    "newSha256": "9b9b68fc7b67379322efc4ff9d14dd5a913491e731006aaadbf5d1c3d07d08f1",
+    "oldRows": 17,
+    "oldSha256": "6df26557f058164295067c60c4200b078e2265e8a3fc3634762944965437b4fc",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "king_dokkaebi"
+        ],
+        "fields": {
+          "extra_drops": {
+            "old": "club_shard:2,ssireum_knot:1",
+            "new": "club_shard:2"
+          },
+          "sig_use": {
+            "old": "도깨비불 등탑(터렛)·씨름 샅바 매듭(데모 악세)",
+            "new": "도깨비불 등탑(터렛)"
+          }
+        }
+      },
+      {
+        "key": [
+          "mother_bulgasari"
+        ],
+        "fields": {
+          "extra_drops": {
+            "old": "iron_scale:4,iron_appetite:1",
+            "new": "iron_scale:4"
+          },
+          "sig_use": {
+            "old": "신기전 화차(터렛)·무쇠 식성(데모 악세)",
+            "new": "신기전 화차(터렛)"
+          }
+        }
+      },
+      {
+        "key": [
+          "imugi_boss"
+        ],
+        "fields": {
+          "extra_drops": {
+            "old": "yeouiju_shard:1",
+            "new": ""
+          },
+          "sig_use": {
+            "old": "빙정 냉각로(엔드 냉각)·여의주 파편(데모 악세)",
+            "new": "빙정 냉각로(엔드 냉각)"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "equipment.csv",
+    "newRows": 44,
+    "newSha256": "ee7c1bd291456c26c7013ed9ba8f954769762d4b0d568dbbe2113fd0437ef99a",
+    "oldRows": 44,
+    "oldSha256": "da0ecfe4b58c2898f90fb009f57f18c83a86f299295bbf5813c95ec4fd34873d",
+    "removedColumns": [
+      "verb_id",
+      "usage_limit_per_day",
+      "activation_condition"
+    ],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "straw_helm"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "straw_armor"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "straw_boots"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "iron_helm"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "iron_armor"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "iron_boots"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "icesteel_helm"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "icesteel_armor"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "icesteel_boots"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "bell_norigae"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "ice_heart_norigae"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "bokjumeoni"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "wind_daenggi"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "tiger_eye_bead"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "dokkaebi_gamtu"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "seonge_helm"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "seonge_armor"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "seonge_boots"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "ice_root_helm"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "ice_root_armor"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "ice_root_boots"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "cold_wave_helm"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "cold_wave_armor"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "cold_wave_boots"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "ssireum_knot"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "GrabKnockedTarget",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "iron_appetite"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "HearIronVein",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "yeouiju_shard"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "ExtendCoolerRadius",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "jigwi_ember"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "NoHeatInShade",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "DaySurface",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "drought_heart_shard"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "ReduceFlameAndHasten",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "DaySurface",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "tiger_gait"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "NoFirstStrike",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "Surface",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "three_horn"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "WalkWhileCharging",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "eop_scale"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "MaintainAfterShutdown",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "yeongno_mask"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "EscapeOnSwallow",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "1",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "perfect_core"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "RelocateColdCore",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "clay_hand"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "HalveClayCraftTime",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "skate_pad"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "TurnWhileSliding",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "magpie_bell"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "ExtendMagpieRadius",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "old_key"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "OpenStorageAnywhere",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "3",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "minhwa_ink"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "BonusTearOnCodex",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "vault_seal"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "FullDemolitionRecovery",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "gate_mark"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "IncreaseVisionDeep",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "Deep",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "dry_trace"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "ReduceFlameTag",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "altar_echo"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "ReduceOfferTears",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      },
+      {
+        "key": [
+          "frost_map"
+        ],
+        "fields": {
+          "verb_id": {
+            "old": "ShowDugPaths",
+            "new": null
+          },
+          "usage_limit_per_day": {
+            "old": "0",
+            "new": null
+          },
+          "activation_condition": {
+            "old": "None",
+            "new": null
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "globals.csv",
+    "newRows": 262,
+    "newSha256": "a35857f5deef42d6cee91b093aa49b99f9abc53183d195d797d4b5b979fe6763",
+    "oldRows": 253,
+    "oldSha256": "af2d3cf5ee78979648dac0e5af97f9fd2c1c8979d5272a617436f928b9429e25",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "team_dev"
+        ],
+        "fields": {
+          "note": {
+            "old": "개발 2명(오너확정)",
+            "new": "개발 2명 — A(월드 상태)·B(표시·사운드+애매한 것). [v84.1 2026-09-28] v84의 A·B 경계 반전은 오너가 취소 — B가 아직 작업을 안 올린 것이지 분장이 바뀐 게 아니다. v71에 C 합류로 3명이었다가 v82(2026-09-10 오너 확정)에 C가 B로 통합돼 다시 2명. 이관된 미완 과제 0"
+          }
+        }
+      },
+      {
+        "key": [
+          "badge_window_days"
+        ],
+        "fields": {
+          "note": {
+            "old": "목표 배지 HUD 기간 — min(3배지 전부 달성·3일차 밤 종료) 소멸",
+            "new": "[v86] 🔴 목표 추적(goal_table=goals.csv)으로 대체 — 배지 3종(작업대·차열벽·화로)은 g01·g05·g02에 흡수되고 3일 소멸 규칙은 폐기(오너 2026-10-03). 키는 구 빌드 호환용으로만 남김 · 구 주석: 목표 배지 HUD 기간 — min(3배지 전부 달성·3일차 밤 종료) 소멸"
+          }
+        }
+      },
+      {
+        "key": [
+          "crafting_b_ui"
+        ],
+        "fields": {
+          "note": {
+            "old": "MVP 범위 B 레시피(crafting-tree.mvp_scope=B)는 제작 UI 미노출 — 데이터 로드만 한다. 오너 확정(v23 2026-07-16): MVP 보스 = 도깨비 대장·이무기 2종. B 사슬(무쇠 미끼 더미·신기전 화차)은 31일~ 확장에서 승격 (얼음 제단 봉헌·빙정 냉각로는 v34 이무기 최종보스 소환·보상으로 A 승격)",
+            "new": "[v86 오너 위임 2026-10-03 — 메인 헤드 추천안 채택] D4 — 30일 완성 범위에서 **숨김 유지(정본 복귀)**. 빌드 「B 레시피 공개」(918d3f5)는 되돌린다 — 대장간·T4~T6처럼 30일 안에 못 만드는 레시피가 보이면 도달 불가 목표가 된다. 구 주석: MVP 범위 B 레시피(crafting-tree.mvp_scope=B)는 제작 UI 미노출 — 데이터 로드만 한다. 오너 확정(v23 2026-07-16): MVP 보스 = 도깨비 대장·이무기 2종. B 사슬(무쇠 "
+          }
+        }
+      },
+      {
+        "key": [
+          "wave_mult_target"
+        ],
+        "fields": {
+          "note": {
+            "old": "🔴 이름이 낡았다(구 '파도'). **침공 일정과 무관하다** — 침공은 invasion_period_days/invasion_offset_days가 정본. 현행 용도 = day-curve-ext `variant_mult`(31~100일 1.25→2.0)를 HP에만 곱하고 접촉 피해·벽 DPS는 고정한다는 규칙. 그 열의 유일한 규칙 서술이라 지우면 배율 적용 방식이 근거를 잃는다. 31~100일이라 B 범위. 명칭 재검토 대상(→variant_mult_target)",
+            "new": "🔴 이름이 낡았다(구 '파도'). **침공 일정과 무관하다** — 침공은 invasion_period_days/invasion_offset_days가 정본. 현행 용도 = day-curve-ext `variant_mult`(31~100일 **1.25→2.75** — v80 정정: 제가 v79 주석에 2.0이라 적었는데 실측 최대는 2.75다)를 HP에만 곱하고 접촉 피해·벽 DPS는 고정한다는 규칙. 그 열의 유일한 규칙 서술이라 지우면 배율 적용 방식이 근거를 잃는다. 31~100일이라 B 범위. 명칭 재검토 대상(→variant_mult_target)"
+          }
+        }
+      },
+      {
+        "key": [
+          "player_jump_height_tiles"
+        ],
+        "fields": {
+          "note": {
+            "old": "⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·지상형 요괴/보스의 1칸 추격 점프는 별도",
+            "new": "⬅️ 개발 확정 등재(v64) — GDD 9-0b가 '정본에 없다(개발 A 소관)'로 비워둔 값이다. 유니티 실물 그대로. 플레이어 점프 최대 높이(가안 v7) — 테라리아급 약 3.5~4칸·1타일=1유닛·지상형 요괴/보스의 1칸 추격 점프는 별도 "
+          }
+        }
+      },
+      {
+        "key": [
+          "mushroom_heal"
+        ],
+        "fields": {
+          "note": {
+            "old": "[가안] 느타리·표고·석이 회복량 — 캣닢 25(지상)와 겹치지 않게 상층은 낮고 심층은 높다",
+            "new": "✅ 오너 확정 2026-08-25 — 느타리·표고·석이 회복량 — 캣닢 25(지상)와 겹치지 않게 상층은 낮고 심층은 높다"
+          }
+        }
+      },
+      {
+        "key": [
+          "goal_table"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "goal_table"
+          },
+          "value": {
+            "old": null,
+            "new": "goals.csv"
+          },
+          "unit": {
+            "old": null,
+            "new": "table"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 확정 2026-10-03] 단계별 목표 추적 정본 표 — P0 첫 석빙고 9단계(작업대→화로→철 주괴→얼음 저장고→작은 방 밀폐→장독에 얼음→보관 조건→따뜻한 곳 휴식→새벽 보존 확인) + P1 성장 선택 6단계. 실제 설치·상태 변화로 자동 완료 · 저장·이어하기 유지"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide_message_table"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "guide_message_table"
+          },
+          "value": {
+            "old": null,
+            "new": "guide-messages.csv"
+          },
+          "unit": {
+            "old": null,
+            "new": "table"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 확정 2026-10-03] 상황별 안내 문구 정본 — 코드에 문장 하드코딩 금지, 이 표에 등재된 문구만 화면에 낸다"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide_priority_tiers"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "guide_priority_tiers"
+          },
+          "value": {
+            "old": null,
+            "new": "1:위험|2:전투·행사|3:건축·보관 반응|4:현재 목표"
+          },
+          "unit": {
+            "old": null,
+            "new": "list"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 확정] 한 번에 주 안내 하나. 숫자가 작을수록 먼저. 위험이 끝나면 선택 목표로 복귀(오너 「저체온·전투·침공 안내가 일반 건축 안내보다 먼저」)"
+          }
+        }
+      },
+      {
+        "key": [
+          "guide_text_policy"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "guide_text_policy"
+          },
+          "value": {
+            "old": null,
+            "new": "action_guide_allowed"
+          },
+          "unit": {
+            "old": null,
+            "new": "enum"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 확정 2026-10-03] 무텍스트 원칙 개정 — 인게임 HUD에 **행동 안내 문구** 허용(상태 설명이 아니라 다음 행동). 단 guide-messages.csv 등재 문구만. 서사 대사·설명문은 여전히 금지. 기존 텍스트 허용 구역(오프닝·도감·결과 화면)은 그대로"
+          }
+        }
+      },
+      {
+        "key": [
+          "result_achievements"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "result_achievements"
+          },
+          "value": {
+            "old": null,
+            "new": "boss|build|storage"
+          },
+          "unit": {
+            "old": null,
+            "new": "list"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 확정 2026-10-03] 30일 결과 화면에 성취를 따로 표시 — boss=이무기 격파 / build=석빙고 핵심 모듈 n/win_modules / storage=새벽 보존 확인(g09) 달성 여부. 완성 판정은 demo_complete_rule(D1 확정 — 잠금 없이 표시)"
+          }
+        }
+      },
+      {
+        "key": [
+          "shelter_outline_inner"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "shelter_outline_inner"
+          },
+          "value": {
+            "old": null,
+            "new": "6x2"
+          },
+          "unit": {
+            "old": null,
+            "new": "tiles"
+          },
+          "note": {
+            "old": null,
+            "new": "[가안] 첫 석빙고 건축 도우미의 선택형 예시 윤곽 — 내부 폭6×높이2(+벽 1칸 테두리·문 1). 근거: Codex 정상 경로에서 실제 밀폐 −10°C에 성공한 내부 6×2 방(2026-10-02). 🔴 정답 크기가 아니라 예시 — 코어 효과 범위 8×10(storage_ice_core_band 주석)을 설계도로 보여주지 말 것"
+          }
+        }
+      },
+      {
+        "key": [
+          "demo_complete_rule"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "demo_complete_rule"
+          },
+          "value": {
+            "old": null,
+            "new": "boss_and_core_modules"
+          },
+          "unit": {
+            "old": null,
+            "new": "enum"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 위임 2026-10-03 — 메인 헤드 추천안 채택] D1 — 30일 데모 「완성」 = 이무기 격파(win_gate_demo) **그리고** 석빙고 핵심 모듈 win_modules종 설치. 결과 화면은 이무기 격파 시 **항상** 열리고, 모듈이 모자라면 「석빙고 미완공 n/5」로 표시 후 계속 플레이 — **이무기 접근 잠금 없음**. 나중에 모듈을 다 지으면 그때 완성으로 갱신(세이브 기록). GDD 1장 완공 조건(7/14)과 win_condition(8/12)을 둘 다 살리는 연결"
+          }
+        }
+      },
+      {
+        "key": [
+          "imugi_arena"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "imugi_arena"
+          },
+          "value": {
+            "old": null,
+            "new": "surface_ice_lake"
+          },
+          "unit": {
+            "old": null,
+            "new": "enum"
+          },
+          "note": {
+            "old": null,
+            "new": "[v86 오너 위임 2026-10-03 — 메인 헤드 추천안 채택] D2 — 30일 이무기 등장 위치 = 지표선 얼음 호수 아레나(GDD 9장 구조물 표 · v63 지상 이설). 플레이어 위치로 내습시키지 않는다(Codex: 지하 접촉 후 무대응 사망 3회). 해질녘 전 boss_tonight 안내 · 휴식 창 경고"
+          }
+        }
+      },
+      {
+        "key": [
+          "cold_device_effect"
+        ],
+        "fields": {
+          "key": {
+            "old": null,
+            "new": "cold_device_effect"
+          },
+          "value": {
+            "old": null,
+            "new": "core_equivalent"
+          },
+          "unit": {
+            "old": null,
+            "new": "enum"
+          },
+          "note": {
+            "old": null,
+            "new": "[가안] [v86 오너 위임 2026-10-03 — 메인 헤드 추천안 채택] D3 — 냉기 장치 = 2번째 냉기원. 실온 공식 「자연실온 + Σ코어 냉각량」(v63)에 코어와 같은 값(core_delta_plain −5 / 밀폐 시 core_delta_insulated −10)을 더한다. 신규 수치 0. 정본에 효과가 없던 물건(레시피만 · Codex 16조건×3회 변화 없음)"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "goals.csv",
+    "newRows": 15,
+    "newSha256": "0762fcca4130a4dbf57dc8fd831b786eaf70a43f29f65b256cedf059adb8e0e2",
+    "status": "신규",
+    "oldRows": 0,
+    "changes": []
+  },
+  {
+    "file": "guide-messages.csv",
+    "newRows": 36,
+    "newSha256": "df5324ad9cc4727d6b5493aee7466386788774ab11b9465d858e6c4a58c48220",
+    "status": "신규",
+    "oldRows": 0,
+    "changes": []
+  },
+  {
+    "file": "id-migration.csv",
+    "newRows": 28,
+    "newSha256": "480d1ba706e1e64931de63f5f6c6583a51dacb726ec56b262808e95c6d9c633e",
+    "oldRows": 28,
+    "oldSha256": "221300601d5ee4c8afb13d83bc2910cf9a0208ed3020c7ff06f208b3c0ec02a3",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "items.csv",
+    "newRows": 165,
+    "newSha256": "ecb78d00f14d51866f62f6ff15af6df2ca16c56db43a4d857a299732b1706757",
+    "oldRows": 165,
+    "oldSha256": "d1e05ac2daa8d94f0dd5140f7cacfb0ff4b6db02219f56635a33b6fdcaf1ed90",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "seonge_ore"
+        ],
+        "fields": {
+          "note": {
+            "old": "T4 원석 — 심층 벽 치환(서리 확산 1차 봉헌)",
+            "new": "[본선 이후 — 오너 확정 2026-08-18] 데모(30일) 범위 제외. 생산처 미정 상태로 동결한다 — 이 주석의 위치 설명(봉헌 1·2·3차·경계암)은 v67에서 폐지된 3단 모델의 잔재이며 착수 근거가 아니다. T4 원석 — 심층 벽 치환(서리 확산 1차 봉헌)"
+          }
+        }
+      },
+      {
+        "key": [
+          "seonge_ingot"
+        ],
+        "fields": {
+          "note": {
+            "old": "T4 주괴 — 얼음 모루·성에 광석×2",
+            "new": "T4 주괴 — 화로·성에 광석×2 (v68 제작대 재배치)"
+          }
+        }
+      },
+      {
+        "key": [
+          "ice_root"
+        ],
+        "fields": {
+          "note": {
+            "old": "T5 원석 — 중층 하단~심층 치환(2차 봉헌)",
+            "new": "[본선 이후 — 오너 확정 2026-08-18] 데모(30일) 범위 제외. 생산처 미정 상태로 동결한다 — 이 주석의 위치 설명(봉헌 1·2·3차·경계암)은 v67에서 폐지된 3단 모델의 잔재이며 착수 근거가 아니다. T5 원석 — 중층 하단~심층 치환(2차 봉헌)"
+          }
+        }
+      },
+      {
+        "key": [
+          "ice_root_bundle"
+        ],
+        "fields": {
+          "note": {
+            "old": "T5 가공 — 얼음 모루·얼음뿌리×3",
+            "new": "T5 가공 — 작업대·얼음뿌리×3 (v68 제작대 재배치)"
+          }
+        }
+      },
+      {
+        "key": [
+          "cold_wave_ore"
+        ],
+        "fields": {
+          "note": {
+            "old": "T6 원석 — 경계암 136~140(3차 봉헌)",
+            "new": "[본선 이후 — 오너 확정 2026-08-18] 데모(30일) 범위 제외. 생산처 미정 상태로 동결한다 — 이 주석의 위치 설명(봉헌 1·2·3차·경계암)은 v67에서 폐지된 3단 모델의 잔재이며 착수 근거가 아니다. T6 원석 — 경계암 136~140(3차 봉헌)"
+          }
+        }
+      },
+      {
+        "key": [
+          "cold_wave_ingot"
+        ],
+        "fields": {
+          "note": {
+            "old": "T6 주괴 — 얼음 모루·한파석×2+서리정수×1",
+            "new": "T6 주괴 — 화로·한파석×2 (v68 제작대 재배치)+서리정수×1"
+          }
+        }
+      },
+      {
+        "key": [
+          "oyster_mushroom"
+        ],
+        "fields": {
+          "max_stack": {
+            "old": "99",
+            "new": ""
+          },
+          "mvp_scope": {
+            "old": "A",
+            "new": ""
+          }
+        }
+      },
+      {
+        "key": [
+          "shiitake"
+        ],
+        "fields": {
+          "max_stack": {
+            "old": "99",
+            "new": ""
+          },
+          "mvp_scope": {
+            "old": "A",
+            "new": ""
+          }
+        }
+      },
+      {
+        "key": [
+          "seogi"
+        ],
+        "fields": {
+          "max_stack": {
+            "old": "99",
+            "new": ""
+          },
+          "mvp_scope": {
+            "old": "A",
+            "new": ""
+          },
+          "note": {
+            "old": "[가안] 지하 자생 버섯 — 회복 HP+50 · 냉장 보관 · 최희소. 오너 지시 '테라리아 버섯 같은 회복 아이템'",
+            "new": "✅ 확정(2026-08-25) 지하 자생 버섯 — 회복 HP+50 · 냉장 보관 · 최희소. 오너 지시 '테라리아 버섯 같은 회복 아이템'"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "mineral-tiers.csv",
+    "newRows": 18,
+    "newSha256": "118a828e11694ccc6d6807943279640b4deebe0e5594c4c46073c3d93cd31a9c",
+    "oldRows": 18,
+    "oldSha256": "aba03f887e4b5934623e83d389b37fc1b40fbd7d6caf125c580ebd090f5c8d75",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "행 순서만 변경"
+  },
+  {
+    "file": "modules.csv",
+    "newRows": 11,
+    "newSha256": "b27b3022ed62e8cf1f161422fe7c3779f1630f08b95ee8d8dd331c2fafdbc2ce",
+    "oldRows": 11,
+    "oldSha256": "5eb57296f495a53d94704280ce49fa4cacc1b74451e03f7bb273d1976c6d67d3",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "player-combat.csv",
+    "newRows": 19,
+    "newSha256": "66f5748cd3977f79d07a39a89e3533f3be94991e3d1a1f23fa041074e9e0b59b",
+    "oldRows": 19,
+    "oldSha256": "1697cd5874b8085ca6d189d49d592841c0fee5916bd10d57eb7a24695113e861",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "행 순서만 변경"
+  },
+  {
+    "file": "seal-whitelist.csv",
+    "newRows": 23,
+    "newSha256": "21d4590dca6333dfc091d47e3483f4f82856f45a5dd2204d88f38eeb8d849511",
+    "oldRows": 23,
+    "oldSha256": "21d4590dca6333dfc091d47e3483f4f82856f45a5dd2204d88f38eeb8d849511",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "smelting.csv",
+    "newRows": 3,
+    "newSha256": "6b1084479c825d92e2629c38c58e79bc9ba483450bd55d741d7775e82575e645",
+    "oldRows": 3,
+    "oldSha256": "6b1084479c825d92e2629c38c58e79bc9ba483450bd55d741d7775e82575e645",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "talismans.csv",
+    "newRows": 5,
+    "newSha256": "cea9a3925eea8544525519b1caeebe6056ba394aaa3796dd9b416e3679e625ae",
+    "oldRows": 5,
+    "oldSha256": "47b2043c346aebe7767ee005bf598ae824a7bb848c9c4301f2b55b62d1930f6a",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "tal_frost"
+        ],
+        "fields": {
+          "note": {
+            "old": "순환 잠금 방지의 보조 장치 — 심층 첫 진입을 부드럽게(4-7 원칙)",
+            "new": "[v86 오너 위임 2026-10-03 — 메인 헤드 추천안 채택] D5 — **모루 이후 깊은 원정용.** 재료 서리정수는 심층 전용(GDD 6-4)이고 제작대가 얼음 모루라 「심층 첫 진입용」은 성립하지 않는다. 구 주석 「순환 잠금 방지의 보조 장치 — 심층 첫 진입을 부드럽게(4-7 원칙)」 폐기"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  },
+  {
+    "file": "terrain-spawn.csv",
+    "newRows": 70,
+    "newSha256": "c0ce4eac18d4c9f6e8388f03ced3e99f1f56938221c3385de8fae436e91336b4",
+    "oldRows": 70,
+    "oldSha256": "c0ce4eac18d4c9f6e8388f03ced3e99f1f56938221c3385de8fae436e91336b4",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "traits.csv",
+    "newRows": 4,
+    "newSha256": "29590b176917ac1a877bbf0a8941aaf1e243841c159716d75c5d34ef9595b0a5",
+    "oldRows": 4,
+    "oldSha256": "7121861f98c86991869f2d199c0e4aab9e5f01b19ad0230cf27eb85d9014b3f6",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "utilities.csv",
+    "newRows": 2,
+    "newSha256": "c47a053e40f84e6e214f7288cd89c26e4d49f9cf50b951a665321e9fa5729e16",
+    "oldRows": 2,
+    "oldSha256": "c47a053e40f84e6e214f7288cd89c26e4d49f9cf50b951a665321e9fa5729e16",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "yokai-stats.csv",
+    "newRows": 7,
+    "newSha256": "348dab9dfaf09ff5d419adfbf22d7c3882ca0aa868bf1a5bb67558bdd4d5ba17",
+    "oldRows": 7,
+    "oldSha256": "348dab9dfaf09ff5d419adfbf22d7c3882ca0aa868bf1a5bb67558bdd4d5ba17",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [],
+    "status": "동일"
+  },
+  {
+    "file": "zones.csv",
+    "newRows": 10,
+    "newSha256": "b4c65771dabbe8726c58f21520bf5c20f3bff91aab981ba65bc52dfde05471cb",
+    "oldRows": 10,
+    "oldSha256": "366f1b5b7445db8858610dfe78cd126c53433dea8019eb4e8d0f42a7dd642fc3",
+    "removedColumns": [],
+    "addedColumns": [],
+    "changes": [
+      {
+        "key": [
+          "zone03"
+        ],
+        "fields": {
+          "boss_ko": {
+            "old": "이무기(30일 데모 최종보스)",
+            "new": "이무기"
+          }
+        }
+      }
+    ],
+    "status": "내용·스키마 변경"
+  }
+]

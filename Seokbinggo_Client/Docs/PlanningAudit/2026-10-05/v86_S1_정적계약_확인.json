@@ -1,0 +1,30 @@
+{
+  "validation": "source inspection only; no runtime behavior execution",
+  "checks": {
+    "completion_states_11": true,
+    "p0_9_p1_6": true,
+    "schema28_legacy23": true,
+    "completion_and_selection_and_pending_dawn_serialized": true,
+    "restore_suspends_callbacks": true,
+    "reevaluate_after_all_restore_stages": true,
+    "rollback_and_editor_roundtrip_do_not_reevaluate": true,
+    "module_tile_and_object_sources": true,
+    "g09_after_visible_frame": true,
+    "hint_from_csv": true,
+    "no_temperature_constants": true,
+    "new_script_project_includes": true
+  },
+  "states": [
+    "boss_defeated",
+    "core_modules_complete",
+    "core_sealed",
+    "dawn_storage_result",
+    "item_count_ge",
+    "item_owned",
+    "module_installed",
+    "slept",
+    "station_installed",
+    "storage_condition_met",
+    "storage_contains"
+  ]
+}

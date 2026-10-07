@@ -1,0 +1,497 @@
+[
+  {
+    "path": "Fan_attack.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          1,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          3,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "cc95526375d99681a1701c8bf47b8dde9b8abeb41e5ca052d7e62b8c8fc1fdf9",
+      "a428ed18cd426026e088ebf3f35cc360dbd434ab2c224cd6ea59d0189722e084",
+      "31b50789c59414e9bc9276b159a2837bb40fbdb1760ed484aa7f7b5cad285ff2",
+      "dd2e45c3147d8659b7d09b3b18294ccce5f43bbcfa084415976ab4a4136ffa3f",
+      "12a25c97ce7f1e1f9ff813af28ce61ee7dd6fd772962b36c8655d96bd83d2d50"
+    ]
+  },
+  {
+    "path": "fan_cold_attack.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          1,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          3,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "1514ac32a4518628768727d67c56d6f79521f26f29d70839b34044022e8e996a",
+      "6fa503f8ba0ad11fb044c40ac36743930316cdcca5f7df08b03f1da4dbb989bf",
+      "18ead8a7134e6931bc91cbd6d4b3d40d94bf53cd15b56320f0dd99c57385d84a",
+      "23ffbf738da0e26ebe70d04870397ca8b71938ff39ea2f1f058e72e7c29b0b07",
+      "460ea7e14cf7ccf77e005b0b7dbaf7521eb383ba829bcb7febd5ab7f95bdae86"
+    ]
+  },
+  {
+    "path": "fan_iron_attack.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          1,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          3,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "91a0398b805eff6bc77c632f61296087919538a959dbc735d38a4fa9678da3e1",
+      "853994f8515b2cbc6da49bb0e381009938f23af035f614467287489038d7f161",
+      "843c42fa14033419cf065f1513381a11fb946efa6c7b8f9fa4f5a95712265056",
+      "72db4f13d4ebf8222d27bc26ad0055b42e077fb9b221e914c3fb7cc5ec5d9cca",
+      "6f48c8b44a5734226bb30a91413787a933940a4e3f6aba8397ee66e67f868cdc"
+    ]
+  },
+  {
+    "path": "Fan_seolpungseon_attack.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          1,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          2,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "052f2ab0bdde2b2322d846a365b87a4bf17711cbb3524813493639bd574feab0",
+      "72905d9fcec5ef380bc9f30855782134c53899f2a339a2e0be08ea0572beb211",
+      "b95a65d0df0637891933fb131eebd0cfab8404d29a0ba48f676848af9037df3a",
+      "d76a271f3b60af9fbdac4db627e79ebdce7ce385d2adf7a2b23d514da15984cb",
+      "c54b9cd38907333719a5579d5333d1488476dc9714a63126fbb95eb36b48a08d"
+    ]
+  },
+  {
+    "path": "fan_seonge_attack.aseprite",
+    "canvas": [
+      32,
+      32
+    ],
+    "frames": 5,
+    "depth": 32,
+    "tags": [],
+    "bounds": [
+      {
+        "frame": 0,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          7,
+          2,
+          25,
+          32
+        ]
+      },
+      {
+        "frame": 1,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          9,
+          0,
+          26,
+          32
+        ]
+      },
+      {
+        "frame": 2,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          1,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 3,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          3,
+          2,
+          24,
+          32
+        ]
+      },
+      {
+        "frame": 4,
+        "duration_ms": 100,
+        "full_bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "opaque_bounds": [
+          6,
+          2,
+          25,
+          32
+        ]
+      }
+    ],
+    "pixel_hashes": [
+      "87271bc48d5518cd17fe56954032ecedff33eeb29fadfd45bfc0e197e4b33858",
+      "878f4772886ae89545ec694c0b7c5b8ca5444d97a254b94b8efa901d898acddf",
+      "f57e63e50de6d628cc9047b44d5f26d48abde3b16ea0e43712d6d5ba98f0227d",
+      "76bf089dd538fb6b6df024bba95cd77b0c91aacb77cdd0c1efef2379b107737d",
+      "edeca82fc16f4a02248ccef70a3871d892073444eaeeb43bcb52e12a0394d3c4"
+    ]
+  }
+]

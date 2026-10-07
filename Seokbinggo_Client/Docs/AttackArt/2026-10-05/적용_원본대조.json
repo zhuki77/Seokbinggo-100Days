@@ -1,0 +1,80 @@
+[
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/arrow_투사체.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\arrow_projectile.aseprite",
+    "sha256": "d2431fb65c8c8117626c78992b827a299a0c66835cad08a1beb789a08cfde5f4"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/stone_sling_shot_투사체.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\sling_stone_projectile.aseprite",
+    "sha256": "1fa3a03f613140b104edf17506551a8ba1e0d05fc7306521a31e9caab02daae4"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/weapon_attack/dokkaebi_club_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\dokkaebi_club_attack.aseprite",
+    "sha256": "e7d046668aea9a1cbfbe363105971ef4c3d66acbe82414081687bbb562f3da37"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/weapon_attack/gakgung_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\gakgung_attack.aseprite",
+    "sha256": "ab12bd58493fbd3450a6f8bdadef420f90b3609710c6a38d74adfe474dc6da25"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/weapon_attack/ice_root_bow_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\ice_root_bow_attack.aseprite",
+    "sha256": "5d918aac85bf2c59d00a693be50d951e3fdabdd99fa6a83e3dfa79c104cc95eb"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/weapon_attack/seonge_gakgung_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\seonge_gakgung_attack.aseprite",
+    "sha256": "aae07f3ca1eb0e74ab007f8c7c220e9563fe7b0aec61b1da192a4fbd7d245d47"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "attack_file/weapon_attack/straw_sling_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\straw_sling_attack.aseprite",
+    "sha256": "1e7e00401a832545e774d0e88c2116ec9cd669e32e6a128ba8257db66e73458c"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\attack_file.zip",
+    "entry": "Player-전체수정.aseprite",
+    "destination": "Assets\\Art\\Characters\\player_frostclaw.aseprite",
+    "sha256": "10aa6c45aa9dfd5875a94a82b527838da5d41334628506a7d6c2ffc47319bd82"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\Fan_attack.zip",
+    "entry": "Fan_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\hapjukseon_attack.aseprite",
+    "sha256": "b5ea0e5c4fe9c4bd25af452e3b0cae62393e628eab3fdf89e366e33db6ef9a0a"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\Fan_attack.zip",
+    "entry": "fan_cold_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\cold_wave_fan_attack.aseprite",
+    "sha256": "749c64e111f6a483571e27fd4f8a00c8999e35838d1496e29deeccd0e6450a18"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\Fan_attack.zip",
+    "entry": "fan_iron_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\cheolseon_attack.aseprite",
+    "sha256": "4dc2a40c811595811dc0599ecdc5cd94b9aa174dbed56a41c1a4210d804d747c"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\Fan_attack.zip",
+    "entry": "Fan_seolpungseon_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\seolpungseon_attack.aseprite",
+    "sha256": "3247e02fcc0e387c3f6c031ce31d35d7ac275b74931c2fe790604590fcc06c81"
+  },
+  {
+    "source": "D:\\다운로드\\박태영\\대경잼\\Fan_attack.zip",
+    "entry": "fan_seonge_attack.aseprite",
+    "destination": "Assets\\Art\\Gameplay\\WeaponAttacks\\seonge_fan_attack.aseprite",
+    "sha256": "3b32fe1e74eaf70dd17efcd7e41640e8d340fe9fc366a2a19b83791ac5926d57"
+  }
+]

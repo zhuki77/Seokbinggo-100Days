@@ -1,0 +1,546 @@
+[
+  {
+    "id": "altar_echo",
+    "source": "altar_echo.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/altar_echo.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "0d25da98d45fc5defc2ee132092e42a80daad6b7b7021eed673e6cd993cf491c",
+    "result_sha256": "0d25da98d45fc5defc2ee132092e42a80daad6b7b7021eed673e6cd993cf491c"
+  },
+  {
+    "id": "clay_hand",
+    "source": "clay_hand.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/clay_hand.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "7c1711dae1459972a74970fff4da18366aaba61d79d6689a8ea3b54a5d14e10a",
+    "result_sha256": "7c1711dae1459972a74970fff4da18366aaba61d79d6689a8ea3b54a5d14e10a"
+  },
+  {
+    "id": "drought_heart_shard",
+    "source": "drought_heart_shard.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/drought_heart_shard.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "84799ced78623b641343fd82a1ba745ab09c67a8810fd73b848fe6a0645b68b6",
+    "result_sha256": "84799ced78623b641343fd82a1ba745ab09c67a8810fd73b848fe6a0645b68b6"
+  },
+  {
+    "id": "dry_trace",
+    "source": "dry_trace.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/dry_trace.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "33ec992c8cf6add2674b1729e9febcead9527ca48c3fb75b9bb619b4fb5e2086",
+    "result_sha256": "33ec992c8cf6add2674b1729e9febcead9527ca48c3fb75b9bb619b4fb5e2086"
+  },
+  {
+    "id": "frost_map",
+    "source": "frost_map.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/frost_map.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "998bdeeabffd71baa7b0baff263437018e0d5c185d18d838e2ec27cce439a888",
+    "result_sha256": "998bdeeabffd71baa7b0baff263437018e0d5c185d18d838e2ec27cce439a888"
+  },
+  {
+    "id": "gate_mark",
+    "source": "gate_mark.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/gate_mark.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "876463544c3dbd8e87f4f4a9abacc0dd41165e6f2a7a7e7bca993c6fd2888d62",
+    "result_sha256": "876463544c3dbd8e87f4f4a9abacc0dd41165e6f2a7a7e7bca993c6fd2888d62"
+  },
+  {
+    "id": "iron_appetite",
+    "source": "iron_appetite.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/iron_appetite.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "d49dd685d61dee1c45933ce78c40207c9ff6bbe5b99944685d949d90002bd282",
+    "result_sha256": "d49dd685d61dee1c45933ce78c40207c9ff6bbe5b99944685d949d90002bd282"
+  },
+  {
+    "id": "magpie_bell",
+    "source": "magpie_bell.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/magpie_bell.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "65e82ab3bdb23c64bfcb75ad942871c315b7d23c181c4ce5c9d16e3e1e30d5c7",
+    "result_sha256": "65e82ab3bdb23c64bfcb75ad942871c315b7d23c181c4ce5c9d16e3e1e30d5c7"
+  },
+  {
+    "id": "minhwa_ink",
+    "source": "minhwa_ink.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/minhwa_ink.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "3f2f0b79055b67b44d9657bb41d4103c31bc5efe1cc28d381b20b8f20c4cc458",
+    "result_sha256": "3f2f0b79055b67b44d9657bb41d4103c31bc5efe1cc28d381b20b8f20c4cc458"
+  },
+  {
+    "id": "old_key",
+    "source": "old_key.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/old_key.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "d2b63cf929e0298f1680eb630db11843e9deaae6e85442e743a8a5ac00fc54d5",
+    "result_sha256": "d2b63cf929e0298f1680eb630db11843e9deaae6e85442e743a8a5ac00fc54d5"
+  },
+  {
+    "id": "perfect_core",
+    "source": "perfect_core.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/perfect_core.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "e3ef778b1a173dd8347987d6253585dc28d49c3611fd234abd0910e2cf5dad28",
+    "result_sha256": "e3ef778b1a173dd8347987d6253585dc28d49c3611fd234abd0910e2cf5dad28"
+  },
+  {
+    "id": "skate_pad",
+    "source": "skate_pad.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/skate_pad.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "1be4a8e9d5f4e8003d9493926141f2150fecfae405a9328ab1c3130e331ed1e6",
+    "result_sha256": "1be4a8e9d5f4e8003d9493926141f2150fecfae405a9328ab1c3130e331ed1e6"
+  },
+  {
+    "id": "ssireum_knot",
+    "source": "ssireum_knot.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/ssireum_knot.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "b050341a0887b434e84dbb80819b009388b5dc9ee6cd0f6ea2e656a926e7e8b1",
+    "result_sha256": "b050341a0887b434e84dbb80819b009388b5dc9ee6cd0f6ea2e656a926e7e8b1"
+  },
+  {
+    "id": "tiger_gait",
+    "source": "tiger_gait.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/tiger_gait.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "abb31378a6c9f5fa9a4816a463d5fda294f54cd204c2a2607cd1bf76184438e9",
+    "result_sha256": "abb31378a6c9f5fa9a4816a463d5fda294f54cd204c2a2607cd1bf76184438e9"
+  },
+  {
+    "id": "yeouiju_shard",
+    "source": "yeouiju_shard.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/yeouiju_shard.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "59310b5a0709346c78d410dd29f75982797342efc44330002054e957ed68a608",
+    "result_sha256": "59310b5a0709346c78d410dd29f75982797342efc44330002054e957ed68a608"
+  },
+  {
+    "id": "cold_wave_battery",
+    "source": "icon/cold_wave_battery_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/cold_wave_battery_icon.aseprite",
+    "canvas_normalized": true,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      32,
+      32
+    ],
+    "frames": 4,
+    "source_sha256": "c83b149d4ccfd48a151ce3b93c0e99ce476cc2a7306c0ea159f57bacb4eecd71",
+    "result_sha256": "739d0da21401f07d3ef8b746ffd95ec2dc91bba8fa05a4bb70ca3b8208707087"
+  },
+  {
+    "id": "ice_root_battery",
+    "source": "icon/ice_root_battery_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/ice_root_battery_icon.aseprite",
+    "canvas_normalized": true,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      32,
+      32
+    ],
+    "frames": 4,
+    "source_sha256": "e45daeb96dab242f5c6b2041967e83a102e5802b3f6d2a4ff8ece8256e0d1653",
+    "result_sha256": "99da1fdbf2e11591a5921bfd4949cf6b3cb3bae4157300419c73e7cc72595f3a"
+  },
+  {
+    "id": "singijeon_cart",
+    "source": "icon/신기전_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/singijeon_cart_icon.aseprite",
+    "canvas_normalized": true,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      28,
+      32
+    ],
+    "frames": 1,
+    "source_sha256": "723581ea461c13f45e46dda53a1e9728d60f1b9e34283e23758925494d957830",
+    "result_sha256": "b6baa6ada2c7d1864f9537a1e66d173d6410159a23ab36a99d2ede97f8717217"
+  },
+  {
+    "id": "door",
+    "source": "icon/door_open_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/door_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "501f04e8c98670c16c5762725b3a8bd8d43a7812c9c472db6acc9631823a8855",
+    "result_sha256": "501f04e8c98670c16c5762725b3a8bd8d43a7812c9c472db6acc9631823a8855"
+  },
+  {
+    "id": "gong_tower",
+    "source": "icon/gong_tower_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/gong_tower_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "c5a2f1aa5744c3a51185a29c7dfff1b978071006f00f938f37ccc6a8ddbaa979",
+    "result_sha256": "c5a2f1aa5744c3a51185a29c7dfff1b978071006f00f938f37ccc6a8ddbaa979"
+  },
+  {
+    "id": "haetae_statue",
+    "source": "icon/haetae_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/haetae_statue_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "9ad89efa58d6506fa8123d064a3af800567cf55d6e07f934d68acfebc9e7ebd8",
+    "result_sha256": "9ad89efa58d6506fa8123d064a3af800567cf55d6e07f934d68acfebc9e7ebd8"
+  },
+  {
+    "id": "jangdok",
+    "source": "icon/m_jangdok_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/jangdok_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "9351bfc273f357de3c79014ccee0b4974356255f65b8274f52d873cd2df3f755",
+    "result_sha256": "9351bfc273f357de3c79014ccee0b4974356255f65b8274f52d873cd2df3f755"
+  },
+  {
+    "id": "ice_jar",
+    "source": "icon/m_jangdok_3_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/ice_jar_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "8bc3fbd2b562d78389da3d1ac330822b8e9b9f4b0208244c2efbc61f5dfc00f3",
+    "result_sha256": "8bc3fbd2b562d78389da3d1ac330822b8e9b9f4b0208244c2efbc61f5dfc00f3"
+  },
+  {
+    "id": "plaster_doll",
+    "source": "icon/plaster_doll_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/plaster_doll_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "59dd3bd9a429775e0a46f2b6a7ad62ba0156c4e2736432a4aa2883c12999ea44",
+    "result_sha256": "59dd3bd9a429775e0a46f2b6a7ad62ba0156c4e2736432a4aa2883c12999ea44"
+  },
+  {
+    "id": "scarecrow",
+    "source": "icon/scarecrow_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/scarecrow_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "45d15d1db812a61d7ed163f902eb805e4af4ce6fd1b802925b6c237f64098444",
+    "result_sha256": "45d15d1db812a61d7ed163f902eb805e4af4ce6fd1b802925b6c237f64098444"
+  },
+  {
+    "id": "tal_waypoint",
+    "source": "icon/tal_waypoint_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/tal_waypoint_icon.aseprite",
+    "canvas_normalized": true,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      32
+    ],
+    "frames": 1,
+    "source_sha256": "ff50cc192d9e4545f12bd427bce7ce73e33a9183014e7c6ea8cc792632df326f",
+    "result_sha256": "b0bb5df401e6737be88fbd28f1105edd4536aff90a88b1a69ae806f6098b6a63"
+  },
+  {
+    "id": "dokkaebi_fire_tower",
+    "source": "icon/turret_lantern_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/dokkaebi_fire_tower_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "7a885d65e6c78986ab1f1e8633192441f5b29f59511291bd8d982c80d6bbc7ed",
+    "result_sha256": "7a885d65e6c78986ab1f1e8633192441f5b29f59511291bd8d982c80d6bbc7ed"
+  },
+  {
+    "id": "seonge_tower",
+    "source": "icon/turret_lantern_seonge_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/seonge_tower_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "eda3384272d17a80a522d815a0dde5750c23d437d96afea07e8bcf074f838168",
+    "result_sha256": "eda3384272d17a80a522d815a0dde5750c23d437d96afea07e8bcf074f838168"
+  },
+  {
+    "id": "cold_wave_tower",
+    "source": "icon/turret_lantern_cold_wave_icon.aseprite",
+    "target": "Assets/Art/Items/DeliveredFinal/cold_wave_tower_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "7d27940ce378d70bd57c9384203bc6ad39f22b8dfb067542eb027deae9fa69d8",
+    "result_sha256": "7d27940ce378d70bd57c9384203bc6ad39f22b8dfb067542eb027deae9fa69d8"
+  },
+  {
+    "id": "yokai_tear",
+    "source": "요괴 눈물.aseprite",
+    "target": "Assets/Art/UI/yokai_tear_balance.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 4,
+    "source_sha256": "0a2dde75f4c8769cb112e9ca52128acdd4a01fb2369841b04e0a830562b760df",
+    "result_sha256": "0a2dde75f4c8769cb112e9ca52128acdd4a01fb2369841b04e0a830562b760df"
+  },
+  {
+    "id": "deathTearPouch",
+    "source": "DeathTearPouch이거원한거 맞는지 모르겠는데 아니면 수정요청부탁드립니다.aseprite",
+    "target": "Assets/Art/Gameplay/death_tear_pouch.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "35d0fcccd28593709ca16c32999b308f3d81b954a136481d8051004763a31cae",
+    "result_sha256": "35d0fcccd28593709ca16c32999b308f3d81b954a136481d8051004763a31cae"
+  },
+  {
+    "id": "hypothermiaStatusIcon",
+    "source": "HypothermiaStatus_Icon.aseprite",
+    "target": "Assets/Art/Gameplay/hypothermia_status_icon.aseprite",
+    "canvas_normalized": false,
+    "source_canvas": [
+      16,
+      16
+    ],
+    "result_canvas": [
+      16,
+      16
+    ],
+    "frames": 1,
+    "source_sha256": "99c80d54b9acc0b1dcbac4e9ba8cd094f914e9d68ce3f5d1526f5cbc8a0d6531",
+    "result_sha256": "99c80d54b9acc0b1dcbac4e9ba8cd094f914e9d68ce3f5d1526f5cbc8a0d6531"
+  }
+]

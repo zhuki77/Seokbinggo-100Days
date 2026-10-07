@@ -1,0 +1,173 @@
+﻿압축 내 경로,크기(px),프레임,대응 ID,용도,판정,현재 참조 원본,SHA256
+본선/16x blocks/t_bedrock.aseprite,16×16,1,bedrock,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/bedrock.aseprite,ca389ddd2ffe84fed6c2a60b32ae40d37557ea9fa27fd0cfbca86f24abe1fa83
+본선/16x blocks/t_clay.aseprite,16×16,1,clay,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/clay.aseprite,c7cb7e80a19e3c115ec1caba226d97894c10cae774963af7c9cbe49c1001d13c
+본선/16x blocks/t_coal.aseprite,16×16,1,coal,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/coal.aseprite,27a1e2b747ff4bdff06e447cfd2fde99e3a577017648686dd5897783c0b5776d
+본선/16x blocks/t_copper.aseprite,16×16,1,copper_ore,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/copper_ore.aseprite,619682b019abd6f996101e68508d2e4cdc7792e11168e35e950699dcc24df076
+본선/16x blocks/t_deep_cold_wave.aseprite,16×16,1,cold_wave_ore,전경 타일,전용 연결 없음·수신 원본 있음,,8941929a4ea608882ad51245912118ffa5010219040e78bcec43993204b166a3
+본선/16x blocks/t_deep_frost_essence.aseprite,16×16,1,frost_essence,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/frost_essence.aseprite,9ad12e51b44446443413fd563b6bea4b9ad5196c63daa24182de2ded644b44e0
+본선/16x blocks/t_deep_icesteel.aseprite,16×16,1,icesteel_ore,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/icesteel_ore.aseprite,3a2df109c83dab465c8c3ba38e87c2391115310c18120688d4194d32840cc5cd
+본선/16x blocks/t_deep_ice_shard.aseprite,16×16,1,ice_shard,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/ice_shard.aseprite,1816d5f993dde1d827754986305fdb7d1b851c86b67ad83005547263026d8e3f
+본선/16x blocks/t_deep_seonge.aseprite,16×16,1,seonge_ore,전경 타일,전용 연결 없음·수신 원본 있음,,1e2a65a63e7d474395b4c015726344ca8b190f1fba1a9d28e732f936ff4e3c94
+본선/16x blocks/t_deep_stone.aseprite,16×16,1,stone_deep,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/stone_deep.aseprite,c3c9a5b3e82898e56e110c2b34a2b6ba797ec67c284fad338e0fdd50df638b6e
+본선/16x blocks/t_dirt.aseprite,16×16,1,dirt,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/dirt.aseprite,c9d68985fcc5c3ec4b9a90db77a7dcbdeed786e61888bb268a988f57a2a7b517
+본선/16x blocks/t_dry_grass.aseprite,16×16,1,grass_dry,장식,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Decorations/grass_dry.aseprite,a9e041a742bab3de66cb670bcc9f535ce8b0791c74f78306fd9bc3b97851eec6
+본선/16x blocks/t_grass.aseprite,16×16,1,grass,장식,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Decorations/grass.aseprite,9001e1279d08e77f0228da09ec6d5845e08db2eb1309eba2614aedeee241c115
+본선/16x blocks/t_ice_lake.aseprite,16×16,1,ice_lake,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/ice_lake.aseprite,1d5874c083c67a1331c539bf4acf94cdb35516ffae28d3a1170cbfb755efff81
+본선/16x blocks/t_iron.aseprite,16×16,1,iron_ore,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/iron_ore.aseprite,5789e75edd64983d18bfa53297555c19c79bb5e39f3e8918e31bc6cb49945575
+본선/16x blocks/t_stone.aseprite,16×16,1,stone,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/stone.aseprite,0849b5d84a5d419eb261a1cd1bf89fe539d7b619dc250727afd533a3a65714cf
+본선/16x blocks/t_stone_mid.aseprite,16×16,1,stone_mid,전경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/stone_mid.aseprite,16c354ca9a5a73a095ff81293e4350249362c5a4f4410e052579c679fe5a9461
+본선/16x blocks/단열_M/m_roof.aseprite,16×16,1,roof,설치 벽·지붕,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/roof.aseprite,f29f3fb7bc78fa3666a51b5b4aac6155de21cc88a1212671bbf895607d7ac02a
+본선/16x blocks/단열_M/m_roof_2.aseprite,16×16,1,roof,설치 벽·지붕,용도/변형 확인 필요,Assets/Art/Buildings/roof.aseprite,2f9a429bc1a5575649a869fa99cbc0acc00b53570e6c7cbf68cff347d2feb7da
+본선/16x blocks/단열_M/m_wall.aseprite,16×16,1,insul_wall,설치 벽·지붕,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/insul_wall.aseprite,2350d296e8e567967026bdbb7dc22adf527b4f0797f5a910dd243b4f2e8ba382
+본선/16x blocks/단열_M/m_wall_clay.aseprite,16×16,1,clay_plaster,설치 벽·지붕,용도/변형 확인 필요,Assets/Art/Buildings/clay_plaster.aseprite,4d6dbdff0ccac963794e91a067c43f7b565ce9a070980ea4cb4f7fadbc42b062
+본선/16x blocks/단열_M/m_wall_iron.aseprite,16×16,1,iron_insul_wall,설치 벽·지붕,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/iron_insul_wall.aseprite,7b3835ce5eaebd6a755953431c8d92703bb616b2b7f2de17a016794571e11b79
+본선/16x blocks/배경_BG/t_bg_deep_stone.aseprite,16×16,1,bg_deep,배경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_bg_deep.aseprite,b5b42587615f5a9b4be897a07ad7dba9c93b4b7a55794d6fe504b6d43418ef58
+본선/16x blocks/배경_BG/t_bg_ice_lake.aseprite,16×16,1,미정: 얼음호수 배경,배경 타일,용도/변형 확인 필요,,18ffedad8fd9d840d3d553b274f713d62b81e0bae5a075c9c5c5e7758bf713ab
+본선/16x blocks/배경_BG/t_dg_dirt.aseprite,16×16,1,bg_dirt,배경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_bg_dirt.aseprite,950c44b1fc6db66c97b0aa34082ce9446b53e596538d14bbe3945115fb4713ed
+본선/16x blocks/배경_BG/t_dg_stone.aseprite,16×16,1,bg_stone,배경 타일,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_bg_stone.aseprite,06b75b517f1ce4d11cdc122e50a8407baca2032e214dd8e9a78411bfac790f39
+본선/16x blocks/추가블럭/얼음동굴천장이나 바닥에 있으면 이쁠거같아요.aseprite,16×16,1,미정: 얼음동굴 장식,추가 제안,용도/변형 확인 필요,,1dee331b721ab1776e6e918940eb1a18beebd6fae27ec191d149a2ba78a44679
+본선/Armor/cold_wave/armor_cold_wave.aseprite,16×16,1,cold_wave_armor,장비 아이콘,전용 연결 없음·수신 원본 있음,,6f23b7c318e38de2984d75831733863db1d6bfadbf67a6aabcbc2f70079d8ebf
+본선/Armor/cold_wave/boots_cold_wave.aseprite,16×16,1,cold_wave_boots,장비 아이콘,전용 연결 없음·수신 원본 있음,,5a9bd7fdeb2831a7cf9201f9613742a66438bfb5d72ac7e12bb88190b478f150
+본선/Armor/cold_wave/helm_cold_wave.aseprite,16×16,1,cold_wave_helm,장비 아이콘,전용 연결 없음·수신 원본 있음,,ba80a28920255ba79255b271960183653937671a6309bf283dad145296b4b089
+본선/Armor/ice/armor_ice.aseprite,16×16,1,icesteel_armor,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/icesteel_armor.aseprite,008936b3a47a48af7d09c8b74fd22cf3c965f6c7de6e9ed343fa6c326953718a
+본선/Armor/ice/boots_ice.aseprite,16×16,1,icesteel_boots,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/icesteel_boots.aseprite,5ef448b4c1bd350a7d86ad1cbeeb206449bd29ba0f81b567a86f111ad5a804d4
+본선/Armor/ice/helm_ice.aseprite,16×16,1,icesteel_helm,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/icesteel_helm.aseprite,f0ea83a7ef9b8d0f7e18d2bb27c0d7df74f8ee0c1cfc80d0fae61bef17f4c2e5
+본선/Armor/ice_root/armor_ice_root.aseprite,16×16,1,ice_root_armor,장비 아이콘,전용 연결 없음·수신 원본 있음,,9941a3e5b09da1ff66fc6391d0111127df217f773ce5087e59c9bbfabc03ce2b
+본선/Armor/ice_root/boots_ice_root.aseprite,16×16,1,ice_root_boots,장비 아이콘,전용 연결 없음·수신 원본 있음,,d51d12d850eef5735db3f8aa087aa94fd60946b920a031c8c3eaa267926ea207
+본선/Armor/ice_root/helm_ice_root.aseprite,16×16,1,ice_root_helm,장비 아이콘,전용 연결 없음·수신 원본 있음,,361266fa282523a89a9e8e3160e00a8bb0c3428c61887e5793b30456ed94a2bf
+본선/Armor/iron/armor_iron.aseprite,16×16,1,iron_armor,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_armor.aseprite,c53851bcafb13baa98d11b6eb1b1081cf8ff107b5342e56c2ef70199e23ad087
+본선/Armor/iron/boots_iron.aseprite,16×16,1,iron_boots,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_boots.aseprite,4bb5b0ba55996462bba71b60a9bef48b9060fd653807288c0e09c4f811c4e9ab
+본선/Armor/iron/helm_iron.aseprite,16×16,1,iron_helm,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_helm.aseprite,181b0498c4a777f14ecb348aa104f5d4accfdeea8a4ef80b3eb8cc98b6c918f7
+본선/Armor/seonge/armor_seonge.aseprite,16×16,1,seonge_armor,장비 아이콘,전용 연결 없음·수신 원본 있음,,c7836150116d3e43a6b65fb769022219e62c25c4cb94fdf1d3fd66bbed27d1cf
+본선/Armor/seonge/boots_seonge.aseprite,16×16,1,seonge_boots,장비 아이콘,전용 연결 없음·수신 원본 있음,,5e15b7be272a2e131c3ce4382668624fa38e4e18198ba876f5e6e2d1ed86f991
+본선/Armor/seonge/helm_seonge.aseprite,16×16,1,seonge_helm,장비 아이콘,전용 연결 없음·수신 원본 있음,,0277af8b96c889f8ab2db18d01b764d66f0c0960c3543cf67c69b8195793e4d5
+본선/Armor/straw/armor_straw.aseprite,16×16,1,straw_armor,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/straw_armor.aseprite,27bd350df914b83247466e4acc175e3a069e9af866fadb33e8bff00030a903db
+본선/Armor/straw/boots_straw.aseprite,16×16,1,straw_boots,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/straw_boots.aseprite,a6fd0f6abc1092f7554e5aae810a03f875d4cde663332ff6cf94a6d6fb6f050a
+본선/Armor/straw/helm_straw.aseprite,16×16,1,straw_helm,장비 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/straw_helm.aseprite,7b2c8e47e07cbe4599188b5f36dcef2db263947dc8b0f944c8484da682b19f0c
+본선/Item/ACC/acc_bell.aseprite,16×16,1,bell_norigae,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/bell_norigae.aseprite,b9c41c1f78340e596b861686684238dd17818378a5de86102ced810d52b389e2
+본선/Item/ACC/acc_eye.aseprite,16×16,1,tiger_eye_bead,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/tiger_eye_bead.aseprite,1ab11bfe4e6731e182cfc8139b0627914d73bd20d7994fdd565f9aaae49ecf05
+본선/Item/ACC/acc_gamtu.aseprite,16×16,1,dokkaebi_gamtu,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/dokkaebi_gamtu.aseprite,f818ad96b285985e56384807fcc59070f3922b64946a68b5e46156651e86481f
+본선/Item/ACC/acc_iceheart.aseprite,16×16,1,ice_heart_norigae,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/ice_heart_norigae.aseprite,7d3d4edffac8e9877b12c44140a41d1cd7ef8b793cf06fd304a37247f4600730
+본선/Item/ACC/acc_pouch.aseprite,16×16,1,bokjumeoni,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/bokjumeoni.aseprite,0dd3b4252e8421c3d79c89fbb3d8ee2ac464becdd4f56708f6b704a3486875bd
+본선/Item/ACC/acc_ribbon.aseprite,16×16,1,wind_daenggi,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/wind_daenggi.aseprite,c50b07e8d27014829917de55928abf657fb3d4c52283b26383b5ea0b87cee197
+본선/Item/baekjung_bundle.aseprite,16×16,1,baekjung_bundle,아이템 아이콘,전용 연결 없음·수신 원본 있음,,9605ddd0a451d7842ec2c1a9c3d1185d66172d8e70800ed48bc3bf64221ddaf0
+본선/Item/bait.aseprite,16×16,1,iron_bait_pile,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_bait_pile.aseprite,3bfc3afd12938d80a4387b109faf6207587c7d16308231d79803d0b9c6ada3ae
+본선/Item/blaze_yeokrin.aseprite,16×16,1,blaze_yeokrin,아이템 아이콘,전용 연결 없음·수신 원본 있음,,e93ef56de190500bdde91d4d7ccbcff848d56cc0412646b715037459f5e04c6c
+본선/Item/clay.aseprite,16×16,1,clay,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/clay.aseprite,e9ba8b01c00910b840adc85ff669149b6ace0fa347a7cf99f0d4dfddb8464681
+본선/Item/cold_wave_ore.aseprite,16×16,1,cold_wave_ore,아이템 아이콘,전용 연결 없음·수신 원본 있음,,8a28b9d91c1346fa7b9320fa2b07cad19cba634f3dbca725d8d9669cb975df91
+본선/Item/drought_heart.aseprite,16×16,1,drought_heart,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/drought_heart.aseprite,fcc7343979ee4b6610e6d94edadda05fe300346816fe10cb85cb29f2d600e7ed
+본선/Item/eop_scale_mat.aseprite,16×16,1,eop_scale_mat,아이템 아이콘,전용 연결 없음·수신 원본 있음,,36d167367c41184b40244464e70f73ea1c49b0fa2cdaa9867c77ff69be014740
+본선/Item/eop_summon.aseprite,16×16,1,eop_summon,아이템 아이콘,전용 연결 없음·수신 원본 있음,,1f68ae675367979eeeb50be24a7856ccf56185c5cf8d629cccd826695223e7cd
+본선/Item/furnace_heart.aseprite,16×16,1,iron_forge_core,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_forge_core.aseprite,4e43f5f40b52093c2739ae4b4a91847aabf3096f3be7a2c026669d81c6ac8455
+본선/Item/ice_root.aseprite,16×16,1,ice_root,아이템 아이콘,전용 연결 없음·수신 원본 있음,,0cb0f2d579e38258a7e4642427dca7055b03245889bda0d272734fd98c01caf9
+본선/Item/ice_root_bundle.aseprite,16×16,1,ice_root_bundle,아이템 아이콘,전용 연결 없음·수신 원본 있음,,66bf6a8fdc0a78201b571b810b0e5b0e4ea2c1d4d8c99055ba1ab2061a31a451
+본선/Item/ingot_cold_wave.aseprite,16×16,1,cold_wave_ingot,아이템 아이콘,전용 연결 없음·수신 원본 있음,,acbf634cb0fe458131e45ccfe09d69c7ef1023c61c87a99178883b0b0caed242
+본선/Item/ingot_copper.aseprite,16×16,1,copper_ingot,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/copper_ingot.aseprite,9256bd259f361b3ae735d649a6fd5896bd535af315d951cdf8d0b943f2389242
+본선/Item/ingot_icesteel.aseprite,16×16,1,icesteel_ingot,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/icesteel_ingot.aseprite,65d406cbedd56b711d4cf8ee265f8d7b13af2bf05b0e967ed10bd5a277c7d7ba
+본선/Item/ingot_iron.aseprite,16×16,1,iron_ingot,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_ingot.aseprite,e7d75b85b60c0c457fd2e3b5a50004cbc59993a0ea510e39a7f6cf2c54abb438
+본선/Item/ingot_seonge.aseprite,16×16,1,seonge_ingot,아이템 아이콘,전용 연결 없음·수신 원본 있음,,58ca81a159446f41900733c83b24873c017ada4d64f9a46d1804d3d1ee31b480
+본선/Item/jigwi_ash.aseprite,16×16,1,jigwi_ash,아이템 아이콘,전용 연결 없음·수신 원본 있음,,00d1a269c5dbc720f2425730ca87c8bcec2e1061f6622c992918772684da6b6f
+본선/Item/jigwi_summon.aseprite,16×16,1,jigwi_summon,아이템 아이콘,전용 연결 없음·수신 원본 있음,,7ae81d3dd6218a6407d449dfaa9a7e3452465ef55301ba8a0b33f35779429688
+본선/Item/offering.aseprite,16×16,1,ice_altar_offering,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/ice_altar_offering.aseprite,345066e26d3a252a90eb3566562376f52e5ae4e9009173aa211645c6606bdc4a
+본선/Item/perfect_heart.aseprite,16×16,1,perfect_heart,아이템 아이콘,전용 연결 없음·수신 원본 있음,,4c5b53a19a775c1d3c66fe8ae0987736187e6083c41062ed1847cffabe80639b
+본선/Item/samdugumi_summon.aseprite,16×16,1,samdugumi_summon,아이템 아이콘,전용 연결 없음·수신 원본 있음,,0fd10fdf04182c7a2f402a44f71f954ff100584eb7776d4d0c7516940ea8ed74
+본선/Item/sangun_talon.aseprite,16×16,1,sangun_talon,아이템 아이콘,전용 연결 없음·수신 원본 있음,,7660dbe1dc73a6e7744c4522ad7d9a50122d1907f82d08f39b5b5e328732077f
+본선/Item/sangun_whisker.aseprite,16×16,1,sangun_whisker,아이템 아이콘,전용 연결 없음·수신 원본 있음,,4c3ee1bec98911612dc4dfb0ff5e40a34a2f79b79cc209788955b32eeb59735d
+본선/Item/satba.aseprite,16×16,1,ssireum_satba,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/ssireum_satba.aseprite,bc80147a5175e1adba542ad8e990528465a10fa88407949cae2d0f40b5e620e9
+본선/Item/three_horn_mat.aseprite,16×16,1,three_horn_mat,아이템 아이콘,전용 연결 없음·수신 원본 있음,,146ef0f42d0128338ff4bdaad4d78038c97a2e37760757f780cc926a76e45f36
+본선/Item/Weapon/claw/clawwww.aseprite,16×16,1,bare_claw,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/bare_claw.aseprite,45053de865abc73428933d4b267ce9977f82863043f77e094f754b53a3c2497c
+본선/Item/Weapon/claw/first_frost_claw.aseprite,16×16,1,first_frost_claw,아이템 아이콘,전용 연결 없음·수신 원본 있음,,ec04277307b698adef108f4d7e0cc19e2258f5f0ff4f4259de8948db9bcfd2ab
+본선/Item/Weapon/claw/ice_claw.aseprite,16×16,1,icesteel_claw,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/icesteel_claw.aseprite,029735c8bae1f49c7c44839468c0ff3d72d36822da2e891f260eacc0033f3bb6
+본선/Item/Weapon/claw/iron_claw.aseprite,16×16,1,iron_claw,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/iron_claw.aseprite,f5c3c717bfc5ab2bc11d25c062ea4161254cbf126aeb8ced8eebf0aea3bd8ed0
+본선/Item/Weapon/claw/perfect_claw.aseprite,16×16,1,perfect_claw,아이템 아이콘,전용 연결 없음·수신 원본 있음,,968045aa9685ba96fd595d1ddac9eae463feb86bf5de573d39efeb999e76e2ce
+본선/Item/Weapon/claw/sangun_claw.aseprite,16×16,1,sangun_claw,아이템 아이콘,전용 연결 없음·수신 원본 있음,,c826d801fddeee0b14c202ad6ca7b46bca774f76c16ea029370c66ec9d54297e
+본선/Item/Weapon/dokkaebi_club.aseprite,16×16,1,dokkaebi_club,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/dokkaebi_club.aseprite,563c226b281c8d2066ce684d5dac29f61d81037d68dec2ab5a8aaf68e614e625
+본선/Item/Weapon/fan/fan.aseprite,16×16,1,hapjukseon,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/hapjukseon.aseprite,824a86dba446e28650be966fc819a2d3fc425bab60a03cc16b2bd2cf61b3ad7b
+본선/Item/Weapon/fan/fan_cold_wave.aseprite,16×16,1,cold_wave_fan,아이템 아이콘,전용 연결 없음·수신 원본 있음,,08f2ffd1ce44d24af9023aecfefa2e56b46ce651c765f24fcb928f327cb3b939
+본선/Item/Weapon/fan/fan_iron.aseprite,16×16,1,cheolseon,아이템 아이콘,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/cheolseon.aseprite,2976f862c206540879cc700441d258b65039571a646d190cc0a1b7f575b08c62
+본선/Item/Weapon/fan/fan_seolpungseon.aseprite,16×16,7,seolpungseon,아이템 아이콘,전용 연결 없음·수신 원본 있음,,9d9a113016e04cfd25f7e91ad56bef5ffa52fae46a0702b08dda6a4e7191d0d6
+본선/Item/Weapon/fan/fan_seonge.aseprite,16×16,1,seonge_fan,아이템 아이콘,전용 연결 없음·수신 원본 있음,,ec71be4d74821fe95ae2741fbb5e27a0e7dc1bca07ae261647065b0870c03046
+본선/Item/Weapon/gakgung.aseprite,16×16,1,gakgung,아이템 아이콘,전용 연결 없음·수신 원본 있음,,61e334202048339546f2ca2845ba38cccaa1d521c267c8a1b10a76934c40f68e
+본선/Item/Weapon/glove1.aseprite,16×16,1,frostclaw_gauntlet,아이템 아이콘,용도/변형 확인 필요,Assets/Art/Items/frostclaw_gauntlet.aseprite,c2957d150880e34982885198d611b681184a53b55d0b0260d574db8cb9a222cb
+본선/Item/Weapon/glove2.aseprite,16×16,1,frostclaw_gauntlet,아이템 아이콘,용도/변형 확인 필요,Assets/Art/Items/frostclaw_gauntlet.aseprite,6212d6ac27630fbfe082080f3ab6386e5f0c9827511c1f21edde0200a281db90
+본선/Item/Weapon/ice_root_bow.aseprite,16×16,1,ice_root_bow,아이템 아이콘,전용 연결 없음·수신 원본 있음,,aa48951afceee7f2880c2470931c06e0e54debe4c6b0e3340f2628c7036f7a51
+본선/Item/Weapon/seonge_gakgung.aseprite,16×16,1,seonge_gakgung,아이템 아이콘,전용 연결 없음·수신 원본 있음,,2fcc6d149aa2b3f9e37fdb8b05febf567033dd3609a51e9c03a30df9cc7a0969
+본선/Item/Weapon/straw_sling.aseprite,16×16,1,straw_sling,아이템 아이콘,전용 연결 없음·수신 원본 있음,,e5c8e9aa4f78feb1dde2b4a426269ecba6351db6849b0b7e4835ca180daca46b
+본선/Item/Weapon/whipfan_ice_roots.aseprite,16×16,1,ice_root_whipfan,아이템 아이콘,전용 연결 없음·수신 원본 있음,,c47fd644235f85290b6e28c08ef1723cbac336bae9dc11c89727da91de7e198b
+본선/Item/yeoiju_claw.aseprite,16×16,1,yeouiju_claw,아이템 아이콘,전용 연결 없음·수신 원본 있음,,c7a8b1b782d8bd6ca1a04d5a55a8abe3ac931d570a4555d7cc0ac2a66c986d6e
+본선/Item/yeongno_tooth.aseprite,16×16,1,yeongno_tooth,아이템 아이콘,전용 연결 없음·수신 원본 있음,,696dabf24e8f8545f2949bec7f6295e654e1b599806262c908f4eef2da2e6f43
+본선/Item/버섯/oyster_mushroom.aseprite,16×16,1,oyster_mushroom,아이템 아이콘,전용 연결 없음·수신 원본 있음,,2d138dc871d7790ec9994add6b8f70d2a72add6737d16ae659c041dd2874dd82
+본선/Item/버섯/shiitake.aseprite,16×16,1,shiitake,아이템 아이콘,전용 연결 없음·수신 원본 있음,,3fd44fef7432a8eae510393ca4152d214aa132e0a7570922f1f7caad84aefdac
+본선/Item/부적/tal_frost.aseprite,16×16,1,tal_frost,아이템 아이콘,전용 연결 없음·수신 원본 있음,,a789c17b59589de4c5626ff30095f02a0150c49074268e282444580e5a11d4cd
+본선/Item/부적/tal_hide.aseprite,16×16,1,tal_hide,아이템 아이콘,전용 연결 없음·수신 원본 있음,,0893f7142b540f5a1ac87927f30d5ea6517ceecc29d66ff5e37e15c8aacd851e
+본선/Item/부적/tal_return.aseprite,16×16,1,tal_return,아이템 아이콘,전용 연결 없음·수신 원본 있음,,c6b240fbb0d5d34cace924148879590f13fbbcf76439c9a9b97a833b92e193c3
+본선/Item/부적/tal_stride.aseprite,16×16,1,tal_stride,아이템 아이콘,전용 연결 없음·수신 원본 있음,,aa6f0c50257b8fe7b5c84feb426189c47041460ae10624404d7545c7747f12b4
+본선/Item/부적/tal_waypoint.aseprite,16×32,1,tal_waypoint,이정표 설치물,전용 연결 없음·수신 원본 있음,,b0bb5df401e6737be88fbd28f1105edd4536aff90a88b1a69ae806f6098b6a63
+본선/Item/부적/tal_waypoint2.aseprite,16×16,1,tal_waypoint,아이템 아이콘,전용 연결 없음·수신 원본 있음,,51a689c6fccb7ddb7501e9c92efedff7b8794bcb12ecaf5382175d115979710f
+본선/Item/추가 아이템/뭔가 필요할수도 있을거같아서.aseprite,16×16,1,뭔가 필요할수도 있을거같아서,아이템 아이콘,용도/변형 확인 필요,,3e9be24dfa4f37c53171954d6abd51cafafbb39e3730d266f40384be5e9c2043
+본선/NPC/2mugi/2mugi.aseprite,16×16,1,imugi,이무기 부위,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Characters/imugi_head2.aseprite,678ccecf60910a297ee5324255d983952154555d324a1f3bffc5d289390d38db
+본선/NPC/2mugi/2mugi_body.aseprite,8×8,1,imugi_body,이무기 부위,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Characters/imugi_body.aseprite,9b5233053f41b7eeb6b62123eaa96c0cb5b6c2f3f3b003f35a24c7b408940c17
+본선/NPC/2mugi/2mugi_last_body.aseprite,8×8,1,imugi_post_tail,이무기 부위,용도/변형 확인 필요,Assets/Art/Characters/imugi_post_tail.aseprite,8520daf911360552ef78e3029233eceab14bdacaec1c33e4dc1811d58f8ce446
+본선/NPC/2mugi/2mugi_mid_body.aseprite,8×8,1,imugi_pre_tail,이무기 부위,용도/변형 확인 필요,Assets/Art/Characters/imugi_pre_tail.aseprite,b7a6be2d0900875ced89c91829858ce87ca774d482d83ed6f5d6818a29639c67
+본선/NPC/Player.aseprite,32×32,29,player,플레이어 애니메이션,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Characters/player_frostclaw.aseprite,49ee394b3322993adce49b6f3bf8a6f747984f9c64786bb8532017196ff0cba4
+본선/NPC/강철/강철_body.aseprite,16×16,1,gangcheol_body,강철 부위,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Characters/gangcheol_body.png,7b42e43e1e47883ea157f8faae974c1c9e51773cafa08d2170f85705119e165a
+본선/NPC/강철/강철_hand.aseprite,16×16,4,미정: 강철 손 부위,강철 부위,용도/변형 확인 필요,,3aaa2b1982e429ddfc314cba7b6341a22d1050b5f6deace346bd9514f710cd4b
+본선/NPC/강철/강철_head.aseprite,32×32,4,gangcheol,강철 부위,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Characters/gangcheol.aseprite,dfb4ba4ebb4580100396fccb3ac13deeb294aca1e0891e8561e4f5c27c214f69
+본선/NPC/강철/강철_last_body.aseprite,16×16,1,gangcheol_post_tail,강철 부위,용도/변형 확인 필요,Assets/Art/Characters/gangcheol_pre_tail.aseprite,d924202f439365993842cb3f66bbb871017e5c7637a84998d14ee0b8701c21de
+본선/NPC/강철/강철_midle_body.aseprite,16×16,1,gangcheol_pre_tail,강철 부위,용도/변형 확인 필요,Assets/Art/Characters/gangcheol_post_tail.aseprite,e0e0d8f69b6444efde4a53f26eb18e4981a268790145df7d082a07baa069347a
+본선/NPC/야광귀.aseprite,16×16,7,yakwang,야광귀 애니메이션,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Characters/yakwang.aseprite,49ca213a1666bda8c7c6728a20b5e891a1cde4fa5a43bf927a4e2a0018bdd6c4
+본선/Object/altar/altar0.aseprite,16×16,1,ice_altar_0,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_altar_0.aseprite,deb16a4473aa1e476dca8aba451f78287a9000e3d3de3634b98cef85e3120636
+본선/Object/altar/altar1.aseprite,16×16,1,ice_altar_1,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_altar_1.aseprite,0478f761b8cb9e74574942c253a7c11e90ce5549e0e691508f6a3689013d74ea
+본선/Object/altar/altar2.aseprite,16×16,1,ice_altar_2,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_altar_2.aseprite,7943a12ad39c162ee7f5c80e2cf281dbc197e2c822de16112ce0f0dfb67aa0d4
+본선/Object/altar/altar3.aseprite,16×16,1,ice_altar_3,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/t_altar_3.aseprite,0bbb1f73ac42ac53761fb18f68bc7d22d0c78efd6b95ac47735421ced5525816
+본선/Object/altar/t_altar.aseprite,32×32,1,ice_altar,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Sprites/Temp/ice_altar_texture.png,cdcc0c8b92d838eb9194230d689b640bce2f5244710036ae82a50bbf2e19ea9f
+본선/Object/arrow/arrow_supply.aseprite,16×32,1,arrow_supply,월드 스프라이트,전용 연결 없음·수신 원본 있음,,14e406b9a396d49db523609c932fbf6cf92d2a4bfb3950b209bf435719471eb5
+본선/Object/arrow/arrow_supply2.aseprite,16×32,1,arrow_supply,월드 스프라이트,전용 연결 없음·수신 원본 있음,,b51644cb6c0b19ebb58978db2e25c37e7609e73b64e4c082d8760940a48541a1
+본선/Object/arrow/arrow_supply3.aseprite,16×16,1,arrow_supply,아이템 아이콘,전용 연결 없음·수신 원본 있음,,fe1229f3ce936652052734a42ef88c712657371f528707cbaf03ff50c7ef3c15
+본선/Object/bell_rope/bell_rope.aseprite,16×16,1,bell_rope,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/bell_rope.aseprite,28e18a32af82c5c24de537acb6d2a37f62ff53b323981db6d6d77acf7cc3f4a9
+본선/Object/bell_rope/frost_bell_rope.aseprite,16×16,1,frost_bell_rope,월드 스프라이트,전용 연결 없음·수신 원본 있음,,030aabb3a14c51d5e62b4ab2367dfc6ca46c28a46cf156e250f4a1cda7e76462
+본선/Object/bell_rope/iron_bell_rope.aseprite,16×16,1,iron_bell_rope,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/iron_bell_rope.aseprite,5fcfb8031cd94c130054f18cb6192a22de41c843dcf823e826686df6d125745b
+본선/Object/Catnp.aseprite,16×16,1,catnip,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/catnip.aseprite,13d82c163d9780b9798109bb36bb36bbebf789728813a396ef87d8c1359f39ee
+본선/Object/chest.aseprite,16×16,2,chest,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/chest.aseprite,22d6cd037d5981c52220b2d6884e44c894b3d62eb823010a96db1d32c07c9b66
+본선/Object/cool_binjeong.aseprite,16×32,1,ice_crystal_cooler,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/ice_crystal_cooler.aseprite,e8e2b3c2c9643298aeae07176e8edd93a5e3b8827bc5f63049ae3445cf283bc3
+본선/Object/cool_hanpa.aseprite,16×16,1,cold_wave_core,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/cold_wave_core.aseprite,baaf399e3b7e0ee6cad1120d53f3557d206256296329a26486a3ba07e424eccd
+본선/Object/craftingbox/anvil.aseprite,16×16,1,ice_anvil,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/ice_anvil.aseprite,ab4321b4ac8ef97da30af9b233ec680a03d4c373794e114ef3ec145f8e25904a
+본선/Object/craftingbox/blast.aseprite,16×16,1,blast_furnace,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/blast_furnace.aseprite,39a2e905e5bd10121239e161efa10c54a28ec3dc964cb3536ebe71123251e2af
+본선/Object/craftingbox/furnace.aseprite,16×16,1,furnace,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/furnace.aseprite,08de023180dfb802c0ead4bf5524808756fb65ebaee281d68cb46cb97b2f8a07
+본선/Object/craftingbox/smithy.aseprite,32×32,1,smithy,월드 스프라이트,전용 연결 없음·수신 원본 있음,,ca54aad767bd597ad390ce04690277c6002b5c03b6afc2e8c5804e24c20b72f3
+본선/Object/craftingbox/smithy_icon.aseprite,16×16,1,smithy,아이템 아이콘,전용 연결 없음·수신 원본 있음,,d4e8937ece029c87caeaa1d172adce366d4f811f092ecacb093a845f467db314
+본선/Object/craftingbox/workbench.aseprite,16×16,1,workbench,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/workbench.aseprite,86979971032f9426265e9129332b97068adac5e4d89011ea7c508b93cd717686
+본선/Object/deco/deco_cushion.aseprite,16×16,1,saekdong_cushion,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/saekdong_cushion.aseprite,55cdd56ebab55d131efbaa376d79f6f32b64e0bf5e8b61e7f3af440c2295815b
+본선/Object/deco/deco_jokja.aseprite,16×16,1,minhwa_scroll,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/minhwa_scroll.aseprite,d130313835740a42f8413d99299fe4168d5ea73d49638a524a8e11ae9c822d1b
+본선/Object/deco/deco_lantern.aseprite,16×16,1,saekdong_lantern,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/saekdong_lantern.aseprite,ea9407e825584c84f9caab8e2319d07801e7fbab4b7705d07875c946cc457e56
+본선/Object/deco/deco_pot.aseprite,16×16,1,onggi_pot,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/onggi_pot.aseprite,a5b341961220dbb2e51f9b553beec5a14b3f35d48faabaceb3c64f1806aac652
+본선/Object/deco/deco_wind.aseprite,16×16,1,wind_chime,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/wind_chime.aseprite,dcc8667e625f1bcd88efcf60ba9419d6657b09af9cf3b7c35b798465f3de865e
+본선/Object/hemp.aseprite,16×16,1,hemp_stalk,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Decorations/hemp.aseprite,05dfedabca6493037f5ab3e0f7532e083b6ac4a17bbdf62ebb239247dbcce5ff
+본선/Object/ice_trap.aseprite,16×16,1,ice_trap,월드 스프라이트,전용 연결 없음·수신 원본 있음,,6a1cdb1ef817e47b00f5aee6d21dcb17cf7ed96c8ca834728739950c788ac789
+본선/Object/jangdok/m_jangdok.aseprite,16×32,1,jangdok,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/jangdok.aseprite,2cfd843211c16abaae9bbc24baa36bb70b00c9b83f77562542f1d21df8105f0d
+본선/Object/jangdok/m_jangdok_3.aseprite,16×32,1,jangdok,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Buildings/jangdok.aseprite,b89e2604f6f362fc4ecd880e49aa2e55aa6b311a0847eac087a65b40e62a86ac
+본선/Object/muldanji.aseprite,16×16,1,water_jar,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Items/water_jar.aseprite,295ee28ab7811fe6a470129e28c2238a711368749c3f063e822704d8470068a2
+본선/Object/m_icecore.aseprite,16×32,1,ice_core,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/ice_core.aseprite,fef8f76d20eb9ead5561d97c61fe8333139674811706290b1a7c2d9275f66385
+본선/Object/ruin/ruin_pillar.aseprite,16×16,1,ruin_pillar,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Decorations/ruin_pillar.aseprite,d311a973f8b6b0ca1df097153fade09c92b28322107bdf399063936c7b9ddd62
+본선/Object/ruin/ruin_rebar.aseprite,32×16,1,rebar,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Decorations/ruin_rebar.aseprite,e00f939408d595c56540dd32112a1ff297f5e3b35d62912de41f05b350be7815
+본선/Object/ruin/ruin_wall.aseprite,32×16,1,ruin_wall,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Tiles/ruin_wall.aseprite,afeb8d9859972cde8c3f97b3fa75e27021b01306362f3ee568f36583fb3e2a71
+본선/Object/scow/scarecrow.aseprite,16×32,1,scarecrow,월드 스프라이트,전용 연결 없음·수신 원본 있음,,802f352c89e3544e0a439905c73b04bd300faa673477f91b4f709a88c10835f6
+본선/Object/scow/scarecrow2.aseprite,16×16,1,scarecrow,아이템 아이콘,전용 연결 없음·수신 원본 있음,,123267619c0177099805ad7e4a4445be5f2968f4e3278366ce96fa1234d747c4
+본선/Object/scow/scarecrow3.aseprite,16×32,1,scarecrow,월드 스프라이트,전용 연결 없음·수신 원본 있음,,3482093f25a2fa4e95c7347b67e1f14030cb27ee714650a2ae45cc266774ef6f
+본선/Object/sieve.aseprite,16×16,1,sieve,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/sieve.aseprite,16f00c0eb0c8ecdcea5ed6f28f7190b605a2dc22b02056b6ee21494cd4ec6f2b
+본선/Object/sieve_iron.aseprite,16×16,1,iron_sieve,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/iron_sieve.aseprite,7428344945231048df82978d2fc57903486910ce43ad8193f05c9753a2d58450
+본선/Object/tower/gong_tower.aseprite,16×32,1,gong_tower,월드 스프라이트,전용 연결 없음·수신 원본 있음,,e0aac652c5e04f6ee41c39a60e797e55b78884a309ea57f4853d777c2e077eab
+본선/Object/tower/gong_tower2.aseprite,16×16,1,gong_tower,아이템 아이콘,전용 연결 없음·수신 원본 있음,,c5a2f1aa5744c3a51185a29c7dfff1b978071006f00f938f37ccc6a8ddbaa979
+본선/Object/tower/haetae.aseprite,16×32,1,haetae_statue,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/haetae_statue.aseprite,dccac9f7cb92165492b1e554c186c6b071eb53717224e2651bdcfa514f2636d8
+본선/Object/tower/lantern.aseprite,16×16,1,lantern,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/lantern.aseprite,a39051d48a73faa44e2d017e0abd8f25a310e93472f07b4628f1525dcd24686b
+본선/Object/tower/lantern_frost.aseprite,16×16,1,frost_lantern,월드 스프라이트,기존 대응 아트 연결 있음·수신본 미반영,Assets/Art/Buildings/frost_lantern.aseprite,0285aadd80a04a242558d849fff6036edd387845a97267a5d50101e3b9c7c847
+본선/Object/tower/turret_lantern.aseprite,16×32,1,dokkaebi_fire_tower,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Buildings/dokkaebi_fire_tower.aseprite,a0f7aa7e405d155f50242c4b7c75a37476c01c076ce437bd8d18bda4729af622
+본선/Object/tower/turret_lantern_cold_wave.aseprite,16×32,1,cold_wave_tower,월드 스프라이트,전용 연결 없음·수신 원본 있음,,35ea3ba87c0d97d0755f25023c2bee443148abe9fd7136abec5a2e4ee38d828e
+본선/Object/tower/turret_lantern_seonge.aseprite,16×32,1,seonge_tower,월드 스프라이트,전용 연결 없음·수신 원본 있음,,2f0904a7b64cdf62b328e51847cf33a0fd9adc11935c63c19474edcdb1eebd8b
+본선/Object/tree/tree_down.aseprite,16×16,1,tree_0,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Decorations/tree.aseprite,b6f04a1c645853ed71548dda61b81f834493381ceb44c62028bfdf8d7a1dc999
+본선/Object/tree/tree_up.aseprite,16×16,1,tree_1,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Decorations/tree_0.aseprite,a7ce133ad40268e412570afee56e17096ca879fc04d503b8dbd83afd0ac3c7cb
+본선/Object/tree/t_tree.aseprite,16×32,1,tree_2,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Decorations/tree_1.aseprite,861cb6fe7a7ec2f4734ed3b7915a6372029cb29fb8931efbcbcb12660cd38d3e
+본선/Object/새 폴더/door_close.aseprite,16×32,1,door,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Buildings/door.aseprite,07f29b8fcc9171dd0451bf8d645e9250059a8f7edb46c235c4608941d221fbe7
+본선/Object/새 폴더/door_close2.aseprite,16×32,1,door,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Buildings/door.aseprite,285a3237c3cea45adf946fa66521ce67474c28e8ab4fc608e8754be027448112
+본선/Object/새 폴더/door_open.aseprite,16×32,1,door,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Buildings/door.aseprite,edb93ab96da3d112f2a4d4ca750c30c9d3aadc799f37358ec21fcc86682e3c79
+본선/Object/새 폴더/door_open2.aseprite,16×32,1,door,월드 스프라이트,용도/변형 확인 필요,Assets/Art/Buildings/door.aseprite,b355829c90785abf5a3be85edf20a8c62ec50a9dc3bd9046ae487fa17a5f7dd3
