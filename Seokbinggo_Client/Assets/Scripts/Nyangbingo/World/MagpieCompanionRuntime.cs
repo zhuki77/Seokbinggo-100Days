@@ -17,6 +17,7 @@ namespace Nyangbingo.World
         public const float FollowSpeedTilesPerGameSecond = 5f;
         public static readonly Vector2 DayFollowOffset = new Vector2(-1.1f, 1.15f);
         public static readonly Vector2 NestPerchOffset = new Vector2(0f, .85f);
+        private const float NestRestingInsetPixels = 4f;
         public static readonly Vector2 DropVisualOffset = new Vector2(0f, .5f);
         public const float CollectionContactRadius = .16f;
 
@@ -36,11 +37,14 @@ namespace Nyangbingo.World
         private Func<Vector2?> guideGoalProvider;
         private readonly GameObject visualRoot;
         private readonly RuntimeCharacterSpriteAnimator visualAnimator;
+        private readonly Sprite restingSprite;
 
         private int killCount;
         private bool baekjungSurvived;
         private bool joined;
         private bool activeUntilNestRemoved;
+        private bool fleeingEast;
+        private float fleeFallbackExitX;
         private float collectionElapsed;
         private float guideElapsed;
         private bool guideTowardGoal;
@@ -78,6 +82,8 @@ namespace Nyangbingo.World
             nestStorage = new Inventory.Inventory(catalog.FindItem, StorageSlotCount);
 
             var art = characterArtCatalog?.Find("magpie");
+            restingSprite = art?.IdleFrames != null && art.IdleFrames.Count > 0
+                ? art.IdleFrames[0] : art?.Sprite;
             if (art?.Sprite != null)
             {
                 visualRoot = new GameObject("MagpieCompanion");
@@ -96,9 +102,9 @@ namespace Nyangbingo.World
         public int KillCount => killCount;
         public bool BaekjungSurvived => baekjungSurvived;
         public bool Joined => joined;
-        public bool IsActive => IsEditorTestOverrideActive ||
+        public bool IsActive => !fleeingEast && (IsEditorTestOverrideActive ||
                                 joined && activeUntilNestRemoved &&
-                                TryResolveFunctionalNest(out _);
+                                TryResolveFunctionalNest(out _));
         public Inventory.Inventory NestStorage => nestStorage;
 
         public void ConfigureArtifactRadius(Func<float> multiplierProvider) =>
@@ -112,10 +118,16 @@ namespace Nyangbingo.World
             if (disposed || !IsFinitePositive(deltaGameSeconds))
                 return;
             var testOverride = IsEditorTestOverrideActive;
+            if (fleeingEast)
+            {
+                TickFleeEast(deltaGameSeconds);
+                return;
+            }
             if (!testOverride && (!joined || !activeUntilNestRemoved))
             {
                 CancelCollection();
-                RefreshVisual(Vector2.zero, deltaGameSeconds, false);
+                BeginFleeEast();
+                TickFleeEast(deltaGameSeconds);
                 return;
             }
             var hasFunctionalNest = TryResolveFunctionalNest(out var nestPosition);
@@ -123,7 +135,8 @@ namespace Nyangbingo.World
             {
                 activeUntilNestRemoved = false;
                 CancelCollection();
-                RefreshVisual(Vector2.zero, deltaGameSeconds, false);
+                BeginFleeEast();
+                TickFleeEast(deltaGameSeconds);
                 return;
             }
 
@@ -131,7 +144,7 @@ namespace Nyangbingo.World
             RefreshDayFollowSide();
             TickGuidePhase(deltaGameSeconds, returnToNest);
             var restingTarget = returnToNest
-                ? nestPosition + NestPerchOffset
+                ? ResolveNestRestingTarget(nestPosition)
                 : ResolveDayRestingTarget();
 
             if (collectionTarget == null)
@@ -191,6 +204,7 @@ namespace Nyangbingo.World
             save.magpieKillCount = killCount;
             save.magpieBaekjungSurvived = baekjungSurvived;
             save.magpieJoined = joined;
+            save.magpieActiveForDay = joined && activeUntilNestRemoved && TryResolveFunctionalNest(out _);
             save.magpieNestPosition = environmentState.TryGetNearestPlacedObjectPosition(
                 MainGameEnvironmentState.MagpieNestDefinitionId, Vector2.zero, out var nestPosition)
                 ? nestPosition
@@ -208,7 +222,9 @@ namespace Nyangbingo.World
             baekjungSurvived = save.magpieBaekjungSurvived;
             joined = save.magpieJoined;
             CancelCollection();
-            activeUntilNestRemoved = joined && TryResolveFunctionalNest(out _);
+            fleeingEast = false;
+            RefreshVisual(Vector2.zero, 0f, false);
+            activeUntilNestRemoved = joined && save.magpieActiveForDay && TryResolveFunctionalNest(out _);
             return true;
         }
 
@@ -298,6 +314,35 @@ namespace Nyangbingo.World
             dayFollowSide = horizontalMovement > 0f ? -1f : 1f;
         }
 
+        private void BeginFleeEast()
+        {
+            if (visualRoot == null || !visualRoot.activeSelf) return;
+            fleeingEast = true;
+            fleeFallbackExitX = visualRoot.transform.position.x + 32f;
+            visualAnimator?.SetMoving(true);
+            visualAnimator?.SetFacing(Vector2.right);
+        }
+
+        private void TickFleeEast(float deltaGameSeconds)
+        {
+            if (!fleeingEast || visualRoot == null) return;
+            // Keep horizontal speed; rise one tile for every two tiles east.
+            visualRoot.transform.position += new Vector3(1f, .5f, 0f) *
+                (FollowSpeedTilesPerGameSecond * deltaGameSeconds);
+            var camera = Camera.main;
+            var renderer = visualAnimator?.Renderer;
+            var exitEdge = renderer != null
+                ? new Vector3(renderer.bounds.min.x, renderer.bounds.min.y, renderer.bounds.center.z)
+                : visualRoot.transform.position;
+            var viewportEdge = camera != null ? camera.WorldToViewportPoint(exitEdge) : Vector3.zero;
+            var outside = camera != null
+                ? viewportEdge.x > 1f || viewportEdge.y > 1f
+                : exitEdge.x > fleeFallbackExitX;
+            if (!outside) return;
+            fleeingEast = false;
+            RefreshVisual(Vector2.zero, 0f, false);
+        }
+
         private void RefreshVisual(Vector2 target, float deltaGameSeconds, bool visible)
         {
             if (visualRoot == null) return;
@@ -321,11 +366,25 @@ namespace Nyangbingo.World
             var seatedAtNest = timeService.IsNight &&
                                collectionTarget == null &&
                                TryResolveFunctionalNest(out var nestPosition) &&
-                               (next - (nestPosition + NestPerchOffset)).sqrMagnitude <=
+                               (next - ResolveNestRestingTarget(nestPosition)).sqrMagnitude <=
                                CollectionContactRadius * CollectionContactRadius;
             visualAnimator?.SetMoving(!seatedAtNest);
-            if (Mathf.Abs(movement.x) > .0001f)
+            if (!seatedAtNest && Mathf.Abs(movement.x) > .0001f)
                 visualAnimator?.SetFacing(movement);
+        }
+
+        private Vector2 ResolveNestRestingTarget(Vector2 nestPosition)
+        {
+            if (restingSprite == null || visualRoot == null ||
+                !environmentState.TryGetMagpieNestVisualBounds(out var nestBounds))
+                return nestPosition + NestPerchOffset;
+            var scale = visualRoot.transform.lossyScale;
+            var flip = visualAnimator?.Renderer != null && visualAnimator.Renderer.flipX ? -1f : 1f;
+            // 가장 높은 가지가 아닌 중앙의 앉는 면에 맞춘다. 사진의 6화면 픽셀 간격은
+            // 원본 3픽셀이므로 기존 1픽셀 보정에 더해 총 4픽셀 내려놓는다.
+            return new Vector2(nestBounds.center.x - restingSprite.bounds.center.x * scale.x * flip,
+                nestBounds.max.y - restingSprite.bounds.min.y * scale.y -
+                NestRestingInsetPixels * Mathf.Abs(scale.y) / restingSprite.pixelsPerUnit);
         }
 
         private bool TryResolveFunctionalNest(out Vector2 nestPosition)

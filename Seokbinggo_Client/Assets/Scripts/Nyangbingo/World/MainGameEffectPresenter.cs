@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Combat;
 using Nyangbingo.Data;
@@ -11,6 +11,14 @@ namespace Nyangbingo.World
     {
         internal const int WorldPopupFontSize = 64;
         internal const float WorldPopupCharacterSize = .12f;
+        private const float MinimumPickupLineSpacing = .25f;
+        private sealed class ItemPickupPopup
+        {
+            public string ItemId;
+            public long Amount;
+            public RuntimeFloatingWorldText Text;
+        }
+        private readonly List<ItemPickupPopup> itemPickupPopups = new List<ItemPickupPopup>();
         public const float PlayerFireHitHeadOffset = .65f;
         public const float PlayerFireHitDurationSeconds = .8f;
         public const int PlayerFireHitFallbackSortingOrder = 19;
@@ -97,23 +105,24 @@ namespace Nyangbingo.World
             GameEvents.OnMiningImpact += HandleMiningImpact;
             GameEvents.OnTileBroken += HandleTileBroken;
             GameEvents.OnMiningResult += HandleMiningResult;
+            GameEvents.OnWorldItemPickedUp += HandleWorldItemPickedUp;
             GameEvents.OnWallDurabilityChanged += HandleWallDurabilityChanged;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void Update()
         {
-            if (playerTransform == null || !Input.GetKeyDown(KeyCode.F10)) return;
+            if (playerTransform == null || !Nyangbingo.Core.DevelopmentShortcuts.CanUseWorldShortcuts) return;
             var cell = Vector3Int.FloorToInt(playerTransform.position + Vector3.right);
-            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+            if (Nyangbingo.Core.DevelopmentShortcuts.IsPressed(Nyangbingo.Core.DevelopmentShortcut.MiningCritical))
             {
                 HandleMiningResult(cell, "철광석", 2, true);
-                Debug.Log("[Nyangbingo] Ctrl+F10 mining critical VFX preview.");
+                Debug.Log("[Nyangbingo] Shift+F10 mining critical VFX preview.");
             }
-            else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            else if (Nyangbingo.Core.DevelopmentShortcuts.IsPressed(Nyangbingo.Core.DevelopmentShortcut.MiningBreak))
             {
                 HandleTileBroken(cell);
-                Debug.Log("[Nyangbingo] Shift+F10 mining break VFX preview.");
+                Debug.Log("[Nyangbingo] F10 mining break VFX preview.");
             }
         }
 #endif
@@ -280,25 +289,69 @@ namespace Nyangbingo.World
 
         private void HandleMiningResult(Vector3Int cell, string itemName, int amount, bool critical)
         {
-            if (string.IsNullOrWhiteSpace(itemName) || amount <= 0) return;
-            var popupObject = new GameObject("MiningResultPopup");
+            if (!critical) return;
+            if (miningCriticalEffect != null && artCatalog.MiningCriticalFrames.Count > 0)
+                PlayMiningCellEffect(miningCriticalEffect, cell, .3f);
+            else RuntimeMiningCriticalSparkle.Create(transform, CellCenter(cell));
+        }
+
+        private void HandleWorldItemPickedUp(ItemDefinition item, int amount, Vector2 position)
+        {
+            if (item == null || amount <= 0) return;
+            for (var index = itemPickupPopups.Count - 1; index >= 0; index--)
+            {
+                var existing = itemPickupPopups[index];
+                if (existing.Text == null || !existing.Text.IsVisible)
+                { itemPickupPopups.RemoveAt(index); continue; }
+                if (!string.Equals(existing.ItemId, item.Id, System.StringComparison.Ordinal)) continue;
+                existing.Amount += amount;
+                existing.Text.RefreshText($"+{item.DisplayName} ×{existing.Amount}");
+                itemPickupPopups.RemoveAt(index);
+                StackItemPickupPopup(existing, position);
+                return;
+            }
+            var popupObject = new GameObject("ItemPickupPopup");
             popupObject.transform.SetParent(transform, false);
-            popupObject.transform.position = CellCenter(cell) + Vector3.up * .35f;
+            popupObject.transform.position = (Vector3)position + Vector3.up * .35f;
             var text = popupObject.AddComponent<TextMesh>();
-            text.text = $"+{itemName} ×{amount}";
+            text.text = $"+{item.DisplayName} ×{amount}";
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
             text.fontSize = WorldPopupFontSize;
             text.characterSize = WorldPopupCharacterSize;
             text.fontStyle = FontStyle.Bold;
-            text.color = critical ? new Color(1f, .82f, .18f, 1f) : Color.white;
+            text.color = Color.white;
             var renderer = text.GetComponent<MeshRenderer>();
             if (renderer != null) renderer.sortingOrder = 28;
-            popupObject.AddComponent<RuntimeFloatingWorldText>().Configure(text, .8f, .65f);
-            if (!critical) return;
-            if (miningCriticalEffect != null && artCatalog.MiningCriticalFrames.Count > 0)
-                PlayMiningCellEffect(miningCriticalEffect, cell, .3f);
-            else RuntimeMiningCriticalSparkle.Create(transform, CellCenter(cell));
+            var popup = popupObject.AddComponent<RuntimeFloatingWorldText>();
+            popup.Configure(text, .8f, .65f);
+            StackItemPickupPopup(new ItemPickupPopup { ItemId = item.Id, Amount = amount, Text = popup }, position);
+        }
+
+        private void StackItemPickupPopup(ItemPickupPopup entry, Vector2 position)
+        {
+            var popup = entry.Text;
+            popup.transform.position = (Vector3)position + Vector3.up * .35f;
+            var renderer = popup.GetComponent<MeshRenderer>();
+            var lineSpacing = Mathf.Max(MinimumPickupLineSpacing,
+                renderer != null ? renderer.bounds.size.y + .025f : 0f);
+            var nextLineY = popup.transform.position.y;
+            // 같은 프레임의 연속 습득도 최신 문구부터 한 줄씩 위로 쌓는다.
+            for (var index = itemPickupPopups.Count - 1; index >= 0; index--)
+            {
+                var previous = itemPickupPopups[index].Text;
+                if (previous == null || !previous.IsVisible)
+                {
+                    itemPickupPopups.RemoveAt(index);
+                    continue;
+                }
+                var previousPosition = previous.transform.position;
+                // 개별 문구의 누적 상승량을 더하지 않고 일정한 줄 간격으로 정돈한다.
+                previousPosition.y = nextLineY + lineSpacing;
+                previous.transform.position = previousPosition;
+                nextLineY = previousPosition.y;
+            }
+            itemPickupPopups.Add(entry);
         }
 
         private Vector3 CellCenter(Vector3Int cell) => worldRenderer != null
@@ -348,6 +401,7 @@ namespace Nyangbingo.World
             GameEvents.OnMiningImpact -= HandleMiningImpact;
             GameEvents.OnTileBroken -= HandleTileBroken;
             GameEvents.OnMiningResult -= HandleMiningResult;
+            GameEvents.OnWorldItemPickedUp -= HandleWorldItemPickedUp;
             GameEvents.OnWallDurabilityChanged -= HandleWallDurabilityChanged;
             wallDurabilityLabels.Clear();
         }
@@ -513,6 +567,8 @@ namespace Nyangbingo.World
         private float risePerSecond;
         private Color baseColor;
 
+        public bool IsVisible => text != null && remaining > 0f;
+
         public void Configure(TextMesh target, float lifetimeSeconds, float verticalSpeed)
         {
             text = target;
@@ -521,6 +577,19 @@ namespace Nyangbingo.World
             risePerSecond = Mathf.Max(0f, verticalSpeed);
             baseColor = text != null ? text.color : Color.white;
             if (text != null) shadow = CreateShadow(text);
+        }
+
+        public void RefreshText(string value)
+        {
+            if (!IsVisible) return;
+            text.text = value;
+            remaining = duration;
+            text.color = baseColor;
+            if (shadow != null)
+            {
+                shadow.text = value;
+                shadow.color = new Color(0f, 0f, 0f, .85f);
+            }
         }
 
         private void Update()

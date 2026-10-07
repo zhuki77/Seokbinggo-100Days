@@ -116,6 +116,67 @@ namespace Nyangbingo.World
 
         /// <summary>코어 창의 마지막으로 통보한 밀폐 상태 — 변경 시에만 이벤트를 1회 발행하기 위한 비교 기준.</summary>
         private bool lastNotifiedCoreSealed;
+        public int Revision { get; private set; }
+
+        // 배치 예정 블록은 자연 지형이 아니다. 현재 칸의 자연 여부·기존 문 레지스트리를 섞지 않는다.
+        public bool IsSealElement(Vector3Int cell, string block) => tileService.InBounds(cell) &&
+            boundaryPolicy.SealsPlacedElement(TileIdAlias.ToCanonical(block));
+
+        public bool IsSealBoundaryCell(Vector3Int cell) => IsRecognizedBoundaryCell(cell);
+
+        public bool IsInCoreWindow(Vector3Int core, Vector3Int cell) => tileService.InBounds(cell) &&
+            Mathf.Abs(cell.x - core.x) <= windowRx && Mathf.Abs(cell.y - core.y) <= windowRy;
+
+        /// <summary>Read-only removal simulation, including both cells of a door.</summary>
+        public bool WouldBreakCoreSeal(Vector3Int core, Vector3Int cell)
+        {
+            if (!IsInCoreWindow(core, cell) || !IsSealBoundaryCell(cell) || !IsCoreWindowSealed(core)) return false;
+            var removed = new HashSet<Vector3Int> { cell };
+            if (barrierRegistry is ISealDoorRegistry doors && doors.TryGetDoor(cell, out var anchor, out _))
+            { removed.Add(anchor); removed.Add(anchor + Vector3Int.up); }
+            else if (TileService.IsDoorFootprintElement(tileService.GetTile(cell).elementType))
+            {
+                var anchorCell = tileService.GetTile(cell).elementType == TileService.DoorTopElementType
+                    ? cell + Vector3Int.down : cell;
+                removed.Add(anchorCell); removed.Add(anchorCell + Vector3Int.up);
+            }
+            return !ComputeCoreWindowRegion(core, removedCells: removed).isSealed;
+        }
+
+        public bool IsDoorCell(Vector3Int cell) =>
+            barrierRegistry is ISealDoorRegistry doors && doors.TryGetDoor(cell, out _, out _);
+
+        private bool TryGetOpenDoorAnchor(Vector3Int cell, out Vector3Int anchor)
+        {
+            anchor = default;
+            return barrierRegistry is ISealDoorRegistry doors &&
+                doors.TryGetDoor(cell, out anchor, out var closed) && !closed;
+        }
+
+        /// <summary>
+        /// Wind and the on-demand diagnostic marker share the same current leak.
+        /// Guidance identifies where air leaks now; it does not require a hypothetical
+        /// set of repairs to seal the entire room. Re-evaluation advances the marker
+        /// to the next leak after repair, and a sealed room returns no markers.
+        /// </summary>
+        public IReadOnlyList<Vector3Int> GetMissingBoundaryCells(Vector3Int core) =>
+            TryGetCoreLeakCell(core, out var cell)
+                ? new[] { cell } : Array.Empty<Vector3Int>();
+
+        // 문을 실제로 닫지 않고 진단용 가상 경계로 같은 창·규칙을 재평가한다.
+        public bool WouldSealWithClosedDoors(Vector3Int core, ISet<Vector3Int> doorCells) =>
+            doorCells != null && doorCells.Count > 0 && ComputeCoreWindowRegion(core, doorCells).isSealed;
+
+        public IReadOnlyCollection<Vector3Int> GetBlockingOpenDoorCells(Vector3Int core, ISet<Vector3Int> doorCells)
+        {
+            if (doorCells == null || doorCells.Count == 0) return Array.Empty<Vector3Int>();
+            var closed = ComputeCoreWindowRegion(core, doorCells);
+            if (!closed.isSealed) return Array.Empty<Vector3Int>();
+            var boundary = new List<Vector3Int>();
+            foreach (var cell in doorCells)
+                if (closed.boundaryWallCells.Contains(cell)) boundary.Add(cell);
+            return boundary;
+        }
 
         /// <summary>
         /// GameEvents.OnSealChanged(무매개변수)는 이미 DevBTest 회귀 테스트가 구독 중인 기존 Dev B 계약이라
@@ -174,7 +235,12 @@ namespace Nyangbingo.World
         // ------------------------------------------------------------------
 
         /// <summary>차열벽/차열 지붕/단열 문 등 B파트 설치물을 밀폐 벽으로 인정할지 조회할 레지스트리를 연결한다.</summary>
-        public void SetBarrierRegistry(ISealBarrierRegistry registry) => barrierRegistry = registry;
+        public void SetBarrierRegistry(ISealBarrierRegistry registry)
+        {
+            if (ReferenceEquals(barrierRegistry, registry)) return;
+            barrierRegistry = registry;
+            InvalidateAll();
+        }
 
         /// <summary>
         /// A-07: 월드 로드 등으로 살아있는 TileData[,]가 통째로 새 TileService로 바뀌었을 때, 이 SealSystem
@@ -230,6 +296,13 @@ namespace Nyangbingo.World
             var region = coreRegionByCell[core];
             leakCell = region.representativeLeakCell ?? default;
             return !region.isSealed && region.representativeLeakCell.HasValue;
+        }
+
+        /// <summary>코어 밀폐 판정에 사용한 실내 공기 영역에 대상 칸이 속하는지 확인한다.</summary>
+        public bool IsInsideCoreSealedArea(Vector3Int core, Vector3Int cell)
+        {
+            if (!IsCoreWindowSealed(core)) return false;
+            return coreRegionByCell[core].interiorAirCells.Contains(cell);
         }
 
         /// <summary>해당 셀이 맵 경계 안에 있는지. 맵 밖은 방(room) 개념이 성립하지 않는 확정 실패 상태라,
@@ -303,6 +376,7 @@ namespace Nyangbingo.World
         /// </summary>
         public void InvalidateAll()
         {
+            Revision++;
             regionByCell.Clear();
             coreRegionCache = null;
             coreRegionByCell.Clear();
@@ -373,6 +447,7 @@ namespace Nyangbingo.World
 
         private void HandleTileChanged(Vector3Int changedCell)
         {
+            Revision++;
             // 임의 코어 창은 현재 배치된 코어 수만큼만 존재한다. 변경 뒤 다음 조회에서 정확히 다시 계산한다.
             coreRegionByCell.Clear();
             if (regionByCell.Count != 0) // 캐시된 범용 리전이 없으면 재계산할 것도 없다(전체 스캔 방지).
@@ -466,7 +541,8 @@ namespace Nyangbingo.World
         /// (요구사항 5). 창 경계 자체에 있는 벽은 일반 경계벽과 동일한 화이트리스트 규칙을 그대로 적용받는다
         /// (자연 지형/화이트리스트 설치물이면 정상 밀폐로 인정 — 요구사항 6).
         /// </summary>
-        private SealRegion ComputeCoreWindowRegion(Vector3Int core)
+        private SealRegion ComputeCoreWindowRegion(Vector3Int core, ISet<Vector3Int> closedDoorCells = null,
+            ISet<Vector3Int> removedCells = null)
         {
             var region = new SealRegion();
 
@@ -508,20 +584,26 @@ namespace Nyangbingo.World
                     if (!tileService.InBounds(neighbor))
                     {
                         leakFaceCount++; // 창 안이라도 맵 자체가 끝나면 새는 면이다.
-                        region.representativeLeakCell ??= ResolveActionableLeakCell(core, current, parents);
+                        if (closedDoorCells == null) RecordWindowLeak(region, core, current, parents);
                         continue;
                     }
 
                     if (interior.Contains(neighbor) || boundaryWalls.Contains(neighbor)) continue;
 
+                    if (closedDoorCells?.Contains(neighbor) == true)
+                    {
+                        boundaryWalls.Add(neighbor);
+                        continue;
+                    }
+
                     var neighborTile = tileService.GetTile(neighbor);
-                    if (neighborTile.IsAir)
+                    if (neighborTile.IsAir || removedCells?.Contains(neighbor) == true)
                     {
                         var outsideWindow = neighbor.x < minX || neighbor.x > maxX || neighbor.y < minY || neighbor.y > maxY;
                         if (outsideWindow)
                         {
                             leakFaceCount++; // 요구사항 5: 창 밖으로 이어지는 공기 면 = leak_faces.
-                            region.representativeLeakCell ??= ResolveActionableLeakCell(core, current, parents);
+                            if (closedDoorCells == null) RecordWindowLeak(region, core, current, parents);
                             continue;
                         }
 
@@ -539,7 +621,8 @@ namespace Nyangbingo.World
                         if (!IsRecognizedWall(neighborTile, neighbor))
                         {
                             leakFaceCount++;
-                            region.representativeLeakCell ??= neighbor;
+                            region.representativeLeakCell ??=
+                                TryGetOpenDoorAnchor(neighbor, out var doorAnchor) ? doorAnchor : neighbor;
                         }
                     }
                 }
@@ -554,7 +637,52 @@ namespace Nyangbingo.World
             region.sealPercent = leakFaceCount == 0 ? Mathf.Min(1f, region.regionCellCount / sealTargetCells) : 0f;
             region.isSealed = leakFaceCount == 0 && boundaryWalls.Count > 0;
 
+            if (!region.isSealed && closedDoorCells == null && removedCells == null)
+                PreferBlockingDoorLeak(core, region);
+
             return region;
+        }
+
+        private void PreferBlockingDoorLeak(Vector3Int core, SealRegion region)
+        {
+            if (!(barrierRegistry is ISealDoorRegistry)) return;
+            var anchors = new HashSet<Vector3Int>();
+            foreach (var cell in region.interiorAirCells)
+                if (TryGetOpenDoorAnchor(cell, out var anchor)) anchors.Add(anchor);
+            foreach (var cell in region.boundaryWallCells)
+                if (TryGetOpenDoorAnchor(cell, out var anchor)) anchors.Add(anchor);
+            if (anchors.Count == 0) return;
+
+            var footprint = new HashSet<Vector3Int>();
+            foreach (var anchor in anchors)
+            {
+                footprint.Add(anchor);
+                footprint.Add(anchor + Vector3Int.up);
+            }
+            // Use the same proof as the open-door guide. A door that restores sealing
+            // must win over arbitrary earlier BFS leaks outside the room. Non-null
+            // footprint skips this resolution on the diagnostic re-evaluation.
+            var closed = ComputeCoreWindowRegion(core, footprint);
+            if (!closed.isSealed) return;
+            Vector3Int? best = null;
+            foreach (var anchor in anchors)
+            {
+                if (!closed.boundaryWallCells.Contains(anchor) &&
+                    !closed.boundaryWallCells.Contains(anchor + Vector3Int.up)) continue;
+                if (!best.HasValue || (anchor - core).sqrMagnitude < (best.Value - core).sqrMagnitude ||
+                    (anchor - core).sqrMagnitude == (best.Value - core).sqrMagnitude &&
+                    (anchor.x < best.Value.x || anchor.x == best.Value.x && anchor.y < best.Value.y))
+                    best = anchor;
+            }
+            if (best.HasValue) region.representativeLeakCell = best;
+        }
+
+        private void RecordWindowLeak(SealRegion region, Vector3Int core, Vector3Int exit,
+            IReadOnlyDictionary<Vector3Int, Vector3Int> parents)
+        {
+            if (!region.representativeLeakCell.HasValue)
+                region.representativeLeakCell = ResolveActionableLeakCell(core, exit, parents);
+            // Both the diagnostic icon and the animated wind consume this location.
         }
 
         private Vector3Int ResolveActionableLeakCell(Vector3Int core, Vector3Int windowLeakCell,
@@ -573,6 +701,12 @@ namespace Nyangbingo.World
                 reversePath.Add(cursor);
             }
             reversePath.Reverse();
+
+            // An open door is the opening itself. Prefer its registered anchor over
+            // the pinched air cell outside it; either occupied door cell resolves
+            // to the same 1x2 door, including when open tile doors contain only air.
+            foreach (var cell in reversePath)
+                if (TryGetOpenDoorAnchor(cell, out var doorAnchor)) return doorAnchor;
 
             var bestCell = windowLeakCell;
             var bestScore = 0;
