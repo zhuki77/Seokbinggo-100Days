@@ -127,7 +127,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: tal_waypoint_icon
     originalName: 
-    pivot: {x: 0.5, y: 0}
+    pivot: {x: 0.5, y: 0.5}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -166,7 +166,7 @@ ScriptedImporter:
       additiveSortOrder: 0
       cellRect:
         x: 1
-        y: 0
+        y: -16
         width: 14
         height: 32
       spriteId: e33b0aa48440a0b4399ff2a3a7c87926
@@ -179,4 +179,4 @@ ScriptedImporter:
   generatePhysicsShape: 0
   secondarySpriteTextures: []
   previousTextureSize: {x: 32, y: 64}
-  canvasSize: {x: 16, y: 32}
+  canvasSize: {x: 16, y: 16}

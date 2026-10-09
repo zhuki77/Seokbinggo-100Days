@@ -93,7 +93,8 @@ namespace Nyangbingo.World
         public WorldSessionController(WorldGenerationConfig config, TilemapRenderer renderer, GameDataCatalog catalog)
         {
             this.config = config ?? throw new ArgumentNullException(nameof(config));
-            this.renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
+            // 월드 생성 테스트가 아닌 세션은 렌더러 없이 타일 서비스만 나중에 연결한다.
+            this.renderer = renderer;
             chestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
             // 월드 생성은 mineral-tiers.csv 경도를 읽기 위해 카탈로그가 필수다. 일부 순수 세션 테스트는
             // 월드를 만들지 않고 내부 서비스만 연결하므로 생성자 단계에서는 null을 허용하고, MapGenerator가
@@ -183,11 +184,19 @@ namespace Nyangbingo.World
 
             DecorationBaseline = CaptureDecorationBaseline(result);
 
+            RequireRenderer();
             renderer.RenderWorld(result.tiles);
             RebuildLiveSystems(result.tiles);
             chestProgress = new ChestProgress(id => catalog != null ? catalog.FindItem(id) : null);
             WorldLoaded?.Invoke(); // §5 항목 7 — 라이브 참조 교체가 전부 끝난 뒤에만 통지한다.
             return result;
+        }
+
+        private void RequireRenderer()
+        {
+            if (renderer == null)
+                throw new InvalidOperationException(
+                    "[Nyangbingo] WorldSessionController: 월드를 그리려면 TilemapRenderer가 필요합니다.");
         }
 
         /// <summary>현재 라이브 상태(타일 diff + 배경 diff + 상자 개봉 여부)를 save에 캡처한다.</summary>
@@ -300,6 +309,7 @@ namespace Nyangbingo.World
             DecorationBaseline = decorationBaseline;
 
             // 3) 타일맵 렌더러 갱신 — diff가 이미 반영된 배열을 한 번에 SetTilesBlock으로 그린다.
+            RequireRenderer();
             renderer.RenderWorld(result.tiles);
 
             // 4) SealSystem은 Dispose하지 않고 내부 TileService 참조만 교체한다(A-07) — 주 관찰 지점/고정
