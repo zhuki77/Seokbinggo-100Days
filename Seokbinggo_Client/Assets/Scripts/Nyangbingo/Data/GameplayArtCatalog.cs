@@ -67,6 +67,7 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite sealRepairCheck;
         [SerializeField] private Sprite[] sealSuccessFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite hypothermiaStatusIcon;
+        [SerializeField] private Sprite hypothermiaStatusIconAlert;
         [SerializeField] private Sprite nightSpawnBlockedIcon;
         [SerializeField] private Sprite deathTearPouch;
         [SerializeField] private Sprite bossWarningLarge;
@@ -154,6 +155,8 @@ namespace Nyangbingo.Data
         public Sprite SealRepairCheck => sealRepairCheck;
         public IReadOnlyList<Sprite> SealSuccessFrames => sealSuccessFrames ?? Array.Empty<Sprite>();
         public Sprite HypothermiaStatusIcon => hypothermiaStatusIcon;
+        // 저체온 피해 임박 시 쓰는 경고 변형(HypothermiaStatus_Icon2). 없으면 기본 아이콘을 쓴다.
+        public Sprite HypothermiaStatusIconAlert => hypothermiaStatusIconAlert;
         public Sprite NightSpawnBlockedIcon => nightSpawnBlockedIcon;
         public Sprite DeathTearPouch => deathTearPouch;
         public Sprite BossWarningLarge => bossWarningLarge;

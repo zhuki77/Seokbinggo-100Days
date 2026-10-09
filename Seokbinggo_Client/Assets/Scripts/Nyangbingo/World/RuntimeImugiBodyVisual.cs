@@ -74,21 +74,27 @@ namespace Nyangbingo.World
             if (source.isReadable)
                 return DuplicateTexturePixels(source);
 
-            var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
+            Texture2D copy;
+            // CopyTexture는 같은 포맷 그룹끼리만 되고, 어긋나면 예외 없이 에러만 찍은 채 빈 텍스처가 남는다.
+            // 압축(BC7/DXT 등) 원본은 처음부터 RenderTexture 경로로 복사한다.
+            if (source.format == TextureFormat.RGBA32 &&
+                SystemInfo.copyTextureSupport != UnityEngine.Rendering.CopyTextureSupport.None)
             {
-                filterMode = source.filterMode,
-                hideFlags = HideFlags.HideAndDontSave
-            };
-
-            try
-            {
-                Graphics.CopyTexture(texture, copy);
-                copy.Apply();
-                return copy;
-            }
-            catch
-            {
-                Object.DestroyImmediate(copy);
+                copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
+                {
+                    filterMode = source.filterMode,
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                try
+                {
+                    Graphics.CopyTexture(texture, copy);
+                    copy.Apply();
+                    return copy;
+                }
+                catch
+                {
+                    Object.DestroyImmediate(copy);
+                }
             }
 
             copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)

@@ -1367,7 +1367,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 throw new Exception("Timed out at phase " + phase);
             if (BaekjungRestoreRun)
             {
-                var activeEvents = FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None).Where(e => e.isActiveAndEnabled).ToArray();
+                var activeEvents = FindObjectsByType<UnityEngine.EventSystems.EventSystem>().Where(e => e.isActiveAndEnabled).ToArray();
                 transitionEventSystemPeak = Math.Max(transitionEventSystemPeak, activeEvents.Length);
                 var signature = string.Join(",", activeEvents.Select(e => e.gameObject.scene.name + "/" + e.name).OrderBy(n => n));
                 if (signature != transitionEventSystemSignature)
@@ -4136,7 +4136,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(baekjung.IsActive && baekjung.DispatchedWaveCount == 1, "normal day15 night starts first Baekjung wave");
                 var baekjungBedAllowed = FindAnyObjectByType<MainGameRuntimeServices>().Bed.CanSleep(placementPoint, out var eventRoom, out var eventBedReason);
                 checks.Add($"Baekjung reached after {Time.realtimeSinceStartup - controlStarted:F3}s, rests={bedRestCount}; waves={baekjung.DispatchedWaveCount}; elapsedGame={baekjung.ElapsedSeconds}; raid={baekjungEncounters.ActiveRaidCount}; regular={baekjungEncounters.ActiveRegularCount}; bedAllowed={baekjungBedAllowed}; room={eventRoom}; reason={eventBedReason}");
-                checks.Add("Actual enemy kinds: " + string.Join(",", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).Select(b => b.Definition.Id)));
+                checks.Add("Actual enemy kinds: " + string.Join(",", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).Select(b => b.Definition.Id)));
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "day15-baekjung-first-wave.png"));
                 Next(1062); break;
             case 1062:
@@ -4148,7 +4148,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (Time.realtimeSinceStartup - phaseStarted < 2f) return;
                 var nearClock = FindAnyObjectByType<MainGameBootstrap>().TimeService;
                 Require(nearClock.Day == 18 && !nearClock.IsNight && !player.IsDead, "near-resident checkpoint Continue restores living day18 daytime");
-                var nearGang = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null && b.Definition.Kind == YokaiKind.Gangcheori).ToArray();
+                var nearGang = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null && b.Definition.Kind == YokaiKind.Gangcheori).ToArray();
                 Require(nearGang.Length == 1, "near-resident Continue creates exactly one Gangcheori");
                 var previousGangPosition = new Vector2(142.5f,12.5f);
                 var restoredGangPosition = (Vector2)nearGang[0].transform.position;
@@ -4161,7 +4161,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(victoryClock.Day == 18 && !victoryClock.IsNight && !player.IsDead, "victory Continue restores living day18 daytime");
                 var victoryInv = FindAnyObjectByType<MainGameRuntimeServices>().PlayerInventory;
                 Require(victoryInv.Count("gangcheol_scale") == 1 && victoryInv.Count("yokai_tear") == 3, "victory Continue restores scale1 and collected tears3");
-                Require(!FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Any(b => b.Definition != null && b.Definition.Kind == YokaiKind.Gangcheori), "killed Gangcheori does not respawn on same-day Continue");
+                Require(!FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Any(b => b.Definition != null && b.Definition.Kind == YokaiKind.Gangcheori), "killed Gangcheori does not respawn on same-day Continue");
                 var residentSnapshot = new Nyangbingo.Save.SaveGame();
                 Require(FindAnyObjectByType<MainGameEncounterCoordinator>().CaptureProgress(residentSnapshot) && residentSnapshot.regularEncounter.residentLastKilledDays.Any(r => r.yokaiId == "gangcheol" && r.lastKilledDay == 18), "runtime restored last-killed day18");
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "gangcheori-victory-restored.png"));
@@ -4751,7 +4751,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                         Next(phase == 1211 ? 1212 : 1214); break;
                     }
                 }
-                var rewardFoe = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None)
+                var rewardFoe = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>()
                     .Where(b => b.Definition != null && b.GetComponent<Nyangbingo.Combat.Health>() != null && !b.GetComponent<Nyangbingo.Combat.Health>().IsDead)
                     .OrderBy(b => Vector2.Distance(b.transform.position, player.transform.position)).FirstOrDefault();
                 if (rewardFoe == null) { Sample(); break; }
@@ -4797,7 +4797,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     throw new Exception("Late night observation ended in death.");
                 }
                 if (Time.realtimeSinceStartup - phaseStarted < 12f) return;
-                var lateBrains = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).ToArray();
+                var lateBrains = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).ToArray();
                 checks.Add("Late night actual runtime enemies: " + string.Join(";", lateBrains.Select(b => b.Definition.Id + "@" + b.transform.position)));
                 var lateHud = FindAnyObjectByType<MainGameHudController>();
                 var lateAlert = (Text)typeof(MainGameHudController).GetField("alertOverlayText", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(lateHud);
@@ -4924,7 +4924,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Next(1121); break;
             case 1121:
                 if (player.IsDead) throw new Exception("Normal Gangcheori approach ended in death.");
-                var gangTarget = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).SingleOrDefault(b => b.Definition != null && b.Definition.Kind == YokaiKind.Gangcheori && !b.GetComponent<Nyangbingo.Combat.Health>().IsDead);
+                var gangTarget = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().SingleOrDefault(b => b.Definition != null && b.Definition.Kind == YokaiKind.Gangcheori && !b.GetComponent<Nyangbingo.Combat.Health>().IsDead);
                 if (gangTarget == null)
                 {
                     Require(GangcheoriFightRun && gangLastHp > 0, "previously observed living Gangcheori no longer alive; verify kill progress separately");
@@ -5020,23 +5020,23 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(day18Start.Day == 17 && !day18Start.IsNight && !player.IsDead, "earned day17 dawn restored alive");
                 placementPoint = FindAnyObjectByType<MainGameEnvironmentState>().ExportPlacedObjects().Single(r => r.definitionId == "nest_bed").position;
                 Require(Vector2.Distance(player.transform.position, placementPoint) < 2f, "earned bed reachable without teleport");
-                checks.Add("Day17 actual enemies: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
+                checks.Add("Day17 actual enemies: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "day17-before-rest.png"));
                 Next(975); break;
             case 1111:
                 Sample();
                 var day18Clock = FindAnyObjectByType<MainGameBootstrap>().TimeService;
                 Require(bedRestCount <= 3 && day18Clock.Day <= 18, "bounded normal three-rest route to day18 night");
-                checks.Add($"Resident checkpoint day={day18Clock.Day} night={day18Clock.IsNight}: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
+                checks.Add($"Resident checkpoint day={day18Clock.Day} night={day18Clock.IsNight}: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
                 if (day18Clock.Day != 18) { Next(975); break; }
-                Require(FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Count(b => b.Definition != null && b.Definition.Kind == Nyangbingo.Core.YokaiKind.Gangcheori) == 1, "day18 naturally creates exactly one Gangcheori resident");
+                Require(FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Count(b => b.Definition != null && b.Definition.Kind == Nyangbingo.Core.YokaiKind.Gangcheori) == 1, "day18 naturally creates exactly one Gangcheori resident");
                 if (!day18Clock.IsNight) { Next(975); break; }
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "day18-night.png"));
                 Next(1112); break;
             case 1112:
                 Sample();
                 if (Time.realtimeSinceStartup - phaseStarted < 5f) return;
-                checks.Add("Day18 night runtime enemies: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
+                checks.Add("Day18 night runtime enemies: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
                 var day18SaveShell = FindAnyObjectByType<GameShellController>();
                 Require(day18SaveShell.OpenPause(), "normal day18 pause opens");
                 var day18SaveButton = (Button)typeof(MainGameShellUiController).GetField("pauseSaveButton", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(FindAnyObjectByType<MainGameShellUiController>());
@@ -5063,8 +5063,8 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 if (player == null || !player.IsInitialized || SceneTransitionRequest.IsLoadingSceneLoaded() || Time.realtimeSinceStartup - phaseStarted < 3f) return;
                 var day18Restored = FindAnyObjectByType<MainGameBootstrap>().TimeService;
                 Require(day18Restored.Day == 18 && day18Restored.IsNight && !player.IsDead, "day18 night Continue restores living player");
-                Require(FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Count(b => b.Definition != null && b.Definition.Kind == Nyangbingo.Core.YokaiKind.Gangcheori) == 1, "day18 Continue reconciles one Gangcheori without duplication");
-                checks.Add("Restored day18 runtime enemies: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
+                Require(FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Count(b => b.Definition != null && b.Definition.Kind == Nyangbingo.Core.YokaiKind.Gangcheori) == 1, "day18 Continue reconciles one Gangcheori without duplication");
+                checks.Add("Restored day18 runtime enemies: " + string.Join(";", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).Select(b => b.Definition.Id + "@" + b.transform.position)));
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "day18-night-continued.png"));
                 Next(1115); break;
             case 1115:
@@ -5148,7 +5148,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 var initialEventSchedule = FindAnyObjectByType<MainGameEncounterCoordinator>().BaekjungScheduler;
                 Require(initialEventClock.Day == 16 && !initialEventClock.IsNight && !player.IsDead, "earned natural event dawn Continue restores living day16");
                 Require(initialEventSchedule.HasEnded && !initialEventSchedule.IsActive && initialEventSchedule.DispatchedWaveCount == 3, "earned natural event dawn preserves ended schedule without new wave");
-                Require(FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None).Count(e => e.isActiveAndEnabled) == 1, "first restored gameplay has exactly one active EventSystem");
+                Require(FindObjectsByType<UnityEngine.EventSystems.EventSystem>().Count(e => e.isActiveAndEnabled) == 1, "first restored gameplay has exactly one active EventSystem");
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "baekjung-first-continue.png"));
                 Next(Day16InvasionRun ? 1081 : 1072); break;
             case 1081:
@@ -5215,7 +5215,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 {
                     baekjungObservationBucket = eventObserveBucket;
                     baekjungObservedWaves = eventObserveScheduler.DispatchedWaveCount;
-                    checks.Add($"Baekjung natural observation: real={eventObserveReal:F3}, day={eventObserveClock.Day}, clock={eventObserveClock.TimeOfDayGameSeconds:F3}, elapsedGame={eventObserveScheduler.ElapsedSeconds:F3}, waves={baekjungObservedWaves}, ended={eventObserveScheduler.HasEnded}, HP={((Nyangbingo.Combat.Health)PlayerField("health")).Current}, raid={eventObserveEncounters.ActiveRaidCount}, regular={eventObserveEncounters.ActiveRegularCount}; kinds=" + string.Join(",", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None).Where(b => b.Definition != null).Select(b => b.Definition.Id)));
+                    checks.Add($"Baekjung natural observation: real={eventObserveReal:F3}, day={eventObserveClock.Day}, clock={eventObserveClock.TimeOfDayGameSeconds:F3}, elapsedGame={eventObserveScheduler.ElapsedSeconds:F3}, waves={baekjungObservedWaves}, ended={eventObserveScheduler.HasEnded}, HP={((Nyangbingo.Combat.Health)PlayerField("health")).Current}, raid={eventObserveEncounters.ActiveRaidCount}, regular={eventObserveEncounters.ActiveRegularCount}; kinds=" + string.Join(",", FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>().Where(b => b.Definition != null).Select(b => b.Definition.Id)));
                     ScreenCapture.CaptureScreenshot(Path.Combine(directory, $"baekjung-wave-{baekjungObservedWaves}-sample-{eventObserveBucket:D2}.png"));
                 }
                 if (player.IsDead) throw new Exception("Natural Baekjung observation ended in death; not a full-night survival result.");
@@ -5261,7 +5261,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 var eventRestoredSchedule = FindAnyObjectByType<MainGameEncounterCoordinator>().BaekjungScheduler;
                 Require(eventRestoredClock.Day == 16 && !eventRestoredClock.IsNight && !player.IsDead, "event autosave Continue restores living day16");
                 Require(eventRestoredSchedule.HasEnded && !eventRestoredSchedule.IsActive && eventRestoredSchedule.DispatchedWaveCount == 3, "Continue does not restart ended Baekjung waves");
-                Require(FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None).Count(e => e.isActiveAndEnabled) == 1, "second restored gameplay has exactly one active EventSystem");
+                Require(FindObjectsByType<UnityEngine.EventSystems.EventSystem>().Count(e => e.isActiveAndEnabled) == 1, "second restored gameplay has exactly one active EventSystem");
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "baekjung-dawn-continued.png"));
                 Next(1075); break;
             case 1075:
@@ -5552,7 +5552,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             case 958:
                 Sample();
                 if (Time.realtimeSinceStartup - phaseStarted < 6f) return;
-                foreach (var probeHud in FindObjectsByType<MainGameHudController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                foreach (var probeHud in FindObjectsByType<MainGameHudController>(FindObjectsInactive.Include))
                 {
                     object HudField(string name) => typeof(MainGameHudController).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(probeHud);
                     var probeServices = (MainGameRuntimeServices)HudField("runtimeServices");
@@ -5561,7 +5561,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     Require(probeGuide != null && probeGuide.gameObject.activeInHierarchy && probeGuide.text.Contains("얼음 저장고 만들기") && probeGuide.text.Contains($"돌 {probeServices.PlayerInventory.Count("stone")}/10"), "settled Continue guide is visible and matches restored facilities and inventory");
                     checks.Add($"Guide diagnostic hud={probeHud.name} enabled={probeHud.enabled} active={probeHud.gameObject.activeInHierarchy} services={probeServices?.name} initialized={probeServices?.IsInitialized} dirt={probeServices?.PlayerInventory?.Count("dirt")} stone={probeServices?.PlayerInventory?.Count("stone")} playerValid={probePlayer != null} guideRefreshAt={HudField("shelterGuideRefreshAt")} unscaledNow={Time.unscaledTime}; guide={probeGuide?.text}");
                 }
-                checks.Add("Runtime service instances: " + string.Join(",", FindObjectsByType<MainGameRuntimeServices>(FindObjectsInactive.Include, FindObjectsSortMode.None).Select(s => $"{s.name} active={s.gameObject.activeInHierarchy} initialized={s.IsInitialized} dirt={s.PlayerInventory?.Count("dirt")}")));
+                checks.Add("Runtime service instances: " + string.Join(",", FindObjectsByType<MainGameRuntimeServices>(FindObjectsInactive.Include).Select(s => $"{s.name} active={s.gameObject.activeInHierarchy} initialized={s.IsInitialized} dirt={s.PlayerInventory?.Count("dirt")}")));
                 ScreenCapture.CaptureScreenshot(Path.Combine(directory, "king-guide-diagnostic.png"));
                 Next(959); break;
             case 959:
@@ -5653,7 +5653,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 }
                 if (Time.realtimeSinceStartup - combatStarted > 1100f)
                 { checks.Add("Natural combat observation reached 1100-second limit; saving partial progress."); Sample(); Next(420); break; }
-                var foe = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>(FindObjectsSortMode.None)
+                var foe = FindObjectsByType<Nyangbingo.Yokai.YokaiBrain>()
                     .Where(b => b.Definition != null && b.GetComponent<Nyangbingo.Combat.Health>() != null && !b.GetComponent<Nyangbingo.Combat.Health>().IsDead)
                     .OrderBy(b => Vector2.Distance(b.transform.position, player.transform.position)).FirstOrDefault();
                 if (foe == null) { Sample(); break; }

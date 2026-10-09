@@ -1354,6 +1354,10 @@ namespace Nyangbingo.UI
             var emphasize = temperature.IsHypothermiaDamageImminent ||
                             RoomTempPresentation.ShouldEmphasizeHypothermiaStatusIcon(
                                 temperature.Current, temperature.HypothermiaDamageAtTemperature);
+            // 피해 임박 단계에서는 전달받은 경고 변형 아이콘(없으면 기본 아이콘 유지)으로 바꾼다.
+            var normalSprite = gameplayArtCatalog != null ? gameplayArtCatalog.HypothermiaStatusIcon : null;
+            var alertSprite = gameplayArtCatalog != null ? gameplayArtCatalog.HypothermiaStatusIconAlert : null;
+            hypothermiaStatusIcon.sprite = emphasize && alertSprite != null ? alertSprite : normalSprite;
             hypothermiaStatusIcon.rectTransform.localScale = Vector3.one;
             hypothermiaStatusIcon.color = emphasize
                 ? Color.white

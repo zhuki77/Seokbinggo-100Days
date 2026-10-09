@@ -42,6 +42,8 @@ public static class NyangbingoArt720Binder
         ("drought_heart_shard", "Assets/Art/Items/DeliveredFinal/drought_heart_shard.aseprite"),
         ("clay_hand", "Assets/Art/Items/DeliveredFinal/clay_hand.aseprite"),
         ("altar_echo", "Assets/Art/Items/DeliveredFinal/altar_echo.aseprite"),
+        // 빗장.aseprite = 창고 봉인(아티팩트 20종 중 마지막 원본). 22x16 가로형이라 preserveAspect로 표시된다.
+        ("vault_seal", "Assets/Art/Items/DeliveredFinal/vault_seal.aseprite"),
         ("wood", "Assets/Art/Decorations/tree.aseprite"),
         ("hemp_stalk", "Assets/Art/Decorations/hemp.aseprite"),
         ("rebar", "Assets/Art/Decorations/ruin_rebar.aseprite"),
@@ -135,11 +137,9 @@ public static class NyangbingoArt720Binder
         ("yeongno_tooth", "Assets/Art/Items/DeliveredFinal/yeongno_tooth.aseprite")
     };
 
-    // 전용 원본 미제공. 재연결 실행 시 다른 아이템 그림이 다시 붙지 않게 해제한다.
-    private static readonly string[] MissingItemArtIds =
-    {
-        "vault_seal"
-    };
+    // 전용 원본이 아직 없는 아이템. 재연결 실행 시 다른 아이템 그림이 다시 붙지 않게 해제한다.
+    // (vault_seal은 빗장.aseprite 수령으로 ItemBindings로 이동했다.)
+    private static readonly string[] MissingItemArtIds = Array.Empty<string>();
 
     private static readonly (string property, string path, int expectedFrames)[] FrameBindings =
     {
@@ -180,6 +180,7 @@ public static class NyangbingoArt720Binder
     {
         ("deathTearPouch", "Assets/Art/Gameplay/death_tear_pouch.aseprite"),
         ("hypothermiaStatusIcon", "Assets/Art/Gameplay/hypothermia_status_icon.aseprite"),
+        ("hypothermiaStatusIconAlert", "Assets/Art/Gameplay/hypothermia_status_icon_alert.aseprite"),
         ("nightSpawnBlockedIcon", "Assets/Art/Gameplay/night_spawn_blocked_icon.aseprite"),
         ("dangerIcon", "Assets/Art/UI/danger_icon.aseprite"),
         ("bossWarningLarge", "Assets/Art/UI/Boss/boss_warning_32.aseprite"),
@@ -423,6 +424,7 @@ public static class NyangbingoArt720Binder
             ContainsItem(itemSerialized.FindProperty("entries"), "ssireum_knot") &&
             gameplaySerialized.FindProperty("dayCounterFrames")?.arraySize == 17 &&
             gameplaySerialized.FindProperty("inventorySlot")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("hypothermiaStatusIconAlert")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellStart")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("shellNumberGlyphs")?.arraySize == ShellNumberGlyphPaths.Length &&
             SpriteBindings.Where(binding => binding.path.StartsWith("Assets/Art/UI/Shell/", StringComparison.Ordinal))

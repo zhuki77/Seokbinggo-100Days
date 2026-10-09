@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: BuildingArtCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.BuildingArtCatalog
   entries:
+  - id: rope
+    frames:
+    - {fileID: -2391460369877762261, guid: 7ca1e50256b23e949bd6ac26459821f6, type: 3}
+    attackFrames: []
   - id: workbench
     frames:
     - {fileID: -7467623030795044663, guid: ca659e2a6c3fb164790018a66ded22a7, type: 3}
@@ -227,8 +231,4 @@ MonoBehaviour:
   - id: wallpaper
     frames:
     - {fileID: -2333506232851026980, guid: 6ec5fd712b9870446be7fca4ea022e7c, type: 3}
-    attackFrames: []
-  - id: rope
-    frames:
-    - {fileID: -2391460369877762261, guid: 7ca1e50256b23e949bd6ac26459821f6, type: 3}
     attackFrames: []

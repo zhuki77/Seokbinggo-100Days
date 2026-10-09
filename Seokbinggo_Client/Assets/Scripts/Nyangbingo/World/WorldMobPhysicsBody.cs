@@ -320,7 +320,9 @@ namespace Nyangbingo.World
             }
             var rawStartCell = ToCell(current);
             var startsOnStandingCell = IsGroundStandingCell(rawStartCell);
-            var groundedOnTiles = IsGroundedOnTiles();
+            // 콜라이더 모서리가 발판에 남아 있어도, 중심이 착지 위 공기 칸으로 들어가면
+            // 이미 낙하 중이다. 이 상태에서 접지를 지우면 목표 쪽으로 되돌아간다.
+            var groundedOnTiles = startsOnStandingCell && IsGroundedOnTiles();
             if (groundedOnTiles)
                 groundDropCommitted = false;
             // A drop edge is represented by a direct graph edge from the platform edge to
@@ -1116,8 +1118,36 @@ namespace Nyangbingo.World
         private bool IsGroundedOnTiles()
         {
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
-            return PlayerMovementPhysics.HasForegroundGroundSupport(attachedCollider, GroundProbeDepth,
-                groundProbeHits, groundContacts);
+            if (PlayerMovementPhysics.HasForegroundGroundSupport(attachedCollider, GroundProbeDepth,
+                    groundProbeHits, groundContacts))
+                return true;
+            // 단차 점프의 장애물과 같은 타일 데이터를 쓴다. 전경 콜라이더가 없는 구간에서도
+            // 발밑 고체 칸 위(GroundProbeDepth 이내)면 땅에 선 것으로 본다.
+            return HasNavigationTileGroundSupport();
+        }
+
+        private bool HasNavigationTileGroundSupport()
+        {
+            if (navigationTiles == null || attachedCollider == null) return false;
+            // 중심 열만 본다. 좌우 끝을 같이 보면 낙하 칸에 들어간 뒤에도
+            // 발판 모서리에 걸친 콜라이더 때문에 접지로 남는다.
+            return HasSolidTileUnderFoot(attachedCollider.bounds.center.x,
+                attachedCollider.bounds.min.y);
+        }
+
+        private bool HasSolidTileUnderFoot(float x, float footY)
+        {
+            var footCell = ToCell(new Vector2(x, footY - .001f));
+            for (var y = footCell.y; y >= footCell.y - 1; y--)
+            {
+                var candidate = new Vector3Int(footCell.x, y, 0);
+                if (!navigationTiles.InBounds(candidate)) continue;
+                var tile = navigationTiles.GetTile(candidate);
+                if (!tile.BlocksMovement || navigationTiles.IsDoorOpen(candidate)) continue;
+                var top = navigationTiles.GetCellWorldBounds(candidate).max.y;
+                return top <= footY + .05f && footY - top <= GroundProbeDepth;
+            }
+            return false;
         }
 
         public static WorldMobLocomotion ForYokai(YokaiKind kind)
