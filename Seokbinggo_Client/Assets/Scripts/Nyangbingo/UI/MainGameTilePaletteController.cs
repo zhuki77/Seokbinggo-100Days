@@ -61,6 +61,7 @@ namespace Nyangbingo.UI
 
         private readonly List<string> paletteItemIds = new List<string>();
         private readonly List<SlotView> slotViews = new List<SlotView>();
+        private bool vitalsWells;
         private readonly List<WorldRangeOverlay> rangeOverlays = new List<WorldRangeOverlay>();
         private readonly List<Vector2> rangePositions = new List<Vector2>();
         [SerializeField] private GameObject paletteRoot;
@@ -363,6 +364,80 @@ namespace Nyangbingo.UI
 
         }
 
+        /// <summary>
+        /// Selection borders sit on the eight wells inside the vitals sheet, not in a separate row.
+        /// Wells stay on the sheet's native 208×62 pixels. The 18×22 border keeps its own size.
+        /// </summary>
+        public void PlaceInVitalsWells()
+        {
+            if (content == null) return;
+            vitalsWells = true;
+            var layout = content.GetComponent<HorizontalLayoutGroup>();
+            if (layout != null) layout.enabled = false;
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            if (fitter != null) fitter.enabled = false;
+            if (content.parent is RectTransform viewport)
+            {
+                viewport.anchorMin = Vector2.zero;
+                viewport.anchorMax = Vector2.one;
+                viewport.offsetMin = Vector2.zero;
+                viewport.offsetMax = Vector2.zero;
+            }
+
+            const float sourceScale = 1f;
+            var border = gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected;
+            var slotSize = border != null ? border.rect.size : new Vector2(18f, 22f);
+            var wellSpriteX = new[] { 4f, 23f, 42f, 61f, 80f, 99f, 118f, 137f };
+            const float wellCenterSpriteY = 49f;
+            content.anchorMin = content.anchorMax = new Vector2(0f, 1f);
+            content.pivot = new Vector2(0f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.localScale = Vector3.one;
+            content.sizeDelta = new Vector2(208f * sourceScale, 62f * sourceScale);
+
+            for (var index = 0; index < wellSpriteX.Length; index++)
+            {
+                var slot = content.Find($"Slot_{index + 1}") as RectTransform;
+                if (slot == null) continue;
+                slot.anchorMin = slot.anchorMax = new Vector2(0f, 1f);
+                slot.pivot = new Vector2(0f, 1f);
+                slot.localScale = Vector3.one;
+                var centerX = (wellSpriteX[index] + 8f) * sourceScale;
+                var centerY = wellCenterSpriteY * sourceScale;
+                slot.anchoredPosition = new Vector2(centerX - slotSize.x * .5f, -(centerY - slotSize.y * .5f));
+                slot.sizeDelta = slotSize;
+                var slotImage = slot.GetComponent<Image>();
+                if (slotImage != null) slotImage.preserveAspect = true;
+                var icon = slot.Find("Icon") as RectTransform;
+                if (icon != null)
+                {
+                    icon.anchorMin = icon.anchorMax = new Vector2(.5f, .5f);
+                    icon.pivot = new Vector2(.5f, .5f);
+                    icon.anchoredPosition = new Vector2(0f, 1f);
+                    var inner = Mathf.Max(1f, slotSize.x - 6f);
+                    icon.sizeDelta = new Vector2(inner, inner);
+                    if (icon.GetComponent<Image>() is Image iconImage)
+                        iconImage.preserveAspect = true;
+                }
+
+                var shortcut = slot.Find("Shortcut");
+                if (shortcut != null) shortcut.gameObject.SetActive(false);
+            }
+
+            if (paletteRoot != null)
+            {
+                var background = paletteRoot.GetComponent<Image>();
+                if (background != null)
+                {
+                    background.sprite = null;
+                    background.color = new Color(1f, 1f, 1f, 0f);
+                    background.raycastTarget = false;
+                }
+            }
+
+            RefreshSlotVisuals();
+        }
+
         private void BuildPaletteUi()
         {
             if (paletteRoot == null || content == null || rangeToggleStatusText == null ||
@@ -513,12 +588,21 @@ namespace Nyangbingo.UI
                 var background = view.Button.targetGraphic as Image;
                 if (background != null)
                 {
-                    background.sprite = selected
-                        ? gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected
-                        : gameplayArtCatalog?.InventorySlot;
-                    background.color = background.sprite != null
-                        ? Color.white
-                        : selected ? new Color(.24f, .55f, .8f, 1f) : new Color(.12f, .17f, .25f, 1f);
+                    if (vitalsWells && !selected)
+                    {
+                        background.sprite = null;
+                        background.color = new Color(1f, 1f, 1f, 0f);
+                    }
+                    else
+                    {
+                        background.sprite = selected
+                            ? gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected
+                            : gameplayArtCatalog?.InventorySlot;
+                        background.preserveAspect = true;
+                        background.color = background.sprite != null
+                            ? Color.white
+                            : selected ? new Color(.24f, .55f, .8f, 1f) : new Color(.12f, .17f, .25f, 1f);
+                    }
                 }
 
                 if (isEmpty)

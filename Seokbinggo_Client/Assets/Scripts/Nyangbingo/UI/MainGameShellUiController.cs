@@ -288,6 +288,7 @@ namespace Nyangbingo.UI
                 var buttonImage = buttonObject.GetComponent<Image>();
                 buttonImage.color = new Color(0.16f, 0.22f, 0.32f, 1f);
                 var button = buttonObject.GetComponent<Button>();
+                var traitFrames = TraitButtonFrames(traitId);
                 var labelObject = new GameObject("Label", typeof(RectTransform));
                 labelObject.transform.SetParent(buttonRect, false);
                 var labelRect = (RectTransform)labelObject.transform;
@@ -306,12 +307,141 @@ namespace Nyangbingo.UI
                 var name = definition != null ? definition.DisplayName : traitId;
                 var shortName = definition != null ? definition.ShortName : string.Empty;
                 label.text = string.IsNullOrEmpty(shortName) ? name : $"{name}  ·  {shortName}";
+                if (traitFrames != null && traitFrames.Count >= 2 && traitFrames[0] != null && traitFrames[1] != null)
+                {
+                    buttonRect.sizeDelta = new Vector2(192f, 38f);
+                    buttonImage.sprite = traitFrames[0];
+                    buttonImage.type = Image.Type.Simple;
+                    buttonImage.color = Color.white;
+                    button.transition = Selectable.Transition.None;
+                    var hoverObject = new GameObject("HoverBorder", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    hoverObject.transform.SetParent(buttonRect, false);
+                    var hoverRect = (RectTransform)hoverObject.transform;
+                    hoverRect.anchorMin = Vector2.zero;
+                    hoverRect.anchorMax = Vector2.one;
+                    hoverRect.offsetMin = Vector2.zero;
+                    hoverRect.offsetMax = Vector2.zero;
+                    var hoverImage = hoverObject.GetComponent<Image>();
+                    hoverImage.sprite = TraitHoverBorderSprite();
+                    hoverImage.type = Image.Type.Simple;
+                    hoverImage.color = new Color(34f / 255f, 35f / 255f, 35f / 255f, 1f);
+                    hoverImage.raycastTarget = false;
+                    hoverImage.enabled = false;
+                    buttonObject.AddComponent<TraitButtonHover>().Bind(hoverImage);
+                    label.text = TemporaryTraitName(traitId);
+                    label.enabled = true;
+                    label.fontSize = 16;
+                    label.fontStyle = FontStyle.Bold;
+                    label.alignment = TextAnchor.MiddleLeft;
+                    label.color = new Color(98f / 255f, 104f / 255f, 113f / 255f, 1f);
+                    labelRect.anchorMin = labelRect.anchorMax = new Vector2(0f, 1f);
+                    labelRect.pivot = new Vector2(0f, 1f);
+                    labelRect.anchoredPosition = new Vector2(14f, -6f);
+                    labelRect.sizeDelta = new Vector2(116f, 26f);
+                    var coverObject = new GameObject("NameCover", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    coverObject.transform.SetParent(buttonRect, false);
+                    var coverRect = (RectTransform)coverObject.transform;
+                    coverRect.anchorMin = coverRect.anchorMax = new Vector2(0f, 1f);
+                    coverRect.pivot = new Vector2(0f, 1f);
+                    coverRect.anchoredPosition = new Vector2(8f, -6f);
+                    coverRect.sizeDelta = new Vector2(124f, 26f);
+                    var cover = coverObject.GetComponent<Image>();
+                    cover.color = new Color(166f / 255f, 174f / 255f, 186f / 255f, 1f);
+                    cover.raycastTarget = false;
+                    coverObject.transform.SetSiblingIndex(labelObject.transform.GetSiblingIndex());
+                    labelObject.transform.SetAsLastSibling();
+                    hoverObject.transform.SetAsLastSibling();
+                }
                 var capturedId = traitId;
                 button.onClick.AddListener(() => HandleTraitSelected(capturedId));
             }
 
             traitSelectPanel.SetActive(false);
             shell.ConfigureTraitSelectPanel(traitSelectPanel);
+        }
+
+        private static string TemporaryTraitName(string traitId)
+        {
+            // 버튼 그림에 옛 이름이 박혀 있어서, 이름 자리만 임시로 덮는다.
+            if (traitId == TraitRules.MeleeId) return "할퀴냥이";
+            if (traitId == TraitRules.RangedId) return "쏘냥이";
+            if (traitId == TraitRules.LaborId) return "파냥이";
+            if (traitId == TraitRules.CoolId) return "얼리냥이";
+            return traitId;
+        }
+
+        private static Sprite traitHoverBorderSprite;
+
+        private static Sprite TraitHoverBorderSprite()
+        {
+            if (traitHoverBorderSprite != null) return traitHoverBorderSprite;
+            const int width = 192;
+            const int height = 38;
+            const int radius = 10;
+            const int thickness = 2;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            var pixels = new Color32[width * height];
+            var ink = new Color32(34, 35, 35, 255);
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    var outer = InsideRoundedRect(x, y, width, height, radius);
+                    var inner = InsideRoundedRect(x - thickness, y - thickness,
+                        width - thickness * 2, height - thickness * 2, radius - thickness);
+                    if (outer && !inner) pixels[y * width + x] = ink;
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            traitHoverBorderSprite = Sprite.Create(texture, new Rect(0f, 0f, width, height),
+                new Vector2(.5f, .5f), 1f);
+            traitHoverBorderSprite.hideFlags = HideFlags.HideAndDontSave;
+            return traitHoverBorderSprite;
+        }
+
+        private static bool InsideRoundedRect(int x, int y, int width, int height, int radius)
+        {
+            if (width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height) return false;
+            var limit = Mathf.Max(0, Mathf.Min(radius, Mathf.Min(width, height) / 2));
+            var nearestX = Mathf.Clamp(x, limit, width - 1 - limit);
+            var nearestY = Mathf.Clamp(y, limit, height - 1 - limit);
+            var dx = x - nearestX;
+            var dy = y - nearestY;
+            return dx * dx + dy * dy <= limit * limit;
+        }
+
+        private sealed class TraitButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+        {
+            private Image border;
+
+            public void Bind(Image borderImage) => border = borderImage;
+
+            public void OnPointerEnter(PointerEventData eventData)
+            {
+                if (border != null) border.enabled = true;
+            }
+
+            public void OnPointerExit(PointerEventData eventData)
+            {
+                if (border != null) border.enabled = false;
+            }
+        }
+
+        private System.Collections.Generic.IReadOnlyList<Sprite> TraitButtonFrames(string traitId)
+        {
+            if (gameplayArtCatalog == null) return null;
+            if (traitId == TraitRules.MeleeId) return gameplayArtCatalog.TraitMeleeFrames;
+            if (traitId == TraitRules.RangedId) return gameplayArtCatalog.TraitRangedFrames;
+            if (traitId == TraitRules.LaborId) return gameplayArtCatalog.TraitLaborFrames;
+            if (traitId == TraitRules.CoolId) return gameplayArtCatalog.TraitCoolFrames;
+            return null;
         }
 
         private void HandleTraitSelected(string traitId)
@@ -1053,6 +1183,8 @@ namespace Nyangbingo.UI
 
         private void LateUpdate()
         {
+            if (shell != null && shell.Screen == GameShellScreen.TraitSelect && traitSelectPanel != null)
+                traitSelectPanel.transform.SetAsLastSibling();
             ProcessEscapeFallback();
             if (!IsInitialized || string.IsNullOrEmpty(pendingEndingBossId)) return;
             var bossId = pendingEndingBossId;

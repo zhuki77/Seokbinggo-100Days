@@ -56,10 +56,24 @@ namespace Nyangbingo.UI
             guides = services.Goals.GuideQueue;
             guides.BeginDay(bootstrap?.TimeService?.Day ?? 1);
             itemArt = icons; gameplayArt = art; directionSprite = goalDirectionSprite;
-            root = Panel("CurrentGoal", parent.transform, new Vector2(12, -62), new Vector2(220, 57));
-            icon = Image("Icon", root, new Vector2(5, -5), new Vector2(18, 18));
+            var questWindow = gameplayArt?.QuestWindow;
+            var questSize = questWindow != null
+                ? new Vector2(questWindow.rect.width, questWindow.rect.height)
+                : new Vector2(107f, 54f);
+            root = Panel("CurrentGoal", parent.transform, new Vector2(4, -110), questSize);
+            if (questWindow != null)
+            {
+                var questImage = root.GetComponent<UnityEngine.UI.Image>();
+                questImage.sprite = questWindow;
+                questImage.color = Color.white;
+                questImage.type = UnityEngine.UI.Image.Type.Simple;
+                questImage.preserveAspect = true;
+            }
+            var innerWidth = Mathf.Max(24f, questSize.x - 8f);
+            icon = Image("Icon", root, new Vector2(4, -4), new Vector2(12, 12));
             icon.preserveAspect = true;
-            title = Label("GoalTitle", root, textTemplate, new Vector2(28, -3), new Vector2(187, 16), 8);
+            title = Label("GoalTitle", root, textTemplate, new Vector2(18, -3), new Vector2(innerWidth - 14f, 12), 7);
+            KeepInside(title);
             title.raycastTarget = true;
             titleButton = title.gameObject.AddComponent<UnityEngine.UI.Button>();
             titleButton.targetGraphic = title;
@@ -67,20 +81,29 @@ namespace Nyangbingo.UI
             titleColors.disabledColor = Color.white;
             titleButton.colors = titleColors;
             titleButton.onClick.AddListener(() => listOpen = !listOpen);
-            hint = Label("GoalHint", root, textTemplate, new Vector2(5, -23), new Vector2(210, 30), 7);
-            completion = Label("GoalCompleted", root, textTemplate, new Vector2(5, -57), new Vector2(210, 14), 7);
+            hint = Label("GoalHint", root, textTemplate, new Vector2(4, -17),
+                new Vector2(innerWidth, Mathf.Max(12f, questSize.y - 21f)), 7);
+            KeepInside(hint);
+            completion = Label("GoalCompleted", root, textTemplate,
+                new Vector2(4, -(questSize.y - 16f)), new Vector2(innerWidth, 14), 7);
+            KeepInside(completion);
             completion.color = new Color(.55f, 1f, .7f);
-            list = Panel("GoalSelection", root, new Vector2(0, -74), new Vector2(220, 108));
             var goals = services.Goals.Progress.SelectableGoals;
+            var listHeight = Mathf.Clamp(goals.Count * 17f + 6f, 20f, 90f);
+            list = Panel("GoalSelection", root, new Vector2(0, -questSize.y), new Vector2(questSize.x, listHeight));
+            list.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
             options = new UnityEngine.UI.Button[goals.Count];
+            var rowWidth = Mathf.Max(20f, questSize.x - 6f);
             for (var i = 0; i < goals.Count; i++)
             {
                 var goal = goals[i];
-                var row = Panel(goal.Id, list, new Vector2(3, -3 - i * 17), new Vector2(214, 16));
+                var row = Panel(goal.Id, list, new Vector2(3, -3 - i * 17), new Vector2(rowWidth, 16));
                 options[i] = row.gameObject.AddComponent<UnityEngine.UI.Button>();
                 options[i].targetGraphic = row.GetComponent<UnityEngine.UI.Image>();
                 options[i].targetGraphic.raycastTarget = true;
-                Label("Name", row, textTemplate, new Vector2(4, 0), new Vector2(206, 16), 7).text = goal.DisplayName;
+                var name = Label("Name", row, textTemplate, new Vector2(4, 0), new Vector2(rowWidth - 8f, 16), 7);
+                KeepInside(name);
+                name.text = goal.DisplayName;
                 options[i].onClick.AddListener(() => { services.Goals.Progress.Select(goal.Id); listOpen = false; });
             }
             dawnRoot = Panel("DawnPreservationConfirmation", parent.transform, Vector2.zero, new Vector2(260, 168));
@@ -426,6 +449,12 @@ namespace Nyangbingo.UI
             label.alignment = TextAnchor.UpperLeft; label.color = Color.white;
             label.horizontalOverflow = HorizontalWrapMode.Wrap; label.verticalOverflow = VerticalWrapMode.Overflow;
             return label;
+        }
+
+        private static void KeepInside(UnityEngine.UI.Text label)
+        {
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
         }
 
         private void OnDestroy()

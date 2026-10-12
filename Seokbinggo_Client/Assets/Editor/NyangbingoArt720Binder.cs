@@ -148,13 +148,24 @@ public static class NyangbingoArt720Binder
         ("yokaiTearBalanceFrames", "Assets/Art/UI/yokai_tear_balance.aseprite", 4),
         ("fuelGaugeFrames", "Assets/Art/UI/fuel_gauge.aseprite", 4),
         ("saveIndicatorFrames", "Assets/Art/UI/save_indicator.aseprite", 6),
-        ("playerVitalsFrames", "Assets/Art/UI/player_vitals_combined.aseprite", 12),
+        ("playerVitalsFrames", "Assets/Art/UI/player_vitals_hotbar.aseprite", 12),
         ("button1x1Frames", "Assets/Art/UI/Common/button_1x1.aseprite", 2),
         ("button1x2Frames", "Assets/Art/UI/Common/button_1x2.aseprite", 2),
         ("button1x4Frames", "Assets/Art/UI/Common/button_1x4.aseprite", 2),
         ("button1x6Frames", "Assets/Art/UI/Common/button_1x6.aseprite", 2),
         ("miningBreakFrames", "Assets/Art/Gameplay/mining_break.aseprite", 2),
-        ("miningCriticalFrames", "Assets/Art/Gameplay/mining_critical.aseprite", 1)
+        ("miningCriticalFrames", "Assets/Art/Gameplay/mining_critical.aseprite", 1),
+        ("traitMeleeFrames", "Assets/Art/UI/Trait/trait_melee.aseprite", 2),
+        ("traitRangedFrames", "Assets/Art/UI/Trait/trait_ranged.aseprite", 2),
+        ("traitLaborFrames", "Assets/Art/UI/Trait/trait_labor.aseprite", 2),
+        ("traitCoolFrames", "Assets/Art/UI/Trait/trait_cool.aseprite", 2),
+        ("button1x1BlueFrames", "Assets/Art/UI/Common/button_1x1_blue.aseprite", 2),
+        ("button1x2BlueFrames", "Assets/Art/UI/Common/button_1x2_blue.aseprite", 2),
+        ("button1x4BlueFrames", "Assets/Art/UI/Common/button_1x4_blue.aseprite", 2),
+        ("button1x6BlueFrames", "Assets/Art/UI/Common/button_1x6_blue.aseprite", 2),
+        ("craftProgressFrames", "Assets/Art/UI/Crafting/craft_progress.aseprite", 4),
+        ("craftTopBarFrames", "Assets/Art/UI/Crafting/craft_top_bar.aseprite", 4),
+        ("craftButtonFrames", "Assets/Art/UI/Crafting/craft_button.aseprite", 2)
     };
 
     // Catalog order consumed by RuntimePixelGlyphPresenter:
@@ -191,6 +202,10 @@ public static class NyangbingoArt720Binder
         ("bossHealthMotherBulgasari", "Assets/Art/UI/Boss/boss_health_mother_bulgasari.aseprite"),
         ("bossHealthImugi", "Assets/Art/UI/Boss/boss_health_imugi.aseprite"),
         ("inventoryPanel", "Assets/Art/UI/Inventory/inventory_panel.aseprite"),
+        ("craftPanel", "Assets/Art/UI/Crafting/craft_panel.aseprite"),
+        ("craftResultSlot", "Assets/Art/UI/Crafting/craft_result_slot.aseprite"),
+        ("craftMidSlot", "Assets/Art/UI/Crafting/craft_mid_slot.aseprite"),
+        ("craftScroll", "Assets/Art/UI/Crafting/craft_scroll.aseprite"),
         ("inventorySlot", "Assets/Art/UI/Inventory/inventory_slot.aseprite"),
         ("inventorySlotSelected", "Assets/Art/UI/Inventory/inventory_slot_selected.aseprite"),
         ("inventorySlotTopSelected", "Assets/Art/UI/Inventory/inventory_slot_top_selected.aseprite"),
@@ -229,7 +244,14 @@ public static class NyangbingoArt720Binder
         ("shellSpeakerLow", "Assets/Art/UI/Shell/sp2.aseprite"),
         ("shellSpeakerMuted", "Assets/Art/UI/Shell/sp3.aseprite"),
         ("shellVolumeBar", "Assets/Art/UI/Shell/spbar.aseprite"),
-        ("shellVolumeHandle", "Assets/Art/UI/Shell/spbar2.aseprite")
+        ("shellVolumeHandle", "Assets/Art/UI/Shell/spbar2.aseprite"),
+        ("questWindow", "Assets/Art/UI/Quest/quest_window.aseprite"),
+        ("scrollTrack", "Assets/Art/UI/Common/scroll_track.aseprite"),
+        ("scrollHandle", "Assets/Art/UI/Common/scroll_handle.aseprite"),
+        ("labelHp", "Assets/Art/UI/Shell/label_hp.aseprite"),
+        ("labelDegree", "Assets/Art/UI/Shell/label_degree.aseprite"),
+        ("labelTemperature", "Assets/Art/UI/Shell/label_temperature.aseprite"),
+        ("labelDay", "Assets/Art/UI/Shell/label_day.aseprite")
     };
 
     private static readonly (string property, string path)[] EnvironmentBindings =
@@ -322,6 +344,14 @@ public static class NyangbingoArt720Binder
         }
 
         AssetDatabase.SaveAssets();
+        try
+        {
+            Nyangbingo.Editor.NyangbingoTileArtIntegrator.ApplyPlayerWeaponArt();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError("[Nyangbingo] 플레이어/무기 아트 재연결 실패: " + exception.Message);
+        }
         var frameCount = FrameBindings.Sum(binding => binding.expectedFrames);
         Debug.Log($"[Nyangbingo] 제공 아트 카탈로그 연결 완료 " +
                   $"(아이템/드롭 {ItemBindings.Length}, HUD/버튼 프레임 {frameCount}, " +
@@ -439,6 +469,13 @@ public static class NyangbingoArt720Binder
             gameplaySerialized.FindProperty("button1x4Frames")?.arraySize == 2 &&
             gameplaySerialized.FindProperty("button1x6Frames")?.arraySize == 2 &&
             gameplaySerialized.FindProperty("codexCard")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("questWindow")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("traitMeleeFrames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("craftProgressFrames")?.arraySize == 4 &&
+            gameplaySerialized.FindProperty("craftPanel")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("craftTopBarFrames")?.arraySize == 4 &&
+            gameplaySerialized.FindProperty("craftButtonFrames")?.arraySize == 2 &&
+            VitalsUseHotbarSheet(gameplaySerialized.FindProperty("playerVitalsFrames")) &&
             EnvironmentBindings.All(binding =>
                 environmentSerialized.FindProperty(binding.property)?.objectReferenceValue != null) &&
             deepBackgroundBound && ruinWallBound;
@@ -548,6 +585,16 @@ public static class NyangbingoArt720Binder
 
         entries.InsertArrayElementAtIndex(entries.arraySize);
         return entries.GetArrayElementAtIndex(entries.arraySize - 1);
+    }
+
+    private static bool VitalsUseHotbarSheet(SerializedProperty frames)
+    {
+        if (frames == null || frames.arraySize != 12) return false;
+        var sprite = frames.GetArrayElementAtIndex(0).objectReferenceValue as Sprite;
+        return sprite != null && string.Equals(
+            AssetDatabase.GetAssetPath(sprite),
+            "Assets/Art/UI/player_vitals_hotbar.aseprite",
+            StringComparison.Ordinal);
     }
 
     private static bool ContainsItem(SerializedProperty entries, string id)

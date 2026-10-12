@@ -550,22 +550,13 @@ namespace Nyangbingo.UI
                 return;
             }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            statusText.text = BuildEditorBossSelectionStatusLine();
-            RefreshDebugBossPickerBody();
-#else
             statusText.text = string.Empty;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            RefreshDebugBossPickerBody();
 #endif
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        private string BuildEditorBossSelectionStatusLine()
-        {
-            var definition = SelectedBoss;
-            if (definition == null) return "[B] 보스 정의 없음";
-            return $"[B] {selectedIndex + 1}/{BossIds.Length} · {definition.DisplayName}";
-        }
-
         private string BuildEditorBossPickerBodyText()
         {
             var definition = SelectedBoss;
