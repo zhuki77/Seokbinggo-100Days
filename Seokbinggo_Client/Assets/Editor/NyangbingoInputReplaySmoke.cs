@@ -1422,8 +1422,9 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
             }
             healingItemId = healingSlots[healingSourceSlot].itemId;
             healingReturnPhase = phase;
-            Sample(0f, healingSourceSlot < 8 ? (KeyCode)((int)KeyCode.Alpha1 + healingSourceSlot) : KeyCode.Tab);
-            Next(healingSourceSlot < 8 ? 718 : 712);
+            Sample(0f, healingSourceSlot < MainGameTilePaletteController.ShortcutSlotCount
+                ? (KeyCode)((int)KeyCode.Alpha1 + healingSourceSlot) : KeyCode.Tab);
+            Next(healingSourceSlot < MainGameTilePaletteController.ShortcutSlotCount ? 718 : 712);
             return;
         }
         switch (phase)
@@ -5784,7 +5785,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                 Require(!MainGameCraftingUiController.BlocksGameplayInput &&
                     FindAnyObjectByType<MainGameTilePaletteController>().SelectedSlotIndex == shortcutCheck,
                     $"number {shortcutCheck + 1} selects hotbar without opening a menu");
-                if (++shortcutCheck < 8) Next(200);
+                if (++shortcutCheck < MainGameTilePaletteController.ShortcutSlotCount) Next(200);
                 else { shortcutCheck = 0; Next(202); }
                 break;
             case 202:

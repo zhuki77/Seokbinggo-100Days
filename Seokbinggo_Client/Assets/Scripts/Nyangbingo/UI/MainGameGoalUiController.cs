@@ -23,9 +23,15 @@ namespace Nyangbingo.UI
         private UnityEngine.UI.Image icon, arrow;
         private UnityEngine.UI.Text arrowLabel;
         private UnityEngine.UI.Button titleButton;
+        private UnityEngine.UI.Button reopenButton;
+        private UnityEngine.UI.Image reopenIcon;
+        private Sprite reopenNormal;
+        private Sprite reopenPressed;
         private UnityEngine.UI.Button dawnPrevious, dawnNext, dawnConfirm;
         private UnityEngine.UI.Button[] options;
+        public const KeyCode WindowToggleKey = KeyCode.L;
         private bool listOpen;
+        private bool windowHidden;
         private bool firstShelterCompleteShown;
         private float nextEvaluation, nextGuideEvaluation, completionUntil;
         private int dawnDayShown, dawnShownFrame, dawnPage;
@@ -43,7 +49,10 @@ namespace Nyangbingo.UI
             (RectTransformUtility.RectangleContainsScreenPoint(title.rectTransform, Input.mousePosition,
                 canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera) ||
              (list.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(list, Input.mousePosition,
-                canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera)))));
+                canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera)))) ||
+             (reopenButton != null && reopenButton.gameObject.activeInHierarchy &&
+              RectTransformUtility.RectangleContainsScreenPoint((RectTransform)reopenButton.transform, Input.mousePosition,
+                  canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera)));
 
         public void Configure(Canvas parent, UnityEngine.UI.Text textTemplate, GameDataCatalog data,
             MainGameRuntimeServices runtime, MainGamePlayerController controller,
@@ -60,7 +69,11 @@ namespace Nyangbingo.UI
             var questSize = questWindow != null
                 ? new Vector2(questWindow.rect.width, questWindow.rect.height)
                 : new Vector2(107f, 54f);
-            root = Panel("CurrentGoal", parent.transform, new Vector2(4, -110), questSize);
+            const float reopenSize = 16f;
+            const float reopenGap = 2f;
+            var reopenPosition = new Vector2(4f, -110f);
+            root = Panel("CurrentGoal", parent.transform,
+                reopenPosition + new Vector2(reopenSize + reopenGap, 0f), questSize);
             if (questWindow != null)
             {
                 var questImage = root.GetComponent<UnityEngine.UI.Image>();
@@ -70,10 +83,15 @@ namespace Nyangbingo.UI
                 questImage.preserveAspect = true;
             }
             var innerWidth = Mathf.Max(24f, questSize.x - 8f);
-            icon = Image("Icon", root, new Vector2(4, -4), new Vector2(12, 12));
+            const float titleRow = 14f;
+            icon = Image("Icon", root, new Vector2(4, -3), new Vector2(titleRow, titleRow));
             icon.preserveAspect = true;
-            title = Label("GoalTitle", root, textTemplate, new Vector2(18, -3), new Vector2(innerWidth - 14f, 12), 7);
+            title = Label("GoalTitle", root, textTemplate, new Vector2(20, -6),
+                new Vector2(innerWidth - 16f, titleRow), 10);
             KeepInside(title);
+            title.alignment = TextAnchor.MiddleLeft;
+            title.fontStyle = FontStyle.Bold;
+            title.verticalOverflow = VerticalWrapMode.Overflow;
             title.raycastTarget = true;
             titleButton = title.gameObject.AddComponent<UnityEngine.UI.Button>();
             titleButton.targetGraphic = title;
@@ -81,9 +99,10 @@ namespace Nyangbingo.UI
             titleColors.disabledColor = Color.white;
             titleButton.colors = titleColors;
             titleButton.onClick.AddListener(() => listOpen = !listOpen);
-            hint = Label("GoalHint", root, textTemplate, new Vector2(4, -17),
-                new Vector2(innerWidth, Mathf.Max(12f, questSize.y - 21f)), 7);
+            hint = Label("GoalHint", root, textTemplate, new Vector2(4, -19),
+                new Vector2(innerWidth, Mathf.Max(12f, questSize.y - 23f)), 7);
             KeepInside(hint);
+            hint.horizontalOverflow = HorizontalWrapMode.Overflow;
             completion = Label("GoalCompleted", root, textTemplate,
                 new Vector2(4, -(questSize.y - 16f)), new Vector2(innerWidth, 14), 7);
             KeepInside(completion);
@@ -131,6 +150,7 @@ namespace Nyangbingo.UI
             arrowLabel.rectTransform.anchorMin = arrowLabel.rectTransform.anchorMax =
                 arrowLabel.rectTransform.pivot = Vector2.one * .5f;
             arrow.gameObject.SetActive(false);
+            BuildReopenButton(parent.transform, reopenPosition);
             root.SetAsFirstSibling(); arrow.rectTransform.SetAsFirstSibling();
             root.gameObject.SetActive(false);
             services.Goals.Progress.Completed += HandleCompleted;
@@ -174,7 +194,16 @@ namespace Nyangbingo.UI
             SetGuide("seal_boundary_dig", ready && !menuOpen && services.BuildingGuide.MiningSealBoundary,
                 context: services.BuildingGuide.MiningCell.ToString());
             var visible = ready && !menuOpen;
-            root.gameObject.SetActive(visible);
+            if (visible && Input.GetKeyDown(WindowToggleKey) &&
+                !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
+                !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&
+                !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt))
+            {
+                windowHidden = !windowHidden;
+                if (windowHidden) listOpen = false;
+            }
+            root.gameObject.SetActive(visible && !windowHidden);
+            if (reopenButton != null) reopenButton.gameObject.SetActive(visible);
             if (!visible) { arrow.gameObject.SetActive(false); dawnRoot.gameObject.SetActive(false); dawnShownFrame = 0; return; }
             var progress = services.Goals.Progress;
             if (progress.FirstShelterComplete != firstShelterCompleteShown)
@@ -186,13 +215,18 @@ namespace Nyangbingo.UI
             title.text = goal?.DisplayName ?? string.Empty;
             if (!listOpen && services.Goals.PendingDawnDay == 0) services.Goals.RefreshRewardCraftingGuide();
             var selected = guides.Select(false);
-            hint.text = selected?.Text ?? string.Empty;
+            hint.text = WrapAtWordBoundaries(selected?.Text, hint);
             if (selected?.Definition.Id != "reward_crafting" || (!listOpen && services.Goals.PendingDawnDay == 0))
                 guides.Advance(selected, Time.unscaledDeltaTime);
             if (selected?.Definition.Id == "reward_crafting" && selected.Remaining <= 0f)
                 services.Goals.RefreshRewardCraftingGuide();
             icon.sprite = ResolveIcon(goal?.IconRef);
             icon.enabled = icon.sprite != null;
+            if (reopenIcon != null)
+            {
+                reopenIcon.sprite = icon.sprite;
+                reopenIcon.enabled = icon.sprite != null;
+            }
             if (services.Goals.PendingDawnDay > 0) listOpen = false;
             titleButton.interactable = progress.FirstShelterComplete && services.Goals.PendingDawnDay == 0;
             list.gameObject.SetActive(listOpen && progress.FirstShelterComplete);
@@ -212,7 +246,10 @@ namespace Nyangbingo.UI
             else RefreshDawn();
             if (goal == null && string.IsNullOrEmpty(hint.text) &&
                 !dawnRoot.gameObject.activeSelf && !completion.gameObject.activeSelf)
+            {
                 root.gameObject.SetActive(false);
+                if (reopenButton != null) reopenButton.gameObject.SetActive(false);
+            }
             RefreshArrow();
         }
 
@@ -409,6 +446,64 @@ namespace Nyangbingo.UI
             completionUntil = Time.unscaledTime + .8f;
         }
 
+        private void BuildReopenButton(Transform parent, Vector2 position)
+        {
+            var frames = gameplayArt?.Button1x1BlueFrames;
+            if (frames == null || frames.Count == 0) frames = gameplayArt?.Button1x1Frames;
+            reopenNormal = CropButtonCenter(frames != null && frames.Count > 0 ? frames[0] : null);
+            reopenPressed = CropButtonCenter(frames != null && frames.Count > 1 ? frames[1] : null);
+            var go = new GameObject("QuestReopen", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.Button));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(16f, 16f);
+            var image = go.GetComponent<UnityEngine.UI.Image>();
+            image.sprite = reopenNormal;
+            image.type = UnityEngine.UI.Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+            image.raycastTarget = true;
+            reopenButton = go.GetComponent<UnityEngine.UI.Button>();
+            reopenButton.targetGraphic = image;
+            if (reopenPressed != null)
+            {
+                reopenButton.transition = UnityEngine.UI.Selectable.Transition.SpriteSwap;
+                reopenButton.spriteState = new UnityEngine.UI.SpriteState
+                {
+                    highlightedSprite = reopenPressed,
+                    pressedSprite = reopenPressed,
+                    selectedSprite = reopenPressed
+                };
+            }
+            reopenButton.onClick.AddListener(() =>
+            {
+                windowHidden = !windowHidden;
+                if (windowHidden) listOpen = false;
+            });
+            reopenIcon = Image("Icon", rect, new Vector2(3f, -3f), new Vector2(10f, 10f));
+            reopenIcon.raycastTarget = false;
+            go.SetActive(false);
+        }
+
+        /// <summary>
+        /// The delivered 1x1 button canvas is 16×16. The imported slice is 64×16, so the center cell is the square box.
+        /// </summary>
+        private static Sprite CropButtonCenter(Sprite source)
+        {
+            if (source == null) return null;
+            var textureRect = source.textureRect;
+            if (textureRect.width <= 16.5f && textureRect.height <= 16.5f) return source;
+            var rect = new Rect(
+                textureRect.x + (textureRect.width - 16f) * .5f,
+                textureRect.y + (textureRect.height - 16f) * .5f,
+                16f, 16f);
+            var sprite = Sprite.Create(source.texture, rect, new Vector2(.5f, .5f), source.pixelsPerUnit, 0,
+                SpriteMeshType.FullRect);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            return sprite;
+        }
+
         private static RectTransform Panel(string name, Transform parent, Vector2 position, Vector2 size)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(UnityEngine.UI.Image));
@@ -451,6 +546,66 @@ namespace Nyangbingo.UI
             return label;
         }
 
+        /// <summary>
+        /// Breaks only at spaces and existing newlines, so a Korean word is not split across lines.
+        /// </summary>
+        public static string WrapAtWordBoundaries(string value, UnityEngine.UI.Text label)
+        {
+            if (string.IsNullOrEmpty(value) || label == null || label.font == null) return value ?? string.Empty;
+            var width = label.rectTransform.rect.width;
+            if (width < 4f) return value;
+            var font = label.font;
+            var size = label.fontSize;
+            var style = label.fontStyle;
+            font.RequestCharactersInTexture(value, size, style);
+            var paragraphs = value.Replace("\r\n", "\n").Split('\n');
+            var builder = new StringBuilder();
+            for (var paragraphIndex = 0; paragraphIndex < paragraphs.Length; paragraphIndex++)
+            {
+                if (paragraphIndex > 0) builder.Append('\n');
+                var words = paragraphs[paragraphIndex].Split(' ');
+                var lineWidth = 0f;
+                var started = false;
+                foreach (var word in words)
+                {
+                    if (word.Length == 0) continue;
+                    var wordWidth = MeasureText(word, font, size, style);
+                    var spaceWidth = started ? MeasureText(" ", font, size, style) : 0f;
+                    if (started && lineWidth + spaceWidth + wordWidth > width)
+                    {
+                        builder.Append('\n');
+                        lineWidth = 0f;
+                        spaceWidth = 0f;
+                    }
+                    else if (started)
+                    {
+                        builder.Append(' ');
+                        lineWidth += spaceWidth;
+                    }
+
+                    builder.Append(word);
+                    lineWidth += wordWidth;
+                    started = true;
+                }
+            }
+
+            return builder.ToString();
+        }
+
+        private static float MeasureText(string value, Font font, int size, FontStyle style)
+        {
+            var width = 0f;
+            foreach (var character in value)
+            {
+                if (font.GetCharacterInfo(character, out var info, size, style))
+                    width += info.advance;
+                else
+                    width += size;
+            }
+
+            return width;
+        }
+
         private static void KeepInside(UnityEngine.UI.Text label)
         {
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -467,6 +622,9 @@ namespace Nyangbingo.UI
             if (services?.Bed != null) services.Bed.Slept -= HandleGuideSlept;
             if (services?.StorageTemperature != null) services.StorageTemperature.DailyProcessed -= HandleGuideDawn;
             if (root != null) Destroy(root.gameObject);
+            if (reopenButton != null) Destroy(reopenButton.gameObject);
+            if (reopenNormal != null) Destroy(reopenNormal);
+            if (reopenPressed != null) Destroy(reopenPressed);
             if (dawnRoot != null) Destroy(dawnRoot.gameObject);
             if (arrow != null) Destroy(arrow.gameObject);
         }

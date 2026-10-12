@@ -12,7 +12,7 @@ using Input = Nyangbingo.Core.GameplayInput;
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 8칸을 고정 슬롯으로 보여 주며,
+    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 9칸을 고정 슬롯으로 보여 주며,
     /// 마우스 휠로 선택 슬롯을 순환한다.
     /// 빈 칸도 선택 가능하다. 전경 타일·설치물·벽지 배치를 같은 슬롯에서 처리한다.
     /// </summary>
@@ -39,7 +39,7 @@ namespace Nyangbingo.UI
         public const float BottomStatusLineHeight = 18f;
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
-        public const int ShortcutSlotCount = 8;
+        public const int ShortcutSlotCount = 9;
         public const bool UsesMouseWheelSelection = true;
         /// <summary>채굴과 동일 — globals <c>player_mining_reach_tiles</c> 기본값.</summary>
         public const float DefaultPlacementReachTiles = 4f;
@@ -280,7 +280,7 @@ namespace Nyangbingo.UI
             runtimeServices.PlayerInventory.Changed += RefreshPalette;
             initialized = true;
             RefreshPalette();
-            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–8칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
+            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–9칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
         }
 
         private void Update()
@@ -365,13 +365,14 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// Selection borders sit on the eight wells inside the vitals sheet, not in a separate row.
+        /// Selection borders sit on the nine wells inside the vitals sheet, not in a separate row.
         /// Wells stay on the sheet's native 208×62 pixels. The 18×22 border keeps its own size.
         /// </summary>
         public void PlaceInVitalsWells()
         {
             if (content == null) return;
             vitalsWells = true;
+            EnsureHotbarSlotObjects();
             var layout = content.GetComponent<HorizontalLayoutGroup>();
             if (layout != null) layout.enabled = false;
             var fitter = content.GetComponent<ContentSizeFitter>();
@@ -387,8 +388,9 @@ namespace Nyangbingo.UI
             const float sourceScale = 1f;
             var border = gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected;
             var slotSize = border != null ? border.rect.size : new Vector2(18f, 22f);
-            var wellSpriteX = new[] { 4f, 23f, 42f, 61f, 80f, 99f, 118f, 137f };
-            const float wellCenterSpriteY = 49f;
+            var wellSpriteX = new[] { 4f, 23f, 42f, 61f, 80f, 99f, 118f, 137f, 156f };
+            // 18×22 border top sits on the slot lip (sprite y 37). The dark well center is one pixel lower.
+            const float wellCenterSpriteY = 48f;
             content.anchorMin = content.anchorMax = new Vector2(0f, 1f);
             content.pivot = new Vector2(0f, 1f);
             content.anchoredPosition = Vector2.zero;
@@ -518,8 +520,24 @@ namespace Nyangbingo.UI
             return results;
         }
 
+        /// <summary>
+        /// The delivered palette prefab stops at Slot_8. The hotbar sheet has a ninth well,
+        /// so the missing slot is cloned from Slot_8 before wiring.
+        /// </summary>
+        private void EnsureHotbarSlotObjects()
+        {
+            if (content == null || content.Find("Slot_9") != null) return;
+            var template = content.Find("Slot_8");
+            if (template == null) return;
+            var clone = Instantiate(template.gameObject, content);
+            clone.name = "Slot_9";
+            var trigger = clone.GetComponent<EventTrigger>();
+            if (trigger != null) Destroy(trigger);
+        }
+
         private void RebuildSlots()
         {
+            EnsureHotbarSlotObjects();
             slotViews.Clear();
             for (var slotIndex = 0; slotIndex < ShortcutSlotCount; slotIndex++)
             {

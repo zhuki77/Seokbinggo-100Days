@@ -4905,9 +4905,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             $"v29 inventory grid must have 10 columns (actual {MainGameCraftingUiController.InventoryGridColumns}).");
         Require(MainGameCraftingUiController.InventoryGridRows == 5,
             $"v29 inventory grid must have 5 rows (actual {MainGameCraftingUiController.InventoryGridRows}).");
-        Require(MainGameCraftingUiController.InventoryHotbarSlotCount == 8 &&
+        Require(MainGameCraftingUiController.InventoryHotbarSlotCount == 9 &&
                 MainGameCraftingUiController.UnifiedTabLabel(0) == "인벤토리",
-            "The inventory must distinguish its first eight hotbar-linked slots and label panel 1 as inventory.");
+            "The inventory must distinguish its first nine hotbar-linked slots and label panel 1 as inventory.");
         Require(Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f),
             $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
         Require(MainGameCraftingUiController.UsesIconOnlyCraftingList,
@@ -4919,7 +4919,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.G &&
                 MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.J &&
                 MainGameCraftingUiController.UnifiedTabHotkey(4) == KeyCode.None,
-            "The four unified panels must use Tab, C, G, and J so number keys 1-8 stay on the hotbar.");
+            "The four unified panels must use Tab, C, G, and J so number keys 1-9 stay on the hotbar.");
         Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F12,
             "Crafting test grants use F12; F5 remains help and Tab/C/G/J remain product panels.");
         Require(MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Furnace) &&
@@ -5072,13 +5072,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "A 480 px logical canvas must use a 240 px tile palette.");
         Require(Mathf.Approximately(MainGameTilePaletteController.SlotPixelSize, 27f),
             "The tile palette must reuse the delivered 27 px inventory slot scale.");
-        Require(MainGameTilePaletteController.ShortcutSlotCount == 8 &&
+        Require(MainGameTilePaletteController.ShortcutSlotCount == 9 &&
                 MainGameTilePaletteController.UsesMouseWheelSelection &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(-1, -1f, 8) == 0 &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(0, -1f, 8) == 1 &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(0, 1f, 8) == 7 &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(7, -1f, 8) == 0,
-            "The eight visible tile-palette slots must wrap in both directions with the mouse wheel.");
+                MainGameTilePaletteController.ResolveMouseWheelSlot(-1, -1f, 9) == 0 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(0, -1f, 9) == 1 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(0, 1f, 9) == 8 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(8, -1f, 9) == 0,
+            "The nine visible tile-palette slots must wrap in both directions with the mouse wheel.");
         Require(Mathf.Approximately(MainGameTilePaletteController.DefaultPlacementReachTiles, 4f) &&
                 MainGameTilePaletteController.IsWithinPlacementReach(
                     new Vector2(.5f, .5f), new Vector3Int(3, 0, 0), 4f) &&
@@ -5093,13 +5093,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
         Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot, toggleOffIfSelected: false)") &&
                  paletteSource.Contains("Input.mouseScrollDelta.y") &&
-                 // 숫자 키 1~8이 핫바 전용이 되어 칸 번호 힌트를 실제 번호로 표시한다.
+                 // 숫자 키 1~9가 핫바 전용이 되어 칸 번호 힌트를 실제 번호로 표시한다.
                  paletteSource.Contains("shortcut.text = (slotIndex + 1).ToString()") &&
                  paletteSource.Contains("shortcut.gameObject.SetActive(true)") &&
                  paletteSource.Contains("CollectHotbarSlotItemIds()") &&
                  paletteSource.Contains("SelectEmptySlot(slotIndex)") &&
                  paletteSource.Contains("SelectDirectUseSlot(slotIndex, itemId)"),
-            "Number keys 1-8 and the mouse wheel must select inventory hotbar slots, including empty slots, with matching slot-number labels.");
+            "Number keys 1-9 and the mouse wheel must select inventory hotbar slots, including empty slots, with matching slot-number labels.");
         Require(!paletteSource.Contains("!MainGameShellUiController.IsLoadingTransitionActive"),
             "The tile palette must remain in the gameplay HUD beneath the shell loading overlay.");
         var loadingCreatorSource = System.IO.File.ReadAllText(
@@ -5141,7 +5141,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 inventory.Slots[7].itemId == runtimeStone.Id &&
                 inventory.Slots[7].amount == 3 &&
                 !inventory.TrySwapSlots(7, 7),
-            "Shift-click inventory reordering must move stacks into and out of the first eight hotbar slots.");
+            "Shift-click inventory reordering must move stacks into and out of the first nine hotbar slots.");
         var reservedInventory = new Nyangbingo.Inventory.Inventory(FindItem, 10);
         Require(reservedInventory.TryAdd(runtimeDirt.Id, 2) &&
                 reservedInventory.Slots[0].itemId == runtimeDirt.Id &&

@@ -565,7 +565,11 @@ namespace Nyangbingo.World
             visualWasGrounded = grounded;
 
             attackCooldown = Mathf.Max(0f, attackCooldown - Time.deltaTime);
-            wireSnare.Tick(Time.deltaTime);
+            // Plain ability state is not serialized, so a play-mode recompile leaves it null
+            // while initialized stays true.
+            if (wireSnare == null && attack != null)
+                wireSnare = new WireSnareAbility(attack);
+            wireSnare?.Tick(Time.deltaTime);
             if (attackIndicatorRemaining > 0f)
             {
                 attackIndicatorRemaining = Mathf.Max(0f, attackIndicatorRemaining - Time.deltaTime);
@@ -2134,7 +2138,10 @@ namespace Nyangbingo.World
             else
                 attack.ConfigureFrostSlow(0f, 0f);
             var knockback = EvolvedFanCombatRules.ResolveAbilityKnockback(activeProfile);
-            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id), knockback))
+            if (wireSnare == null && attack != null)
+                wireSnare = new WireSnareAbility(attack);
+            if (wireSnare != null &&
+                wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id), knockback))
             {
                 if (activeProfile.Id == SeolpungseonId)
                     attack.ConfigureFrostSlow(0f, 0f);

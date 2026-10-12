@@ -181,7 +181,7 @@ namespace Nyangbingo.UI
         public const int UnifiedTabCount = 4;
         public const int InventoryGridColumns = 10;
         public const int InventoryGridRows = 5;
-        public const int InventoryHotbarSlotCount = 8;
+        public const int InventoryHotbarSlotCount = 9;
         public const float InventorySlotPixelSize = 27f;
         public const bool UsesIconOnlyCraftingList = true;
         public const KeyCode DebugGrantRequirementsKey = KeyCode.F12;

@@ -18,6 +18,8 @@ namespace Nyangbingo.World
         // Soft day/night ramps in the Stardew/Terraria range: readable nights, warm days,
         // and a dimmer underground ambient so portable lanterns actually matter.
         private const float TransitionSeconds = 90f;
+        /// <summary>Tiles below the surface before the underground light fully replaces the surface light.</summary>
+        public const float UndergroundLightFadeTiles = 28f;
 
         private static readonly Color NightColor = HtmlColor("#6B7FA8");
         private static readonly Color UndergroundColor = HtmlColor("#3E4A5C");
@@ -123,21 +125,41 @@ namespace Nyangbingo.World
 
         private void ApplyLighting()
         {
-            var state = EvaluateLighting(
-                timeService, background != null && background.IsUnderground, heatStage?.Current ?? 1);
+            var blend = background != null
+                ? UndergroundLightBlend(transform.position.y, background.UndergroundThreshold)
+                : 0f;
+            var state = EvaluateLighting(timeService, blend, heatStage?.Current ?? 1);
             globalLight.color = state.color;
             globalLight.intensity = state.intensity;
         }
 
+        /// <summary>0 on the surface, 1 after <see cref="UndergroundLightFadeTiles"/> below the surface line.</summary>
+        public static float UndergroundLightBlend(float worldY, float surfaceThreshold)
+        {
+            var depth = surfaceThreshold - worldY;
+            if (depth <= 0f) return 0f;
+            return SmoothStep(depth / UndergroundLightFadeTiles);
+        }
+
         public static (Color color, float intensity) EvaluateLighting(
-            DayNightService clock, bool underground, int heatStage = 1)
+            DayNightService clock, bool underground, int heatStage = 1) =>
+            EvaluateLighting(clock, underground ? 1f : 0f, heatStage);
+
+        public static (Color color, float intensity) EvaluateLighting(
+            DayNightService clock, float undergroundBlend, int heatStage = 1)
         {
             var settings = clock?.OfficialGlobals;
             var baekjung = IsBaekjungNight(clock);
-            if (underground)
-                return (UndergroundColor, DayLight.IntensityFor(
-                    heatStage,
-                    clock != null && !clock.IsNight, false, baekjung, settings));
+            var undergroundState = (UndergroundColor, DayLight.IntensityFor(
+                heatStage,
+                clock != null && !clock.IsNight, false, baekjung, settings));
+            var surfaceState = EvaluateSurfaceLighting(clock, heatStage, baekjung, settings);
+            return Lerp(surfaceState, undergroundState, Mathf.Clamp01(undergroundBlend));
+        }
+
+        private static (Color color, float intensity) EvaluateSurfaceLighting(
+            DayNightService clock, int heatStage, bool baekjung, GlobalSettings settings)
+        {
             if (clock == null)
                 return (NightColor, DayLight.NightIntensity);
 
