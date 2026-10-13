@@ -526,7 +526,7 @@ namespace Nyangbingo.World
                     active ? "까치 테스트 활성화" : "까치 테스트 비활성화");
             }
 #endif
-            if (!MainGameCraftingUiController.BlocksGameplayInput &&
+            if (!MainGameCraftingUiController.BlocksWorldActions &&
                 Input.GetKeyDown(KeyCode.Q) && runtimeServices.ActiveSlot.Toggle())
             {
                 var activeItemId = runtimeServices.ActiveSlot.EquippedItemId;
@@ -597,7 +597,7 @@ namespace Nyangbingo.World
                                           MainGameHudController.BlocksWorldPrimaryInput;
             var primaryHeld = Input.GetMouseButton(0);
             if (!buildingPlacementActive && !pointerOverUi && primaryHeld &&
-                !MainGameCraftingUiController.BlocksGameplayInput)
+                !MainGameCraftingUiController.BlocksWorldActions)
             {
                 if (attackCooldown <= 0f)
                     TryBasicAttack();
@@ -611,12 +611,14 @@ namespace Nyangbingo.World
             UpdateMiningTargetFeedback(pointerOverUi || buildingPlacementActive ||
                                        (lastBasicAttackHitTarget && attackCooldown > 0f));
             // E opens chests and facilities; right-click uses the selected item.
-            if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
+            if (!buildingPlacementActive && !pointerOverUi && !MainGameCraftingUiController.BlocksWorldActions &&
+                Input.GetMouseButtonDown(1) &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
             {
                 TryUseSelectedItem();
             }
-            if (!buildingPlacementActive && !pointerOverUi && Input.GetKeyDown(KeyCode.F))
+            if (!buildingPlacementActive && !pointerOverUi && !MainGameCraftingUiController.BlocksWorldActions &&
+                Input.GetKeyDown(KeyCode.F))
                 TryFanAbility();
         }
 

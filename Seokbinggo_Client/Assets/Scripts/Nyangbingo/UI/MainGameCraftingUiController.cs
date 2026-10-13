@@ -182,6 +182,10 @@ namespace Nyangbingo.UI
         public static bool BlocksPlayerMovement => openControllerCount > 1 ||
             openControllerCount > 0 && (cursorOwner == null || !cursorOwner.open ||
                 cursorOwner.page != Page.Crafting || cursorOwner.HasStorageMode);
+        // Crafting stays open beside normal world play. Other menus and a held
+        // inventory stack still own gameplay input; UI clicks are filtered separately.
+        public static bool BlocksWorldActions => BlocksPlayerMovement ||
+            (cursorOwner != null && cursorOwner.HasHeldInventoryItem);
         public static bool ShowsInventoryPointer => cursorOwner != null &&
             (cursorOwner.HasHeldInventoryItem || cursorOwner.open &&
                 (cursorOwner.page == Page.Gathering || cursorOwner.HasStorageMode));
