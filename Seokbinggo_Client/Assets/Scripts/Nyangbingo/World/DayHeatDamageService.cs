@@ -11,6 +11,7 @@ namespace Nyangbingo.World
     {
         private readonly Health health;
         private readonly Transform player;
+        private readonly Collider2D playerCollider;
         private readonly DayNightService timeService;
         private readonly WorldSessionController session;
         private readonly HeatStageService heatStage;
@@ -41,6 +42,7 @@ namespace Nyangbingo.World
         {
             health = playerHealth ?? throw new ArgumentNullException(nameof(playerHealth));
             player = playerTransform ?? throw new ArgumentNullException(nameof(playerTransform));
+            playerCollider = player.GetComponent<Collider2D>();
             timeService = clock ?? throw new ArgumentNullException(nameof(clock));
             session = worldSession ?? throw new ArgumentNullException(nameof(worldSession));
             heatStage = stages ?? throw new ArgumentNullException(nameof(stages));
@@ -87,11 +89,31 @@ namespace Nyangbingo.World
 
         private void ResetExposure() => fractionalDamage = 0f;
 
-        private bool IsSunlightExposed() =>
-            !disposed && !health.IsDead && sunlightImmune?.Invoke() != true &&
-            !timeService.IsNight && session.HasWorld &&
-            WorldExposureRules.TryIsSurfaceExposed(
-                player.position, session.LastResult.surfaceHeights, out var exposed) && exposed &&
-            sealSystem?.IsInsideSealedArea(player.position) != true;
+        private bool IsSunlightExposed()
+        {
+            if (disposed || health.IsDead || sunlightImmune?.Invoke() == true ||
+                timeService.IsNight || !session.HasWorld) return false;
+            if (IsExposedAt(player.position)) return true;
+            if (playerCollider == null || !playerCollider.enabled ||
+                !playerCollider.gameObject.activeInHierarchy) return false;
+
+            // The root can be below ground while the torso/head is above it.
+            // Check every terrain column occupied by the actual body, not the art.
+            var bounds = playerCollider.bounds;
+            const float inset = .001f;
+            var firstColumn = Mathf.FloorToInt(bounds.min.x + inset);
+            var lastColumn = Mathf.FloorToInt(bounds.max.x - inset);
+            for (var column = firstColumn; column <= lastColumn; column++)
+            {
+                var x = Mathf.Clamp(column + .5f, bounds.min.x + inset, bounds.max.x - inset);
+                if (IsExposedAt(new Vector2(x, bounds.max.y - inset))) return true;
+            }
+            return false;
+        }
+
+        private bool IsExposedAt(Vector2 position) =>
+            WorldExposureRules.TryIsSurfaceExposed(position,
+                session.LastResult.surfaceHeights, out var exposed) && exposed &&
+            sealSystem?.IsInsideSealedArea(position) != true;
     }
 }

@@ -13,6 +13,8 @@ namespace Nyangbingo.World
         private const float FrameSeconds = .1f;
         private const float MovementThreshold = .000001f;
         private const float HitFlashSeconds = .12f;
+        private const float PlayerHitFlashSeconds = .2f;
+        private const float PlayerHitFlashFadeSeconds = .12f;
 
         private SpriteRenderer spriteRenderer;
         private CharacterArtCatalog.Entry entry;
@@ -27,6 +29,7 @@ namespace Nyangbingo.World
         private float activeFrameSeconds = FrameSeconds;
         private float actionRemaining;
         private float hitFlashRemaining;
+        private bool playerHitFlash;
         private Color baseSpriteColor = Color.white;
         private bool holdFinalFrame;
         private bool deathLocked;
@@ -59,6 +62,7 @@ namespace Nyangbingo.World
             entry = artEntry;
             spriteRenderer = GetComponent<SpriteRenderer>();
             health = GetComponent<Health>() ?? GetComponentInParent<Health>();
+            playerHitFlash = GetComponentInParent<MainGamePlayerController>() != null;
             RuntimePlaceholderVisual.ConfigureSprite(spriteRenderer, entry.Sprite, sortingOrder);
             singleFrame = entry.Sprite != null ? new[] { entry.Sprite } : System.Array.Empty<Sprite>();
             previousPosition = transform.position;
@@ -341,16 +345,24 @@ namespace Nyangbingo.World
 
         private void HandleDamaged(Nyangbingo.Core.DamageTag tag, int amount)
         {
-            if (amount <= 0 || specialActionPlaying || deathLocked) return;
+            if (amount <= 0 || deathLocked) return;
+            if (playerHitFlash && spriteRenderer != null)
+            {
+                if (hitFlashRemaining <= 0f) baseSpriteColor = spriteRenderer.color;
+                spriteRenderer.color = new Color(1f, .25f, .25f, baseSpriteColor.a);
+                hitFlashRemaining = PlayerHitFlashSeconds;
+            }
+            if (specialActionPlaying) return;
             if (entry?.HitFrames != null && entry.HitFrames.Count > 0)
             {
                 PlayAction(entry.HitFrames);
                 return;
             }
 
-            // hit 클립이 없으면 짧은 흰색 플래시로 피격 피드백한다.
+            if (playerHitFlash) return;
+            // Non-player characters retain the existing white flash fallback.
             if (spriteRenderer == null) return;
-            baseSpriteColor = spriteRenderer.color;
+            if (hitFlashRemaining <= 0f) baseSpriteColor = spriteRenderer.color;
             spriteRenderer.color = Color.white;
             hitFlashRemaining = HitFlashSeconds;
         }
@@ -359,6 +371,12 @@ namespace Nyangbingo.World
         {
             if (hitFlashRemaining <= 0f || spriteRenderer == null) return;
             hitFlashRemaining = Mathf.Max(0f, hitFlashRemaining - Mathf.Max(0f, deltaTime));
+            if (playerHitFlash)
+            {
+                var red = new Color(1f, .25f, .25f, baseSpriteColor.a);
+                spriteRenderer.color = Color.Lerp(baseSpriteColor, red,
+                    Mathf.Clamp01(hitFlashRemaining / PlayerHitFlashFadeSeconds));
+            }
             if (hitFlashRemaining <= 0f)
                 spriteRenderer.color = baseSpriteColor;
         }
