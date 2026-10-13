@@ -292,18 +292,9 @@ namespace Nyangbingo.Bosses
                 var actualTravel = physicsBody != null
                     ? physicsBody.Move(direction * travel)
                     : MoveWithoutPhysics(direction * travel);
-                if (actualTravel > Mathf.Epsilon)
-                    SetAnimationMovement(direction);
-                else
-                {
-                    // 이동이 막혔어도 facing은 항상 업데이트한다.
-                    // 이전 프레임 방향이 유지된 채 새 방향으로 전환될 때 역방향 sprite가 보이는 현상 방지.
-                    if (characterAnimator == null)
-                        characterAnimator = GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
-                    characterAnimator?.SetFacing(ResolveFacingDirection(direction));
-                    if (travel > Mathf.Epsilon && physicsBody?.IsKnockbackActive != true &&
-                        TryAttackBlockingStructure(direction, contactRange)) return;
-                }
+                if (actualTravel > Mathf.Epsilon) SetAnimationMovement(direction);
+                else if (travel > Mathf.Epsilon && physicsBody?.IsKnockbackActive != true &&
+                         TryAttackBlockingStructure(direction, contactRange)) return;
                 targetOffset = (Vector2)(targetTransform.position - transform.position);
                 distance = targetOffset.magnitude;
                 navigationOffset = physicsBody != null ? physicsBody.NavigationOffset(targetOffset) : targetOffset;
