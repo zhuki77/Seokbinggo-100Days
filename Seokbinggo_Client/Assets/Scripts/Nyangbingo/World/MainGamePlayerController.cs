@@ -610,12 +610,22 @@ namespace Nyangbingo.World
             else CancelMining();
             UpdateMiningTargetFeedback(pointerOverUi || buildingPlacementActive ||
                                        (lastBasicAttackHitTarget && attackCooldown > 0f));
-            // Pointed storage takes priority over item use; E remains an alternative.
+            // E and right-click share highlighted targets. Item use is the fallback
+            // only when there is no highlighted world interaction target.
             if (!buildingPlacementActive && !pointerOverUi && !MainGameCraftingUiController.BlocksWorldActions &&
                 Input.GetMouseButtonDown(1) &&
+                !MainGameCraftingUiController.ConsumedWorldInteractionThisFrame &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
             {
-                if (!TryOpenStorageAtPointer()) TryUseSelectedItem();
+                if (TryGetHighlightedInteractionTarget(out _, out _, out _))
+                {
+                    if (!MainGameCraftingUiController.TryInteractFromOpenCraftingWindow())
+                    {
+                        if (placedObjectInteractions?.TryEnterDifferentCraftingStation(null) != true)
+                            TryInteractClosestWorldTarget(includePlacedObjects: true);
+                    }
+                }
+                else TryUseSelectedItem();
                 if (MainGameCraftingUiController.BlocksPlayerMovement)
                 {
                     movementInput = Vector2.zero;

@@ -50,10 +50,10 @@ namespace Nyangbingo.Inventory
                     if (activeSlot == null) return false;
                     if (activeSlot.EquippedItemId == ItemId)
                         return activeSlot.IsUsingEquippedItem || activeSlot.Toggle();
-                    return activeSlot.TryEquip(ItemId);
+                    return activeSlot.TryEquip(ItemId, SourceIndex);
                 }
                 return equipment != null && TryGetEquipmentSlot(visualSlot, out var slot) &&
-                       equipment.TryEquipInSlot(findEquipment(ItemId), slot);
+                       equipment.TryEquipInSlot(findEquipment(ItemId), slot, SourceIndex);
             }
             finally { Cancel(); }
         }

@@ -217,7 +217,7 @@ namespace Nyangbingo.UI
             if (ready && !menuOpen) services.BuildingGuide.RefreshMiningWarning(player.transform.position);
             SetGuide("seal_boundary_dig", ready && !menuOpen && services.BuildingGuide.MiningSealBoundary,
                 context: services.BuildingGuide.MiningCell.ToString());
-            var visible = ready && Time.timeScale > 0f;
+            var visible = ready && Time.timeScale > 0f && !MainGameCraftingUiController.IsStorageWindowOpen;
             if (visible && !menuOpen && Input.GetKeyDown(WindowToggleKey) &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
                 !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&

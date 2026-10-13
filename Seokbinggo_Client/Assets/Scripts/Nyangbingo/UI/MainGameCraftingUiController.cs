@@ -37,6 +37,7 @@ namespace Nyangbingo.UI
         }
 
         public const int CraftingFilterCount = 6;
+        private const string StorageItemMovedMessage = "아이템을 이동했습니다.";
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
         [SerializeField] private MainGameRuntimeServices runtimeServices;
@@ -159,6 +160,9 @@ namespace Nyangbingo.UI
         private string equipmentDropFeedback;
         private float equipmentDropFeedbackUntil;
         private bool IsDraggingEquipment => equipmentDrag?.IsActive == true;
+        private int equippedDragVisualSlot = -1;
+        private string equippedDragItemId;
+        private bool IsDraggingEquippedItem => equippedDragVisualSlot >= 0;
         private static MainGameCraftingUiController cursorOwner;
         private bool HasHeldInventoryItem => runtimeServices?.InventoryCursor?.IsEmpty == false;
 
@@ -187,6 +191,18 @@ namespace Nyangbingo.UI
         private static int escapeConsumedFrame = -1;
         private static int worldInteractionConsumedFrame = -1;
         public static bool ConsumedWorldInteractionThisFrame => worldInteractionConsumedFrame == Time.frameCount;
+        public static bool TryInteractFromOpenCraftingWindow()
+        {
+            var owner = cursorOwner;
+            if (owner == null || !owner.open || owner.page != Page.Crafting || owner.HasStorageMode) return false;
+            worldInteractionConsumedFrame = Time.frameCount;
+            owner.turretRuntime?.TryInteractFromCraftingUi(owner.openedStationObjectId, () =>
+            {
+                owner.SetOpen(false);
+                return !owner.open;
+            });
+            return true;
+        }
         private int openedFrame = -1;
 
         public static bool BlocksGameplayInput => openControllerCount > 0 ||
@@ -203,6 +219,7 @@ namespace Nyangbingo.UI
                 (cursorOwner.page == Page.Gathering || cursorOwner.HasStorageMode));
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsOpen => open;
+        public static bool IsStorageWindowOpen => cursorOwner != null && cursorOwner.open && cursorOwner.HasStorageMode;
 
         /// <summary>인스펙터에 수동 배선되는 납품 제작·제련 패널 하이어라키가 살아 있는지.</summary>
         public bool HasDeliveredPanelBindings =>
@@ -585,7 +602,6 @@ namespace Nyangbingo.UI
             selectedIndex = 0;
             SetOpen(true);
             Refresh();
-            FindAnyObjectByType<MainGameGoalUiController>()?.CollapseWindow();
             Debug.Log($"[Nyangbingo] Chest loot storage opened: id={id}, slots={ChestProgress.StorageSlotCount}.");
             return true;
         }
@@ -1566,11 +1582,14 @@ namespace Nyangbingo.UI
                 WireInventoryPointer(inventoryGridButtons[index], pointer =>
                 {
                     inventorySelectedIndex = capturedIndex;
-                    ClickInventorySlot(runtimeServices.PlayerInventory, capturedIndex, pointer);
+                    TransferPlayerSlot(capturedIndex, pointer);
                 });
                 WireEquipmentDragSource(inventoryGridButtons[index], capturedIndex);
                 WireEquipmentDrop(inventoryGridButtons[index], pointer =>
-                    DropStorageItem(runtimeServices.PlayerInventory, capturedIndex, pointer));
+                {
+                    if (IsDraggingEquippedItem) DropEquippedItemToInventory(capturedIndex, pointer);
+                    else DropStorageItem(runtimeServices.PlayerInventory, capturedIndex, pointer);
+                });
                 var oldNumberHint = inventoryGridButtons[index].transform.Find("HotbarShortcut");
                 if (oldNumberHint != null) oldNumberHint.gameObject.SetActive(false);
             }
@@ -1596,6 +1615,10 @@ namespace Nyangbingo.UI
                         ShowEquipmentDescription(EquippedItemIdForVisualSlot(capturedIndex));
                 });
                 WireEquipmentDrop(equipmentSlotButtons[index], pointer => DropInventoryEquipment(capturedIndex, pointer));
+                var dragSource = equipmentSlotButtons[index].GetComponent<InventoryEquipmentDragSource>() ??
+                                 equipmentSlotButtons[index].gameObject.AddComponent<InventoryEquipmentDragSource>();
+                dragSource.Configure(pointer => BeginEquippedItemDrag(capturedIndex,
+                    equipmentSlotButtons[capturedIndex].gameObject, pointer), CancelEquipmentDrag);
                 // ColorTint Transition의 SelectedColor가 클릭 후에도 남아 그림자처럼 보인다.
                 // None으로 바꾸고 RefreshEquipmentVisual에서 직접 색을 지정한다.
                 equipmentSlotButtons[index].transition = Selectable.Transition.None;
@@ -1671,6 +1694,8 @@ namespace Nyangbingo.UI
         {
             if (!HasStorageMode || !(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
                 return false;
+            if (!open || Time.timeScale <= 0f || shell != null && shell.Screen != GameShellScreen.Gameplay)
+                return true;
             Nyangbingo.Inventory.Inventory storage;
             if (chestProgress != null)
             {
@@ -1682,14 +1707,8 @@ namespace Nyangbingo.UI
             if (count <= 0) return true;
             if (pointer.button == PointerEventData.InputButton.Right) count = count / 2 + count % 2;
             var target = source == runtimeServices.PlayerInventory ? storage : runtimeServices.PlayerInventory;
-            if (source == runtimeServices.PlayerInventory &&
-                runtimeServices.IsEquippedItem(source.Slots[index].itemId))
-            {
-                ShowMessage("장착 중인 장비는 옮길 수 없습니다. 먼저 장착을 해제해주세요.");
-                return true;
-            }
             message = source.TryTransferSlotTo(index, target, count)
-                ? string.Empty : "이동할 보관 공간이 부족합니다.";
+                ? StorageItemMovedMessage : "이동할 보관 공간이 부족합니다.";
             Refresh();
             return true;
         }
@@ -2039,8 +2058,48 @@ namespace Nyangbingo.UI
             ShowMessage(succeeded ? $"{name} 장착 완료" : "이 칸에 장착할 수 없습니다. 맞는 장비 칸에 놓아주세요.");
         }
 
+        private void BeginEquippedItemDrag(int visualSlot, GameObject source, PointerEventData pointer)
+        {
+            if (runtimeServices?.IsInitialized != true || HasHeldInventoryItem || HasStorageMode ||
+                source == null || !source.activeInHierarchy || pointer.button != PointerEventData.InputButton.Left ||
+                shell != null && shell.Screen != GameShellScreen.Gameplay) return;
+            var id = EquippedItemIdForVisualSlot(visualSlot);
+            if (string.IsNullOrEmpty(id)) return;
+            CancelEquipmentDrag();
+            equippedDragVisualSlot = visualSlot;
+            equippedDragItemId = id;
+            equipmentDragSource = source;
+            equipmentDragPointerId = pointer.pointerId;
+            if (turretRuntime != null && turretRuntime.IsPlacementPreviewActive) turretRuntime.CancelPlacementPreview();
+        }
+
+        private void DropEquippedItemToInventory(int targetIndex, PointerEventData pointer)
+        {
+            if (!IsDraggingEquippedItem || pointer.pointerDrag != equipmentDragSource ||
+                pointer.pointerId != equipmentDragPointerId) return;
+            var visualSlot = equippedDragVisualSlot;
+            var id = equippedDragItemId;
+            var inventory = runtimeServices.PlayerInventory;
+            var valid = shell == null || shell.Screen == GameShellScreen.Gameplay;
+            valid = valid && !HasStorageMode && equipmentDragSource != null &&
+                    equipmentDragSource.activeInHierarchy && EquippedItemIdForVisualSlot(visualSlot) == id &&
+                    targetIndex >= 0 && targetIndex < inventory.Capacity;
+            valid = valid && inventory.Slots[targetIndex].amount <= 0;
+            var succeeded = valid && (visualSlot == 0
+                ? runtimeServices.ActiveSlot.TryUnequip(targetIndex)
+                : EquipmentInventoryDrag.TryGetEquipmentSlot(visualSlot, out var slot) &&
+                  runtimeServices.EquipmentSystem.TryUnequip(slot, targetIndex));
+            CancelEquipmentDrag();
+            if (succeeded) inventorySelectedIndex = targetIndex;
+            ShowMessage(succeeded ? $"{gameDataCatalog.ItemDisplayName(id, "장비")} 장착 해제" :
+                "빈 인벤토리 칸에 놓아주세요.");
+            Refresh();
+        }
+
         private void CancelEquipmentDrag()
         {
+            equippedDragVisualSlot = -1;
+            equippedDragItemId = null;
             equipmentDrag?.Cancel();
             storageDrag?.Cancel();
             equipmentDragSource = null;
@@ -2105,12 +2164,6 @@ namespace Nyangbingo.UI
             if (inventory == runtimeServices.PlayerInventory) inventorySelectedIndex = index;
             var heldBefore = runtimeServices.InventoryCursor.Slots[0];
             var clickedBefore = inventory.Slots[index];
-            if (inventory != runtimeServices.PlayerInventory && heldBefore.amount > 0 &&
-                runtimeServices.IsEquippedItem(heldBefore.itemId))
-            {
-                ShowMessage("장착 중인 장비는 옮길 수 없습니다. 먼저 장착을 해제해주세요.");
-                return;
-            }
             if (!inventory.TryClickSlot(index, runtimeServices.InventoryCursor,
                     pointer.button == PointerEventData.InputButton.Right)) return;
             if (runtimeServices.InventoryCursor.IsEmpty) runtimeServices.InventoryCursorOrigin = null;
@@ -2127,6 +2180,7 @@ namespace Nyangbingo.UI
                     remainder = inventory.Slots[index]
                 };
             }
+            if (HasStorageMode) message = StorageItemMovedMessage;
             Refresh();
         }
 
@@ -2154,7 +2208,8 @@ namespace Nyangbingo.UI
             }
             inventoryCursorIcon.gameObject.SetActive(true);
             inventoryCursorIcon.transform.SetAsLastSibling();
-            var slot = storageDrag?.IsActive == true ? storageDrag.Preview : IsDraggingEquipment
+            var slot = IsDraggingEquippedItem ? new InventorySlot { itemId = equippedDragItemId, amount = 1 }
+                : storageDrag?.IsActive == true ? storageDrag.Preview : IsDraggingEquipment
                 ? new InventorySlot { itemId = equipmentDrag.ItemId, amount = 1 }
                 : runtimeServices.InventoryCursor.Slots[0];
             var item = gameDataCatalog.FindItem(slot.itemId);
@@ -3541,11 +3596,44 @@ namespace Nyangbingo.UI
             detailsText.text = BuildItemEquipmentDescription(item, equipment);
         }
 
+        private void MatchEquipmentAmmoToInventory()
+        {
+            if (equipmentAmmoCount == null || equipmentSlotIcons[0] == null ||
+                inventoryGridLabels == null || inventoryGridLabels.Length == 0 ||
+                inventoryGridLabels[0] == null || inventoryGridIcons[0] == null) return;
+            var source = inventoryGridLabels[0];
+            var sourceIcon = inventoryGridIcons[0].rectTransform;
+            var targetIcon = equipmentSlotIcons[0].rectTransform;
+            if (targetIcon.parent is not RectTransform targetSlot) return;
+            var iconRatio = targetIcon.rect.height / Mathf.Max(.0001f, sourceIcon.rect.height);
+            var sourceScale = Mathf.Abs(source.rectTransform.lossyScale.y) /
+                              Mathf.Max(.0001f, Mathf.Abs(sourceIcon.lossyScale.y));
+            var labelRect = equipmentAmmoCount.rectTransform;
+            labelRect.SetParent(targetSlot, false);
+            labelRect.localScale = Vector3.one;
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.pivot = Vector2.one * .5f;
+            labelRect.offsetMin = new Vector2(1f, 1f) * iconRatio;
+            labelRect.offsetMax = new Vector2(-2f, -1f) * iconRatio;
+            equipmentAmmoCount.font = source.font;
+            equipmentAmmoCount.fontStyle = source.fontStyle;
+            equipmentAmmoCount.fontSize = Mathf.Max(1, Mathf.RoundToInt(source.fontSize * sourceScale * iconRatio));
+            equipmentAmmoCount.resizeTextForBestFit = false;
+            equipmentAmmoCount.alignment = TextAnchor.LowerRight;
+            equipmentAmmoCount.color = source.color;
+            equipmentAmmoCount.horizontalOverflow = HorizontalWrapMode.Overflow;
+            equipmentAmmoCount.verticalOverflow = VerticalWrapMode.Overflow;
+            equipmentAmmoCount.raycastTarget = false;
+            labelRect.SetAsLastSibling();
+        }
+
         private void RefreshEquipmentVisual()
         {
             if (equipmentVisualRoot == null || runtimeServices == null || !runtimeServices.IsInitialized) return;
             if (equipmentAmmoCount != null)
             {
+                MatchEquipmentAmmoToInventory();
                 var usesAmmo = BowCombatRules.IsBowWeaponId(EquippedItemIdForVisualSlot(0));
                 equipmentAmmoCount.text = usesAmmo
                     ? runtimeServices.PlayerInventory.Count(BowCombatRules.AmmoItemId).ToString()

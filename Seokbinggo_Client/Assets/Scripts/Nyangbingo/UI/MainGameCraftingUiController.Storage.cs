@@ -12,7 +12,7 @@ namespace Nyangbingo.UI
         private InventorySlotDrag storageDrag;
         private RectTransform storageHudCounter;
         private RectTransform storageFrameTop;
-        private bool IsDraggingItem => IsDraggingEquipment || storageDrag?.IsActive == true;
+        private bool IsDraggingItem => IsDraggingEquipment || IsDraggingEquippedItem || storageDrag?.IsActive == true;
         private const float StorageHeaderHeight = 14f;
         private static readonly Vector2 StorageGridSize = new Vector2(
             HudInventoryColumns * HudInventoryCellSize + (HudInventoryColumns - 1) * HudInventoryCellGap,
@@ -90,14 +90,9 @@ namespace Nyangbingo.UI
                 CancelEquipmentDrag();
                 return;
             }
-            // A cross-container swap must protect worn gear on either side.
-            var movingWornItem = source != target &&
-                (source == runtimeServices.PlayerInventory && runtimeServices.IsEquippedItem(storageDrag.Preview.itemId) ||
-                 target == runtimeServices.PlayerInventory && runtimeServices.IsEquippedItem(target.Slots[index].itemId));
-            var moved = !movingWornItem && storageDrag.TryDrop(target, index);
+            var moved = storageDrag.TryDrop(target, index);
             CancelEquipmentDrag();
-            message = movingWornItem ? "장착 중인 장비는 먼저 해제해주세요." :
-                moved ? "아이템을 이동했습니다." : "이 칸에는 옮길 수 없습니다. 빈 칸에 놓아주세요.";
+            message = moved ? StorageItemMovedMessage : "이 칸에는 옮길 수 없습니다. 빈 칸에 놓아주세요.";
             Refresh();
         }
 
