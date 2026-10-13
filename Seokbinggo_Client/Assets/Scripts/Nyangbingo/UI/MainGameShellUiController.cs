@@ -967,7 +967,7 @@ namespace Nyangbingo.UI
             }
             card.anchorMin = card.anchorMax = card.pivot = new Vector2(.5f, .5f);
             card.anchoredPosition = Vector2.zero;
-            card.sizeDelta = new Vector2(220f, 210f);
+            card.sizeDelta = new Vector2(220f, 230f);
             var image = card.GetComponent<Image>();
             image.color = new Color(.045f, .065f, .11f, .98f);
             image.raycastTarget = false;
@@ -982,35 +982,10 @@ namespace Nyangbingo.UI
             ConfigureNamedRect(settingsPanel, "SfxLabel", new Vector2(-72f, -5f), new Vector2(54f, 18f));
             ConfigureNamedRect(settingsPanel, "SfxVolume", new Vector2(31f, -5f), new Vector2(96f, 18f));
             ConfigureFullscreenToggleLayout(settingsPanel);
-            EnsureDifficultyPlaceholder(settingsPanel);
+            var oldDifficultyPlaceholder = settingsPanel.Find("DifficultyPlaceholder");
+            if (oldDifficultyPlaceholder != null) oldDifficultyPlaceholder.gameObject.SetActive(false);
             ConfigureShellButton(settingsApplyButton, new Vector2(-43f, -88f), new Vector2(78f, 22f));
             ConfigureShellButton(settingsBackButton, new Vector2(43f, -88f), new Vector2(78f, 22f));
-        }
-
-        /// <summary>B-UI-v71 B-6: 난이도 옵션은 자리만 잡고 비활성(구현은 이후).</summary>
-        private static void EnsureDifficultyPlaceholder(Transform settingsPanel)
-        {
-            if (settingsPanel == null) return;
-            var existing = settingsPanel.Find("DifficultyPlaceholder") as RectTransform;
-            if (existing == null)
-            {
-                var go = new GameObject("DifficultyPlaceholder", typeof(RectTransform), typeof(Text));
-                go.transform.SetParent(settingsPanel, false);
-                existing = (RectTransform)go.transform;
-                var text = go.GetComponent<Text>();
-                text.font = UiTextFont.Source;
-                text.fontSize = 7;
-                text.alignment = TextAnchor.MiddleCenter;
-                text.color = new Color(.55f, .6f, .68f, .85f);
-                text.text = "난이도 · 준비 중";
-                text.raycastTarget = false;
-            }
-
-            existing.anchorMin = existing.anchorMax = existing.pivot = new Vector2(.5f, .5f);
-            existing.anchoredPosition = new Vector2(0f, -58f);
-            existing.sizeDelta = new Vector2(180f, 14f);
-            var card = settingsPanel.Find("SettingsMenuCard") as RectTransform;
-            if (card != null) card.sizeDelta = new Vector2(220f, 230f);
         }
 
         private static void ConfigureFullscreenToggleLayout(Transform settingsPanel)
@@ -1145,10 +1120,12 @@ namespace Nyangbingo.UI
 
         private void OpenSettings()
         {
-            bgmSlider.value = audioService.BgmVolume;
-            sfxSlider.value = audioService.SfxVolume;
-            fullscreenToggle.isOn = Screen.fullScreen;
-            shell.OpenSettings();
+            if (!shell.OpenSettings()) return;
+            bgmSlider.SetValueWithoutNotify(audioService.BgmVolume);
+            sfxSlider.SetValueWithoutNotify(audioService.SfxVolume);
+            fullscreenToggle.SetIsOnWithoutNotify(Screen.fullScreen);
+            RefreshSpeakerIcon(bgmSpeakerImage, bgmSlider.value);
+            RefreshSpeakerIcon(sfxSpeakerImage, sfxSlider.value);
         }
 
         private void ApplySettings()
@@ -1160,7 +1137,8 @@ namespace Nyangbingo.UI
 
         private void PreviewSettingsVolumes()
         {
-            if (audioService == null || bgmSlider == null || sfxSlider == null) return;
+            if (audioService == null || bgmSlider == null || sfxSlider == null ||
+                shell == null || shell.Screen != GameShellScreen.Settings) return;
             audioService.TryPreviewBusVolumes(bgmSlider.value, sfxSlider.value);
         }
 
