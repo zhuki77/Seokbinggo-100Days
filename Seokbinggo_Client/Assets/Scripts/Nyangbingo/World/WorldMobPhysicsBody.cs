@@ -371,6 +371,10 @@ namespace Nyangbingo.World
                 groundDropCommitted = false;
                 routeInvalid = true;
                 groundRouteLastProgressTime = Time.unscaledTime;
+                // 벽에 막혀 있던 동안 물리 엔진이 쌓은 수평 속도를 초기화한다.
+                // stuck 감지 직후 방향 반전 시 잔류 속도가 순간이동처럼 보이는 현상 방지.
+                if (body != null)
+                    body.linearVelocity = new Vector2(0f, body.linearVelocity.y);
             }
             if (targetChanged ||
                 routeInvalid && Time.unscaledTime >= nextGroundRouteRetryTime)
@@ -398,7 +402,12 @@ namespace Nyangbingo.World
                             groundRoutePreviousDirection.x);
                     }
                     if (groundRouteDirection.x * groundRoutePreviousDirection.x < 0f)
+                    {
                         groundRouteReverseHoldUntil = Time.unscaledTime + GroundNavigationReversalHoldSeconds;
+                        // 경로 방향 반전 시 수평 잔류 속도 제거 → 순간이동 완화
+                        if (body != null)
+                            body.linearVelocity = new Vector2(0f, body.linearVelocity.y);
+                    }
                     groundRoutePreviousDirection = groundRouteDirection;
                     return WithNavigationFacing(groundRouteDirection, horizontalDelta);
                 }
