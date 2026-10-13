@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Nyangbingo.Audio;
 using Nyangbingo.Bosses;
 using Nyangbingo.Data;
@@ -41,6 +41,7 @@ namespace Nyangbingo.UI
         [SerializeField] private Text confirmationText;
         [SerializeField] private Button resultTitleButton;
         [SerializeField] private Text statusText;
+        private Text pauseTraitDescription;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
 
         private GameDataCatalog gameDataCatalog;
@@ -1043,6 +1044,7 @@ namespace Nyangbingo.UI
 
         private void RefreshPauseControls()
         {
+            ExpirePauseStatusAfterClose();
             if (pauseSaveButton != null)
                 pauseSaveButton.interactable = bossManager == null || !bossManager.IsBossActive;
             if (pauseHoverIndicator != null)
@@ -1054,13 +1056,13 @@ namespace Nyangbingo.UI
             {
                 statusText.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause);
                 var traitLine = SelectedTraitStatusLine();
-                var line = string.IsNullOrEmpty(pauseStatusMessage) ||
-                           pauseStatusMessage.EndsWith(" 선택", StringComparison.Ordinal)
-                    ? traitLine
-                    : pauseStatusMessage;
+                var showingTrait = string.IsNullOrEmpty(pauseStatusMessage) ||
+                                   pauseStatusMessage.EndsWith(" 선택", StringComparison.Ordinal);
+                var line = showingTrait ? traitLine : pauseStatusMessage;
                 statusText.text = HasPauseBossWarning ? BossSaveRestrictionDetail : line;
-                statusText.rectTransform.anchoredPosition = new Vector2(0f, HasPauseBossWarning ? -90f : -83f);
-                statusText.rectTransform.sizeDelta = new Vector2(166f, HasPauseBossWarning ? 12f : 28f);
+                statusText.rectTransform.anchoredPosition = new Vector2(0f, HasPauseBossWarning ? -90f : -79f);
+                statusText.rectTransform.sizeDelta = new Vector2(166f, 12f);
+                RefreshPauseTraitDescription(showingTrait);
                 RefreshPauseBossWarning();
             }
         }
@@ -1156,6 +1158,7 @@ namespace Nyangbingo.UI
             if (shell != null && shell.Screen == GameShellScreen.TraitSelect && traitSelectPanel != null)
                 traitSelectPanel.transform.SetAsLastSibling();
             ProcessEscapeFallback();
+            ExpirePauseStatusAfterClose();
             if (!IsInitialized || string.IsNullOrEmpty(pendingEndingBossId)) return;
             var bossId = pendingEndingBossId;
             pendingEndingBossId = null;
@@ -1298,10 +1301,54 @@ namespace Nyangbingo.UI
                 SceneTransitionRequest.Begin(SceneTransitionRequest.TitleSceneName);
         }
 
+        private void ExpirePauseStatusAfterClose()
+        {
+            if (shell == null || shell.Screen == GameShellScreen.Pause ||
+                shell.Screen == GameShellScreen.Settings || shell.Screen == GameShellScreen.Confirmation) return;
+            // Settings and confirmation belong to the same pause session.
+            // Returning to gameplay ends that session and its transient messages.
+            pauseStatusMessage = string.Empty;
+        }
+
         private void SetStatus(string value)
         {
             pauseStatusMessage = value ?? string.Empty;
             if (statusText != null) statusText.text = pauseStatusMessage;
+            if (pauseTraitDescription != null && !string.IsNullOrEmpty(pauseStatusMessage) &&
+                !pauseStatusMessage.EndsWith(" 선택", StringComparison.Ordinal))
+                pauseTraitDescription.gameObject.SetActive(false);
+        }
+
+        private void RefreshPauseTraitDescription(bool showingTrait)
+        {
+            var traitId = FindAnyObjectByType<MainGameRuntimeServices>()?.Traits?.SelectedTraitId;
+            // Use player-facing wording, rather than the trait's internal planning notes.
+            var description = traitId switch
+            {
+                TraitRules.MeleeId => $"일반 요괴 근접 피해 +{TraitRules.MeleeYokaiDamageMultiplier - 1f:0%}" +
+                    (TraitRules.MeleeBossExempt(gameDataCatalog) ? " · 보스 제외" : string.Empty),
+                TraitRules.RangedId => $"{gameDataCatalog?.ItemDisplayName(TraitRules.RangedStartItemId, "원거리 무기")}를 가지고 시작합니다.",
+                TraitRules.LaborId => $"채굴 치명타 확률 +{TraitRules.LaborMiningCriticalBonus:0%}",
+                TraitRules.CoolId => $"낮 지상에서 체온 상승 속도 −{1f - TraitRules.CoolDayTemperatureRiseMultiplier:0%}",
+                _ => string.Empty
+            };
+            if (pauseTraitDescription == null)
+            {
+                pauseTraitDescription = Instantiate(statusText, statusText.transform.parent);
+                pauseTraitDescription.name = "SelectedTraitDescription";
+                pauseTraitDescription.fontSize = 6;
+                pauseTraitDescription.resizeTextForBestFit = false;
+                pauseTraitDescription.alignment = TextAnchor.MiddleCenter;
+                pauseTraitDescription.horizontalOverflow = HorizontalWrapMode.Overflow;
+                pauseTraitDescription.verticalOverflow = VerticalWrapMode.Truncate;
+                pauseTraitDescription.raycastTarget = false;
+                var rect = pauseTraitDescription.rectTransform;
+                rect.anchoredPosition = new Vector2(0f, -91f);
+                rect.sizeDelta = new Vector2(166f, 12f);
+            }
+            pauseTraitDescription.text = description;
+            pauseTraitDescription.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause &&
+                showingTrait && !HasPauseBossWarning && !string.IsNullOrEmpty(description));
         }
 
         private string SelectedTraitStatusLine()
