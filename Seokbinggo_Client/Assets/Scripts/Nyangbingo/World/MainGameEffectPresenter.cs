@@ -399,13 +399,14 @@ namespace Nyangbingo.World
             popupObject.transform.SetParent(transform, false);
             popupObject.transform.position = (Vector3)position + Vector3.up * .35f;
             var text = popupObject.AddComponent<TextMesh>();
-            text.text = $"+{item.DisplayName} ×{amount}";
-            text.anchor = TextAnchor.MiddleCenter;
-            text.alignment = TextAlignment.Center;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = WorldPopupFontSize;
             text.characterSize = WorldPopupCharacterSize;
             text.fontStyle = FontStyle.Bold;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
             text.color = Color.white;
+            text.text = $"+{item.DisplayName} ×{amount}";
             var renderer = text.GetComponent<MeshRenderer>();
             if (renderer != null) renderer.sortingOrder = 28;
             var popup = popupObject.AddComponent<RuntimeFloatingWorldText>();

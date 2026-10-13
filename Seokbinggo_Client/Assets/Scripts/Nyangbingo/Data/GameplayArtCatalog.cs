@@ -135,6 +135,10 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite craftResultSlot;
         [SerializeField] private Sprite craftMidSlot;
         [SerializeField] private Sprite[] craftButtonFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] craftCategoryBarFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite craftSmeltPanel;
+        [SerializeField] private Sprite[] craftSmeltButtonFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] craftViewToggleFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite craftScroll;
         [SerializeField] private Sprite questWindow;
         [SerializeField] private Sprite scrollTrack;
@@ -247,6 +251,10 @@ namespace Nyangbingo.Data
         public Sprite CraftResultSlot => craftResultSlot;
         public Sprite CraftMidSlot => craftMidSlot;
         public IReadOnlyList<Sprite> CraftButtonFrames => craftButtonFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> CraftCategoryBarFrames => craftCategoryBarFrames ?? Array.Empty<Sprite>();
+        public Sprite CraftSmeltPanel => craftSmeltPanel;
+        public IReadOnlyList<Sprite> CraftSmeltButtonFrames => craftSmeltButtonFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> CraftViewToggleFrames => craftViewToggleFrames ?? Array.Empty<Sprite>();
         public Sprite CraftScroll => craftScroll;
         public Sprite QuestWindow => questWindow;
         public Sprite ScrollTrack => scrollTrack;

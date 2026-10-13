@@ -292,7 +292,8 @@ namespace Nyangbingo.Bosses
                 var actualTravel = physicsBody != null
                     ? physicsBody.Move(direction * travel)
                     : MoveWithoutPhysics(direction * travel);
-                if (actualTravel > Mathf.Epsilon) SetAnimationMovement(direction);
+                if (actualTravel > Mathf.Epsilon)
+                    SetAnimationMovement(FacingForActualTravel(direction));
                 else if (travel > Mathf.Epsilon && physicsBody?.IsKnockbackActive != true &&
                          TryAttackBlockingStructure(direction, contactRange)) return;
                 targetOffset = (Vector2)(targetTransform.position - transform.position);
@@ -1134,6 +1135,16 @@ namespace Nyangbingo.Bosses
             return displacement.magnitude;
         }
 
+        private Vector2 FacingForActualTravel(Vector2 commanded)
+        {
+            var moved = physicsBody != null ? physicsBody.LastMoveDisplacement : commanded;
+            // 명령은 플레이어 쪽인데 몸이 반대로 밀리면, 그 방향으로 뒤돌아 걷게 한다.
+            if (Mathf.Abs(moved.x) > .04f && Mathf.Abs(commanded.x) > .05f &&
+                Mathf.Sign(moved.x) != Mathf.Sign(commanded.x))
+                return new Vector2(Mathf.Sign(moved.x), 0f);
+            return commanded;
+        }
+
         private void SetAnimationMovement(Vector2 direction)
         {
             if (characterAnimator == null)
@@ -1159,7 +1170,14 @@ namespace Nyangbingo.Bosses
             if (targetTransform == null) return movement;
             var targetOffset = (Vector2)(targetTransform.position - transform.position);
             if (targetOffset.magnitude > 1.5f && Mathf.Abs(targetOffset.x) > .35f)
+            {
+                // 이동 방향이 목표 방향과 반대이면(장애물 우회 중) 이동 방향을 따른다.
+                // 반대 방향으로 우회하면서 목표를 향해 sprite가 뒤집히는 '문워크' 현상 방지.
+                if (Mathf.Abs(movement.x) > .05f &&
+                    Mathf.Sign(movement.x) != Mathf.Sign(targetOffset.x))
+                    return movement;
                 return targetOffset.x > 0f ? Vector2.right : Vector2.left;
+            }
             return movement;
         }
 

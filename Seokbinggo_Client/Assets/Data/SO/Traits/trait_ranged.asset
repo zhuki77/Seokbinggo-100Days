@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: trait_ranged
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
   id: trait_ranged
-  displayName: "\uC3D8\uB294 \uB188"
+  displayName: "\uC3D8\uB0E5\uC774"
   shortName: "\uC6D0\uAC70\uB9AC"
   hookField: "items.csv \uC2DC\uC791 \uC778\uBCA4\uD1A0\uB9AC"
   hookSource: "\uC9DA \uD22C\uC11D\uAE30 T1 10.0 DPS (\uC774\uBBF8 \uC815\uBCF8)"

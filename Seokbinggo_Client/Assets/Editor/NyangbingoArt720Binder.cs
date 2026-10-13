@@ -165,7 +165,10 @@ public static class NyangbingoArt720Binder
         ("button1x6BlueFrames", "Assets/Art/UI/Common/button_1x6_blue.aseprite", 2),
         ("craftProgressFrames", "Assets/Art/UI/Crafting/craft_progress.aseprite", 4),
         ("craftTopBarFrames", "Assets/Art/UI/Crafting/craft_top_bar.aseprite", 4),
-        ("craftButtonFrames", "Assets/Art/UI/Crafting/craft_button.aseprite", 2)
+        ("craftButtonFrames", "Assets/Art/UI/Crafting/craft_button.aseprite", 2),
+        ("craftCategoryBarFrames", "Assets/Art/UI/Crafting/craft_category_bar.aseprite", 4),
+        ("craftSmeltButtonFrames", "Assets/Art/UI/Crafting/craft_smelt_button.aseprite", 2),
+        ("craftViewToggleFrames", "Assets/Art/UI/Crafting/craft_view_toggle.aseprite", 2)
     };
 
     // Catalog order consumed by RuntimePixelGlyphPresenter:
@@ -206,6 +209,7 @@ public static class NyangbingoArt720Binder
         ("craftResultSlot", "Assets/Art/UI/Crafting/craft_result_slot.aseprite"),
         ("craftMidSlot", "Assets/Art/UI/Crafting/craft_mid_slot.aseprite"),
         ("craftScroll", "Assets/Art/UI/Crafting/craft_scroll.aseprite"),
+        ("craftSmeltPanel", "Assets/Art/UI/Crafting/craft_smelt_panel.aseprite"),
         ("inventorySlot", "Assets/Art/UI/Inventory/inventory_slot.aseprite"),
         ("inventorySlotSelected", "Assets/Art/UI/Inventory/inventory_slot_selected.aseprite"),
         ("inventorySlotTopSelected", "Assets/Art/UI/Inventory/inventory_slot_top_selected.aseprite"),
@@ -477,6 +481,10 @@ public static class NyangbingoArt720Binder
             gameplaySerialized.FindProperty("craftPanel")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("craftTopBarFrames")?.arraySize == 4 &&
             gameplaySerialized.FindProperty("craftButtonFrames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("craftCategoryBarFrames")?.arraySize == 4 &&
+            gameplaySerialized.FindProperty("craftSmeltPanel")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("craftSmeltButtonFrames")?.arraySize == 2 &&
+            gameplaySerialized.FindProperty("craftViewToggleFrames")?.arraySize == 2 &&
             VitalsUseHotbarSheet(gameplaySerialized.FindProperty("playerVitalsFrames")) &&
             EnvironmentBindings.All(binding =>
                 environmentSerialized.FindProperty(binding.property)?.objectReferenceValue != null) &&

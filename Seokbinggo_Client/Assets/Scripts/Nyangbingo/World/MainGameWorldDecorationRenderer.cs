@@ -788,16 +788,19 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool TryHarvestCatnip(string patchId, Nyangbingo.Inventory.Inventory inventory)
+        public bool TryHarvestCatnip(string patchId, out Vector2 dropPosition, out int healHitPoints)
         {
-            if (inventory == null || string.IsNullOrWhiteSpace(patchId) ||
-                !catnipPatches.TryGetValue(patchId, out var patch) || !IsCatnipAvailable(patch) ||
-                !inventory.TryAdd(PlayerHealthRecoveryService.CatnipItemId, 1))
+            dropPosition = default;
+            healHitPoints = 0;
+            if (string.IsNullOrWhiteSpace(patchId) ||
+                !catnipPatches.TryGetValue(patchId, out var patch) || !IsCatnipAvailable(patch))
                 return false;
+            dropPosition = patch.Renderer != null
+                ? (Vector2)patch.Renderer.transform.position
+                : new Vector2(patch.SupportCell.x + .5f, patch.SupportCell.y + 1f);
+            healHitPoints = patch.HealHitPoints;
             patch.HarvestedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
             if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
-            if (patch.HealHitPoints > 0)
-                runtimeServices?.PlayerHealthRecovery?.EnqueueCatnipHeal(patch.HealHitPoints);
             return true;
         }
 

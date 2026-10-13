@@ -1513,9 +1513,11 @@ namespace Nyangbingo.UI
             var celsius = roomService.Resolve(playerController.transform.position);
             var band = RoomTempPresentation.ResolveBand(celsius, roomService.ColdEnterCelsius,
                 roomService.FrozenEnterCelsius);
-            sealText.text = RoomTempPresentation.FormatCelsius(celsius);
+            // 0도는 의미 없는 기본값이라 숨긴다.
+            var formatted = RoomTempPresentation.FormatCelsius(celsius);
+            sealText.text = formatted;
             sealText.color = RoomTempPresentation.BandColor(band);
-            sealText.gameObject.SetActive(true);
+            sealText.gameObject.SetActive(!Mathf.Approximately(celsius, 0f));
             if (RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius) &&
                 !hypothermiaCuePlayed)
             {

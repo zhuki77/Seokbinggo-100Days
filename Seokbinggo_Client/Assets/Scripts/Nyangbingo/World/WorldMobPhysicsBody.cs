@@ -25,9 +25,17 @@ namespace Nyangbingo.World
         private const float CollisionSkin = .02f;
         private const float GroundProbeDepth = .12f;
         private const float StepJumpVelocity = 8.5f;
-        public const float GroundBossStepJumpVelocity = 10.5f;
+        // 지상 보스는 플레이어 기본 점프(3.5칸)와 같은 높이로 턱을 넘는다.
+        // 기본 중력 9.81, gravityScale 3 기준 v = sqrt(2 * g * 3.5).
+        public const float GroundBossStepJumpVelocity = 14.35f;
+        private const float GroundBossJumpHeightTiles = 3.5f;
         private const float StepJumpCooldownSeconds = .35f;
+        // 한 칸 턱을 넘는 동안 물리 시간으로 앞으로 실어 준다. 게임 시간 이동만으로는
+        // 넓은 몸이 턱에 걸리고 구덩이로 떨어진다.
+        private const float StepJumpCarrySpeed = 2.4f;
         private const float NavigationReversalHoldSeconds = .5f;
+        // 이보다 목표가 반대쪽에 있어야 좌우를 바꾼다. 구덩이 한가운데의 미세한 교차로 뒤집지 않는다.
+        private const float GroundReversalCommitDistance = .85f;
         private const float DirectPathConfirmationSeconds = .2f;
         private const int PathTargetCellTolerance = 3;
         private const int GroundRouteSearchMargin = 32;
@@ -58,11 +66,16 @@ namespace Nyangbingo.World
         private int groundPathIndex;
         private float nextPathRebuildTime;
         private float nextStepJumpTime;
+        private bool stepJumpLocked;
+        private float stepJumpDirectionX;
+        private float stepJumpSettleUntil;
         private Vector2 stableNavigationDirection;
         private float navigationFacingX;
         private float navigationDirectionHoldUntil;
         private float directPathClearSince = -1f;
         private Vector2 groundRouteDirection;
+        private Vector2 groundRoutePreviousDirection;
+        private float groundDetourAllowedUntil;
         private Vector3Int groundRouteTarget;
         private Vector2 groundRouteLastProgressPosition;
         private float groundRouteLastProgressTime;
@@ -123,6 +136,10 @@ namespace Nyangbingo.World
             groundPathIndex = 0;
             nextPathRebuildTime = float.NegativeInfinity;
             nextStepJumpTime = float.NegativeInfinity;
+            stepJumpLocked = false;
+            stepJumpDirectionX = 0f;
+            stepJumpSettleUntil = 0f;
+            groundDetourAllowedUntil = 0f;
             stableNavigationDirection = Vector2.zero;
             navigationFacingX = 0f;
             navigationDirectionHoldUntil = 0f;
@@ -323,6 +340,15 @@ namespace Nyangbingo.World
             // 콜라이더 모서리가 발판에 남아 있어도, 중심이 착지 위 공기 칸으로 들어가면
             // 이미 낙하 중이다. 이 상태에서 접지를 지우면 목표 쪽으로 되돌아간다.
             var groundedOnTiles = startsOnStandingCell && IsGroundedOnTiles();
+            if (stepJumpLocked)
+            {
+                var rising = body != null && body.linearVelocity.y > .15f;
+                if (rising || !groundedOnTiles)
+                    return LockedStepJumpDirection();
+                stepJumpLocked = false;
+                // 착지 직후 한동안은 충돌로 뒤집힌 우회 경로를 받아들이지 않는다.
+                stepJumpSettleUntil = Time.unscaledTime + .4f;
+            }
             if (groundedOnTiles)
                 groundDropCommitted = false;
             // A drop edge is represented by a direct graph edge from the platform edge to
@@ -344,6 +370,22 @@ namespace Nyangbingo.World
                     ? groundRouteDirection
                     : directHorizontal;
 
+            // 발밑이 이어져 있으면 그 칸까지 걷는다. 곧 끊기는 구덩이 벽은 예외다.
+            // 넘을 수 없는 벽 쪽으로 다시 걸어 들어갔다가 백스텝으로 빠지지 않는다.
+            if (Mathf.Abs(targetOffset.x) > .05f &&
+                HasSupportedWalkRoom(targetOffset.x, .55f))
+            {
+                var towardTarget = Mathf.Sign(targetOffset.x);
+                var floorEndsSoon = !HasSupportedWalkRoom(towardTarget, 1.8f);
+                if (!floorEndsSoon || HasJumpableLipAhead(towardTarget))
+                {
+                    directHorizontal = new Vector2(towardTarget, 0f);
+                    if (ShouldKeepStepJumpDirection(directHorizontal, targetOffset))
+                        return LockedStepJumpDirection();
+                    return CommitGroundDirection(directHorizontal, targetOffset);
+                }
+            }
+
             var startCell = startsOnStandingCell
                 ? rawStartCell
                 : ResolveGroundStandingCell(rawStartCell, 3);
@@ -357,16 +399,30 @@ namespace Nyangbingo.World
                              IsGroundedOnTiles();
             var routeInvalid = groundPathIndex >= groundPath.Count ||
                                !IsGroundStandingCell(groundPath[groundPathIndex]) ||
-                               Mathf.Abs(groundPath[groundPathIndex].x - startCell.x) > 1;
+                               // 1칸 구멍 도약 웨이포인트는 두 칸 앞이다. 1칸 초과만 무효로 보면
+                               // 점프 경로가 매 프레임 깨지고, 재탐색이 반대 방향으로 돌아간다.
+                               Mathf.Abs(groundPath[groundPathIndex].x - startCell.x) > 2;
             if (routeStuck)
             {
-                groundRouteTieBias *= -1;
+                var towardTarget = Mathf.Abs(targetOffset.x) > .05f
+                    ? Mathf.Sign(targetOffset.x) : 0f;
+                if (towardTarget != 0f && HasJumpableLipAhead(towardTarget))
+                    groundRouteTieBias = towardTarget > 0f ? 1 : -1;
+                else if (towardTarget != 0f)
+                    groundRouteTieBias = towardTarget > 0f ? -1 : 1;
+                else
+                    groundRouteTieBias *= -1;
                 groundPath.Clear();
                 groundPathIndex = 0;
                 groundRouteReachesTarget = false;
                 groundDropCommitted = false;
                 routeInvalid = true;
                 groundRouteLastProgressTime = Time.unscaledTime;
+                groundDetourAllowedUntil = Time.unscaledTime + 1.5f;
+                // 벽에 막혀 있던 동안 물리 엔진이 쌓은 수평 속도를 초기화한다.
+                // stuck 감지 직후 방향 반전 시 잔류 속도가 순간이동처럼 보이는 현상 방지.
+                if (body != null)
+                    body.linearVelocity = new Vector2(0f, body.linearVelocity.y);
             }
             if (targetChanged ||
                 routeInvalid && Time.unscaledTime >= nextGroundRouteRetryTime)
@@ -384,16 +440,85 @@ namespace Nyangbingo.World
                         groundDropLandingCell = nextCell;
                     }
                     groundRouteDirection = new Vector2(Mathf.Sign(horizontalDelta), 0f);
-                    return WithNavigationFacing(
-                        groundRouteDirection, horizontalDelta);
+                    if (ShouldKeepStepJumpDirection(groundRouteDirection, targetOffset))
+                        return LockedStepJumpDirection();
+                    return CommitGroundDirection(groundRouteDirection, targetOffset);
                 }
             }
             if (Mathf.Abs(targetOffset.x) > .05f)
-                return WithNavigationFacing(directHorizontal, targetOffset.x);
+            {
+                if (ShouldKeepStepJumpDirection(directHorizontal, targetOffset))
+                    return LockedStepJumpDirection();
+                return CommitGroundDirection(directHorizontal, targetOffset);
+            }
             var transitionDirection =
                 FindGroundTransitionDirection(startCell, targetCell);
-            return WithNavigationFacing(
-                transitionDirection, transitionDirection.x);
+            if (ShouldKeepStepJumpDirection(transitionDirection, targetOffset))
+                return LockedStepJumpDirection();
+            return CommitGroundDirection(transitionDirection, targetOffset);
+        }
+
+        private Vector2 CommitGroundDirection(Vector2 direction, Vector2 targetOffset)
+        {
+            if (Mathf.Abs(direction.x) <= Mathf.Epsilon)
+                return WithNavigationFacing(direction, direction.x);
+            var signed = new Vector2(Mathf.Sign(direction.x), 0f);
+            if (groundRoutePreviousDirection.x * signed.x < 0f &&
+                !AcceptGroundReversal(signed, targetOffset))
+                return WithNavigationFacing(groundRoutePreviousDirection,
+                    groundRoutePreviousDirection.x);
+            if (groundRoutePreviousDirection.x * signed.x < 0f && body != null && !stepJumpLocked)
+                body.linearVelocity = new Vector2(0f, body.linearVelocity.y);
+            groundRoutePreviousDirection = signed;
+            groundRouteDirection = signed;
+            return WithNavigationFacing(signed, signed.x);
+        }
+
+        private bool AcceptGroundReversal(Vector2 newDirection, Vector2 targetOffset)
+        {
+            if (groundRoutePreviousDirection.sqrMagnitude <= Mathf.Epsilon) return true;
+            // 목표가 돌아설 쪽에 충분히 가 있다. 그때는 한 번만 방향을 바꾼다.
+            if (targetOffset.x * newDirection.x > GroundReversalCommitDistance) return true;
+            // 한 칸 턱이 앞에 있으면 구덩이 안에서 반대 벽으로 돌아가지 않는다.
+            if (HasClimbableStepAhead(groundRoutePreviousDirection.x)) return false;
+            return Time.unscaledTime < groundDetourAllowedUntil;
+        }
+
+        private bool HasClimbableStepAhead(float directionX)
+        {
+            if (navigationTiles == null || Mathf.Abs(directionX) <= Mathf.Epsilon) return false;
+            var origin = body != null ? body.position : (Vector2)transform.position;
+            var start = ToCell(origin);
+            if (!IsGroundStandingCell(start))
+                start = ResolveGroundStandingCell(start, 3);
+            if (!IsGroundStandingCell(start)) return false;
+            var sign = directionX > 0f ? 1 : -1;
+            for (var distance = 1; distance <= 6; distance++)
+            {
+                var candidate = start + Vector3Int.right * (distance * sign);
+                if (candidate.x < 0 || candidate.x >= navigationTiles.Width) return false;
+                if (IsGroundStandingCell(candidate)) continue;
+                return HasJumpableLipAt(candidate);
+            }
+            return false;
+        }
+
+        private bool ShouldKeepStepJumpDirection(Vector2 candidate, Vector2 targetOffset)
+        {
+            if (Time.unscaledTime >= stepJumpSettleUntil || Mathf.Abs(stepJumpDirectionX) <= Mathf.Epsilon)
+                return false;
+            if (candidate.x * stepJumpDirectionX >= 0f) return false;
+            if (targetOffset.x * stepJumpDirectionX > .2f) return true;
+            // 착지했어도 한 칸 턱이 그대로면 구덩이 반대편으로 걷지 않고 같은 쪽을 다시 오른다.
+            return HasClimbableStepAhead(stepJumpDirectionX);
+        }
+
+        private Vector2 LockedStepJumpDirection()
+        {
+            var locked = new Vector2(stepJumpDirectionX > 0f ? 1f : -1f, 0f);
+            groundRouteDirection = locked;
+            groundRoutePreviousDirection = locked;
+            return WithNavigationFacing(locked, locked.x);
         }
 
         private void AdvanceGroundPath(Vector3Int currentCell)
@@ -553,6 +678,30 @@ namespace Nyangbingo.World
             TryAddGroundRouteNode(
                 from, stepUp, 1.25f, minX, maxX, minY, maxY,
                 open, openSet, closed, costs, cameFrom);
+            // 두 칸 턱. 한 칸 위가 막혀 있고 그 위가 설 수 있는 칸이면 플레이어처럼 뛰어넘는다.
+            var stepUpTwo = stepUp + Vector3Int.up;
+            if (!IsGroundStandingCell(stepUp))
+                TryAddGroundRouteNode(
+                    from, stepUpTwo, 1.75f, minX, maxX, minY, maxY,
+                    open, openSet, closed, costs, cameFrom);
+            // 점프 높이 안의 3칸 턱. 구덩이 바닥에서 지표로 올라가는 출구다.
+            var stepUpThree = stepUpTwo + Vector3Int.up;
+            if (!IsGroundStandingCell(stepUp) && !IsGroundStandingCell(stepUpTwo))
+                TryAddGroundRouteNode(
+                    from, stepUpThree, 2.1f, minX, maxX, minY, maxY,
+                    open, openSet, closed, costs, cameFrom);
+            // 1~2칸 너비 수평 구멍. 더 넓은 구덩이는 떨어진다.
+            var belowWalk = walk + Vector3Int.down;
+            if (IsNavigationPassableCell(walk) && IsNavigationPassableCell(belowWalk))
+            {
+                var gapFar = walk + Vector3Int.right * horizontalSign;
+                if (IsNavigationPassableCell(gapFar) &&
+                    IsNavigationPassableCell(gapFar + Vector3Int.down))
+                    gapFar += Vector3Int.right * horizontalSign;
+                TryAddGroundRouteNode(
+                    from, gapFar, 1.5f, minX, maxX, minY, maxY,
+                    open, openSet, closed, costs, cameFrom);
+            }
         }
 
         private void AddGroundDropNeighbour(
@@ -869,7 +1018,17 @@ namespace Nyangbingo.World
             if (IsKnockbackActive) return 0f;
             if (IsFlying && body.linearVelocity.sqrMagnitude > Mathf.Epsilon)
                 body.linearVelocity = Vector2.zero;
-            if (!IsFlying) requestedDisplacement.y = 0f;
+            if (!IsFlying)
+            {
+                requestedDisplacement.y = 0f;
+                // 벽에 닿으면 수평 속도가 0이 된다. 점프가 끝나기 전에는 턱 위로 실어 줄 속도를 다시 넣는다.
+                if (stepJumpLocked)
+                    body.linearVelocity = new Vector2(
+                        Mathf.Sign(stepJumpDirectionX) * StepJumpCarrySpeed,
+                        body.linearVelocity.y);
+                else if (Mathf.Abs(body.linearVelocity.x) > Mathf.Epsilon)
+                    body.linearVelocity = new Vector2(0f, body.linearVelocity.y);
+            }
             var startPosition = body.position;
             var movedDistance = MoveWithCollisionCast(requestedDisplacement);
             LastMoveDisplacement = body.position - startPosition;
@@ -1026,6 +1185,12 @@ namespace Nyangbingo.World
                                       CollisionSkin);
                     if (!IsFinite(correction) ||
                         correction.sqrMagnitude <= Mathf.Epsilon) continue;
+                    // 점프가 벽에 박힌 동안 수평 밀어내기는 진행 방향의 반대라
+                    // 뒤로 걸어 나가게 만든다. 수직 분리만 남긴다.
+                    if (correction.x * stepJumpDirectionX < 0f &&
+                        (stepJumpLocked || Time.unscaledTime < stepJumpSettleUntil))
+                        correction.x = 0f;
+                    if (correction.sqrMagnitude <= Mathf.Epsilon) continue;
                     body.position += correction;
                     corrected = true;
                 }
@@ -1046,12 +1211,91 @@ namespace Nyangbingo.World
                 : displacement;
         }
 
+        private bool HasJumpableLipAhead(float directionX)
+        {
+            if (navigationTiles == null || Mathf.Abs(directionX) <= Mathf.Epsilon) return false;
+            var origin = body != null ? body.position : (Vector2)transform.position;
+            var start = ToCell(origin);
+            if (!IsGroundStandingCell(start))
+                start = ResolveGroundStandingCell(start, 3);
+            if (!IsGroundStandingCell(start)) return false;
+            var sign = directionX > 0f ? 1 : -1;
+            for (var distance = 1; distance <= 4; distance++)
+            {
+                var candidate = start + Vector3Int.right * (distance * sign);
+                if (candidate.x < 0 || candidate.x >= navigationTiles.Width) return false;
+                if (IsGroundStandingCell(candidate)) continue;
+                return HasJumpableLipAt(candidate);
+            }
+            return false;
+        }
+
+        private bool HasJumpableLipAt(Vector3Int blockedCell)
+        {
+            for (var up = 1; up <= 3; up++)
+                if (IsGroundStandingCell(blockedCell + Vector3Int.up * up))
+                    return true;
+            return false;
+        }
+
+        private bool HasGapLandingAhead(float directionX)
+        {
+            if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
+            if (attachedCollider == null || navigationTiles == null ||
+                Mathf.Abs(directionX) <= Mathf.Epsilon)
+                return false;
+            var sign = directionX > 0f ? 1 : -1;
+            var bounds = attachedCollider.bounds;
+            var probe = (Vector2)bounds.center +
+                        Vector2.right * sign * (bounds.extents.x + .08f);
+            var hole = ToCell(probe);
+            for (var gap = 0; gap < 2; gap++)
+            {
+                var cell = hole + Vector3Int.right * (sign * gap);
+                if (!IsAirCell(cell) || !IsNavigationPassableCell(cell + Vector3Int.down))
+                    return false;
+                if (IsGroundStandingCell(cell + Vector3Int.right * sign))
+                    return true;
+            }
+            return false;
+        }
+
+        private bool HasSupportedWalkRoom(float directionX, float minimumRoom)
+        {
+            if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
+            if (attachedCollider == null || navigationTiles == null ||
+                Mathf.Abs(directionX) <= Mathf.Epsilon || minimumRoom <= 0f)
+                return false;
+            var sign = directionX > 0f ? 1f : -1f;
+            var bounds = attachedCollider.bounds;
+            var aheadFoot = new Vector2(bounds.center.x, bounds.min.y) +
+                            Vector2.right * (sign * minimumRoom);
+            if (!HasSolidTileUnderFoot(aheadFoot.x, bounds.min.y)) return false;
+            var allowed = minimumRoom;
+            var castDirection = Vector2.right * sign;
+            var hitCount = attachedCollider.Cast(
+                castDirection, movementFilter, castHits, minimumRoom + CollisionSkin);
+            for (var index = 0; index < hitCount; index++)
+            {
+                var hit = castHits[index];
+                if (!IsBlockingHit(hit, castDirection)) continue;
+                allowed = Mathf.Min(allowed, Mathf.Max(0f, hit.distance - CollisionSkin));
+            }
+            return allowed + .001f >= minimumRoom;
+        }
+
         private bool TryBeginStepJump(Vector2 direction)
         {
             if (navigationTiles == null || body == null || Mathf.Abs(direction.x) <= .1f ||
                 Time.unscaledTime < nextStepJumpTime || !IsGroundedOnTiles()) return false;
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
             if (attachedCollider == null) return false;
+            // 앞 칸 바닥에 아직 걸을 자리가 있으면 점프하지 않는다.
+            // 넓은 몸통 프로브가 한 칸 일찍 벽에 닿아 제자리 점프를 반복했다.
+            if (HasSupportedWalkRoom(direction.x, .55f)) return false;
+            // 넘을 수 없는 구덩이 벽에는 점프하지 않는다. 맞고 밀리면 뒤로 걸어 나간다.
+            if (!HasJumpableLipAhead(direction.x) && !HasGapLandingAhead(direction.x))
+                return false;
             var bounds = attachedCollider.bounds;
             var extents = bounds.extents;
             var horizontalSign = direction.x > 0f ? 1 : -1;
@@ -1061,27 +1305,53 @@ namespace Nyangbingo.World
             var forwardProbe = (Vector2)bounds.center +
                                Vector2.right * horizontalSign * (extents.x + .08f);
             var blockingCell = ToCell(forwardProbe);
-            if (IsAirCell(blockingCell)) return false;
+            if (IsAirCell(blockingCell) && !HasGapLandingAhead(horizontalSign))
+                return false;
 
-            var jumpVelocity = StepJumpVelocityForCollider(extents.x);
+            var jumpVelocity = ResolveStepJumpVelocity(extents.x);
             var gravity = Mathf.Abs(Physics2D.gravity.y * body.gravityScale);
             if (gravity <= Mathf.Epsilon) return false;
             var jumpHeight = jumpVelocity * jumpVelocity / (2f * gravity);
             // Sweep the whole movement collider to the jump apex. A point above the pivot
             // misses low ceilings over the boss's shoulders and causes repeated head bumps.
+            var ceilingLimit = jumpHeight;
             var ceilingHitCount = attachedCollider.Cast(
                 Vector2.up, movementFilter, castHits, jumpHeight + CollisionSkin);
             for (var index = 0; index < ceilingHitCount; index++)
-                if (IsBlockingHit(castHits[index], Vector2.up)) return false;
+            {
+                if (!IsBlockingHit(castHits[index], Vector2.up)) continue;
+                ceilingLimit = Mathf.Min(ceilingLimit,
+                    Mathf.Max(0f, castHits[index].distance - CollisionSkin));
+            }
+            // 두 칸 턱을 넘을 최소 높이. 그보다 낮은 천장에는 점프하지 않는다.
+            const float minimumLipClearance = 2.25f;
+            if (ceilingLimit < minimumLipClearance && ceilingLimit < jumpHeight - .01f)
+                return false;
+            if (ceilingLimit < jumpHeight)
+            {
+                jumpHeight = ceilingLimit;
+                jumpVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
+            }
 
-            body.linearVelocity = new Vector2(body.linearVelocity.x,
-                jumpVelocity);
+            // 위로는 점프, 앞으로는 턱을 넘을 만큼만. 벽에 쌓인 반대 속도는 싣지 않는다.
+            body.linearVelocity = new Vector2(horizontalSign * StepJumpCarrySpeed, jumpVelocity);
+            stepJumpLocked = true;
+            stepJumpDirectionX = horizontalSign;
+            stepJumpSettleUntil = 0f;
             nextStepJumpTime = Time.unscaledTime + StepJumpCooldownSeconds;
             return true;
         }
 
         public static float StepJumpVelocityForCollider(float horizontalExtent) =>
             horizontalExtent > .5f ? GroundBossStepJumpVelocity : StepJumpVelocity;
+
+        private float ResolveStepJumpVelocity(float horizontalExtent)
+        {
+            if (horizontalExtent <= .5f) return StepJumpVelocity;
+            var gravity = Mathf.Abs(Physics2D.gravity.y * (body != null ? body.gravityScale : GroundGravityScale));
+            if (gravity <= Mathf.Epsilon) return GroundBossStepJumpVelocity;
+            return Mathf.Sqrt(2f * gravity * GroundBossJumpHeightTiles);
+        }
 
         public bool TryFindBlockingStructure(Vector2 direction, float attackRange,
             out Vector3Int cell, out YokaiWallMaterial material)

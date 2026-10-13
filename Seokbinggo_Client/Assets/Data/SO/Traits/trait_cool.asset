@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: trait_cool
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
   id: trait_cool
-  displayName: "\uC2DC\uC6D0\uD55C \uB188"
+  displayName: "\uC5BC\uB9AC\uB0E5\uC774"
   shortName: "\uC2DC\uC6D0"
   hookField: globals temp_rise_per_stage
   hookSource: "\uB0AE \uC9C0\uC0C1 \uCCB4\uC628 \uC0C1\uC2B9 0.10/\uCD08 x \uB2E8\uACC4

@@ -24,6 +24,7 @@ namespace Nyangbingo.UI
         private UnityEngine.UI.Text arrowLabel;
         private UnityEngine.UI.Button titleButton;
         private UnityEngine.UI.Button reopenButton;
+        private UnityEngine.UI.Shadow questShadow;
         private UnityEngine.UI.Image reopenIcon;
         private Sprite reopenNormal;
         private Sprite reopenPressed;
@@ -81,6 +82,11 @@ namespace Nyangbingo.UI
                 questImage.color = Color.white;
                 questImage.type = UnityEngine.UI.Image.Type.Simple;
                 questImage.preserveAspect = true;
+                questShadow = questImage.gameObject.AddComponent<UnityEngine.UI.Shadow>();
+                questShadow.effectColor = new Color(0f, 0f, 0f, .9f);
+                questShadow.effectDistance = new Vector2(1f, -1f);
+                questShadow.useGraphicAlpha = true;
+                questShadow.enabled = false;
             }
             const float sideInset = 12f;
             var innerWidth = Mathf.Max(24f, questSize.x - sideInset * 2f);
@@ -212,7 +218,15 @@ namespace Nyangbingo.UI
             }
             root.gameObject.SetActive(visible && !windowHidden);
             if (reopenButton != null) reopenButton.gameObject.SetActive(visible);
-            if (!visible) { arrow.gameObject.SetActive(false); dawnRoot.gameObject.SetActive(false); dawnShownFrame = 0; return; }
+            if (!visible)
+            {
+                arrow.gameObject.SetActive(false);
+                dawnRoot.gameObject.SetActive(false);
+                dawnShownFrame = 0;
+                if (questShadow != null) questShadow.enabled = false;
+                return;
+            }
+            RefreshQuestHoverShadow();
             var progress = services.Goals.Progress;
             if (progress.FirstShelterComplete != firstShelterCompleteShown)
             {
@@ -454,6 +468,18 @@ namespace Nyangbingo.UI
             completionUntil = Time.unscaledTime + .8f;
         }
 
+        private void RefreshQuestHoverShadow()
+        {
+            if (questShadow == null || root == null) return;
+            var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera : null;
+            var over = root.gameObject.activeInHierarchy &&
+                       RectTransformUtility.RectangleContainsScreenPoint(root, Input.mousePosition, camera);
+            if (!over && list != null && list.gameObject.activeInHierarchy)
+                over = RectTransformUtility.RectangleContainsScreenPoint(list, Input.mousePosition, camera);
+            questShadow.enabled = over;
+        }
+
         private void BuildReopenButton(Transform parent, Vector2 position)
         {
             var frames = gameplayArt?.Button1x1BlueFrames;
@@ -479,9 +505,7 @@ namespace Nyangbingo.UI
                 reopenButton.transition = UnityEngine.UI.Selectable.Transition.SpriteSwap;
                 reopenButton.spriteState = new UnityEngine.UI.SpriteState
                 {
-                    highlightedSprite = reopenPressed,
-                    pressedSprite = reopenPressed,
-                    selectedSprite = reopenPressed
+                    pressedSprite = reopenPressed
                 };
             }
             reopenButton.onClick.AddListener(() =>
