@@ -2,6 +2,7 @@
 using Nyangbingo.Core;
 using Nyangbingo.Combat;
 using Nyangbingo.Data;
+using Nyangbingo.UI;
 using UnityEngine;
 
 namespace Nyangbingo.World
@@ -11,6 +12,35 @@ namespace Nyangbingo.World
     {
         internal const int WorldPopupFontSize = 64;
         internal const float WorldPopupCharacterSize = .12f;
+        // 아이템 픽업 팝업 전용 크기.
+        // 64pt로 한글 글리프를 생성하면 아틀라스가 넘쳐 깨진다.
+        // 16pt로 줄이고 characterSize를 4배 키워 화면 크기는 동일하게 유지한다.
+        private const int PickupFontSize = 16;
+        private const float PickupCharacterSize = WorldPopupCharacterSize * (WorldPopupFontSize / PickupFontSize);
+
+        // 아이템 픽업 팝업 전용 픽셀 글꼴.
+        // ChunkyHangulPixel-Bold → 없으면 게임 기본 UI 글꼴 → 없으면 Unity 내장 글꼴 순으로 대체.
+        private static Font popupFont;
+        private static Font PopupFont
+        {
+            get
+            {
+                if (popupFont != null) return popupFont;
+                popupFont = Resources.Load<Font>("Fonts/ChunkyHangulPixel-Bold");
+                if (popupFont == null) popupFont = UiTextFont.Source;
+                if (popupFont == null) popupFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                ApplyPointFilterTo(popupFont);
+                Font.textureRebuilt += ApplyPointFilterTo;
+                return popupFont;
+            }
+        }
+
+        private static void ApplyPointFilterTo(Font f)
+        {
+            if (f == null || f != popupFont) return;
+            if (f.material?.mainTexture != null)
+                f.material.mainTexture.filterMode = FilterMode.Point;
+        }
         private const float MinimumPickupLineSpacing = .25f;
         private sealed class ItemPickupPopup
         {
@@ -365,14 +395,22 @@ namespace Nyangbingo.World
             popupObject.transform.SetParent(transform, false);
             popupObject.transform.position = (Vector3)position + Vector3.up * .35f;
             var text = popupObject.AddComponent<TextMesh>();
-            text.text = $"+{item.DisplayName} ×{amount}";
+            // ★ 폰트를 text.text 보다 먼저 설정해야 한다.
+            // text를 먼저 설정하면 Unity가 기본 폰트로 글리프를 생성한 뒤 폰트를 교체해도
+            // 같은 프레임에서 갱신되지 않아 깨진 글자가 표시된다.
+            text.font = PopupFont;
+            text.fontSize = PickupFontSize;
+            text.characterSize = PickupCharacterSize;
+            text.fontStyle = FontStyle.Bold;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
-            text.fontSize = WorldPopupFontSize;
-            text.characterSize = WorldPopupCharacterSize;
-            text.fontStyle = FontStyle.Bold;
             text.color = Color.white;
+            text.text = $"+{item.DisplayName} ×{amount}";
             var renderer = text.GetComponent<MeshRenderer>();
+            // Point 필터: sharedMaterial을 통해 font.material과 같은 재질을 공유하므로
+            // font.material에 직접 적용하는 것이 가장 확실하다.
+            if (PopupFont?.material?.mainTexture != null)
+                PopupFont.material.mainTexture.filterMode = FilterMode.Point;
             if (renderer != null) renderer.sortingOrder = 28;
             var popup = popupObject.AddComponent<RuntimeFloatingWorldText>();
             popup.Configure(text, .8f, .65f);

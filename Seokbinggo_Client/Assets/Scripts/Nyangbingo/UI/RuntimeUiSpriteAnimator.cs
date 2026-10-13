@@ -449,11 +449,8 @@ namespace Nyangbingo.UI
             button.transition = Selectable.Transition.SpriteSwap;
             button.spriteState = new SpriteState
             {
-                highlightedSprite = frames[1],
+                // 올라간 그림자 그림은 누르고 있는 동안에만. 떼면 보통 그림으로 돌아간다.
                 pressedSprite = frames[1],
-                selectedSprite = frames[1],
-                // The delivered hover frame is the darkened variant. Reuse it for disabled
-                // controls so unavailable actions remain visibly distinct without extra art.
                 disabledSprite = frames[1]
             };
         }
