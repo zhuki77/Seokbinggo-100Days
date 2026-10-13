@@ -112,12 +112,19 @@ public sealed class StorageDragLivePointerReplay : BaseInput
                     (popup.GetComponent<Outline>() == null || !popup.GetComponent<Outline>().enabled),
                 "chest interior must remain transparent");
             var borderFrame = popup.transform.Find("StorageFrame") as RectTransform;
-            Require(borderFrame != null && borderFrame.childCount == 4 && borderFrame.GetComponent<Image>() == null,
-                "chest needs only four outer border edges, without a filled panel");
+            Require(borderFrame != null && borderFrame.childCount == 5 && borderFrame.GetComponent<Image>() == null,
+                "chest needs an outer frame with a split top edge, without a filled panel");
             foreach (var edge in borderFrame.GetComponentsInChildren<Image>())
-                Require(edge.enabled && edge.color.a == 1f && !edge.raycastTarget &&
+                Require(edge.enabled && edge.color == Color.white && !edge.raycastTarget &&
                         Mathf.Approximately(Mathf.Min(edge.rectTransform.rect.width, edge.rectTransform.rect.height), 1f),
-                    "border must be one pixel thick and must not intercept drags");
+                    "border must be white, one pixel thick and must not intercept drags");
+            var title = Get<Text>(ui, "storageLabelText");
+            var titleCentre = popup.transform.InverseTransformPoint(title.rectTransform.TransformPoint(title.rectTransform.rect.center));
+            var frameTop = popup.transform.InverseTransformPoint(borderFrame.TransformPoint(new Vector2(0f, borderFrame.rect.yMax)));
+            var topRight = (RectTransform)borderFrame.Find("TopRight");
+            Require(Mathf.Approximately(frameTop.y, titleCentre.y) &&
+                    topRight.offsetMin.x >= title.preferredWidth + 4f,
+                "top border must align with the title and leave a clear gap around its text");
             var bagLayout = Get<GameObject>(ui, "inventoryGridRoot").GetComponent<GridLayoutGroup>();
             var storageLayout = popup.transform.Find("StorageGrid").GetComponent<GridLayoutGroup>();
             Require(storageLayout.cellSize == bagLayout.cellSize && storageLayout.spacing == bagLayout.spacing &&

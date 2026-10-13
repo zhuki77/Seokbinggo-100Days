@@ -11,6 +11,7 @@ namespace Nyangbingo.UI
         private const string StorageDragHelp = "드래그: 이동 · Shift+클릭: 빠른 이동\n우클릭: 절반/1개 · E/ESC: 닫기";
         private InventorySlotDrag storageDrag;
         private RectTransform storageHudCounter;
+        private RectTransform storageFrameTop;
         private bool IsDraggingItem => IsDraggingEquipment || storageDrag?.IsActive == true;
         private const float StorageHeaderHeight = 14f;
         private static readonly Vector2 StorageGridSize = new Vector2(
@@ -176,7 +177,7 @@ namespace Nyangbingo.UI
             storageHintText.raycastTarget = false;
         }
 
-        private static void BuildStorageFrame(RectTransform root)
+        private void BuildStorageFrame(RectTransform root)
         {
             var frame = new GameObject("StorageFrame", typeof(RectTransform)).GetComponent<RectTransform>();
             frame.SetParent(root, false);
@@ -185,13 +186,15 @@ namespace Nyangbingo.UI
             frame.anchorMax = Vector2.one;
             // Expand outward so the existing slot positions and hit areas do not move.
             frame.offsetMin = new Vector2(-2f, -2f);
-            frame.offsetMax = new Vector2(2f, 2f);
-            Edge("Top", new Vector2(0f, 1f), Vector2.one, new Vector2(0f, -1f), Vector2.zero);
+            // The title sits in a break in the top edge, like a fieldset legend.
+            frame.offsetMax = new Vector2(2f, -6f);
+            Edge("TopLeft", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -1f), new Vector2(1f, 0f));
+            storageFrameTop = Edge("TopRight", new Vector2(0f, 1f), Vector2.one, new Vector2(24f, -1f), Vector2.zero);
             Edge("Bottom", Vector2.zero, new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, 1f));
             Edge("Left", Vector2.zero, new Vector2(0f, 1f), Vector2.zero, new Vector2(1f, 0f));
             Edge("Right", new Vector2(1f, 0f), Vector2.one, new Vector2(-1f, 0f), Vector2.zero);
 
-            void Edge(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+            RectTransform Edge(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
             {
                 var image = new GameObject(name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
                 var rect = image.rectTransform;
@@ -200,8 +203,9 @@ namespace Nyangbingo.UI
                 rect.anchorMax = anchorMax;
                 rect.offsetMin = offsetMin;
                 rect.offsetMax = offsetMax;
-                image.color = new Color(.5f, .54f, .68f, 1f);
+                image.color = Color.white;
                 image.raycastTarget = false;
+                return rect;
             }
         }
 
@@ -242,6 +246,9 @@ namespace Nyangbingo.UI
             var placement = ResolveStoragePopupRect(canvas.rect.size, inventory, size * scale);
             root.anchoredPosition = new Vector2(placement.x, -placement.y);
             root.localScale = Vector3.one * scale;
+            if (storageFrameTop != null && storageLabelText != null)
+                storageFrameTop.offsetMin = new Vector2(
+                    Mathf.Min(Mathf.Ceil(storageLabelText.preferredWidth) + 4f, size.x + 3f), -1f);
         }
     }
 }
