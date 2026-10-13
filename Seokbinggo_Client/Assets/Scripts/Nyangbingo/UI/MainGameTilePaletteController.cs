@@ -436,27 +436,7 @@ namespace Nyangbingo.UI
                     }
                 }
 
-                var shortcut = slot.Find("Shortcut") as RectTransform;
-                if (shortcut != null)
-                {
-                    shortcut.gameObject.SetActive(true);
-                    shortcut.anchorMin = shortcut.anchorMax = new Vector2(0f, 1f);
-                    shortcut.pivot = new Vector2(.5f, .5f);
-                    shortcut.anchoredPosition = new Vector2(4f, -3f);
-                    shortcut.sizeDelta = new Vector2(6f, 5f);
-                    if (shortcut.GetComponent<Text>() is Text shortcutText)
-                    {
-                        // Slot_9는 Slot_8 복제본이라 글자가 8로 남는다.
-                        shortcutText.text = (index + 1).ToString();
-                        shortcutText.alignment = TextAnchor.MiddleCenter;
-                        shortcutText.fontSize = 5;
-                        shortcutText.fontStyle = FontStyle.Normal;
-                        shortcutText.color = new Color(.86f, .9f, .96f, 1f);
-                        shortcutText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                        shortcutText.verticalOverflow = VerticalWrapMode.Overflow;
-                        shortcutText.raycastTarget = false;
-                    }
-                }
+                PlaceHotbarNumber(slot, index + 1);
             }
 
             if (paletteRoot != null)
@@ -568,6 +548,9 @@ namespace Nyangbingo.UI
             clone.name = "Slot_9";
             var trigger = clone.GetComponent<EventTrigger>();
             if (trigger != null) Destroy(trigger);
+            var clonedShortcut = clone.transform.Find("Shortcut");
+            if (clonedShortcut != null && clonedShortcut.GetComponent<Text>() is Text clonedText)
+                clonedText.text = "9";
         }
 
         private void RebuildSlots()
@@ -604,6 +587,8 @@ namespace Nyangbingo.UI
                     shortcut.gameObject.SetActive(true);
                 }
 
+                PlaceHotbarNumber(slotTransform, slotIndex + 1);
+
                 slotViews.Add(new SlotView
                 {
                     SlotIndex = slotIndex,
@@ -632,6 +617,57 @@ namespace Nyangbingo.UI
                 if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + index)) ||
                     Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index))) return index;
             return ReadPaletteMouseWheelSlot();
+        }
+
+        /// <summary>
+        /// 슬롯 번호는 글꼴 대신 숫자 스프라이트를 쓴다.
+        /// Slot_9는 Slot_8 복제라 글자 8이 남는데, 스프라이트는 칸 번호 그대로 9를 그린다.
+        /// </summary>
+        private void PlaceHotbarNumber(Transform slot, int number)
+        {
+            if (slot == null) return;
+            var glyphs = gameplayArtCatalog?.ShellNumberGlyphs;
+            var sprite = glyphs != null && number >= 0 && number <= 9 && glyphs.Count > 3 + number
+                ? glyphs[3 + number]
+                : null;
+            var shortcut = slot.Find("Shortcut");
+            if (shortcut != null && shortcut.GetComponent<Text>() is Text shortcutText)
+            {
+                shortcutText.text = number.ToString();
+                shortcutText.enabled = sprite == null;
+                shortcutText.alignment = TextAnchor.MiddleCenter;
+                shortcutText.raycastTarget = false;
+            }
+
+            if (sprite == null) return;
+            var marker = slot.Find("SlotNumber");
+            Image image;
+            if (marker == null)
+            {
+                var root = new GameObject("SlotNumber", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                root.transform.SetParent(slot, false);
+                marker = root.transform;
+                image = root.GetComponent<Image>();
+            }
+            else
+                image = marker.GetComponent<Image>();
+
+            var rect = (RectTransform)marker;
+            const float height = 5f;
+            var width = sprite.rect.height > 0f ? sprite.rect.width * (height / sprite.rect.height) : height;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(.5f, .5f);
+            // 16×16 홈은 y=8에서 시작한다. 솟은 탭의 중심은 그 위, 핫바 (6.5+19n, 4.5)이다.
+            rect.anchoredPosition = new Vector2(2.5f, 3.5f);
+            rect.sizeDelta = new Vector2(width, height);
+            rect.localScale = Vector3.one;
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+            image.raycastTarget = false;
+            image.enabled = true;
+            marker.SetAsLastSibling();
         }
 
         private void SetHotbarSelectionArt(Transform slot, bool visible)

@@ -596,53 +596,80 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// 위 홈에 체온 글자를 원본 크기로 두고, 그 오른쪽에 체온·체력 숫자를 올린다.
+        /// 위 홈의 흰 테두리 안(x 6..66, y 8..19)에 체온 글자·숫자·도 표시와 체력 숫자를 한 줄로 넣는다.
+        /// 글자가 홈보다 넓으면 같은 비율로 줄여 테두리에 걸치지 않게 한다.
         /// 밀폐 게이지는 아래 홈, 물약은 체력 틀 오른쪽에 붙어 있다.
         /// </summary>
         private void PlaceClusterReadouts()
         {
             if (!rightStatusCluster) return;
+            // 위쪽 흰 선(y=5)과 아래 테두리(y=22) 안쪽으로 한 픽셀씩 띄운다.
             const float wellLeft = 6f;
-            const float wellRight = 68f;
-            const float wellTop = 6f;
-            var rowHeight = 15f * StatusGlyphScale;
+            const float wellRight = 66f;
+            const float wellTop = 8f;
+            const float wellHeight = 12f;
+            const float gap = 1f;
+            const float glyphHeight = 15f;
 
-            var wordWidth = 0f;
-            var wordHeight = rowHeight;
-            if (temperatureWordLabel != null && temperatureWordLabel.sprite != null)
+            var wordNative = SpriteSize(temperatureWordLabel);
+            var degreeNative = SpriteSize(degreeWordLabel);
+            var temperatureNative = UnscaledGlyphWidth(playerTemperatureGlyphs);
+            var healthNative = UnscaledGlyphWidth(playerHealthGlyphs);
+            var gaps = 0f;
+            if (wordNative.x > 0f && temperatureNative > 0f) gaps += gap;
+            if (temperatureNative > 0f && degreeNative.x > 0f) gaps += gap;
+            if (healthNative > 0f && wordNative.x + temperatureNative + degreeNative.x > 0f) gaps += gap;
+            var contentWidth = wordNative.x + temperatureNative + degreeNative.x + healthNative;
+            var fit = 1f;
+            if (contentWidth > 0f)
+                fit = Mathf.Min(fit, (wellRight - wellLeft - gaps) / contentWidth);
+            fit = Mathf.Min(fit, wellHeight / glyphHeight);
+            fit = Mathf.Max(.1f, fit);
+            playerTemperatureGlyphs?.SetScale(fit);
+            playerHealthGlyphs?.SetScale(fit);
+
+            var rowHeight = glyphHeight * fit;
+            var rowTop = wellTop + (wellHeight - rowHeight) * .5f;
+            var cursor = wellLeft;
+            if (temperatureWordLabel != null && wordNative.x > 0f)
             {
-                var native = temperatureWordLabel.sprite.rect.size;
-                wordWidth = native.x;
-                wordHeight = native.y;
                 var word = temperatureWordLabel.rectTransform;
                 word.anchorMin = word.anchorMax = new Vector2(0f, 1f);
                 word.pivot = new Vector2(0f, 1f);
-                word.anchoredPosition = new Vector2(wellLeft, -wellTop);
-                word.sizeDelta = native;
+                word.anchoredPosition = new Vector2(cursor, -rowTop);
+                word.sizeDelta = wordNative * fit;
                 word.localScale = Vector3.one;
                 temperatureWordLabel.preserveAspect = false;
+                cursor += wordNative.x * fit + gap;
             }
 
-            var numberY = wellTop + Mathf.Max(0f, (wordHeight - rowHeight) * .5f);
-            var temperatureWidth = playerTemperatureGlyphs != null
-                ? playerTemperatureGlyphs.RenderedWidth : 0f;
-            var temperatureX = wellLeft + (wordWidth > 0f ? wordWidth + 1f : 0f);
-            PlaceGlyphBox(temperatureText, temperatureX, numberY, temperatureWidth, rowHeight);
+            var temperatureWidth = playerTemperatureGlyphs != null ? playerTemperatureGlyphs.RenderedWidth : 0f;
+            PlaceGlyphBox(temperatureText, cursor, rowTop, temperatureWidth, rowHeight);
+            if (temperatureWidth > 0f) cursor += temperatureWidth + gap;
 
-            if (degreeWordLabel != null && degreeWordLabel.sprite != null && temperatureText != null)
+            if (degreeWordLabel != null && degreeNative.x > 0f)
             {
-                var native = degreeWordLabel.sprite.rect.size;
-                var degreeWidth = native.y > 0f ? native.x * (rowHeight / native.y) : native.x;
                 var degree = degreeWordLabel.rectTransform;
                 degree.anchorMin = degree.anchorMax = new Vector2(0f, 1f);
                 degree.pivot = new Vector2(0f, 1f);
-                degree.anchoredPosition = new Vector2(temperatureX + temperatureWidth + 1f, -numberY);
-                degree.sizeDelta = new Vector2(degreeWidth, rowHeight);
+                degree.anchoredPosition = new Vector2(cursor, -rowTop);
+                degree.sizeDelta = degreeNative * fit;
+                degree.localScale = Vector3.one;
+                degreeWordLabel.preserveAspect = false;
             }
 
             var healthWidth = playerHealthGlyphs != null ? playerHealthGlyphs.RenderedWidth : 0f;
             var healthX = Mathf.Max(wellLeft, wellRight - healthWidth);
-            PlaceGlyphBox(playerHealthText, healthX, numberY, healthWidth, rowHeight);
+            PlaceGlyphBox(playerHealthText, healthX, rowTop, healthWidth, rowHeight);
+        }
+
+        private static Vector2 SpriteSize(Image image) =>
+            image != null && image.sprite != null ? image.sprite.rect.size : Vector2.zero;
+
+        private static float UnscaledGlyphWidth(RuntimePixelGlyphPresenter glyphs)
+        {
+            if (glyphs == null || glyphs.GlyphScale <= 0f) return 0f;
+            return glyphs.RenderedWidth / glyphs.GlyphScale;
         }
 
         private static void PlaceGlyphBox(Text row, float x, float y, float width, float height)
