@@ -610,11 +610,18 @@ namespace Nyangbingo.World
             else CancelMining();
             UpdateMiningTargetFeedback(pointerOverUi || buildingPlacementActive ||
                                        (lastBasicAttackHitTarget && attackCooldown > 0f));
-            // E opens chests and facilities; right-click uses the selected item.
+            // Pointed storage takes priority over item use; E remains an alternative.
             if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
+                !MainGameCraftingUiController.BlocksGameplayInput &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
             {
-                TryUseSelectedItem();
+                if (!TryOpenStorageAtPointer()) TryUseSelectedItem();
+                if (MainGameCraftingUiController.BlocksPlayerMovement)
+                {
+                    movementInput = Vector2.zero;
+                    CancelMining();
+                    return;
+                }
             }
             if (!buildingPlacementActive && !pointerOverUi && Input.GetKeyDown(KeyCode.F))
                 TryFanAbility();
@@ -1835,6 +1842,20 @@ namespace Nyangbingo.World
             if (!TryGetHighlightedInteractionTarget(out _, out var cell, out var chest)) return false;
             return chest ? TryOpenChestAt(cell) : includePlacedObjects &&
                 placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
+        }
+
+        private bool TryOpenStorageAtPointer()
+        {
+            if (!TryGetHighlightedInteractionTarget(out var record, out var cell, out var chest)) return false;
+            if (chest)
+            {
+                TryOpenChestAt(cell);
+                return true; // Never consume a held item when the user aimed at a chest.
+            }
+            if (record.definitionId != JangdokStorageRuntime.DefinitionId) return false;
+            storageUi ??= FindAnyObjectByType<MainGameCraftingUiController>();
+            storageUi?.TryOpenJangdok(record.objectId);
+            return true;
         }
 
         private bool TryInteractPlacedObjectAtPointer()
