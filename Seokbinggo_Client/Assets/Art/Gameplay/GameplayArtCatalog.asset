@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 146fb9fd9d01eab4fbd2c038e2e6fe7d, type: 3}
   m_Name: GameplayArtCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.GameplayArtCatalog
+  descriptionFrame: {fileID: -1525834705788533640, guid: ec0461f962204ff4990e29ca24db2f4e, type: 3}
   weaponAttackAnimations:
   - itemId: dokkaebi_club
     frames:
