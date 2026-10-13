@@ -122,6 +122,7 @@ namespace Nyangbingo.World
         private string miningTreeId = string.Empty;
         private string miningRebarId = string.Empty;
         private string miningHempId = string.Empty;
+        private string miningCatnipId = string.Empty;
         private string miningPlacedObjectId = string.Empty;
         private Vector3Int miningCell;
         private Vector3Int miningCompanionCell;
@@ -565,7 +566,11 @@ namespace Nyangbingo.World
             visualWasGrounded = grounded;
 
             attackCooldown = Mathf.Max(0f, attackCooldown - Time.deltaTime);
-            wireSnare.Tick(Time.deltaTime);
+            // Plain ability state is not serialized, so a play-mode recompile leaves it null
+            // while initialized stays true.
+            if (wireSnare == null && attack != null)
+                wireSnare = new WireSnareAbility(attack);
+            wireSnare?.Tick(Time.deltaTime);
             if (attackIndicatorRemaining > 0f)
             {
                 attackIndicatorRemaining = Mathf.Max(0f, attackIndicatorRemaining - Time.deltaTime);
@@ -593,7 +598,7 @@ namespace Nyangbingo.World
             else CancelMining();
             UpdateMiningTargetFeedback(!IsClawMiningActive || pointerOverUi || buildingPlacementActive ||
                                        (lastBasicAttackHitTarget && attackCooldown > 0f));
-            // E interacts with world targets; right-click uses the selected item.
+            // E opens chests and facilities; right-click uses the selected item.
             if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
             {
@@ -1144,6 +1149,13 @@ namespace Nyangbingo.World
                 ConsiderMiningTarget(CellAimPoint(hempCell), aim, MiningWorldTargetKind.Hemp, ref bestAimDist, ref bestKind);
                 if (bestKind == MiningWorldTargetKind.Hemp) cell = hempCell;
             }
+            if (worldDecorationRenderer != null &&
+                worldDecorationRenderer.TryResolveCatnipMiningTarget(origin, mouseWorld, facingDir, miningReach,
+                    out _, out var catnipCell))
+            {
+                ConsiderMiningTarget(CellAimPoint(catnipCell), aim, MiningWorldTargetKind.Catnip, ref bestAimDist, ref bestKind);
+                if (bestKind == MiningWorldTargetKind.Catnip) cell = catnipCell;
+            }
             if (environmentState != null &&
                 environmentState.TryResolvePlacedObjectMiningTarget(origin, mouseWorld, miningReach,
                     out _, out var placedCell))
@@ -1208,6 +1220,10 @@ namespace Nyangbingo.World
                     if (TryTickHempMining(clawTier, miningDelta)) return;
                     ResetMiningProgress();
                     return;
+                case MiningWorldTargetKind.Catnip:
+                    if (TryTickCatnipMining(clawTier, miningDelta)) return;
+                    ResetMiningProgress();
+                    return;
                 case MiningWorldTargetKind.PlacedObject:
                     if (TryTickPlacedObjectMining(clawTier, miningDelta)) return;
                     ResetMiningProgress();
@@ -1241,6 +1257,7 @@ namespace Nyangbingo.World
 
             if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
                 !string.IsNullOrEmpty(miningRebarId) || !string.IsNullOrEmpty(miningHempId) ||
+                !string.IsNullOrEmpty(miningCatnipId) ||
                 !string.IsNullOrEmpty(miningPlacedObjectId) ||
                 miningCell != cell ||
                 miningHasCompanion != hasCompanion ||
@@ -1285,6 +1302,7 @@ namespace Nyangbingo.World
             }
             if (!miningActive || !string.IsNullOrEmpty(miningRebarId) ||
                 !string.IsNullOrEmpty(miningHempId) ||
+                !string.IsNullOrEmpty(miningCatnipId) ||
                 !string.IsNullOrEmpty(miningPlacedObjectId) ||
                 !string.Equals(miningTreeId, treeId, System.StringComparison.Ordinal) ||
                 miningCell != hitCell || !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
@@ -1529,6 +1547,7 @@ namespace Nyangbingo.World
             }
             if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
                 !string.IsNullOrEmpty(miningHempId) ||
+                !string.IsNullOrEmpty(miningCatnipId) ||
                 !string.IsNullOrEmpty(miningPlacedObjectId) ||
                 !string.Equals(miningRebarId, rebarId, System.StringComparison.Ordinal) ||
                 miningCell != hitCell || !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
@@ -1592,6 +1611,50 @@ namespace Nyangbingo.World
             return true;
         }
 
+        private bool TryTickCatnipMining(int clawTier, float miningDelta)
+        {
+            Vector2? mouseWorld = followCamera != null
+                ? followCamera.ScreenToWorldPoint(Input.mousePosition)
+                : null;
+            if (worldDecorationRenderer == null ||
+                !worldDecorationRenderer.TryResolveCatnipMiningTarget(
+                    transform.position, mouseWorld, SnapAttackFeedbackDirection(facing), miningReach,
+                    out var patchId, out var hitCell))
+                return false;
+            var definition = catalog?.FindMineralTier(PlayerHealthRecoveryService.CatnipItemId)
+                             ?? catalog?.FindMineralTier(MainGameWorldDecorationRenderer.HempItemId);
+            var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
+            if (requiredSeconds <= 0f)
+            {
+                ResetMiningProgress();
+                return true;
+            }
+            if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
+                !string.IsNullOrEmpty(miningRebarId) ||
+                !string.IsNullOrEmpty(miningHempId) ||
+                !string.IsNullOrEmpty(miningPlacedObjectId) ||
+                !string.Equals(miningCatnipId, patchId, StringComparison.Ordinal) ||
+                miningCell != hitCell || !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
+            {
+                ResetMiningProgress();
+                miningActive = true;
+                miningTreeId = string.Empty;
+                miningRebarId = string.Empty;
+                miningHempId = string.Empty;
+                miningCatnipId = patchId;
+                miningPlacedObjectId = string.Empty;
+                miningCell = hitCell;
+                miningElapsedSeconds = 0f;
+                miningRequiredSeconds = requiredSeconds;
+            }
+            miningElapsedSeconds = Mathf.Min(miningRequiredSeconds, miningElapsedSeconds + miningDelta);
+            Nyangbingo.Core.GameEvents.RaiseMiningProgress(miningCell, MiningProgress);
+            if (miningElapsedSeconds < miningRequiredSeconds) return true;
+            CompleteCatnipMining(miningCatnipId, miningCell);
+            ResetMiningProgress();
+            return true;
+        }
+
         private bool TryTickPlacedObjectMining(int clawTier, float miningDelta)
         {
             if (placedObjectInteractions == null || environmentState == null) return false;
@@ -1613,6 +1676,7 @@ namespace Nyangbingo.World
             if (!miningActive || !string.IsNullOrEmpty(miningTreeId) ||
                 !string.IsNullOrEmpty(miningRebarId) ||
                 !string.IsNullOrEmpty(miningHempId) ||
+                !string.IsNullOrEmpty(miningCatnipId) ||
                 !string.Equals(miningPlacedObjectId, record.objectId, StringComparison.Ordinal) ||
                 miningCell != hitCell ||
                 !Mathf.Approximately(miningRequiredSeconds, requiredSeconds))
@@ -1651,6 +1715,7 @@ namespace Nyangbingo.World
             Tree,
             Rebar,
             Hemp,
+            Catnip,
             PlacedObject,
             Tile
         }
@@ -1658,7 +1723,6 @@ namespace Nyangbingo.World
         private enum WorldInteractKind
         {
             None = 0,
-            Catnip,
             Chest,
             PlacedObject
         }
@@ -1694,7 +1758,8 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 사거리 안 자연 상호작용과 설치물 중 마우스에 가장 가까운 대상을 E로 고른다.
+        /// 사거리 안 상자와 설치물 중 마우스에 가장 가까운 대상을 E로 고른다.
+        /// 캣닢·삼줄기·나무처럼 얻는 자원은 좌클릭 채굴로 통일한다.
         /// </summary>
         private bool TryInteractClosestWorldTarget(bool includePlacedObjects)
         {
@@ -1703,17 +1768,6 @@ namespace Nyangbingo.World
             var bestAimDist = float.PositiveInfinity;
             var bestKind = WorldInteractKind.None;
             var bestChestCell = default(Vector3Int);
-
-            if (worldDecorationRenderer != null &&
-                worldDecorationRenderer.TryFindCatnipInRange(origin, CatnipHarvestRadius, aim, out var catnipPos))
-            {
-                var aimDist = (catnipPos - aim).sqrMagnitude;
-                if (aimDist < bestAimDist)
-                {
-                    bestAimDist = aimDist;
-                    bestKind = WorldInteractKind.Catnip;
-                }
-            }
 
             var session = bootstrap?.Session;
             if (session != null && session.HasWorld &&
@@ -1737,8 +1791,6 @@ namespace Nyangbingo.World
 
             switch (bestKind)
             {
-                case WorldInteractKind.Catnip:
-                    return TryHarvestNearbyCatnip();
                 case WorldInteractKind.Chest:
                     return TryOpenChestAt(bestChestCell);
                 case WorldInteractKind.PlacedObject:
@@ -1999,6 +2051,18 @@ namespace Nyangbingo.World
                 hitCell, item.DisplayName, amount, critical);
         }
 
+        private void CompleteCatnipMining(string patchId, Vector3Int hitCell)
+        {
+            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null)
+                return;
+            if (!worldDecorationRenderer.TryHarvestCatnip(patchId, runtimeServices.PlayerInventory))
+            {
+                ShowMiningFailure(hitCell, "인벤토리가 가득 차 캣닢을 담지 못했습니다.");
+                return;
+            }
+            interactionMessages?.ShowExternalMessage("캣닢 채집 ×1 · 2일 뒤 재생");
+        }
+
         private void CancelMining()
         {
             ResetMiningProgress();
@@ -2012,6 +2076,7 @@ namespace Nyangbingo.World
             miningTreeId = string.Empty;
             miningRebarId = string.Empty;
             miningHempId = string.Empty;
+            miningCatnipId = string.Empty;
             miningPlacedObjectId = string.Empty;
             miningHasCompanion = false;
             miningElapsedSeconds = 0f;
@@ -2134,7 +2199,10 @@ namespace Nyangbingo.World
             else
                 attack.ConfigureFrostSlow(0f, 0f);
             var knockback = EvolvedFanCombatRules.ResolveAbilityKnockback(activeProfile);
-            if (wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id), knockback))
+            if (wireSnare == null && attack != null)
+                wireSnare = new WireSnareAbility(attack);
+            if (wireSnare != null &&
+                wireSnare.TryUse(facing, ResolveFanAbilityDamage(activeProfile.Id), knockback))
             {
                 if (activeProfile.Id == SeolpungseonId)
                     attack.ConfigureFrostSlow(0f, 0f);
@@ -2817,19 +2885,6 @@ namespace Nyangbingo.World
             return true;
         }
 
-        private bool TryHarvestNearbyCatnip()
-        {
-            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null)
-                return false;
-            var origin = (Vector2)transform.position;
-            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
-            if (!worldDecorationRenderer.TryHarvestCatnip(
-                    origin, CatnipHarvestRadius, aim, runtimeServices.PlayerInventory, out var harvested))
-                return false;
-            interactionMessages?.ShowExternalMessage($"캣닢 채집 ×{harvested} · 2일 뒤 재생");
-            return true;
-        }
-
         private bool TryUseSelectedHealingItem()
         {
             tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
@@ -2862,7 +2917,7 @@ namespace Nyangbingo.World
 
             var origin = (Vector2)transform.position;
             var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
-            // 수확 가능한 캣닢이 있으면 심기보다 E 상호작용(채집)을 우선한다.
+            // 수확 가능한 캣닢이 있으면 심기보다 좌클릭 채집을 우선한다.
             if (worldDecorationRenderer.TryFindCatnipInRange(origin, CatnipHarvestRadius, aim, out _))
                 return false;
             if (!worldDecorationRenderer.TryPlantCatnip(

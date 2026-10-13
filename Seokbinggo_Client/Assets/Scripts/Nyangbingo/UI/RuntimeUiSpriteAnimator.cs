@@ -161,6 +161,7 @@ namespace Nyangbingo.UI
         private readonly Text source;
         private readonly Text prefix;
         private readonly Text suffix;
+        private readonly Image leadingArt;
         private readonly RectTransform root;
         private readonly RectTransform numberRect;
         private readonly RuntimePixelGlyphPresenter numbers;
@@ -169,16 +170,26 @@ namespace Nyangbingo.UI
         private string displayed;
 
         public RuntimeArtNumberLabel(Text template, IReadOnlyList<Sprite> glyphs,
-            string leadingText, string trailingText, float numberScale)
+            string leadingText, string trailingText, float numberScale, Sprite leadingSprite = null)
         {
             source = template;
-            before = leadingText;
+            before = leadingSprite == null ? leadingText : string.Empty;
             after = trailingText;
             root = new GameObject("ArtNumberLabel", typeof(RectTransform)).GetComponent<RectTransform>();
             root.SetParent(template.transform, false);
             root.anchorMin = root.anchorMax = root.pivot = new Vector2(.5f, .5f);
             root.anchoredPosition = Vector2.zero;
             prefix = CreateText("Prefix", before);
+            if (leadingSprite != null)
+            {
+                var wordObject = new GameObject("LeadingArt", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                wordObject.transform.SetParent(root, false);
+                leadingArt = wordObject.GetComponent<Image>();
+                leadingArt.sprite = leadingSprite;
+                leadingArt.preserveAspect = true;
+                leadingArt.raycastTarget = false;
+                leadingArt.color = Color.white;
+            }
             numberRect = new GameObject("Number", typeof(RectTransform)).GetComponent<RectTransform>();
             numberRect.SetParent(root, false);
             numbers = numberRect.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
@@ -213,24 +224,28 @@ namespace Nyangbingo.UI
             {
                 displayed = text;
                 numbers.SetText(text);
-                var leftWidth = prefix.preferredWidth;
+                var leftWidth = leadingArt != null ? leadingArt.sprite.rect.width : prefix.preferredWidth;
+                var gap = leadingArt != null && leftWidth > 0f ? 2f : 0f;
                 var rightWidth = suffix.preferredWidth;
-                var total = leftWidth + numbers.RenderedWidth + rightWidth;
-                Place(prefix.rectTransform, -total * .5f + leftWidth * .5f, leftWidth);
-                Place(numberRect, -total * .5f + leftWidth + numbers.RenderedWidth * .5f,
-                    numbers.RenderedWidth);
-                Place(suffix.rectTransform, total * .5f - rightWidth * .5f, rightWidth);
+                var total = leftWidth + gap + numbers.RenderedWidth + rightWidth;
+                if (leadingArt != null)
+                    Place(leadingArt.rectTransform, -total * .5f + leftWidth * .5f, leftWidth, leadingArt.sprite.rect.height);
+                else
+                    Place(prefix.rectTransform, -total * .5f + leftWidth * .5f, leftWidth, source.rectTransform.sizeDelta.y);
+                Place(numberRect, -total * .5f + leftWidth + gap + numbers.RenderedWidth * .5f,
+                    numbers.RenderedWidth, source.rectTransform.sizeDelta.y);
+                Place(suffix.rectTransform, total * .5f - rightWidth * .5f, rightWidth, source.rectTransform.sizeDelta.y);
             }
             source.text = string.Empty;
             source.enabled = false;
             root.gameObject.SetActive(visible);
         }
 
-        private void Place(RectTransform rect, float x, float width)
+        private static void Place(RectTransform rect, float x, float width, float height)
         {
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
             rect.anchoredPosition = new Vector2(x, 0f);
-            rect.sizeDelta = new Vector2(width, source.rectTransform.sizeDelta.y);
+            rect.sizeDelta = new Vector2(width, height);
         }
     }
 
@@ -463,7 +478,7 @@ namespace Nyangbingo.UI
         private static IReadOnlyList<Sprite> ClosestFrames(GameplayArtCatalog catalog, float aspect)
         {
             if (aspect < 1.5f) return catalog.Button1x1Frames;
-            if (aspect < 3f) return catalog.Button1x2Frames;
+            // 1x2 셀은 32px 버튼 옆에 빈 칸이 붙어 있어, 좁은 버튼이 가운데서 갈라져 보인다.
             if (aspect < 5f) return catalog.Button1x4Frames;
             return catalog.Button1x6Frames;
         }

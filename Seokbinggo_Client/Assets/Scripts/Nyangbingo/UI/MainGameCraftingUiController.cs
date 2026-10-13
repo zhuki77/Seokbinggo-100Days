@@ -65,8 +65,20 @@ namespace Nyangbingo.UI
         [SerializeField] private RectTransform detailsViewportRect;
         [SerializeField] private RectTransform detailsScrollbarRect;
         [SerializeField] private GameObject inventoryGridRoot;
+        private GameObject inventoryScrollRoot;
+        private ScrollRect inventoryScrollRect;
         private GameObject craftingListRoot;
         private ScrollRect craftingListScrollRect;
+        private GameObject craftWindowRoot;
+        private Image craftWindowOutputIcon;
+        private Image[] craftWindowIngredientIcons = new Image[3];
+        private Button[] craftWindowSlotButtons = Array.Empty<Button>();
+        private Image[] craftWindowSlotIcons = Array.Empty<Image>();
+        private Image[] craftWindowSlotMarks = Array.Empty<Image>();
+        private readonly List<RecipeDefinition> craftWindowRecipes = new List<RecipeDefinition>();
+        private int craftWindowIndex;
+        private bool craftWindowPanelTintSaved;
+        private Color craftWindowPanelColor;
         private Button[] craftingListButtons = Array.Empty<Button>();
         private Text[] craftingListLabels = Array.Empty<Text>();
         private Image[] craftingListOutputIcons = Array.Empty<Image>();
@@ -169,7 +181,7 @@ namespace Nyangbingo.UI
         public const int UnifiedTabCount = 4;
         public const int InventoryGridColumns = 10;
         public const int InventoryGridRows = 5;
-        public const int InventoryHotbarSlotCount = 8;
+        public const int InventoryHotbarSlotCount = 9;
         public const float InventorySlotPixelSize = 27f;
         public const bool UsesIconOnlyCraftingList = true;
         public const KeyCode DebugGrantRequirementsKey = KeyCode.F12;
@@ -535,6 +547,494 @@ namespace Nyangbingo.UI
             return true;
         }
 
+        private void ApplySketchWindowLayout()
+        {
+            var canvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
+            if (canvas == null || inventoryGridRoot == null || equipmentVisualRoot == null) return;
+
+            const float cell = 14f;
+            const float gap = 1f;
+            const int columns = 8;
+            const int visibleRows = 4;
+            var trackSprite = gameplayArtCatalog?.ScrollTrack;
+            var barWidth = trackSprite != null ? trackSprite.rect.width : 3f;
+            const float barGap = 2f;
+            var slotCount = inventoryGridButtons != null ? inventoryGridButtons.Length : 50;
+            var contentRows = Mathf.Max(visibleRows, Mathf.CeilToInt(slotCount / (float)columns));
+            var contentWidth = columns * cell + (columns - 1) * gap;
+            var contentHeight = contentRows * cell + (contentRows - 1) * gap;
+            var viewHeight = visibleRows * cell + (visibleRows - 1) * gap;
+            var layout = inventoryGridRoot.GetComponent<GridLayoutGroup>();
+            if (layout != null)
+            {
+                layout.padding = new RectOffset(0, 0, 0, 0);
+                layout.childAlignment = TextAnchor.UpperLeft;
+                layout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+                layout.startAxis = GridLayoutGroup.Axis.Horizontal;
+                layout.cellSize = new Vector2(cell, cell);
+                layout.spacing = new Vector2(gap, gap);
+                layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                layout.constraintCount = columns;
+            }
+
+            var grid = (RectTransform)inventoryGridRoot.transform;
+            if (inventoryScrollRoot == null)
+                BuildInventoryScrollWindow(canvas.transform, grid);
+            var shell = (RectTransform)inventoryScrollRoot.transform;
+            shell.SetParent(canvas.transform, false);
+            shell.anchorMin = shell.anchorMax = new Vector2(0f, 1f);
+            shell.pivot = new Vector2(0f, 1f);
+            shell.anchoredPosition = new Vector2(4f, -4f);
+            shell.sizeDelta = new Vector2(contentWidth + barGap + barWidth, viewHeight);
+            var viewport = (RectTransform)shell.Find("InventoryViewport");
+            viewport.sizeDelta = new Vector2(contentWidth, viewHeight);
+            grid.anchorMin = grid.anchorMax = new Vector2(0f, 1f);
+            grid.pivot = new Vector2(0f, 1f);
+            grid.anchoredPosition = Vector2.zero;
+            grid.localScale = Vector3.one;
+            grid.sizeDelta = new Vector2(contentWidth, contentHeight);
+            var bar = (RectTransform)shell.Find("InventoryScrollbar");
+            bar.anchoredPosition = new Vector2(contentWidth + barGap, 0f);
+            bar.sizeDelta = new Vector2(barWidth, viewHeight);
+            if (bar.GetComponent<Image>() is Image trackImage)
+                trackImage.preserveAspect = true;
+            var handleImage = bar.Find("Handle")?.GetComponent<Image>();
+            if (handleImage != null) handleImage.preserveAspect = true;
+            shell.SetAsLastSibling();
+            FitInventorySlotContents(cell);
+            SetInventoryWindowActive(true);
+
+            var equip = (RectTransform)equipmentVisualRoot.transform;
+            equip.SetParent(canvas.transform, false);
+            equip.anchorMin = equip.anchorMax = new Vector2(1f, 1f);
+            equip.pivot = new Vector2(1f, 1f);
+            // Flush with the right edge, directly under the 0.75-scale vitals sheet.
+            equip.anchoredPosition = new Vector2(-4f, -52.5f);
+            equip.localScale = new Vector3(.42f, .42f, 1f);
+            equip.SetAsLastSibling();
+            equipmentVisualRoot.SetActive(true);
+            RefreshEquipmentVisual();
+
+            var panelRect = (RectTransform)panel.transform;
+            panelRect.anchorMin = panelRect.anchorMax = new Vector2(0f, 0f);
+            panelRect.pivot = new Vector2(0f, 0f);
+            panelRect.anchoredPosition = new Vector2(4f, 4f);
+            panelRect.sizeDelta = new Vector2(220f, 100f);
+
+            var tabPositions = new[]
+            {
+                new Vector2(-78f, 30f),
+                new Vector2(-78f, 12f),
+                new Vector2(-78f, -6f),
+                new Vector2(-78f, -24f)
+            };
+            var tabLabels = new[] { "재료", "제작", "장비", "도감" };
+            for (var index = 0; index < tabButtons.Length && index < tabPositions.Length; index++)
+            {
+                var rect = tabButtons[index].GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+                rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = tabPositions[index];
+                rect.sizeDelta = new Vector2(56f, 16f);
+                var label = tabButtons[index].GetComponentInChildren<Text>();
+                if (label != null) label.text = tabLabels[index];
+            }
+
+            if (titleText != null)
+            {
+                var titleRect = titleText.rectTransform;
+                titleRect.anchoredPosition = new Vector2(46f, 38f);
+                titleRect.sizeDelta = new Vector2(110f, 14f);
+            }
+        }
+
+        private void FitInventorySlotContents(float cell)
+        {
+            if (inventoryGridButtons == null) return;
+            var inner = Mathf.Max(1f, cell - 2f);
+            foreach (var button in inventoryGridButtons)
+            {
+                if (button == null) continue;
+                for (var index = 0; index < button.transform.childCount; index++)
+                {
+                    if (button.transform.GetChild(index) is not RectTransform child || child.name == "Label")
+                        continue;
+                    child.anchorMin = child.anchorMax = new Vector2(.5f, .5f);
+                    child.pivot = new Vector2(.5f, .5f);
+                    child.anchoredPosition = Vector2.zero;
+                    child.sizeDelta = new Vector2(inner, inner);
+                    if (child.GetComponent<Image>() is Image childImage)
+                        childImage.preserveAspect = true;
+                }
+            }
+        }
+
+        private void BuildInventoryScrollWindow(Transform canvas, RectTransform grid)
+        {
+            inventoryScrollRoot = new GameObject("InventoryScroll", typeof(RectTransform));
+            inventoryScrollRoot.transform.SetParent(canvas, false);
+
+            var viewportObject = new GameObject("InventoryViewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+            viewportObject.transform.SetParent(inventoryScrollRoot.transform, false);
+            var viewport = (RectTransform)viewportObject.transform;
+            viewport.anchorMin = viewport.anchorMax = new Vector2(0f, 1f);
+            viewport.pivot = new Vector2(0f, 1f);
+            viewport.anchoredPosition = Vector2.zero;
+            var viewportImage = viewportObject.GetComponent<Image>();
+            viewportImage.color = new Color(0f, 0f, 0f, .02f);
+            viewportImage.raycastTarget = true;
+            grid.SetParent(viewport, false);
+
+            inventoryScrollRect = viewportObject.AddComponent<ScrollRect>();
+            inventoryScrollRect.content = grid;
+            inventoryScrollRect.viewport = viewport;
+            inventoryScrollRect.horizontal = false;
+            inventoryScrollRect.vertical = true;
+            inventoryScrollRect.movementType = ScrollRect.MovementType.Clamped;
+            inventoryScrollRect.scrollSensitivity = 16f;
+            inventoryScrollRect.inertia = false;
+
+            var barObject = new GameObject("InventoryScrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barObject.transform.SetParent(inventoryScrollRoot.transform, false);
+            var barRect = (RectTransform)barObject.transform;
+            barRect.anchorMin = barRect.anchorMax = new Vector2(0f, 1f);
+            barRect.pivot = new Vector2(0f, 1f);
+            var track = barObject.GetComponent<Image>();
+            track.raycastTarget = true;
+            if (gameplayArtCatalog?.ScrollTrack != null)
+            {
+                track.sprite = gameplayArtCatalog.ScrollTrack;
+                track.type = Image.Type.Simple;
+                track.preserveAspect = true;
+                track.color = Color.white;
+            }
+            else track.color = new Color(.15f, .22f, .3f, .95f);
+
+            var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(barObject.transform, false);
+            var handleRect = (RectTransform)handleObject.transform;
+            handleRect.anchorMin = Vector2.zero;
+            handleRect.anchorMax = Vector2.one;
+            handleRect.offsetMin = Vector2.zero;
+            handleRect.offsetMax = Vector2.zero;
+            var handle = handleObject.GetComponent<Image>();
+            handle.raycastTarget = true;
+            if (gameplayArtCatalog?.ScrollHandle != null)
+            {
+                handle.sprite = gameplayArtCatalog.ScrollHandle;
+                handle.type = Image.Type.Simple;
+                handle.preserveAspect = true;
+                handle.color = Color.white;
+            }
+            else handle.color = new Color(.75f, .85f, .95f, 1f);
+
+            var scrollbar = barObject.GetComponent<Scrollbar>();
+            scrollbar.handleRect = handleRect;
+            scrollbar.targetGraphic = handle;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            inventoryScrollRect.verticalScrollbar = scrollbar;
+            inventoryScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        }
+
+        private void BuildCraftWindow(Transform canvas)
+        {
+            const int columns = 3;
+            const int visibleRows = 3;
+            craftWindowRoot = new GameObject("CraftWindow", typeof(RectTransform), typeof(Image));
+            craftWindowRoot.transform.SetParent(canvas, false);
+            var root = (RectTransform)craftWindowRoot.transform;
+            root.anchorMin = root.anchorMax = new Vector2(0f, 0f);
+            root.pivot = new Vector2(0f, 0f);
+            root.anchoredPosition = new Vector2(4f, 4f);
+            var frame = craftWindowRoot.GetComponent<Image>();
+            var topBars = gameplayArtCatalog?.CraftTopBarFrames;
+            var frameSprite = topBars != null && topBars.Count > 0 ? topBars[0] : gameplayArtCatalog?.CraftPanel;
+            var frameSize = frameSprite != null ? frameSprite.rect.size : new Vector2(108f, 78f);
+            root.sizeDelta = frameSize;
+            frame.sprite = frameSprite;
+            frame.type = Image.Type.Simple;
+            frame.preserveAspect = true;
+            frame.color = frameSprite != null ? Color.white : new Color(.08f, .1f, .16f, .96f);
+            frame.raycastTarget = true;
+
+            craftWindowOutputIcon = CreateArtImage(root, "Output", null, Vector2.zero, new Vector2(22f, 22f));
+            PlaceTopLeft(craftWindowOutputIcon.rectTransform, 9f, 9f, 22f, 22f);
+            craftWindowOutputIcon.preserveAspect = true;
+            for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
+            {
+                var icon = CreateArtImage(root, $"Ingredient_{index + 1}", null, Vector2.zero, new Vector2(8f, 8f));
+                PlaceTopLeft(icon.rectTransform, 8f + index * 9f, 45f, 8f, 8f);
+                icon.preserveAspect = true;
+                craftWindowIngredientIcons[index] = icon;
+            }
+
+            var buttonFrames = gameplayArtCatalog?.CraftButtonFrames;
+            var normal = buttonFrames != null && buttonFrames.Count > 0 ? buttonFrames[0] : null;
+            var buttonSize = normal != null ? normal.rect.size : new Vector2(32f, 14f);
+            var buttonObject = new GameObject("CraftButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(root, false);
+            var buttonRect = (RectTransform)buttonObject.transform;
+            PlaceTopLeft(buttonRect, 4f, frameSize.y - buttonSize.y - 4f, buttonSize.x, buttonSize.y);
+            var buttonImage = buttonObject.GetComponent<Image>();
+            buttonImage.sprite = normal;
+            buttonImage.type = Image.Type.Simple;
+            buttonImage.preserveAspect = true;
+            buttonImage.color = normal != null ? Color.white : new Color(.45f, .42f, .62f, 1f);
+            var craftButton = buttonObject.GetComponent<Button>();
+            craftButton.targetGraphic = buttonImage;
+            if (normal != null && buttonFrames.Count > 1 && buttonFrames[1] != null)
+            {
+                var state = craftButton.spriteState;
+                state.pressedSprite = buttonFrames[1];
+                state.highlightedSprite = buttonFrames[1];
+                craftButton.spriteState = state;
+                craftButton.transition = Selectable.Transition.SpriteSwap;
+            }
+            craftButton.onClick.AddListener(TryCraftFromWindow);
+
+            var slotSprite = gameplayArtCatalog?.CraftMidSlot;
+            var cell = slotSprite != null ? slotSprite.rect.size : new Vector2(18f, 18f);
+            const float holeX = 37f;
+            const float holeY = 17f;
+            const float holeW = 58f;
+            const float holeH = 57f;
+            var gridW = cell.x * columns;
+            var gridH = cell.y * visibleRows;
+            var gridX = holeX + Mathf.Max(0f, (holeW - gridW) * .5f);
+            var gridY = holeY + Mathf.Max(0f, (holeH - gridH) * .5f);
+
+            var viewportObject = new GameObject("RecipeViewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+            viewportObject.transform.SetParent(root, false);
+            var viewport = (RectTransform)viewportObject.transform;
+            PlaceTopLeft(viewport, gridX, gridY, gridW, gridH);
+            var viewportImage = viewportObject.GetComponent<Image>();
+            viewportImage.color = new Color(24f / 255f, 31f / 255f, 47f / 255f, 1f);
+            viewportImage.raycastTarget = true;
+
+            var slotCount = Mathf.Max(columns * visibleRows, visibleRecipes.Count);
+            var rows = Mathf.CeilToInt(slotCount / (float)columns);
+            var contentObject = new GameObject("RecipeGrid", typeof(RectTransform), typeof(GridLayoutGroup));
+            contentObject.transform.SetParent(viewport, false);
+            var content = (RectTransform)contentObject.transform;
+            PlaceTopLeft(content, 0f, 0f, gridW, rows * cell.y);
+            var layout = contentObject.GetComponent<GridLayoutGroup>();
+            layout.cellSize = cell;
+            layout.spacing = Vector2.zero;
+            layout.padding = new RectOffset(0, 0, 0, 0);
+            layout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            layout.startAxis = GridLayoutGroup.Axis.Horizontal;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = columns;
+
+            var scroll = viewportObject.AddComponent<ScrollRect>();
+            scroll.content = content;
+            scroll.viewport = viewport;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 12f;
+            scroll.inertia = false;
+
+            var scrollSprite = gameplayArtCatalog?.CraftScroll;
+            var scrollWidth = scrollSprite != null ? scrollSprite.rect.width : 7f;
+            var barObject = new GameObject("RecipeScrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barObject.transform.SetParent(root, false);
+            var barRect = (RectTransform)barObject.transform;
+            PlaceTopLeft(barRect, holeX + holeW + 1f, holeY, scrollWidth, holeH);
+            var track = barObject.GetComponent<Image>();
+            track.color = new Color(1f, 1f, 1f, 0f);
+            track.raycastTarget = true;
+            var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(barObject.transform, false);
+            var handleRect = (RectTransform)handleObject.transform;
+            handleRect.anchorMin = Vector2.zero;
+            handleRect.anchorMax = Vector2.one;
+            handleRect.offsetMin = Vector2.zero;
+            handleRect.offsetMax = Vector2.zero;
+            var handle = handleObject.GetComponent<Image>();
+            handle.sprite = scrollSprite;
+            handle.type = Image.Type.Simple;
+            handle.preserveAspect = true;
+            handle.color = handle.sprite != null ? Color.white : new Color(.75f, .8f, .9f, 1f);
+            var scrollbar = barObject.GetComponent<Scrollbar>();
+            scrollbar.handleRect = handleRect;
+            scrollbar.targetGraphic = handle;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scroll.verticalScrollbar = scrollbar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+
+            craftWindowSlotButtons = new Button[slotCount];
+            craftWindowSlotIcons = new Image[slotCount];
+            craftWindowSlotMarks = new Image[slotCount];
+            for (var index = 0; index < slotCount; index++)
+            {
+                var captured = index;
+                var slotObject = new GameObject($"RecipeSlot_{index + 1:00}", typeof(RectTransform), typeof(Image), typeof(Button));
+                slotObject.transform.SetParent(content, false);
+                var slotImage = slotObject.GetComponent<Image>();
+                slotImage.color = new Color(1f, 1f, 1f, 0f);
+                var slotButton = slotObject.GetComponent<Button>();
+                slotButton.targetGraphic = slotImage;
+                slotButton.onClick.AddListener(() => SelectCraftWindowRecipe(captured));
+                var mark = CreateArtImage(slotObject.transform, "Selected", slotSprite, Vector2.zero, cell);
+                mark.preserveAspect = true;
+                mark.color = Color.white;
+                mark.enabled = false;
+                var frameImage = CreateArtImage(slotObject.transform, "Frame", slotSprite, Vector2.zero, cell);
+                frameImage.preserveAspect = true;
+                frameImage.color = slotSprite != null ? Color.white : new Color(.12f, .16f, .24f, 1f);
+                var icon = CreateArtImage(slotObject.transform, "Icon", null, Vector2.zero, new Vector2(12f, 12f));
+                icon.preserveAspect = true;
+                craftWindowSlotButtons[index] = slotButton;
+                craftWindowSlotIcons[index] = icon;
+                craftWindowSlotMarks[index] = mark;
+            }
+            craftWindowRoot.SetActive(false);
+        }
+
+        private static void PlaceTopLeft(RectTransform rect, float x, float y, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, -y);
+            rect.sizeDelta = new Vector2(width, height);
+            rect.localScale = Vector3.one;
+        }
+
+        private void ApplyCraftWindowChrome(bool useArtWindow)
+        {
+            if (panel == null) return;
+            var background = panel.GetComponent<Image>();
+            if (background != null)
+            {
+                if (!craftWindowPanelTintSaved)
+                {
+                    craftWindowPanelColor = background.color;
+                    craftWindowPanelTintSaved = true;
+                }
+                var color = craftWindowPanelColor;
+                if (useArtWindow) color.a = 0f;
+                background.color = color;
+                background.raycastTarget = !useArtWindow;
+            }
+            if (!useArtWindow || craftWindowRoot == null) return;
+            foreach (var tab in tabButtons)
+                if (tab != null) tab.gameObject.SetActive(false);
+            if (previousButton != null) previousButton.gameObject.SetActive(false);
+            if (nextButton != null) nextButton.gameObject.SetActive(false);
+            if (primaryButton != null) primaryButton.gameObject.SetActive(false);
+            if (messageText != null) messageText.gameObject.SetActive(false);
+            if (titleText != null) titleText.gameObject.SetActive(false);
+            if (craftingListRoot != null) craftingListRoot.SetActive(false);
+            if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(false);
+            if (detailsScrollbarRect != null) detailsScrollbarRect.gameObject.SetActive(false);
+            if (debugCompleteButton != null) debugCompleteButton.gameObject.SetActive(false);
+            if (productionQueueRoot != null) productionQueueRoot.SetActive(false);
+        }
+
+        private void RefreshCraftWindow()
+        {
+            if (runtimeServices == null || !runtimeServices.IsInitialized || panel == null) return;
+            if (craftWindowRoot == null)
+            {
+                if (gameplayArtCatalog == null) return;
+                var canvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
+                if (canvas == null) return;
+                BuildCraftWindow(canvas.transform);
+            }
+            var show = !HasStorageMode && (!open || (page == Page.Crafting && !IsShowingSmeltingList));
+            var wasActive = craftWindowRoot.activeSelf;
+            craftWindowRoot.SetActive(show);
+            if (!show) return;
+            if (!wasActive) craftWindowRoot.transform.SetAsLastSibling();
+            if (!(open && page == Page.Crafting)) RebuildCraftWindowRecipes();
+            var recipes = open && page == Page.Crafting ? filteredRecipes : craftWindowRecipes;
+            var selected = CurrentCraftWindowIndex(recipes);
+            var recipe = selected >= 0 && selected < recipes.Count ? recipes[selected] : null;
+            if (craftWindowOutputIcon != null)
+            {
+                craftWindowOutputIcon.sprite = recipe?.Output.item != null
+                    ? itemArtCatalog?.FindSprite(recipe.Output.item.Id) : null;
+                craftWindowOutputIcon.enabled = craftWindowOutputIcon.sprite != null;
+            }
+            for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
+            {
+                var icon = craftWindowIngredientIcons[index];
+                if (icon == null) continue;
+                var ingredient = recipe != null && recipe.Ingredients != null && index < recipe.Ingredients.Length
+                    ? recipe.Ingredients[index] : default;
+                var hasIngredient = ingredient.item != null;
+                icon.sprite = hasIngredient ? itemArtCatalog?.FindSprite(ingredient.item.Id) : null;
+                icon.enabled = icon.sprite != null;
+                if (!hasIngredient || runtimeServices.PlayerInventory == null) continue;
+                var missing = runtimeServices.PlayerInventory.Count(ingredient.item.Id) < ingredient.amount;
+                icon.color = missing ? new Color(.55f, .55f, .6f, 1f) : Color.white;
+            }
+            for (var index = 0; index < craftWindowSlotButtons.Length; index++)
+            {
+                var button = craftWindowSlotButtons[index];
+                if (button == null) continue;
+                var entry = index < recipes.Count ? recipes[index] : null;
+                button.interactable = entry != null;
+                var icon = craftWindowSlotIcons[index];
+                if (icon != null)
+                {
+                    icon.sprite = entry?.Output.item != null ? itemArtCatalog?.FindSprite(entry.Output.item.Id) : null;
+                    icon.enabled = icon.sprite != null;
+                }
+                if (craftWindowSlotMarks[index] != null)
+                    craftWindowSlotMarks[index].enabled = entry != null && index == selected;
+            }
+            if (productionQueueRoot != null) productionQueueRoot.SetActive(false);
+        }
+
+        private void RebuildCraftWindowRecipes()
+        {
+            craftWindowRecipes.Clear();
+            if (visibleRecipes.Count == 0 && gameDataCatalog != null) RebuildVisibleRecipes();
+            var nearby = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+            var smithyUnlocked = runtimeServices?.Seokbinggo?.IsSmithyUnlocked == true;
+            for (var index = 0; index < visibleRecipes.Count; index++)
+            {
+                var recipe = visibleRecipes[index];
+                if (recipe == null) continue;
+                if (!IsRecipeVisibleAtStation(recipe.Station, nearby)) continue;
+                if (!IsSmithyRecipeAllowed(recipe.Station, smithyUnlocked)) continue;
+                if (RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook))
+                    craftWindowRecipes.Add(recipe);
+            }
+            if (craftWindowRecipes.Count == 0) craftWindowIndex = 0;
+            else craftWindowIndex = Mathf.Clamp(craftWindowIndex, 0, craftWindowRecipes.Count - 1);
+        }
+
+        private int CurrentCraftWindowIndex(IReadOnlyList<RecipeDefinition> recipes)
+        {
+            if (recipes == null || recipes.Count == 0) return -1;
+            var index = open && page == Page.Crafting ? selectedIndex : craftWindowIndex;
+            return Mathf.Clamp(index, 0, recipes.Count - 1);
+        }
+
+        private void SelectCraftWindowRecipe(int index)
+        {
+            var recipes = open && page == Page.Crafting ? filteredRecipes : craftWindowRecipes;
+            if (index < 0 || index >= recipes.Count) return;
+            if (open && page == Page.Crafting) selectedIndex = index;
+            else craftWindowIndex = index;
+            Refresh();
+        }
+
+        private void SetInventoryWindowActive(bool active)
+        {
+            var wasActive = inventoryScrollRoot != null && inventoryScrollRoot.activeSelf;
+            if (inventoryScrollRoot != null) inventoryScrollRoot.SetActive(active);
+            if (craftWindowRoot != null && !active) craftWindowRoot.SetActive(false);
+            if (inventoryGridRoot != null) inventoryGridRoot.SetActive(active);
+            if (!active || wasActive || inventoryScrollRect == null) return;
+            inventoryScrollRect.StopMovement();
+            inventoryScrollRect.verticalNormalizedPosition = 1f;
+        }
+
         private void BuildUi()
         {
             if (panel == null || titleText == null || tabButtons == null || tabButtons.Length != 4)
@@ -565,6 +1065,7 @@ namespace Nyangbingo.UI
             BuildEquipmentVisual();
             BuildStorageUi();
             BuildCodexGrid();
+            ApplySketchWindowLayout();
 
             previousButton.onClick.AddListener(() => SelectRelative(-1));
             nextButton.onClick.AddListener(() => SelectRelative(1));
@@ -602,6 +1103,20 @@ namespace Nyangbingo.UI
             var handleRect = detailsScrollbarRect.Find("Handle") as RectTransform;
             scrollbar.handleRect = handleRect;
             scrollbar.targetGraphic = handleRect.GetComponent<Image>();
+            var trackImage = detailsScrollbarRect.GetComponent<Image>();
+            if (gameplayArtCatalog?.ScrollTrack != null && trackImage != null)
+            {
+                trackImage.sprite = gameplayArtCatalog.ScrollTrack;
+                trackImage.type = Image.Type.Simple;
+                trackImage.color = Color.white;
+            }
+            var handleImage = handleRect.GetComponent<Image>();
+            if (gameplayArtCatalog?.ScrollHandle != null && handleImage != null)
+            {
+                handleImage.sprite = gameplayArtCatalog.ScrollHandle;
+                handleImage.type = Image.Type.Simple;
+                handleImage.color = Color.white;
+            }
             detailsScrollRect.verticalScrollbar = scrollbar;
             detailsScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
         }
@@ -609,7 +1124,7 @@ namespace Nyangbingo.UI
         private void BuildCraftingList()
         {
             craftingListRoot = CreateUiObject("CraftingRecipeViewport", panel.transform,
-                new Vector2(178f, 134f), new Vector2(-130f, 11f));
+                new Vector2(110f, 58f), new Vector2(46f, 14f));
             var viewport = (RectTransform)craftingListRoot.transform;
             var viewportImage = craftingListRoot.AddComponent<Image>();
             viewportImage.color = new Color(.025f, .035f, .045f, .72f);
@@ -900,7 +1415,7 @@ namespace Nyangbingo.UI
                 label.alignment = TextAnchor.LowerCenter;
                 label.fontSize = 11;
                 label.raycastTarget = false;
-                var builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                var builtinFont = UiTextFont.Source;
                 if (builtinFont != null)
                     label.font = builtinFont;
                 label.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -1419,6 +1934,55 @@ namespace Nyangbingo.UI
                 : "제작을 시작할 수 없습니다. 제작 조건을 확인해 주세요.");
         }
 
+        private void TryCraftFromWindow()
+        {
+            if (open && page == Page.Crafting && !IsShowingSmeltingList)
+            {
+                TryCraftSelected();
+                return;
+            }
+            if (craftWindowIndex < 0 || craftWindowIndex >= craftWindowRecipes.Count)
+            {
+                ShowMessage("표시할 제작법이 없습니다.");
+                return;
+            }
+            var recipe = craftWindowRecipes[craftWindowIndex];
+            var nearby = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+            var previousStation = openedStation;
+            var previousId = openedStationObjectId;
+            openedStation = recipe.Station == CraftingStation.None ? CraftingStation.None : nearby;
+            openedStationObjectId = null;
+            try
+            {
+                if (!RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook))
+                { ShowMessage("아직 해금되지 않은 제작법입니다."); return; }
+                if (recipe.Station != CraftingStation.None && recipe.Station != nearby)
+                { ShowMessage($"{StationLabel(recipe.Station)} 근처에서 제작해야 합니다."); return; }
+                if (recipe.Station == CraftingStation.Smithy &&
+                    runtimeServices?.Seokbinggo?.IsSmithyUnlocked != true)
+                { ShowMessage("대장간은 석빙고 4단계 이상에서 해금됩니다."); return; }
+                var missingMaterials = DescribeMissingMaterials(recipe, runtimeServices.PlayerInventory);
+                if (!string.IsNullOrEmpty(missingMaterials))
+                { ShowMessage(missingMaterials); return; }
+                var requirementsValid = runtimeServices.CraftingService.CanCraft(recipe, recipe.Station);
+                var queue = ResolveProductionQueue();
+                if (!runtimeServices.StationProduction.CanEnqueue(queue))
+                { ShowMessage("제작 대기열이 가득 찼거나 제작대를 사용할 수 없습니다."); return; }
+                var succeeded = runtimeServices.StationProduction.TryEnqueue(
+                    queue, recipe, ResolveCraftDurationMultiplier(recipe));
+                ShowMessage(succeeded
+                    ? $"제작 예약: {recipe.Output.item.DisplayName}"
+                    : requirementsValid && recipe.DurationSeconds == 0f
+                        ? "완성품을 넣을 인벤토리 공간이 부족합니다. 소지품을 정리해 주세요."
+                        : "제작을 시작할 수 없습니다. 제작 조건을 확인해 주세요.");
+            }
+            finally
+            {
+                openedStation = previousStation;
+                openedStationObjectId = previousId;
+            }
+        }
+
         public static string DescribeMissingMaterials(RecipeDefinition recipe,
             Nyangbingo.Inventory.Inventory inventory)
         {
@@ -1611,7 +2175,14 @@ namespace Nyangbingo.UI
 
         private void Refresh()
         {
-            if (panel == null || !open || runtimeServices == null || !runtimeServices.IsInitialized) return;
+            if (panel == null || runtimeServices == null || !runtimeServices.IsInitialized) return;
+            RefreshEquipmentVisual();
+            if (!open)
+            {
+                RefreshInventoryGridVisual();
+                RefreshCraftWindow();
+                return;
+            }
             RefreshPageLayout();
             RefreshProductionQueue();
             if (HasStorageMode)
@@ -1633,6 +2204,7 @@ namespace Nyangbingo.UI
             messageText.text = string.IsNullOrEmpty(message)
                 ? DefaultHelpText()
                 : message;
+            RefreshCraftWindow();
         }
 
         private void RefreshPageLayout()
@@ -1649,12 +2221,13 @@ namespace Nyangbingo.UI
                 collectButton.gameObject.SetActive(false);
                 debugCompleteButton.gameObject.SetActive(false);
                 messageText.gameObject.SetActive(false);
-                if (inventoryGridRoot != null) inventoryGridRoot.SetActive(false);
-                if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(false);
+                SetInventoryWindowActive(false);
+                if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(true);
                 if (craftingListRoot != null) craftingListRoot.SetActive(false);
                 if (codexGridRoot != null) codexGridRoot.SetActive(false);
                 if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(false);
                 if (detailsScrollbarRect != null) detailsScrollbarRect.gameObject.SetActive(false);
+                ApplyCraftWindowChrome(false);
                 return;
             }
             foreach (var tab in tabButtons) if (tab != null) tab.gameObject.SetActive(true);
@@ -1667,17 +2240,17 @@ namespace Nyangbingo.UI
             nextButton.gameObject.SetActive(hasListActions && !recipeList);
             primaryButton.gameObject.SetActive(!codex);
             var primaryRect = primaryButton.GetComponent<RectTransform>();
-            primaryRect.anchoredPosition = new Vector2(110f, -91f);
-            primaryRect.sizeDelta = new Vector2(240f, 22f);
+            primaryRect.anchoredPosition = new Vector2(48f, -34f);
+            primaryRect.sizeDelta = new Vector2(100f, 16f);
             var collectRect = collectButton.GetComponent<RectTransform>();
             collectRect.anchoredPosition = new Vector2(-52f, -118f);
             collectRect.sizeDelta = new Vector2(130f, 20f);
             messageText.gameObject.SetActive(hasListActions);
             collectButton.gameObject.SetActive(false);
             debugCompleteButton.gameObject.SetActive(SupportsDebugInstantCompletion && page == Page.Crafting);
-            if (inventoryGridRoot != null) inventoryGridRoot.SetActive(gathering);
+            SetInventoryWindowActive(true);
             if (inventoryHintText != null) inventoryHintText.gameObject.SetActive(false);
-            if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(equipment);
+            if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(true);
             if (craftingListRoot != null) craftingListRoot.SetActive(recipeList);
             if (codexGridRoot != null) codexGridRoot.SetActive(codex);
             if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(!gathering && !codex);
@@ -1685,23 +2258,12 @@ namespace Nyangbingo.UI
 
             if (!gathering && !codex)
             {
-                detailsViewportRect.sizeDelta = recipeList
-                    ? new Vector2(250f, 134f)
-                    : equipment ? new Vector2(286f, 134f) : new Vector2(438f, 134f);
-                detailsViewportRect.anchoredPosition = recipeList
-                    ? new Vector2(89f, 11f)
-                    : equipment ? new Vector2(73f, 11f) : new Vector2(-5f, 11f);
-                detailsScrollbarRect.sizeDelta = new Vector2(6f, 134f);
-                detailsScrollbarRect.anchoredPosition = new Vector2(222f, 11f);
-                if (page == Page.Crafting)
-                {
-                    // Reserve a row for missing material selectors; retain the existing scroll content.
-                    detailsViewportRect.sizeDelta = new Vector2(detailsViewportRect.sizeDelta.x, 44f);
-                    detailsViewportRect.anchoredPosition += new Vector2(0f, 19f);
-                    detailsScrollbarRect.sizeDelta = new Vector2(6f, 44f);
-                    detailsScrollbarRect.anchoredPosition += new Vector2(0f, 19f);
-                }
+                detailsViewportRect.sizeDelta = new Vector2(118f, 52f);
+                detailsViewportRect.anchoredPosition = new Vector2(42f, 12f);
+                detailsScrollbarRect.sizeDelta = new Vector2(6f, 52f);
+                detailsScrollbarRect.anchoredPosition = new Vector2(104f, 12f);
             }
+            ApplyCraftWindowChrome(page == Page.Crafting && !IsShowingSmeltingList);
         }
 
         private void RefreshCrafting()
@@ -1722,15 +2284,12 @@ namespace Nyangbingo.UI
             var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe, CurrentDay) &&
                                turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
             primaryButton.GetComponentInChildren<Text>().text = "E · 제작 예약";
-            var primaryRect = primaryButton.GetComponent<RectTransform>();
-            primaryRect.anchoredPosition = new Vector2(65f, -91f);
-            primaryRect.sizeDelta = new Vector2(150f, 22f);
             collectButton.gameObject.SetActive(readyToPlace);
             if (readyToPlace)
             {
                 var placementRect = collectButton.GetComponent<RectTransform>();
-                placementRect.anchoredPosition = new Vector2(-100f, -91f);
-                placementRect.sizeDelta = new Vector2(150f, 22f);
+                placementRect.anchoredPosition = new Vector2(0f, -34f);
+                placementRect.sizeDelta = new Vector2(44f, 16f);
                 collectButton.GetComponentInChildren<Text>().text = "설치";
                 collectButton.interactable = true;
             }
@@ -2178,17 +2737,28 @@ namespace Nyangbingo.UI
                         : string.Empty;
             }
 
+            RefreshInventoryGridVisual();
+        }
+
+        private void RefreshInventoryGridVisual()
+        {
+            if (inventoryGridButtons == null || inventoryGridLabels == null ||
+                runtimeServices?.PlayerInventory == null) return;
+            var inventory = runtimeServices.PlayerInventory;
             for (var index = 0; index < inventoryGridLabels.Length; index++)
             {
                 var label = inventoryGridLabels[index];
                 var buttonImage = inventoryGridButtons[index]?.targetGraphic as Image;
-                var icon = inventoryGridIcons[index];
+                var icon = inventoryGridIcons != null && index < inventoryGridIcons.Length
+                    ? inventoryGridIcons[index] : null;
                 if (label == null) continue;
                 if (buttonImage != null)
                 {
                     buttonImage.sprite = index == selectedIndex
                         ? gameplayArtCatalog?.InventorySlotSelected
                         : gameplayArtCatalog?.InventorySlot;
+                    buttonImage.preserveAspect = true;
+                    buttonImage.type = Image.Type.Simple;
                     buttonImage.color = buttonImage.sprite != null
                         ? Color.white
                         : index == selectedIndex
@@ -2337,7 +2907,7 @@ namespace Nyangbingo.UI
 
         private void RefreshEquipmentVisual()
         {
-            if (equipmentVisualRoot == null) return;
+            if (equipmentVisualRoot == null || runtimeServices == null || !runtimeServices.IsInitialized) return;
             if (equipmentAmmoCount != null)
             {
                 var usesAmmo = BowCombatRules.IsBowWeaponId(EquippedItemIdForVisualSlot(0));
@@ -2953,8 +3523,18 @@ namespace Nyangbingo.UI
             for (var index = 0; index < tabButtons.Length; index++)
             {
                 var image = tabButtons[index]?.targetGraphic as Image;
-                if (image != null)
-                    image.color = index == (int)page
+                if (image == null) continue;
+                var selected = index == (int)page;
+                var blue = gameplayArtCatalog?.Button1x6BlueFrames;
+                var normal = gameplayArtCatalog?.Button1x6Frames;
+                if (blue != null && blue.Count > 0 && blue[0] != null &&
+                    normal != null && normal.Count > 0 && normal[0] != null)
+                {
+                    image.sprite = selected ? blue[0] : normal[0];
+                    image.color = Color.white;
+                }
+                else
+                    image.color = selected
                         ? new Color(.22f, .42f, .62f, 1f)
                         : new Color(.16f, .24f, .34f, 1f);
             }
@@ -2996,7 +3576,7 @@ namespace Nyangbingo.UI
             Vector2 size, Vector2 position)
         {
             var result = CreateUiObject(name, parent, size, position).AddComponent<Text>();
-            result.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            result.font = UiTextFont.Source;
             result.fontSize = fontSize;
             result.alignment = anchor;
             result.color = new Color(.93f, .96f, 1f);

@@ -39,6 +39,7 @@ namespace Nyangbingo.Data
         public const string PlayerMaxFallSpeed = "player_max_fall_speed";
         public const string PlayerJumpCut = "player_jump_cut";
         public const string FurnitureMvpScope = "furniture_mvp_scope";
+        public const string CraftingBUi = "crafting_b_ui";
         public const string InventorySlots = "inventory_slots";
         public const string ActiveSlotRule = "active_slot_rule";
         public const string PortableLanternRadius = "portable_lantern_radius";

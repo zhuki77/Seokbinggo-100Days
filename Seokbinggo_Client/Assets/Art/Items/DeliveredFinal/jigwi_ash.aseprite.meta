@@ -127,16 +127,16 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: jigwi_ash
     originalName: 
-    pivot: {x: 0.5, y: 0}
-    alignment: 7
+    pivot: {x: 0.4666667, y: -0.071428575}
+    alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
     rect:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 14
-      height: 9
+      width: 15
+      height: 14
     spriteID: d24a783a1cfe6714191c71d367396933
     spriteBone: []
     spriteOutline: []
@@ -167,8 +167,8 @@ ScriptedImporter:
       cellRect:
         x: 1
         y: 1
-        width: 14
-        height: 9
+        width: 15
+        height: 14
       spriteId: d24a783a1cfe6714191c71d367396933
     linkedCells: []
     tileCells: []

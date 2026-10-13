@@ -127,7 +127,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: Frame_0
     originalName: 
-    pivot: {x: 0.5714286, y: 0}
+    pivot: {x: 0.2857143, y: 0.25}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -148,7 +148,7 @@ ScriptedImporter:
     uvTransform: {x: 4, y: 4}
   - name: Frame_1
     originalName: 
-    pivot: {x: 0.4074074, y: 0}
+    pivot: {x: 0.11111111, y: 0.25}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -169,7 +169,7 @@ ScriptedImporter:
     uvTransform: {x: 4, y: 44}
   - name: Frame_2
     originalName: 
-    pivot: {x: 0.30434784, y: 0}
+    pivot: {x: -0.04347826, y: 0.25}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -190,7 +190,7 @@ ScriptedImporter:
     uvTransform: {x: 36, y: 84}
   - name: Frame_3
     originalName: 
-    pivot: {x: 0.33333334, y: 0}
+    pivot: {x: 0, y: 0.25}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -229,7 +229,7 @@ ScriptedImporter:
       additiveSortOrder: 0
       cellRect:
         x: 0
-        y: 0
+        y: -8
         width: 28
         height: 32
       spriteId: 133e918fe5932084d8394f230b8f6915
@@ -238,7 +238,7 @@ ScriptedImporter:
       additiveSortOrder: 0
       cellRect:
         x: 5
-        y: 0
+        y: -8
         width: 27
         height: 32
       spriteId: 249805d26e24a4e4da2a58dbf27806ac
@@ -247,7 +247,7 @@ ScriptedImporter:
       additiveSortOrder: 0
       cellRect:
         x: 9
-        y: 0
+        y: -8
         width: 23
         height: 32
       spriteId: 2bc62937308e90e4d96c0c4486deff73
@@ -256,7 +256,7 @@ ScriptedImporter:
       additiveSortOrder: 0
       cellRect:
         x: 8
-        y: 0
+        y: -8
         width: 24
         height: 32
       spriteId: d80518f11fbea9644b21ae032c6bde87
@@ -269,4 +269,4 @@ ScriptedImporter:
   generatePhysicsShape: 0
   secondarySpriteTextures: []
   previousTextureSize: {x: 64, y: 128}
-  canvasSize: {x: 32, y: 32}
+  canvasSize: {x: 16, y: 16}

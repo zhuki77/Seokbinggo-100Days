@@ -82,7 +82,7 @@ namespace Nyangbingo.UI
             // scene is unloaded. Suspend only currently active source systems during
             // that overlap; leave the non-interactive loading overlay unchanged.
             var suspendedEvents = new List<EventSystem>();
-            foreach (var events in FindObjectsByType<EventSystem>(FindObjectsSortMode.None))
+            foreach (var events in FindObjectsByType<EventSystem>())
             {
                 if (!events.isActiveAndEnabled || events.gameObject.scene == gameObject.scene) continue;
                 suspendedEvents.Add(events);

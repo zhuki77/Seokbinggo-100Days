@@ -206,8 +206,8 @@ public static class NyangbingoDataBuildGate
         };
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["items"] = 170,
-            ["recipes"] = 98,
+            ["items"] = 171,
+            ["recipes"] = 99,
             ["modules"] = 11,
             ["mineral tiers"] = 18,
             ["seal rules"] = 23,
