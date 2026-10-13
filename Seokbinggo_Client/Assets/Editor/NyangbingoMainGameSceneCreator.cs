@@ -460,6 +460,9 @@ public static class NyangbingoMainGameSceneCreator
             TextAnchor.UpperCenter, new Vector2(0f, -174f), new Vector2(1000f, 40f), 19);
         var seal = CreateHudText(canvasObject.transform, "SealTemperature", TextAnchor.UpperRight,
             new Vector2(-24f, -22f), new Vector2(340f, 48f), 28);
+        seal.text = string.Empty;
+        seal.enabled = false;
+        seal.gameObject.SetActive(false);
 
         var craftingProgressPanel = new GameObject("CraftingProgress", typeof(RectTransform));
         craftingProgressPanel.transform.SetParent(canvasObject.transform, false);

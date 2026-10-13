@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
@@ -21,10 +22,12 @@ namespace Nyangbingo.Inventory
         }
 
         public int Count => inventory != null ? Export().Count : ownedIds.Count;
+        public Func<IEnumerable<string>> EquippedIds { get; set; }
         public event Action<EquipmentDefinition> Added;
 
         public bool Contains(string equipmentId) => !string.IsNullOrWhiteSpace(equipmentId) &&
-            (inventory != null ? inventory.Count(equipmentId) + (cursor?.Count(equipmentId) ?? 0) > 0 :
+            (inventory != null ? inventory.Count(equipmentId) + (cursor?.Count(equipmentId) ?? 0) > 0 ||
+             EquippedIds?.Invoke()?.Contains(equipmentId) == true :
                 ownedIds.Contains(equipmentId));
 
         public bool TryAdd(EquipmentDefinition definition)
@@ -54,6 +57,8 @@ namespace Nyangbingo.Inventory
                     foreach (var slot in cursor.Slots)
                         if (slot.amount > 0 && findEquipment(slot.itemId) != null) ids.Add(slot.itemId);
             }
+            if (EquippedIds != null)
+                foreach (var id in EquippedIds()) if (!string.IsNullOrEmpty(id)) ids.Add(id);
             var result = new List<string>(ids);
             result.Sort(StringComparer.Ordinal);
             return result;
@@ -100,6 +105,8 @@ namespace Nyangbingo.Inventory
 
     public sealed class EquipmentSystem
     {
+        private readonly Inventory inventory;
+        public EquipmentSystem(Inventory playerInventory = null) => inventory = playerInventory;
         private readonly Dictionary<EquipmentSlot, EquipmentDefinition> equipped = new Dictionary<EquipmentSlot, EquipmentDefinition>();
         public event Action Changed;
         public int TotalDefense
@@ -117,18 +124,14 @@ namespace Nyangbingo.Inventory
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Id) || item.IsAccessory || (item.Slot != EquipmentSlot.Head &&
                 item.Slot != EquipmentSlot.Body && item.Slot != EquipmentSlot.Feet)) return false;
-            equipped[item.Slot] = item;
-            Changed?.Invoke();
-            return true;
+            return TryEquipInSlot(item, item.Slot);
         }
         public bool TryEquipAccessory(EquipmentDefinition item, int accessoryIndex)
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Id) || !item.IsAccessory ||
                 (item.Slot != EquipmentSlot.AccessoryOne && item.Slot != EquipmentSlot.AccessoryTwo) ||
                 accessoryIndex < 0 || accessoryIndex > 1 || ContainsId(item.Id)) return false;
-            equipped[accessoryIndex == 0 ? EquipmentSlot.AccessoryOne : EquipmentSlot.AccessoryTwo] = item;
-            Changed?.Invoke();
-            return true;
+            return TryEquipInSlot(item, accessoryIndex == 0 ? EquipmentSlot.AccessoryOne : EquipmentSlot.AccessoryTwo);
         }
         public EquipmentDefinition Get(EquipmentSlot slot) => equipped.TryGetValue(slot, out var item) ? item : null;
         public static bool CanEquipInSlot(EquipmentDefinition item, EquipmentSlot slot)
@@ -141,17 +144,33 @@ namespace Nyangbingo.Inventory
                    (slot == EquipmentSlot.Head || slot == EquipmentSlot.Body || slot == EquipmentSlot.Feet);
         }
 
-        // Explicit UI drop target: move an already worn accessory atomically, without
-        // duplicating its effects. Replaced equipment is still owned by the inventory.
-        public bool TryEquipInSlot(EquipmentDefinition item, EquipmentSlot slot)
+        // Inventory-bound equipment consumes one bag item and returns the previous
+        // item atomically. Moving worn accessories swaps their equipped slots.
+        public bool TryEquipInSlot(EquipmentDefinition item, EquipmentSlot slot, int sourceIndex = -1)
         {
             if (!CanEquipInSlot(item, slot)) return false;
             if (Get(slot) == item) return true;
             EquipmentSlot? previousSlot = null;
             foreach (var pair in equipped)
                 if (pair.Value != null && pair.Value.Id == item.Id) previousSlot = pair.Key;
-            if (previousSlot.HasValue) equipped.Remove(previousSlot.Value);
-            equipped[slot] = item;
+            if (inventory != null && !previousSlot.HasValue)
+                return inventory.TryExchangeEquipment(item.Id, Get(slot)?.Id, () =>
+                {
+                    equipped[slot] = item;
+                    Changed?.Invoke();
+                }, sourceIndex);
+            if (inventory != null && previousSlot.HasValue)
+            {
+                var old = Get(slot);
+                equipped.Remove(previousSlot.Value);
+                equipped[slot] = item;
+                if (old != null) equipped[previousSlot.Value] = old;
+            }
+            else
+            {
+                if (previousSlot.HasValue) equipped.Remove(previousSlot.Value);
+                equipped[slot] = item;
+            }
             Changed?.Invoke();
             return true;
         }
@@ -162,8 +181,16 @@ namespace Nyangbingo.Inventory
                     return false;
             return true;
         }
-        public bool TryUnequip(EquipmentSlot slot)
+        public bool TryUnequip(EquipmentSlot slot, int targetIndex = -1)
         {
+            var item = Get(slot);
+            if (item == null) return false;
+            if (inventory != null)
+                return inventory.TryExchangeEquipment(null, item.Id, () =>
+                {
+                    equipped.Remove(slot);
+                    Changed?.Invoke();
+                }, targetIndex: targetIndex);
             if (!equipped.Remove(slot)) return false;
             Changed?.Invoke();
             return true;

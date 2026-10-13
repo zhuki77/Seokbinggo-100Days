@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
@@ -526,7 +526,7 @@ namespace Nyangbingo.World
                     active ? "까치 테스트 활성화" : "까치 테스트 비활성화");
             }
 #endif
-            if (!MainGameCraftingUiController.BlocksGameplayInput &&
+            if (!MainGameCraftingUiController.BlocksWorldActions &&
                 Input.GetKeyDown(KeyCode.Q) && runtimeServices.ActiveSlot.Toggle())
             {
                 var activeItemId = runtimeServices.ActiveSlot.EquippedItemId;
@@ -597,7 +597,7 @@ namespace Nyangbingo.World
                                           MainGameHudController.BlocksWorldPrimaryInput;
             var primaryHeld = Input.GetMouseButton(0);
             if (!buildingPlacementActive && !pointerOverUi && primaryHeld &&
-                !MainGameCraftingUiController.BlocksGameplayInput)
+                !MainGameCraftingUiController.BlocksWorldActions)
             {
                 if (attackCooldown <= 0f)
                     TryBasicAttack();
@@ -610,12 +610,22 @@ namespace Nyangbingo.World
             else CancelMining();
             UpdateMiningTargetFeedback(pointerOverUi || buildingPlacementActive ||
                                        (lastBasicAttackHitTarget && attackCooldown > 0f));
-            // Pointed storage takes priority over item use; E remains an alternative.
-            if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
-                !MainGameCraftingUiController.BlocksGameplayInput &&
+            // E and right-click share highlighted targets. Item use is the fallback
+            // only when there is no highlighted world interaction target.
+            if (!buildingPlacementActive && !pointerOverUi && !MainGameCraftingUiController.BlocksWorldActions &&
+                Input.GetMouseButtonDown(1) &&
+                !MainGameCraftingUiController.ConsumedWorldInteractionThisFrame &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
             {
-                if (!TryOpenStorageAtPointer()) TryUseSelectedItem();
+                if (TryGetHighlightedInteractionTarget(out _, out _, out _))
+                {
+                    if (!MainGameCraftingUiController.TryInteractFromOpenCraftingWindow())
+                    {
+                        if (placedObjectInteractions?.TryEnterDifferentCraftingStation(null) != true)
+                            TryInteractClosestWorldTarget(includePlacedObjects: true);
+                    }
+                }
+                else TryUseSelectedItem();
                 if (MainGameCraftingUiController.BlocksPlayerMovement)
                 {
                     movementInput = Vector2.zero;
@@ -623,7 +633,8 @@ namespace Nyangbingo.World
                     return;
                 }
             }
-            if (!buildingPlacementActive && !pointerOverUi && Input.GetKeyDown(KeyCode.F))
+            if (!buildingPlacementActive && !pointerOverUi && !MainGameCraftingUiController.BlocksWorldActions &&
+                Input.GetKeyDown(KeyCode.F))
                 TryFanAbility();
         }
 

@@ -288,7 +288,7 @@ namespace Nyangbingo.UI
             if (!initialized || runtimeServices == null || !runtimeServices.IsInitialized ||
                 runtimeServices.PlayerInventory == null) return;
             var gameplayVisible = (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
-                                  !MainGameCraftingUiController.BlocksGameplayInput;
+                                  !MainGameCraftingUiController.BlocksWorldActions;
             // Keep the hotbar rendered behind menus; only its gameplay input
             // depends on whether crafting/equipment/pause UI is active.
             var paletteVisible = shell == null || shell.Screen == GameShellScreen.Gameplay ||
@@ -628,8 +628,9 @@ namespace Nyangbingo.UI
 
         private int ReadPaletteMouseWheelSlot()
         {
-            // UI scrolling owns the wheel; number-key selection stays independent.
-            if (MainGameCraftingUiController.BlocksGameplayInput || Input.IsPointerOverUi()) return -1;
+            // Crafting can stay open while the wheel selects world hotbar slots.
+            // Hovered UI owns scrolling and must never change the hotbar too.
+            if (MainGameCraftingUiController.BlocksWorldActions || Input.IsPointerOverUi()) return -1;
             return ResolveMouseWheelSlot(selectedSlotIndex, Input.mouseScrollDelta.y, ShortcutSlotCount);
         }
 

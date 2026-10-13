@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -413,6 +413,7 @@ namespace Nyangbingo.Save
         public List<InventorySlot> inventoryCursor = new List<InventorySlot>();
         public InventoryCursorOrigin inventoryCursorOrigin;
         public bool equipmentStoredInInventory;
+        public bool equippedItemsSeparated;
         public List<SmeltingRecord> smelting = new List<SmeltingRecord>();
         public List<SmeltingOutputRecord> smeltingOutputs = new List<SmeltingOutputRecord>();
         public List<string> openedChestIds = new List<string>();

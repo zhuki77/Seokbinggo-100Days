@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.UI;
@@ -246,7 +246,8 @@ namespace Nyangbingo.Save
             save.stationProduction = runtimeServices.StationProduction.Export();
             save.inventoryCursor = runtimeServices.InventoryCursor.Export();
             save.inventoryCursorOrigin = runtimeServices.InventoryCursorOrigin;
-            save.equipmentStoredInInventory = true;
+            save.equipmentStoredInInventory = false;
+            save.equippedItemsSeparated = true;
             if (!UtilityCooldownSaveAdapter.Capture(save, runtimeServices.UtilityService))
                 return CaptureFailed("utility cooldown");
             if (!PendingItemAcquisitionSaveAdapter.Capture(save, runtimeServices.InventoryRuntime))
