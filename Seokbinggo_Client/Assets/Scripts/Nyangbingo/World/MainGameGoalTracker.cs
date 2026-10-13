@@ -45,7 +45,6 @@ namespace Nyangbingo.World
             MainGameBootstrap mainBootstrap, MainGameEnvironmentState state)
         {
             catalog = data; services = runtime; bootstrap = mainBootstrap; environment = state;
-            GuideQueue.BeginDay(Math.Max(1, bootstrap.TimeService != null ? bootstrap.TimeService.Day : 1));
             Progress = new GoalProgress(data.Goals);
             Progress.Completed += HandleGoalCompleted;
             services.PlayerInventory.Changed += Evaluate;

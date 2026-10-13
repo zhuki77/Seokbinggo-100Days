@@ -56,7 +56,7 @@ public static class NyangbingoLoadingSceneCreator
         var statusObject = new GameObject("Status", typeof(RectTransform));
         statusObject.transform.SetParent(canvasObject.transform, false);
         var statusText = statusObject.AddComponent<Text>();
-        statusText.font = UiTextFont.Source;
+        statusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         statusText.fontSize = 28;
         statusText.alignment = TextAnchor.MiddleCenter;
         statusText.color = new Color(.94f, .96f, 1f, 1f);

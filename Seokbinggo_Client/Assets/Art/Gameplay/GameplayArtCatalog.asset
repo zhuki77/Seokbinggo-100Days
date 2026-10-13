@@ -130,7 +130,6 @@ MonoBehaviour:
   - {fileID: -8378419233823984523, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
   - {fileID: -5610657100678056555, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
   - {fileID: -7425023199020944573, guid: 854805db9dd4a9b459abb81ce0292147, type: 3}
-  openingIllustrations: []
   temperatureFrames:
   - {fileID: 6089713551096819619, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
   - {fileID: 7442340692086479441, guid: 4ebc086f446dbb240af9673b89f7ec0c, type: 3}
@@ -228,18 +227,18 @@ MonoBehaviour:
   - {fileID: 2551867120231468295, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
   - {fileID: -5935160030333331820, guid: 805ae21e69d4ab644b3cfb5784e26c33, type: 3}
   playerVitalsFrames:
-  - {fileID: -4620900575710896349, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: 1286966231689979311, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -2540194725032298538, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -8198338604459491690, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -354594060830567466, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -6425993176522152182, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: 3774291598467358385, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: 906056854281529460, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: 4324567469087677411, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -2026079424659323359, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -2025612463906168371, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
-  - {fileID: -7055580224660381542, guid: 30b947805c64624479fcf5ce4ba301fb, type: 3}
+  - {fileID: 342472981728555708, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 4628786815080422358, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -2159810619888014206, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 1714869698881532054, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -5488785843092371762, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -8092784084236439385, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 9096039661358621114, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 248457074356266389, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -5363100182959096825, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 1451380000352412553, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: 2450228824927592135, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
+  - {fileID: -1222377997886849009, guid: b7b1ea589ab42014cb80c91b71daf66d, type: 3}
   button1x1Frames:
   - {fileID: -2492862134000260289, guid: adc9089c66c1e4d4d94ae53ada1270be, type: 3}
   - {fileID: 2270689531458779038, guid: adc9089c66c1e4d4d94ae53ada1270be, type: 3}
@@ -292,7 +291,6 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 362ef663c8b0c4a47ac9b1b43cb45167, type: 3}
   - {fileID: 21300000, guid: 5fb665e53a445e64da1909a10969183b, type: 3}
   hypothermiaStatusIcon: {fileID: 3269218813956921848, guid: 0077b6e3650405d45964581b333fb047, type: 3}
-  hypothermiaStatusIconAlert: {fileID: -880943458506354678, guid: 4a0c057980470834bb97dd3872bb1b94, type: 3}
   nightSpawnBlockedIcon: {fileID: -1279190295927003375, guid: 3179805dc46f03f4b98529e158e193e1, type: 3}
   deathTearPouch: {fileID: 2628922703091145929, guid: 56c0c5355b02b1241ae44473fdbb45a6, type: 3}
   bossWarningLarge: {fileID: -5218591732139051355, guid: be5c714da4f8b324e932ba1c069c442c, type: 3}
@@ -362,52 +360,3 @@ MonoBehaviour:
   - {fileID: 5160817330198155487, guid: 2546db2d1f054414a684ac26a528f1f3, type: 3}
   - {fileID: -1894244916020180322, guid: 2546db2d1f054414a684ac26a528f1f3, type: 3}
   - {fileID: 633052627709097134, guid: 2546db2d1f054414a684ac26a528f1f3, type: 3}
-  traitMeleeFrames:
-  - {fileID: 9174694563202315655, guid: b73768a828cc90549a5cdfaf87f72acb, type: 3}
-  - {fileID: 1193629564856051709, guid: b73768a828cc90549a5cdfaf87f72acb, type: 3}
-  traitRangedFrames:
-  - {fileID: -1236719343596057839, guid: 67e2d57351d2d5045a528fa31249ce91, type: 3}
-  - {fileID: 7676529220479198131, guid: 67e2d57351d2d5045a528fa31249ce91, type: 3}
-  traitLaborFrames:
-  - {fileID: 4968798071151238154, guid: 53b29ec132f1bc74da0de410174f68d9, type: 3}
-  - {fileID: -8024402185692380241, guid: 53b29ec132f1bc74da0de410174f68d9, type: 3}
-  traitCoolFrames:
-  - {fileID: -3363601414907651746, guid: d22bbdf810ac23c4297f5d395de50bd0, type: 3}
-  - {fileID: 5729145918424858977, guid: d22bbdf810ac23c4297f5d395de50bd0, type: 3}
-  traitWindow: {fileID: -3579021231072306896, guid: 32b56da26d205314a92f794b63d32a0d, type: 3}
-  button1x1BlueFrames:
-  - {fileID: -4982720259483930479, guid: 358b6f79377f9af439b9b63ed473f249, type: 3}
-  - {fileID: 7657029713554222493, guid: 358b6f79377f9af439b9b63ed473f249, type: 3}
-  button1x2BlueFrames:
-  - {fileID: -1279538177363106890, guid: e2b85c968be1763448a763a17caf9199, type: 3}
-  - {fileID: -1226777415033937479, guid: e2b85c968be1763448a763a17caf9199, type: 3}
-  button1x4BlueFrames:
-  - {fileID: 6827790586120049839, guid: 470d5b6a1874d5d42987b65f5a90c031, type: 3}
-  - {fileID: -218885566473170842, guid: 470d5b6a1874d5d42987b65f5a90c031, type: 3}
-  button1x6BlueFrames:
-  - {fileID: -6623207863965466929, guid: 1237dc9a8d34b3f41bb98d505257ef7e, type: 3}
-  - {fileID: 3497298821806464691, guid: 1237dc9a8d34b3f41bb98d505257ef7e, type: 3}
-  craftProgressFrames:
-  - {fileID: -5557138065941208837, guid: 89f5931fd47d5b0449652de2ce2e162f, type: 3}
-  - {fileID: -3516171031866297528, guid: 89f5931fd47d5b0449652de2ce2e162f, type: 3}
-  - {fileID: -5277390268561369581, guid: 89f5931fd47d5b0449652de2ce2e162f, type: 3}
-  - {fileID: -5780937512680752423, guid: 89f5931fd47d5b0449652de2ce2e162f, type: 3}
-  craftPanel: {fileID: 7866490576807248894, guid: 8f28bdca039db6f47a8f86235ab0a056, type: 3}
-  craftTopBarFrames:
-  - {fileID: -4294342899620778227, guid: 1f2b35ac0ef820c4da338ea260cbefab, type: 3}
-  - {fileID: -8189911508295797698, guid: 1f2b35ac0ef820c4da338ea260cbefab, type: 3}
-  - {fileID: 1497117700920425642, guid: 1f2b35ac0ef820c4da338ea260cbefab, type: 3}
-  - {fileID: 6915420555011049756, guid: 1f2b35ac0ef820c4da338ea260cbefab, type: 3}
-  craftResultSlot: {fileID: 2325466450937249687, guid: 8eef9b88eecdf0548a5df42d2d5da7e6, type: 3}
-  craftMidSlot: {fileID: -4608003991792282977, guid: d72be335cf24e564a8723be596eacc14, type: 3}
-  craftButtonFrames:
-  - {fileID: -5978639560776834825, guid: 09725d58b169b5648acf37c2b6dd9d58, type: 3}
-  - {fileID: 1769039371810824475, guid: 09725d58b169b5648acf37c2b6dd9d58, type: 3}
-  craftScroll: {fileID: -7892021517413963380, guid: 55227d29f3bf803449d19e90cac111b1, type: 3}
-  questWindow: {fileID: -1553718283348301681, guid: 6986a20c125ca7642bf01346ab89235f, type: 3}
-  scrollTrack: {fileID: -5279489369124325073, guid: e918a257718be4246978fecddd5f3ee2, type: 3}
-  scrollHandle: {fileID: -5237057042915424289, guid: fa92de61948c4fb4a8bd228b71e2e7b6, type: 3}
-  labelHp: {fileID: 50838335055288672, guid: 8dfe69e808b0d8343a0a40354b9d7608, type: 3}
-  labelDegree: {fileID: -6547866197422528238, guid: 2e63b790bf2fa5b4b98555bd2847fc17, type: 3}
-  labelTemperature: {fileID: -6013363540640648689, guid: c5bcc547c620dcc4a9ebe59fe79c7f03, type: 3}
-  labelDay: {fileID: -514819981857950251, guid: 689bcc4b64ebf374cb9e68d964719b67, type: 3}

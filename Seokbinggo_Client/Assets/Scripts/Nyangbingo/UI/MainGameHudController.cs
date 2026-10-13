@@ -355,7 +355,6 @@ namespace Nyangbingo.UI
             RefreshInventory();
             RefreshStatus();
             RefreshShelterGuide();
-            PlaceSketchHud();
             Debug.Log("[Nyangbingo] MainGameHudController: 체온·석빙고 온도·폭염 단계·발톱 티어 HUD와 " +
                       "v29 50슬롯 통합 인벤토리 연결 완료.");
         }
@@ -408,7 +407,6 @@ namespace Nyangbingo.UI
                 playerTemperatureGlyphs.SetText(displayedTemperature);
             else if (temperatureText != null)
                 temperatureText.text = displayedTemperature;
-            PlaceDegreeLabel();
             RefreshTemperatureArt();
             RefreshRoomTemperature();
             if (dayText != null)
@@ -449,124 +447,6 @@ namespace Nyangbingo.UI
             RefreshStatusAlarmRow();
         }
 
-        private void PlaceSketchHud()
-        {
-            // Art pixels stay 208×62 and 34×62. Full size covers nearly half the
-            // 480-wide HUD, so the corner is drawn a little smaller. Half scale
-            // made the plate text too small to read.
-            const float margin = 4f;
-            const float gap = 2f;
-            const float hudScale = .75f;
-            const float frameWidth = 208f;
-            const float frameHeight = 62f;
-            const float thermoWidth = 34f;
-            var visualFrameHeight = frameHeight * hudScale;
-            var visualThermoWidth = thermoWidth * hudScale;
-            var frameBottom = margin + visualFrameHeight;
-            var clusterRight = margin + visualThermoWidth + gap;
-
-            if (statusArtRoot != null)
-            {
-                var vitals = statusArtRoot.GetComponent<RectTransform>();
-                var plate = vitals.Find("VitalsReadoutPlate");
-                if (plate != null) Destroy(plate.gameObject);
-                vitals.anchorMin = vitals.anchorMax = new Vector2(1f, 1f);
-                vitals.pivot = new Vector2(1f, 1f);
-                vitals.anchoredPosition = new Vector2(-clusterRight, -margin);
-                vitals.sizeDelta = new Vector2(frameWidth, frameHeight);
-                vitals.localScale = new Vector3(hudScale, hudScale, 1f);
-                if (playerVitalsArt != null)
-                {
-                    var frame = playerVitalsArt.rectTransform;
-                    frame.anchorMin = frame.anchorMax = new Vector2(0f, 1f);
-                    frame.pivot = new Vector2(0f, 1f);
-                    frame.anchoredPosition = Vector2.zero;
-                    frame.sizeDelta = new Vector2(frameWidth, frameHeight);
-                    playerVitalsArt.preserveAspect = true;
-                    playerVitalsArt.type = Image.Type.Simple;
-                }
-                if (playerHealthFill != null)
-                {
-                    var health = playerHealthFill.rectTransform;
-                    health.anchoredPosition = new Vector2(4f, -27f);
-                }
-                if (playerTemperatureFill != null)
-                    playerTemperatureFill.enabled = false;
-                PlaceStatusIcon(nightSpawnBlockedIcon, new Vector2(92f, -1f));
-                PlaceStatusIcon(hypothermiaStatusIcon, new Vector2(92f, -11f));
-            }
-
-            if (temperatureArt != null)
-            {
-                var room = temperatureArt.rectTransform;
-                room.anchorMin = room.anchorMax = new Vector2(1f, 1f);
-                room.pivot = new Vector2(1f, 1f);
-                room.anchoredPosition = new Vector2(-margin, -margin);
-                room.sizeDelta = new Vector2(thermoWidth, frameHeight);
-                room.localScale = new Vector3(hudScale, hudScale, 1f);
-                temperatureArt.preserveAspect = true;
-                temperatureArt.type = Image.Type.Simple;
-            }
-
-            if (sealText != null)
-            {
-                // Room Celsius sits on the right-hand thermometer. The wide vitals sheet
-                // would otherwise push this label into the middle of the screen.
-                var seal = sealText.rectTransform;
-                seal.anchorMin = seal.anchorMax = new Vector2(1f, 1f);
-                seal.pivot = new Vector2(.5f, .5f);
-                seal.localScale = new Vector3(.2f, .2f, 1f);
-                seal.sizeDelta = new Vector2(100f, 40f);
-                seal.anchoredPosition = new Vector2(-(margin + visualThermoWidth * .5f), -(margin + 6f));
-                sealText.alignment = TextAnchor.MiddleCenter;
-                sealText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                sealText.verticalOverflow = VerticalWrapMode.Overflow;
-                sealText.raycastTarget = false;
-            }
-
-            if (tearBalanceArt != null && tearBalanceArt.rectTransform.parent is RectTransform tearRoot)
-            {
-                tearRoot.anchorMin = tearRoot.anchorMax = new Vector2(0f, 1f);
-                tearRoot.pivot = new Vector2(0f, 1f);
-                tearRoot.anchoredPosition = new Vector2(4f, -68f);
-            }
-
-            var palette = GameObject.Find("TilePalette");
-            if (palette != null)
-            {
-                var hotbar = palette.GetComponent<RectTransform>();
-                hotbar.anchorMin = hotbar.anchorMax = new Vector2(1f, 1f);
-                hotbar.pivot = new Vector2(1f, 1f);
-                hotbar.anchoredPosition = new Vector2(-clusterRight, -margin);
-                hotbar.sizeDelta = new Vector2(frameWidth, frameHeight);
-                hotbar.localScale = new Vector3(hudScale, hudScale, 1f);
-                hotbar.SetAsLastSibling();
-                var paletteController = hotbar.GetComponent<MainGameTilePaletteController>() ??
-                                        GetComponent<MainGameTilePaletteController>();
-                paletteController?.PlaceInVitalsWells();
-            }
-
-            var equipment = GameObject.Find("EquipmentVisual");
-            if (equipment != null)
-            {
-                var equip = equipment.GetComponent<RectTransform>();
-                equip.anchorMin = equip.anchorMax = new Vector2(1f, 1f);
-                equip.pivot = new Vector2(1f, 1f);
-                equip.anchoredPosition = new Vector2(-margin, -(frameBottom + gap));
-                equip.localScale = new Vector3(.42f, .42f, 1f);
-            }
-        }
-
-        private static void PlaceStatusIcon(Image icon, Vector2 position)
-        {
-            if (icon == null) return;
-            var rect = icon.rectTransform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = position;
-            rect.sizeDelta = new Vector2(10f, 10f);
-        }
-
         private void BuildStatusArtHud()
         {
             if (clawText != null) clawText.gameObject.SetActive(false);
@@ -583,115 +463,21 @@ namespace Nyangbingo.UI
                 playerHealthText.enabled = false;
                 playerHealthGlyphs = playerHealthText.GetComponent<RuntimePixelGlyphPresenter>() ??
                                      playerHealthText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                playerHealthGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .5f);
-                AlignGlyphsToLeft(playerHealthText);
+                playerHealthGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .45f);
 
                 temperatureText.text = string.Empty;
                 temperatureText.enabled = false;
                 playerTemperatureGlyphs = temperatureText.GetComponent<RuntimePixelGlyphPresenter>() ??
                                           temperatureText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                playerTemperatureGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .5f);
-                AlignGlyphsToLeft(temperatureText);
+                playerTemperatureGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .45f);
             }
 
             if (saveIndicatorArt != null) saveIndicatorArt.enabled = false;
 
             EnsureHypothermiaStatusIcon();
             EnsureNightSpawnBlockedIcon();
-            EnsureDeliveredHudLabels();
             hudSaveManager = FindAnyObjectByType<SaveManager>();
             if (hudSaveManager != null) hudSaveManager.Saved += HandleSaved;
-        }
-
-        private Image hpWordLabel;
-        private Image temperatureWordLabel;
-        private Image degreeWordLabel;
-
-        private void EnsureDeliveredHudLabels()
-        {
-            SeparateStatusReadouts();
-            hpWordLabel = EnsureRowWord(hpWordLabel, "HpWord", playerHealthText, gameplayArtCatalog?.LabelHp, true);
-            temperatureWordLabel = EnsureRowWord(temperatureWordLabel, "TemperatureWord",
-                temperatureText, gameplayArtCatalog?.LabelTemperature, true);
-            degreeWordLabel = EnsureRowWord(degreeWordLabel, "DegreeWord",
-                temperatureText, gameplayArtCatalog?.LabelDegree, false);
-            PlaceDegreeLabel();
-            playerHealthText?.transform.SetAsLastSibling();
-            temperatureText?.transform.SetAsLastSibling();
-        }
-
-        private void SeparateStatusReadouts()
-        {
-            // Empty plate on the hotbar sheet, sprite pixels x 117..182 and y 6..21.
-            const float boxX = 117f;
-            const float boxY = 6f;
-            const float rowH = 7f;
-            var labelW = 22f * (rowH / 15f);
-            var numberX = boxX + labelW + 1f;
-
-            if (playerHealthText != null)
-            {
-                var health = playerHealthText.rectTransform;
-                health.anchorMin = health.anchorMax = new Vector2(0f, 1f);
-                health.pivot = new Vector2(0f, 1f);
-                health.anchoredPosition = new Vector2(numberX, -boxY);
-                health.sizeDelta = new Vector2(40f, rowH);
-            }
-
-            if (temperatureText == null) return;
-            var temperature = temperatureText.rectTransform;
-            temperature.anchorMin = temperature.anchorMax = new Vector2(0f, 1f);
-            temperature.pivot = new Vector2(0f, 1f);
-            temperature.anchoredPosition = new Vector2(numberX, -(boxY + rowH + 1f));
-            temperature.sizeDelta = new Vector2(24f, rowH);
-        }
-
-        private static void AlignGlyphsToLeft(Text row)
-        {
-            var glyphs = row != null ? row.transform.Find("PixelGlyphs") as RectTransform : null;
-            if (glyphs == null) return;
-            glyphs.anchorMin = glyphs.anchorMax = new Vector2(0f, .5f);
-            glyphs.pivot = new Vector2(0f, .5f);
-            glyphs.anchoredPosition = Vector2.zero;
-        }
-
-        private void PlaceDegreeLabel()
-        {
-            if (degreeWordLabel == null || temperatureText == null) return;
-            var row = temperatureText.rectTransform;
-            var width = playerTemperatureGlyphs != null ? playerTemperatureGlyphs.RenderedWidth : row.sizeDelta.x;
-            var rect = degreeWordLabel.rectTransform;
-            rect.anchoredPosition = new Vector2(row.anchoredPosition.x + width + 1f, row.anchoredPosition.y);
-        }
-
-        private Image EnsureRowWord(Image existing, string name, Text row, Sprite sprite, bool placeOnLeft)
-        {
-            if (row == null || sprite == null) return existing;
-            var parent = row.rectTransform.parent as RectTransform;
-            if (parent == null) return existing;
-            var image = existing;
-            if (image == null)
-            {
-                var labelObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                labelObject.transform.SetParent(parent, false);
-                image = labelObject.GetComponent<Image>();
-                image.sprite = sprite;
-                image.raycastTarget = false;
-                image.preserveAspect = true;
-                image.color = Color.white;
-            }
-
-            var rowRect = row.rectTransform;
-            var rect = image.rectTransform;
-            rect.anchorMin = rect.anchorMax = rowRect.anchorMin;
-            var height = Mathf.Max(1f, rowRect.sizeDelta.y);
-            var native = sprite.rect.size;
-            var width = native.y > 0f ? native.x * (height / native.y) : native.x;
-            rect.pivot = new Vector2(placeOnLeft ? 1f : 0f, rowRect.pivot.y);
-            rect.anchoredPosition = rowRect.anchoredPosition +
-                                    new Vector2(placeOnLeft ? -1f : rowRect.sizeDelta.x + 1f, 0f);
-            rect.sizeDelta = new Vector2(width, height);
-            return image;
         }
 
         private void EnsureHypothermiaStatusIcon()
@@ -1023,12 +809,18 @@ namespace Nyangbingo.UI
             else playerVitalsArt.enabled = false;
 
             var healthRatio = playerHealth != null ? CalculateHealthRatio(playerHealth.Current, playerHealth.MaxHealth) : 0f;
-            playerHealthFill.rectTransform.anchoredPosition = new Vector2(4f, -27f);
             playerHealthFill.color = new Color(.82f, .15f, .12f, 1f);
-            playerHealthFill.rectTransform.sizeDelta = new Vector2(166f * healthRatio, 4f);
+            playerHealthFill.rectTransform.sizeDelta = new Vector2(42f * healthRatio, 2.5f);
             playerHealthFill.enabled = healthRatio > 0f;
-            if (playerTemperatureFill != null)
-                playerTemperatureFill.enabled = false;
+
+            var temperatureRatio = Mathf.Clamp01(runtimeServices.PlayerTemperature.Normalized);
+            var hypothermiaBlink = IsHypothermiaWarningActive() &&
+                                   IsSunsetWarningBrightPhase(Time.unscaledTime);
+            playerTemperatureFill.color = hypothermiaBlink
+                ? new Color(.35f, .72f, 1f, 1f)
+                : VitalsTemperatureColor(temperatureBucket);
+            playerTemperatureFill.rectTransform.sizeDelta = new Vector2(42f * temperatureRatio, 2.5f);
+            playerTemperatureFill.enabled = temperatureRatio > 0f || hypothermiaBlink;
             RefreshHypothermiaStatusIcon();
 
             var tearFrames = gameplayArtCatalog?.YokaiTearBalanceFrames;
@@ -1081,6 +873,17 @@ namespace Nyangbingo.UI
             ? 0
             : Mathf.Clamp(Mathf.RoundToInt((1f - Mathf.Clamp01(normalizedValue)) * (frameCount - 1)),
                 0, frameCount - 1);
+
+        private static Color VitalsTemperatureColor(int bucket)
+        {
+            var colors = new[]
+            {
+                new Color32(0x82, 0x21, 0x1d, 0xff), new Color32(0xe3, 0x78, 0x40, 0xff),
+                new Color32(0xe8, 0xd2, 0x4b, 0xff), new Color32(0xd0, 0xcc, 0x32, 0xff),
+                new Color32(0x55, 0xb6, 0x7d, 0xff), new Color32(0x00, 0xbf, 0xa3, 0xff)
+            };
+            return colors[Mathf.Clamp(bucket, 0, colors.Length - 1)];
+        }
 
         private void HandleSaved(int _) => saveIndicatorRemaining =
             Mathf.Max(SaveIndicatorFrameSeconds, (gameplayArtCatalog?.SaveIndicatorFrames?.Count ?? 0) *
@@ -1473,20 +1276,6 @@ namespace Nyangbingo.UI
             var fillRect = craftingProgressFill.rectTransform;
             var trackRect = fillRect.parent as RectTransform;
             if (trackRect == null) return;
-            var progressFrames = gameplayArtCatalog?.CraftProgressFrames;
-            if (progressFrames != null && progressFrames.Count >= 4 && progressFrames[0] != null)
-            {
-                var step = completion >= 1f ? 3 : Mathf.Clamp(Mathf.FloorToInt(completion * 4f), 0, 3);
-                craftingProgressFill.sprite = progressFrames[step];
-                craftingProgressFill.color = Color.white;
-                craftingProgressFill.type = Image.Type.Simple;
-                fillRect.anchorMin = fillRect.anchorMax = fillRect.pivot = new Vector2(0f, .5f);
-                fillRect.anchoredPosition = new Vector2(2f, 0f);
-                fillRect.sizeDelta = new Vector2(
-                    Mathf.Max(0f, trackRect.rect.width - 4f),
-                    Mathf.Max(0f, trackRect.rect.height - 4f));
-                return;
-            }
             craftingProgressFill.type = Image.Type.Simple;
             fillRect.anchorMin = fillRect.anchorMax = fillRect.pivot = new Vector2(0f, .5f);
             fillRect.anchoredPosition = new Vector2(2f, 0f);
@@ -1565,10 +1354,6 @@ namespace Nyangbingo.UI
             var emphasize = temperature.IsHypothermiaDamageImminent ||
                             RoomTempPresentation.ShouldEmphasizeHypothermiaStatusIcon(
                                 temperature.Current, temperature.HypothermiaDamageAtTemperature);
-            // 피해 임박 단계에서는 전달받은 경고 변형 아이콘(없으면 기본 아이콘 유지)으로 바꾼다.
-            var normalSprite = gameplayArtCatalog != null ? gameplayArtCatalog.HypothermiaStatusIcon : null;
-            var alertSprite = gameplayArtCatalog != null ? gameplayArtCatalog.HypothermiaStatusIconAlert : null;
-            hypothermiaStatusIcon.sprite = emphasize && alertSprite != null ? alertSprite : normalSprite;
             hypothermiaStatusIcon.rectTransform.localScale = Vector3.one;
             hypothermiaStatusIcon.color = emphasize
                 ? Color.white
@@ -1801,8 +1586,7 @@ namespace Nyangbingo.UI
             dayClockText.rectTransform.anchoredPosition = dayClockDefaultPosition;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
                 elapsedDayLabel = new RuntimeArtNumberLabel(dayText,
-                    gameplayArtCatalog.ShellNumberGlyphs, string.Empty, string.Empty, 1f,
-                    gameplayArtCatalog.LabelDay);
+                    gameplayArtCatalog.ShellNumberGlyphs, "Day ", string.Empty, .6f);
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
                 dayClockGlyphs = dayClockText.GetComponent<RuntimePixelGlyphPresenter>() ??
@@ -1817,10 +1601,7 @@ namespace Nyangbingo.UI
             RefreshDayNightClockArt();
             if (dayText != null) dayText.gameObject.SetActive(true);
             if (dayCounterScrollRect != null) dayCounterScrollRect.gameObject.SetActive(false);
-            ShowOpeningDayCounter();
         }
-
-        private void ShowOpeningDayCounter() => HandleDayCounterDawn();
 
         private void HandleDayCounterContentVisibility(bool visible)
         {

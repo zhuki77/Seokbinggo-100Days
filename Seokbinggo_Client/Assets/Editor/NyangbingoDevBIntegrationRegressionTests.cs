@@ -34,39 +34,26 @@ public static class NyangbingoDevBIntegrationRegressionTests
     [MenuItem("Nyangbingo/Run Dev B Integration Regression Tests")]
     public static void RunAll()
     {
-        failureLines.Clear();
-        var passed = RunAllCore();
-        var failed = failureLines.Count;
-        var total = passed + failed;
-        if (failed == 0)
+        try
         {
+            var ran = RunAllCore();
             NyangbingoEditorVerifyLog.Pass(
                 "Run Dev B Integration Regression Tests",
-                $"{passed}/{total} tests");
-            return;
+                $"{ran}/{ran} tests");
         }
-
-        var detail = $"{failed} failed, {passed} passed\n" + string.Join("\n", failureLines);
-        NyangbingoEditorVerifyLog.Fail("Run Dev B Integration Regression Tests", detail);
-        throw new InvalidOperationException(detail);
+        catch (System.Exception exception)
+        {
+            NyangbingoEditorVerifyLog.Fail("Run Dev B Integration Regression Tests", exception.Message);
+            throw;
+        }
     }
 
     private static int ranTests;
-    private static readonly List<string> failureLines = new List<string>();
 
     private static void Run(Action test)
     {
-        try
-        {
-            test();
-            ranTests++;
-        }
-        catch (Exception exception)
-        {
-            var line = $"{test.Method.Name}: {exception.Message}";
-            failureLines.Add(line);
-            Debug.LogError($"[Nyangbingo] [FAIL] {line}");
-        }
+        test();
+        ranTests++;
     }
 
     private static int RunAllCore()
@@ -196,12 +183,10 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
             Require(playerSource.Contains("TryOpenChest(session.ChestProgress, chestId)") &&
                     playerSource.Contains("TryPeekChestAt") &&
-                    uiSource.Contains("public bool TryOpenChest(ChestProgress progress, string id)") &&
-                    uiSource.Contains("TransferStorageSlot") &&
-                    uiSource.Contains("TransferPlayerSlot") &&
-                    uiSource.Contains("TryShiftStorageTransfer"),
-                // 장비는 이제 인벤토리 아이템 그 자체라(EquipmentCollection이 인벤토리 기반) 일반 칸과 같은 경로로 옮겨진다.
-                "Chest interaction must reopen a bidirectional click/shift-click storage UI; equipment moves as regular inventory items.");
+                    uiSource.Contains("자연 상자에 보관했습니다.") &&
+                    uiSource.Contains("!runtimeServices.EquipmentCollection.Contains(equipment.Id)") &&
+                    uiSource.Contains("EquipmentCollection.TryAdd(equipment)"),
+                "Chest interaction must reopen a bidirectional storage UI and keep duplicate accessories transferable.");
         }
         finally
         {
@@ -1751,9 +1736,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
 
         var runtimeSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGameRuntimeServices.cs");
-        Require(runtimeSource.Contains("new EquipmentCollection(gameDataCatalog.FindEquipment, PlayerInventory, InventoryCursor)") &&
-                runtimeSource.Contains("new EquipmentAcquisitionBinding(EquipmentCollection)"),
-            "Crafted/inventory armor must be owned through the inventory-backed EquipmentCollection and its acquisition binding.");
+        Require(runtimeSource.Contains("HandleEquipmentRecipeCrafted") &&
+                runtimeSource.Contains("PromoteInventoryEquipmentItems"),
+            "Crafted/inventory armor must promote into EquipmentCollection.");
     }
 
     private static void TestCodexSeventeenEntryPresentationContract()
@@ -1825,7 +1810,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             return null;
         }
 
-        var pendingIds = new[] { "sangun", "eop_guryeongi", "yeongno" };
+        var pendingIds = new[] { "imugi", "imugi_boss", "sangun", "eop_guryeongi", "yeongno" };
         for (var index = 0; index < pendingIds.Length; index++)
         {
             var card = Find(pendingIds[index]);
@@ -1834,14 +1819,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 $"Pending lore card '{pendingIds[index]}' must stay front-only without placeholder back text.");
             Require(model.TryTapCard(pendingIds[index]) && !model.IsBackVisible && !model.TryFlipSelected(),
                 $"Pending lore card '{pendingIds[index]}' must refuse flip to an empty back.");
-        }
-
-        var deliveredLoreIds = new[] { "imugi", "imugi_boss" };
-        for (var index = 0; index < deliveredLoreIds.Length; index++)
-        {
-            var card = Find(deliveredLoreIds[index]);
-            Require(card != null && card.IsUnlocked && card.HasReadableBackText,
-                $"Delivered lore card '{deliveredLoreIds[index]}' must flip to its catalog back text.");
         }
 
         var clubSave = new SaveGame
@@ -2075,7 +2052,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 magpieSource.Contains("ResolveDayRestingTarget") &&
                 magpieSource.Contains("MagpieGuideRules.IsFlyToGoalMode") &&
                 magpieSource.Contains("ToggleEditorTestOverride") &&
-                magpiePlayerSource.Contains("DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Magpie)"),
+                magpiePlayerSource.Contains("Input.GetKeyDown(KeyCode.M)"),
             "The v34 magpie must join at dawn and collect one world-drop stack through the official sealed-nest rules.");
 
         var validateYokaiState = typeof(MainGameEncounterCoordinator).GetMethod(
@@ -2122,13 +2099,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Data/SO/GameDataCatalog.asset");
         var eoduksini = catalog?.FindYokai("eoduksini");
         var gangcheori = catalog?.FindYokai("gangcheol");
-        Require(catalog != null && catalog.Globals.Count == 265 &&
+        Require(catalog != null && catalog.Globals.Count == 253 &&
                 ResidentYokaiRules.TryCreate(catalog.Globals, out var rules) &&
                 rules.MaxPerSpecies == 1 &&
                 rules.MinPlayerDistance == 24 &&
                 rules.MinBetweenDistance == 12 &&
                 rules.MinDepth == 91 && rules.MaxDepth == 135,
-            "The v79 catalog must expose all 265 globals including the six confirmed resident-elite rules.");
+            "The v79 catalog must expose all 253 globals including the six confirmed resident-elite rules.");
         Require(eoduksini != null &&
                 eoduksini.SupportsSpawnTrack(YokaiSpawnTrack.Resident) &&
                 gangcheori != null &&
@@ -2525,10 +2502,6 @@ public static class NyangbingoDevBIntegrationRegressionTests
             ((IDictionary)GetField(environment, "byObjectId")).Add("overlap_furnace", entry);
             ((IDictionary)GetField(environment, "byCell")).Add(anchor, entry);
             Invoke(environment, "BindWallHealthRuntime");
-            // 이 픽스처는 타일 서비스와 경계 정책만 연결한다. 전체 씬 초기화는 카탈로그가 없어 실패한다.
-            typeof(MainGameEnvironmentState).GetProperty("IsInitialized")
-                ?.GetSetMethod(true)
-                ?.Invoke(environment, new object[] { true });
             var inventory = new Nyangbingo.Inventory.Inventory(id => id == item.Id ? item : null);
             Require(inventory.TryAdd(item.Id, 3), "Door overlap fixture must own door items.");
             foreach (var cell in new[] { anchor, anchor + Vector3Int.up, anchor + Vector3Int.down })
@@ -2645,7 +2618,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/World/MainGameEnvironmentState.cs");
         Require(playerSource.Contains("TryInteractPlacedObjectAtPointer()") &&
                 saveSource.Contains("ExportDoorStates()") &&
-                saveSource.Contains("RestoreDoorStates(save.doorStates, save.placedObjectRecords)") &&
+                saveSource.Contains("RestoreDoorStates(save.doorStates)") &&
                 environmentSource.Contains(
                     "attachment.Record.definitionId != DoorPaperDefinitionId"),
             "Door input, persistence, and the attached door-paper exception must all use " +
@@ -3292,7 +3265,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
         Require(source.Contains("private void TryPlaceSelectedCraftingOutput()") &&
                 source.Contains("collectButton.GetComponentInChildren<Text>().text = \"설치\"") &&
-                source.Contains("primaryButton.GetComponentInChildren<Text>().text = \"E · 제작 예약\"") &&
+                source.Contains("primaryButton.GetComponentInChildren<Text>().text = \"E · 제작\"") &&
                 !source.Contains("var isMissing = owned < ingredient.amount && !readyToPlace"),
             "Owned placeable products must expose a separate placement action without replacing or bypassing crafting requirements.");
     }
@@ -3348,9 +3321,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 playerSource.Contains("PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId)") &&
                 playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth, tilePalette.SelectedSlotIndex)") &&
                 playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: true)") &&
-                playerSource.Contains("TryTickCatnipMining(") &&
-                playerSource.Contains("TryResolveCatnipMiningTarget(") &&
-                !playerSource.Contains("WorldInteractKind.Catnip") &&
+                playerSource.Contains("TryHarvestNearbyCatnip()") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
                 playerSource.Contains("TryTickHempMining(") &&
                 source.Contains("TryResolveHempMiningTarget(") &&
@@ -3358,7 +3329,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 source.Contains("FindItem(PlayerHealthRecoveryService.CatnipItemId)") &&
                 saveSource.Contains("save.hempPatches = worldDecorationRenderer.ExportHempPatches();") &&
                 saveSource.Contains("worldDecorationRenderer.RestoreHempPatches(save.hempPatches)"),
-            "Catnip and surface hemp are both harvested by left-click mining. E still opens chests and placed objects.");
+            "Catnip stays on E; surface hemp is harvested by left-click mining like trees/rebar.");
         Require(source.Contains("decorationSupportCells[visual.transform] = supportCell;") &&
                 source.Contains("RemoveDecorationsSupportedBy(cell);") &&
                 source.Contains("visual.gameObject.SetActive(false);") &&
@@ -4007,8 +3978,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     physicsSource.Contains(
                         "transform.GetComponentsInChildren<Collider2D>(true)") &&
                     physicsSource.Contains("var forwardProbe = (Vector2)bounds.center") &&
-                    physicsSource.Contains("attachedCollider.bounds.extents.y + GroundProbeDepth") &&
-                    physicsSource.Contains("footY - top <= GroundProbeDepth"),
+                    physicsSource.Contains(
+                        "attachedCollider.bounds.min.y - GroundProbeDepth"),
                 "Moving targets must not cause equal detours to alternate every frame, while real target crossings still reverse pursuit immediately.");
             Require(animatorSource.Contains("var hasClearAttackLine = physicsBody == null") &&
                     animatorSource.Contains(
@@ -4025,7 +3996,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 "Imugi body hurtboxes must use detached kinematic bodies and follow the prior world-space trail instead of flipping instantly.");
             Require(encounterSource.Contains("definition.Kind == BossKind.Imugi") &&
                     encounterSource.Contains(
-                        "definition.Kind == BossKind.Imugi ? \"gangcheol\" : definition.Id") &&
+                        "definition.Kind == BossKind.Imugi ? \"imugi\" : definition.Id") &&
                     encounterSource.Contains("characterAnimator.SetFacing(Vector2.right)") &&
                     encounterSource.Contains("FindSprite(\"imugi_body\")") &&
                     encounterSource.Contains("FindSprite(\"imugi_pre_tail\")") &&
@@ -4089,12 +4060,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
         Require(ore.Contains("지하 중층") && ore.Contains("46~90칸") && ore.Contains("필요 발톱 T1"),
             "S6 must use the actual depth and soft-gate claw tier from mineral data.");
         var shard = MaterialSourceGuide.Describe(catalog, "club_shard");
-        // 도깨비 대장 확정 드롭(조각 ×2)은 별도 출처다. 확률 줄만 확정·고정 처치 수를 약속하면 안 된다.
-        var randomDrop = shard.Split(new[] { "\n\n" }, StringSplitOptions.None)
-            .FirstOrDefault(line => line.Contains("방망이 도깨비")) ?? string.Empty;
-        Require(randomDrop.Contains("25%") &&
-                randomDrop.Contains("매번 나오지 않음") &&
-                !randomDrop.Contains("확정"),
+        Require(shard.Contains("방망이 도깨비") && shard.Contains("25%") &&
+                shard.Contains("매번 나오지 않음") && !shard.Contains("확정"),
             "Random drops must not promise a fixed kill count or guaranteed reward.");
         Require(MaterialSourceGuide.Describe(catalog, "stolen_bundle").Contains("절도 성공 후 처치 시"),
             "Conditional guaranteed drops must retain the theft condition.");
@@ -4442,9 +4409,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Clicking the top-right seal thermometer must block claw attacks and mining input.");
         Require(playerSource.Contains("lastBasicAttackHitTarget = attack.LastHitCount > 0;") &&
                 System.Text.RegularExpressions.Regex.IsMatch(playerSource,
-                    @"if \(!IsClawMiningActive \|\| lastBasicAttackHitTarget && attackCooldown > 0f\)\s*CancelMining\(\);\s*else\s*TickMining\(\);") &&
+                    @"if \(lastBasicAttackHitTarget && attackCooldown > 0f\)\s*CancelMining\(\);\s*else\s*TickMining\(\);") &&
                 playerSource.Contains("(lastBasicAttackHitTarget && attackCooldown > 0f)"),
-            "Mining stays on the claw slot; a successful attack must cancel mining and hide its target feedback throughout the attack cooldown.");
+            "A successful attack must cancel mining and hide its target feedback throughout the attack cooldown.");
         Require(System.Text.RegularExpressions.Regex.IsMatch(playerSource,
                     @"Input\.GetKeyDown\(KeyCode\.E\)[\s\S]{0,500}TryInteractClosestWorldTarget\(includePlacedObjects: true\)") &&
                 playerSource.Contains("TryOpenChestAt(") &&
@@ -4458,11 +4425,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 System.Text.RegularExpressions.Regex.IsMatch(turretSource,
                     @"GetMouseButtonDown\(1\)[\s\S]{0,160}ConfirmPlacementPreview\(\)") &&
                 !paletteSource.Contains("Input.GetMouseButtonDown(0)) ConfirmForegroundPlacement()") &&
-                // 인벤토리 안에서 우클릭은 절반 집기/1개 놓기이므로, 아이템 사용은 E로 일원화됐다.
-                System.Text.RegularExpressions.Regex.IsMatch(craftingSource,
-                    @"openedFrame != Time\.frameCount &&\s*Input\.GetKeyDown\(KeyCode\.E\)\)\s*TryPrimaryAction\(\)") &&
+                craftingSource.Contains("page == Page.Gathering ? Input.GetMouseButtonDown(1) && inventoryDragSourceIndex < 0 : Input.GetKeyDown(KeyCode.E)") &&
                 craftingSource.Contains("else if (Input.GetMouseButtonDown(1)) ConfirmSummonItemUse()"),
-            "Tile and furniture use must agree on right-click, inventory use runs on E (right-click there picks half/drops one); last-item placement consumes the frame without a second use.");
+            "Tile, furniture and inventory use must agree on right-click; last-item placement consumes the frame without a second use.");
     }
 
     private static void TestBossHealthArtMapping()
@@ -4533,8 +4498,8 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 MainGameHudController.BossEntranceFlashColor(.25f).a > 0f &&
                 Mathf.Approximately(MainGameHudController.BossEntranceFlashColor(.4f).a, 0f) &&
                 MainGameHudController.BossEntranceFlashColor(.55f).a > 0f &&
-                // BossWarningLarge(구 바람 연출)만 금지한다. BossWarningSmall은 "오늘 밤 보스" 상태 아이콘으로 쓴다.
                 !bossHudSource.Contains("gameplayArtCatalog?.BossWarningLarge") &&
+                !bossHudSource.Contains("gameplayArtCatalog?.BossWarningSmall") &&
                 horrorFlashRect != null && horrorFlashRect.anchorMin == Vector2.zero &&
                 horrorFlashRect.anchorMax == Vector2.one,
             "Boss entrances must use a full-screen irregular horror flicker instead of the legacy wind art.");
@@ -4571,13 +4536,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     lastBody.position.x - preTail.position.x >= 1.05f &&
                     Mathf.Abs(Mathf.DeltaAngle(lastBody.localEulerAngles.z, 90f)) < .01f &&
                     Mathf.Abs(Mathf.DeltaAngle(preTail.localEulerAngles.z, 0f)) < .01f &&
-                    // 정렬은 머리에 가까운 마디가 앞(sortingOrder - index)이라, 꼬리로 갈수록 뒤로 깔린다.
-                    lastBody.GetComponent<SpriteRenderer>().sortingOrder >
+                    lastBody.GetComponent<SpriteRenderer>().sortingOrder <
                     preTail.GetComponent<SpriteRenderer>().sortingOrder &&
-                    preTail.GetComponent<SpriteRenderer>().sortingOrder >
+                    preTail.GetComponent<SpriteRenderer>().sortingOrder <
                     postTail.GetComponent<SpriteRenderer>().sortingOrder &&
                     imugiTailObject.transform.Find("Body_1")
-                        .GetComponent<SpriteRenderer>().sortingOrder >
+                        .GetComponent<SpriteRenderer>().sortingOrder <
                     lastBody.GetComponent<SpriteRenderer>().sortingOrder &&
                     preTail.GetComponent<SpriteRenderer>().flipX &&
                     postTail.GetComponent<SpriteRenderer>().flipX &&
@@ -4667,10 +4631,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
             characterCatalog != null ? characterCatalog.FindSprite("gangcheol_body") : null;
         Require(gangcheoriBody != null &&
                 AssetDatabase.GetAssetPath(gangcheoriBody) ==
-                "Assets/Art/Characters/gangcheol_body.aseprite" &&
-                Mathf.Approximately(gangcheoriBody.rect.width, 16f) &&
-                Mathf.Approximately(gangcheoriBody.rect.height, 16f),
-            "Gangcheori must bind the latest delivered 16x16 body art (gangcheol_body.aseprite).");
+                "Assets/Art/Characters/gangcheol_body.png" &&
+                gangcheoriBody.texture.width == 8 && gangcheoriBody.texture.height == 8,
+            "Gangcheori must bind the delivered 8x8 body art from the latest resource package.");
         var gangcheoriPreTail =
             characterCatalog != null ? characterCatalog.FindSprite("gangcheol_pre_tail") : null;
         var gangcheoriPostTail =
@@ -4695,13 +4658,12 @@ public static class NyangbingoDevBIntegrationRegressionTests
                     preTail.localPosition.x < postTail.localPosition.x &&
                     Mathf.Abs(Mathf.DeltaAngle(lastBody.localEulerAngles.z, 90f)) < .01f &&
                     Mathf.Abs(Mathf.DeltaAngle(preTail.localEulerAngles.z, 0f)) < .01f &&
-                    // 머리에 가까운 마디가 앞(sortingOrder - index), 꼬리로 갈수록 뒤.
-                    lastBody.GetComponent<SpriteRenderer>().sortingOrder >
+                    lastBody.GetComponent<SpriteRenderer>().sortingOrder <
                     preTail.GetComponent<SpriteRenderer>().sortingOrder &&
-                    preTail.GetComponent<SpriteRenderer>().sortingOrder >
+                    preTail.GetComponent<SpriteRenderer>().sortingOrder <
                     postTail.GetComponent<SpriteRenderer>().sortingOrder &&
                     gangcheoriTailObject.transform.Find("GangcheoriBody_1")
-                        .GetComponent<SpriteRenderer>().sortingOrder >
+                        .GetComponent<SpriteRenderer>().sortingOrder <
                     lastBody.GetComponent<SpriteRenderer>().sortingOrder &&
                     !preTail.GetComponent<SpriteRenderer>().flipX &&
                     !postTail.GetComponent<SpriteRenderer>().flipX &&
@@ -4907,23 +4869,23 @@ public static class NyangbingoDevBIntegrationRegressionTests
             $"v29 inventory grid must have 10 columns (actual {MainGameCraftingUiController.InventoryGridColumns}).");
         Require(MainGameCraftingUiController.InventoryGridRows == 5,
             $"v29 inventory grid must have 5 rows (actual {MainGameCraftingUiController.InventoryGridRows}).");
-        Require(MainGameCraftingUiController.InventoryHotbarSlotCount == 9 &&
+        Require(MainGameCraftingUiController.InventoryHotbarSlotCount == 8 &&
                 MainGameCraftingUiController.UnifiedTabLabel(0) == "인벤토리",
-            "The inventory must distinguish its first nine hotbar-linked slots and label panel 1 as inventory.");
+            "The inventory must distinguish its first eight hotbar-linked slots and label panel 1 as inventory.");
         Require(Mathf.Approximately(MainGameCraftingUiController.InventorySlotPixelSize, 27f),
             $"v29 inventory slot art must render at 27 px (actual {MainGameCraftingUiController.InventorySlotPixelSize}).");
         Require(MainGameCraftingUiController.UsesIconOnlyCraftingList,
             "v28 crafting list must use icon and quantity presentation without narrative row text.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F5,
             "MainGame Editor test shortcut help must be assigned to F5.");
-        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.Tab &&
-                MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.C &&
-                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.G &&
-                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.J &&
+        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.Alpha1 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.Alpha2 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.Alpha3 &&
+                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.Alpha4 &&
                 MainGameCraftingUiController.UnifiedTabHotkey(4) == KeyCode.None,
-            "The four unified panels must use Tab, C, G, and J so number keys 1-9 stay on the hotbar.");
+            "The four unified panels must be assigned to number keys 1 through 4.");
         Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F12,
-            "Crafting test grants use F12; F5 remains help and Tab/C/G/J remain product panels.");
+            "Crafting test grants use F12; F5 remains help and 1-4 remain product panels.");
         Require(MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Furnace) &&
                 MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Foundry) &&
                 !MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Workbench),
@@ -4932,12 +4894,11 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
         Require(craftingUiSource.Contains("TryToggleFurnaceCraftingSmeltingView") &&
                 craftingUiSource.Contains("furnaceSmeltingView") &&
-                craftingUiSource.Contains("Q 제련 목록으로 전환") &&
-                craftingUiSource.Contains("Q 제작 목록으로 전환"),
+                craftingUiSource.Contains("Q 제련↔제작"),
             "The furnace filter must toggle between smelting and station crafting with Q.");
         var shellUiSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameShellUiController.cs");
-        Require(craftingUiSource.Contains("$\"{UnifiedTabHotkey(index)} · {UnifiedTabLabel(index)}\"") &&
+        Require(craftingUiSource.Contains("$\"{index + 1} · {UnifiedTabLabel(index)}\"") &&
                 !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Foundry,
                     MainGameCraftingUiController.CraftingStationFilter.Furnace) &&
                 !MainGameCraftingUiController.RecipeMatchesFilter(CraftingStation.Smithy,
@@ -5074,13 +5035,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "A 480 px logical canvas must use a 240 px tile palette.");
         Require(Mathf.Approximately(MainGameTilePaletteController.SlotPixelSize, 27f),
             "The tile palette must reuse the delivered 27 px inventory slot scale.");
-        Require(MainGameTilePaletteController.ShortcutSlotCount == 9 &&
+        Require(MainGameTilePaletteController.ShortcutSlotCount == 8 &&
                 MainGameTilePaletteController.UsesMouseWheelSelection &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(-1, -1f, 9) == 0 &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(0, -1f, 9) == 1 &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(0, 1f, 9) == 8 &&
-                MainGameTilePaletteController.ResolveMouseWheelSlot(8, -1f, 9) == 0,
-            "The nine visible tile-palette slots must wrap in both directions with the mouse wheel.");
+                MainGameTilePaletteController.ResolveMouseWheelSlot(-1, -1f, 8) == 0 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(0, -1f, 8) == 1 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(0, 1f, 8) == 7 &&
+                MainGameTilePaletteController.ResolveMouseWheelSlot(7, -1f, 8) == 0,
+            "The eight visible tile-palette slots must wrap in both directions with the mouse wheel.");
         Require(Mathf.Approximately(MainGameTilePaletteController.DefaultPlacementReachTiles, 4f) &&
                 MainGameTilePaletteController.IsWithinPlacementReach(
                     new Vector2(.5f, .5f), new Vector3Int(3, 0, 0), 4f) &&
@@ -5093,15 +5054,13 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Catnip must remain selected as a direct-use hotbar item instead of entering placement.");
         var paletteSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/UI/MainGameTilePaletteController.cs");
-        Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot, toggleOffIfSelected: false)") &&
+        Require(paletteSource.Contains("TrySelectPaletteSlot(shortcutSlot)") &&
                  paletteSource.Contains("Input.mouseScrollDelta.y") &&
-                 // 숫자 키 1~9가 핫바 전용이 되어 칸 번호 힌트를 실제 번호로 표시한다.
-                 paletteSource.Contains("shortcut.text = (slotIndex + 1).ToString()") &&
-                 paletteSource.Contains("shortcut.gameObject.SetActive(true)") &&
+                 paletteSource.Contains("shortcut.gameObject.SetActive(false)") &&
                  paletteSource.Contains("CollectHotbarSlotItemIds()") &&
                  paletteSource.Contains("SelectEmptySlot(slotIndex)") &&
                  paletteSource.Contains("SelectDirectUseSlot(slotIndex, itemId)"),
-            "Number keys 1-9 and the mouse wheel must select inventory hotbar slots, including empty slots, with matching slot-number labels.");
+            "Mouse-wheel input must select inventory hotbar slots, including empty slots, without stale number-key labels.");
         Require(!paletteSource.Contains("!MainGameShellUiController.IsLoadingTransitionActive"),
             "The tile palette must remain in the gameplay HUD beneath the shell loading overlay.");
         var loadingCreatorSource = System.IO.File.ReadAllText(
@@ -5143,7 +5102,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 inventory.Slots[7].itemId == runtimeStone.Id &&
                 inventory.Slots[7].amount == 3 &&
                 !inventory.TrySwapSlots(7, 7),
-            "Shift-click inventory reordering must move stacks into and out of the first nine hotbar slots.");
+            "Shift-click inventory reordering must move stacks into and out of the first eight hotbar slots.");
         var reservedInventory = new Nyangbingo.Inventory.Inventory(FindItem, 10);
         Require(reservedInventory.TryAdd(runtimeDirt.Id, 2) &&
                 reservedInventory.Slots[0].itemId == runtimeDirt.Id &&
@@ -5159,17 +5118,16 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Assets/Scripts/Nyangbingo/UI/MainGameCraftingUiController.cs");
         var playerSource = System.IO.File.ReadAllText(
             "Assets/Scripts/Nyangbingo/World/MainGamePlayerController.cs");
-        // 드래그 이동은 클릭으로 집어 올리고 내려놓는 커서 방식(InventoryCursor)으로 대체됐다.
-        Require(craftingSource.Contains("ClickInventorySlot(runtimeServices.PlayerInventory, capturedIndex, pointer)") &&
-                craftingSource.Contains("inventory.TryClickSlot(index, runtimeServices.InventoryCursor") &&
-                craftingSource.Contains("EventTriggerType.PointerClick") &&
-                !craftingSource.Contains("EventTriggerType.BeginDrag") &&
+        Require(craftingSource.Contains("TrySwapSlots(sourceIndex, index)") &&
+                craftingSource.Contains("EventTriggerType.BeginDrag") &&
+                craftingSource.Contains("EventTriggerType.Drop") &&
+                craftingSource.Contains("CanSwapSlots(sourceIndex, index)") &&
                 !craftingSource.Contains("var swapRequested =") &&
                 !craftingSource.Contains("앞 8칸은 퀵슬롯") &&
                 craftingSource.Contains("transform.Find(\"HotbarShortcut\")") &&
                 craftingSource.Contains("oldNumberHint.gameObject.SetActive(false)") &&
                 !craftingSource.Contains("gameplayArtCatalog?.InventorySlotTopSelected") &&
-                craftingSource.Contains("{UnifiedTabHotkey(index)} · {UnifiedTabLabel(index)}") &&
+                craftingSource.Contains("{index + 1} · {UnifiedTabLabel(index)}") &&
                 !paletteSource.Contains("설치 거리가 너무 멉니다") &&
                 !paletteSource.Contains("붉은 위치에는 블럭을 설치할 수 없습니다") &&
                 paletteSource.Contains("if (!IsHotbarSelectable(selectedItem") &&

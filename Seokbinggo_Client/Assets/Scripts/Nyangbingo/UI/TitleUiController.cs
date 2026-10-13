@@ -224,9 +224,8 @@ namespace Nyangbingo.UI
             }
             for (var index = 0; index < demoSaveButtons.Count; index++)
             {
-                // 480x270(16:9) 아래쪽은 y=-135다. -128이면 버튼 하단이 화면 밖으로 4px 나간다.
                 ConfigureShellButton(demoSaveButtons[index],
-                    new Vector2(-112f + (index - 1) * 56f, -120f), new Vector2(52f, 22f));
+                    new Vector2(-112f + (index - 1) * 56f, -128f), new Vector2(52f, 22f));
                 EnsureDemoButtonLabel(demoSaveButtons[index],
                     $"{GameShellController.DemoSaveDays[index]}일차 데모");
             }
@@ -254,7 +253,7 @@ namespace Nyangbingo.UI
             var labelObject = new GameObject("MapWidthLabel", typeof(RectTransform), typeof(Text));
             labelObject.transform.SetParent(titlePanel, false);
             mapWidthLabel = labelObject.GetComponent<Text>();
-            mapWidthLabel.font = UiTextFont.Source;
+            mapWidthLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             mapWidthLabel.fontSize = 8;
             mapWidthLabel.alignment = TextAnchor.MiddleCenter;
             mapWidthLabel.color = new Color(.85f, .9f, .95f, .95f);
@@ -463,12 +462,12 @@ namespace Nyangbingo.UI
             }
             counterTransform.anchorMin = counterTransform.anchorMax = counterTransform.pivot =
                 new Vector2(.5f, .5f);
-            counterTransform.anchoredPosition = new Vector2(168f, 100f);
-            counterTransform.sizeDelta = new Vector2(150f, 28f);
+            counterTransform.anchoredPosition = new Vector2(176f, 97f);
+            counterTransform.sizeDelta = new Vector2(160f, 36f);
             titleDayCounterText = counterTransform.GetComponent<Text>();
             var menuLabel = titleNewGameButton.GetComponentInChildren<Text>(true);
             titleDayCounterText.font = menuLabel != null ? menuLabel.font : titleDayCounterText.font;
-            titleDayCounterText.fontSize = 16;
+            titleDayCounterText.fontSize = 22;
             titleDayCounterText.fontStyle = FontStyle.Bold;
             titleDayCounterText.alignment = TextAnchor.MiddleCenter;
             titleDayCounterText.color = Color.white;
@@ -479,7 +478,7 @@ namespace Nyangbingo.UI
             titleDayCounterText.horizontalOverflow = HorizontalWrapMode.Overflow;
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
                 titleHeatStageLabel = new RuntimeArtNumberLabel(titleDayCounterText,
-                    gameplayArtCatalog.ShellNumberGlyphs, "폭염 ", "단계", .75f);
+                    gameplayArtCatalog.ShellNumberGlyphs, "폭염 ", "단계", 1f);
 
 
             var playerEntry = characterArtCatalog?.Find("player");

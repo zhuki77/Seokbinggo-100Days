@@ -193,7 +193,7 @@ namespace Nyangbingo.UI
             openingImage.rectTransform.anchorMax = Vector2.one;
             openingImage.rectTransform.offsetMin = new Vector2(8f, 42f);
             openingImage.rectTransform.offsetMax = new Vector2(-8f, -8f);
-            var font = UiTextFont.Source;
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             openingPageText = CreateTraitText(rect, "Page", font, 11, TextAnchor.MiddleCenter,
                 Vector2.zero, new Vector2(280f, 22f));
             openingPageText.rectTransform.anchorMin = openingPageText.rectTransform.anchorMax = new Vector2(.5f, 0f);
@@ -249,46 +249,32 @@ namespace Nyangbingo.UI
             panelImage.color = new Color(0.05f, 0.07f, 0.12f, 0.88f);
             panelImage.raycastTarget = true;
 
-            var windowSprite = gameplayArtCatalog?.TraitWindow;
-            var cardSize = windowSprite != null ? windowSprite.rect.size : new Vector2(280f, 236f);
-            var sampleFrames = TraitButtonFrames(TraitRules.AllIds[0]);
-            var artButton = sampleFrames != null && sampleFrames.Count > 0 ? sampleFrames[0] : null;
-            var buttonSize = artButton != null ? artButton.rect.size : new Vector2(cardSize.x - 28f, 36f);
-            const float buttonGap = 3f;
+            // 화면 중앙의 고정 카드 — 절대 픽셀 스택이 뷰포트 밖으로 나가지 않게 한다.
+            const float cardWidth = 280f;
+            const float cardHeight = 236f;
+            const float buttonHeight = 36f;
+            const float buttonGap = 6f;
             var cardObject = new GameObject("TraitSelectCard", typeof(RectTransform), typeof(Image));
             cardObject.transform.SetParent(panelRect, false);
             var cardRect = (RectTransform)cardObject.transform;
             cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(0.5f, 0.5f);
-            cardRect.sizeDelta = cardSize;
+            cardRect.sizeDelta = new Vector2(cardWidth, cardHeight);
             cardRect.anchoredPosition = Vector2.zero;
             var cardImage = cardObject.GetComponent<Image>();
+            cardImage.color = new Color(0.1f, 0.13f, 0.2f, 0.98f);
             cardImage.raycastTarget = true;
-            if (windowSprite != null)
-            {
-                cardImage.sprite = windowSprite;
-                cardImage.type = Image.Type.Simple;
-                cardImage.preserveAspect = true;
-                cardImage.color = Color.white;
-            }
-            else
-                cardImage.color = new Color(0.1f, 0.13f, 0.2f, 0.98f);
 
-            var font = UiTextFont.Source;
-            var stack = TraitRules.AllIds.Length * buttonSize.y + (TraitRules.AllIds.Length - 1) * buttonGap;
-            var titleHeight = windowSprite != null ? 0f : 40f;
-            var content = titleHeight + stack;
-            var buttonsTop = content * 0.5f - titleHeight - buttonSize.y * 0.5f;
-            if (windowSprite == null)
-            {
-                var title = CreateTraitText(cardRect, "Title", font, 15, TextAnchor.MiddleCenter,
-                    new Vector2(0f, cardSize.y * 0.5f - 18f), new Vector2(cardSize.x - 24f, 22f));
-                title.text = "시작 특성 선택";
-                title.fontStyle = FontStyle.Bold;
-                var hint = CreateTraitText(cardRect, "Hint", font, 10, TextAnchor.MiddleCenter,
-                    new Vector2(0f, cardSize.y * 0.5f - 38f), new Vector2(cardSize.x - 24f, 16f));
-                hint.text = "1회만 고릅니다. 되돌릴 수 없습니다.";
-                buttonsTop = cardSize.y * 0.5f - 56f - buttonSize.y * 0.5f;
-            }
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var title = CreateTraitText(cardRect, "Title", font, 15, TextAnchor.MiddleCenter,
+                new Vector2(0f, cardHeight * 0.5f - 18f), new Vector2(cardWidth - 24f, 22f));
+            title.text = "시작 특성 선택";
+            title.fontStyle = FontStyle.Bold;
+            var hint = CreateTraitText(cardRect, "Hint", font, 10, TextAnchor.MiddleCenter,
+                new Vector2(0f, cardHeight * 0.5f - 38f), new Vector2(cardWidth - 24f, 16f));
+            hint.text = "1회만 고릅니다. 되돌릴 수 없습니다.";
+
+            // This coordinate is the button CENTER, not its top edge.
+            var buttonsTop = cardHeight * 0.5f - 56f - buttonHeight * 0.5f;
             for (var i = 0; i < TraitRules.AllIds.Length; i++)
             {
                 var traitId = TraitRules.AllIds[i];
@@ -297,12 +283,11 @@ namespace Nyangbingo.UI
                 buttonObject.transform.SetParent(cardRect, false);
                 var buttonRect = (RectTransform)buttonObject.transform;
                 buttonRect.anchorMin = buttonRect.anchorMax = buttonRect.pivot = new Vector2(0.5f, 0.5f);
-                buttonRect.anchoredPosition = new Vector2(0f, buttonsTop - i * (buttonSize.y + buttonGap));
-                buttonRect.sizeDelta = buttonSize;
+                buttonRect.anchoredPosition = new Vector2(0f, buttonsTop - i * (buttonHeight + buttonGap));
+                buttonRect.sizeDelta = new Vector2(cardWidth - 28f, buttonHeight);
                 var buttonImage = buttonObject.GetComponent<Image>();
                 buttonImage.color = new Color(0.16f, 0.22f, 0.32f, 1f);
                 var button = buttonObject.GetComponent<Button>();
-                var traitFrames = TraitButtonFrames(traitId);
                 var labelObject = new GameObject("Label", typeof(RectTransform));
                 labelObject.transform.SetParent(buttonRect, false);
                 var labelRect = (RectTransform)labelObject.transform;
@@ -321,111 +306,12 @@ namespace Nyangbingo.UI
                 var name = definition != null ? definition.DisplayName : traitId;
                 var shortName = definition != null ? definition.ShortName : string.Empty;
                 label.text = string.IsNullOrEmpty(shortName) ? name : $"{name}  ·  {shortName}";
-                if (traitFrames != null && traitFrames.Count >= 1 && traitFrames[0] != null)
-                {
-                    var frame = traitFrames[0];
-                    buttonRect.sizeDelta = frame.rect.size;
-                    buttonImage.sprite = frame;
-                    buttonImage.type = Image.Type.Simple;
-                    buttonImage.preserveAspect = true;
-                    buttonImage.color = Color.white;
-                    button.transition = Selectable.Transition.None;
-                    label.enabled = false;
-                    var hoverObject = new GameObject("HoverBorder", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                    hoverObject.transform.SetParent(buttonRect, false);
-                    var hoverRect = (RectTransform)hoverObject.transform;
-                    hoverRect.anchorMin = Vector2.zero;
-                    hoverRect.anchorMax = Vector2.one;
-                    hoverRect.offsetMin = Vector2.zero;
-                    hoverRect.offsetMax = Vector2.zero;
-                    var hoverImage = hoverObject.GetComponent<Image>();
-                    hoverImage.sprite = TraitHoverBorderSprite(
-                        Mathf.RoundToInt(frame.rect.width), Mathf.RoundToInt(frame.rect.height));
-                    hoverImage.type = Image.Type.Simple;
-                    hoverImage.color = new Color(34f / 255f, 35f / 255f, 35f / 255f, 1f);
-                    hoverImage.raycastTarget = false;
-                    hoverImage.enabled = false;
-                    buttonObject.AddComponent<TraitButtonHover>().Bind(hoverImage);
-                    hoverObject.transform.SetAsLastSibling();
-                }
                 var capturedId = traitId;
                 button.onClick.AddListener(() => HandleTraitSelected(capturedId));
             }
 
             traitSelectPanel.SetActive(false);
             shell.ConfigureTraitSelectPanel(traitSelectPanel);
-        }
-
-        private static Sprite traitHoverBorderSprite;
-
-        private static Sprite TraitHoverBorderSprite(int width, int height)
-        {
-            if (traitHoverBorderSprite != null) return traitHoverBorderSprite;
-            var radius = Mathf.Clamp(Mathf.Min(width, height) / 4, 2, 6);
-            const int thickness = 1;
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp,
-                hideFlags = HideFlags.HideAndDontSave
-            };
-            var pixels = new Color32[width * height];
-            var ink = new Color32(34, 35, 35, 255);
-            for (var y = 0; y < height; y++)
-            {
-                for (var x = 0; x < width; x++)
-                {
-                    var outer = InsideRoundedRect(x, y, width, height, radius);
-                    var inner = InsideRoundedRect(x - thickness, y - thickness,
-                        width - thickness * 2, height - thickness * 2, radius - thickness);
-                    if (outer && !inner) pixels[y * width + x] = ink;
-                }
-            }
-
-            texture.SetPixels32(pixels);
-            texture.Apply(false, true);
-            traitHoverBorderSprite = Sprite.Create(texture, new Rect(0f, 0f, width, height),
-                new Vector2(.5f, .5f), 1f);
-            traitHoverBorderSprite.hideFlags = HideFlags.HideAndDontSave;
-            return traitHoverBorderSprite;
-        }
-
-        private static bool InsideRoundedRect(int x, int y, int width, int height, int radius)
-        {
-            if (width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height) return false;
-            var limit = Mathf.Max(0, Mathf.Min(radius, Mathf.Min(width, height) / 2));
-            var nearestX = Mathf.Clamp(x, limit, width - 1 - limit);
-            var nearestY = Mathf.Clamp(y, limit, height - 1 - limit);
-            var dx = x - nearestX;
-            var dy = y - nearestY;
-            return dx * dx + dy * dy <= limit * limit;
-        }
-
-        private sealed class TraitButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
-        {
-            private Image border;
-
-            public void Bind(Image borderImage) => border = borderImage;
-
-            public void OnPointerEnter(PointerEventData eventData)
-            {
-                if (border != null) border.enabled = true;
-            }
-
-            public void OnPointerExit(PointerEventData eventData)
-            {
-                if (border != null) border.enabled = false;
-            }
-        }
-
-        private System.Collections.Generic.IReadOnlyList<Sprite> TraitButtonFrames(string traitId)
-        {
-            if (gameplayArtCatalog == null) return null;
-            if (traitId == TraitRules.MeleeId) return gameplayArtCatalog.TraitMeleeFrames;
-            if (traitId == TraitRules.RangedId) return gameplayArtCatalog.TraitRangedFrames;
-            if (traitId == TraitRules.LaborId) return gameplayArtCatalog.TraitLaborFrames;
-            if (traitId == TraitRules.CoolId) return gameplayArtCatalog.TraitCoolFrames;
-            return null;
         }
 
         private void HandleTraitSelected(string traitId)
@@ -995,7 +881,7 @@ namespace Nyangbingo.UI
                 go.transform.SetParent(settingsPanel, false);
                 existing = (RectTransform)go.transform;
                 var text = go.GetComponent<Text>();
-                text.font = UiTextFont.Source;
+                text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 text.fontSize = 7;
                 text.alignment = TextAnchor.MiddleCenter;
                 text.color = new Color(.55f, .6f, .68f, .85f);
@@ -1167,8 +1053,6 @@ namespace Nyangbingo.UI
 
         private void LateUpdate()
         {
-            if (shell != null && shell.Screen == GameShellScreen.TraitSelect && traitSelectPanel != null)
-                traitSelectPanel.transform.SetAsLastSibling();
             ProcessEscapeFallback();
             if (!IsInitialized || string.IsNullOrEmpty(pendingEndingBossId)) return;
             var bossId = pendingEndingBossId;
@@ -1192,7 +1076,7 @@ namespace Nyangbingo.UI
             if (panel == null) return;
             resultHeaderText = panel.Find("Result")?.GetComponent<Text>();
             var buttonLabel = resultTitleButton.GetComponentInChildren<Text>(true);
-            var font = buttonLabel != null ? buttonLabel.font : UiTextFont.Source;
+            var font = buttonLabel != null ? buttonLabel.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             if (resultHeaderText != null)
             {

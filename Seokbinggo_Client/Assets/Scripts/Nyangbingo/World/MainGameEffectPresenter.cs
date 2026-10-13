@@ -98,7 +98,7 @@ namespace Nyangbingo.World
             targetObject.transform.SetParent(transform, false);
             miningTargetRenderer = targetObject.AddComponent<SpriteRenderer>();
             RuntimePlaceholderVisual.Configure(
-                miningTargetRenderer, new Color(1f, 1f, 1f, .35f), 1.02f, 24);
+                miningTargetRenderer, new Color(.2f, .9f, 1f, .18f), 1.02f, 24);
             miningTargetRenderer.enabled = false;
             GameEvents.OnMiningTargetChanged += HandleMiningTargetChanged;
             GameEvents.OnMiningProgress += HandleMiningProgress;
@@ -129,72 +129,21 @@ namespace Nyangbingo.World
 
         private void HandleMiningImpact(MiningImpactSurface surface) => lastMiningSurface = surface;
 
-        private bool tileFaded;
-        private Vector3Int fadedTileCell;
-        private Color fadedTileColor = Color.white;
-        private static readonly Color FadedBlockHighlight = new Color(.38f, .4f, .46f, 1f);
-
         private void HandleMiningTargetChanged(Vector3Int cell, bool visible, bool mineable)
         {
-            if (!visible)
-            {
-                RestoreFadedTile();
-                if (miningTargetRenderer != null) miningTargetRenderer.enabled = false;
-                return;
-            }
-
-            if (TryFadeForegroundTile(cell))
-            {
-                if (miningTargetRenderer != null) miningTargetRenderer.enabled = false;
-                return;
-            }
-
             if (miningTargetRenderer == null) return;
-            RestoreFadedTile();
-            miningTargetRenderer.enabled = true;
-            miningTargetRenderer.transform.localRotation = Quaternion.identity;
-            RuntimePlaceholderVisual.Configure(
-                miningTargetRenderer, new Color(1f, 1f, 1f, .35f), 1.02f, 24);
+            miningTargetRenderer.enabled = visible;
+            if (!visible) return;
             miningTargetRenderer.transform.position = CellVisualAnchor(cell);
             AlignMiningOverlayToCell(miningTargetRenderer, cell);
-        }
-
-        /// <summary>
-        /// 흙·돌처럼 전경 타일이 있는 칸은 덧그린 막 대신 그 칸 색만 낮춘다.
-        /// 타일 기본 LockColor가 켜져 있으면 SetColor가 무시된다.
-        /// </summary>
-        private bool TryFadeForegroundTile(Vector3Int cell)
-        {
-            var foreground = worldRenderer != null ? worldRenderer.Foreground : null;
-            if (foreground == null || foreground.GetSprite(cell) == null)
-                return false;
-            if (tileFaded && fadedTileCell == cell) return true;
-
-            RestoreFadedTile();
-            var current = foreground.GetColor(cell);
-            if (current.a <= .01f) return false;
-
-            fadedTileColor = current;
-            fadedTileCell = cell;
-            tileFaded = true;
-            foreground.SetTileFlags(cell, foreground.GetTileFlags(cell) & ~UnityEngine.Tilemaps.TileFlags.LockColor);
-            foreground.SetColor(cell, new Color(
-                current.r * FadedBlockHighlight.r,
-                current.g * FadedBlockHighlight.g,
-                current.b * FadedBlockHighlight.b,
-                current.a));
-            return true;
-        }
-
-        private void RestoreFadedTile()
-        {
-            if (!tileFaded) return;
-            tileFaded = false;
-            var foreground = worldRenderer != null ? worldRenderer.Foreground : null;
-            if (foreground == null) return;
-            foreground.SetTileFlags(fadedTileCell,
-                foreground.GetTileFlags(fadedTileCell) & ~UnityEngine.Tilemaps.TileFlags.LockColor);
-            foreground.SetColor(fadedTileCell, fadedTileColor);
+            var tile = tileService != null && tileService.InBounds(cell)
+                ? tileService.GetTile(cell)
+                : default;
+            miningTargetRenderer.color = mineable
+                ? new Color(.2f, .9f, 1f, .18f)
+                : tile.IsAir
+                    ? new Color(.2f, .9f, 1f, .12f)
+                    : new Color(1f, .2f, .2f, .24f);
         }
 
         private void HandlePlayerDamaged(DamageTag tag, int amount)
@@ -446,7 +395,6 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
-            RestoreFadedTile();
             if (playerHealth != null) playerHealth.Damaged -= HandlePlayerDamaged;
             GameEvents.OnMiningTargetChanged -= HandleMiningTargetChanged;
             GameEvents.OnMiningProgress -= HandleMiningProgress;
