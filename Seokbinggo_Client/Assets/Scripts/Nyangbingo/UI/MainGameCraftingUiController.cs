@@ -22,7 +22,7 @@ namespace Nyangbingo.UI
     /// scope B 레시피만 표시 단계에서 제외한다.
     /// </summary>
     [DefaultExecutionOrder(-50)]
-    public sealed class MainGameCraftingUiController : MonoBehaviour
+    public sealed partial class MainGameCraftingUiController : MonoBehaviour
     {
         private enum Page { Gathering, Crafting, Equipment, Codex }
 
@@ -153,6 +153,12 @@ namespace Nyangbingo.UI
         private readonly bool[] displayedIngredientMissing = new bool[3];
         private UnityEngine.UI.Image inventoryCursorIcon;
         private UnityEngine.UI.Text inventoryCursorCount;
+        private EquipmentInventoryDrag equipmentDrag;
+        private GameObject equipmentDragSource;
+        private int equipmentDragPointerId;
+        private string equipmentDropFeedback;
+        private float equipmentDropFeedbackUntil;
+        private bool IsDraggingEquipment => equipmentDrag?.IsActive == true;
         private static MainGameCraftingUiController cursorOwner;
         private bool HasHeldInventoryItem => runtimeServices?.InventoryCursor?.IsEmpty == false;
 
@@ -184,16 +190,16 @@ namespace Nyangbingo.UI
         private int openedFrame = -1;
 
         public static bool BlocksGameplayInput => openControllerCount > 0 ||
-            (cursorOwner != null && cursorOwner.HasHeldInventoryItem);
+            (cursorOwner != null && (cursorOwner.HasHeldInventoryItem || cursorOwner.IsDraggingItem));
         public static bool BlocksPlayerMovement => openControllerCount > 1 ||
             openControllerCount > 0 && (cursorOwner == null || !cursorOwner.open ||
                 cursorOwner.page != Page.Crafting || cursorOwner.HasStorageMode);
         // Crafting stays open beside normal world play. Other menus and a held
         // inventory stack still own gameplay input; UI clicks are filtered separately.
         public static bool BlocksWorldActions => BlocksPlayerMovement ||
-            (cursorOwner != null && cursorOwner.HasHeldInventoryItem);
+            (cursorOwner != null && (cursorOwner.HasHeldInventoryItem || cursorOwner.IsDraggingItem));
         public static bool ShowsInventoryPointer => cursorOwner != null &&
-            (cursorOwner.HasHeldInventoryItem || cursorOwner.open &&
+            (cursorOwner.HasHeldInventoryItem || cursorOwner.IsDraggingItem || cursorOwner.open &&
                 (cursorOwner.page == Page.Gathering || cursorOwner.HasStorageMode));
         public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         public bool IsOpen => open;
@@ -208,6 +214,9 @@ namespace Nyangbingo.UI
         public const int InventoryGridRows = 5;
         public const int InventoryHotbarSlotCount = 9;
         public const float InventorySlotPixelSize = 27f;
+        private const float HudInventoryCellSize = 14f;
+        private const float HudInventoryCellGap = 1f;
+        private const int HudInventoryColumns = 8;
         public const float InventoryCursorPixelSize = 12f;
         public const bool UsesIconOnlyCraftingList = true;
         public const KeyCode DebugGrantRequirementsKey = KeyCode.F12;
@@ -322,6 +331,13 @@ namespace Nyangbingo.UI
                 return;
             }
             if (!initialized) return;
+
+            if (IsDraggingItem && Input.TryConsumeEscape())
+            {
+                escapeConsumedFrame = Time.frameCount;
+                CancelEquipmentDrag();
+                return;
+            }
 
             if (HasHeldInventoryItem && Input.TryConsumeEscape())
             {
@@ -519,6 +535,7 @@ namespace Nyangbingo.UI
             if (!initialized || string.IsNullOrWhiteSpace(objectId) ||
                 shell != null && shell.Screen != GameShellScreen.Gameplay || Time.timeScale <= 0f ||
                 !runtimeServices.JangdokStorage.TryRegister(objectId)) return false;
+            CancelEquipmentDrag();
             chestProgress = null;
             chestId = string.Empty;
             storageObjectId = objectId;
@@ -561,12 +578,14 @@ namespace Nyangbingo.UI
             if (!initialized || progress == null || string.IsNullOrWhiteSpace(id) ||
                 shell != null && shell.Screen != GameShellScreen.Gameplay || Time.timeScale <= 0f ||
                 !progress.TryGetContents(id, out _)) return false;
+            CancelEquipmentDrag();
             storageObjectId = string.Empty;
             chestProgress = progress;
             chestId = id;
             selectedIndex = 0;
             SetOpen(true);
             Refresh();
+            FindAnyObjectByType<MainGameGoalUiController>()?.CollapseWindow();
             Debug.Log($"[Nyangbingo] Chest loot storage opened: id={id}, slots={ChestProgress.StorageSlotCount}.");
             return true;
         }
@@ -597,9 +616,9 @@ namespace Nyangbingo.UI
             var canvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
             if (canvas == null || inventoryGridRoot == null || equipmentVisualRoot == null) return;
 
-            const float cell = 14f;
-            const float gap = 1f;
-            const int columns = 8;
+            const float cell = HudInventoryCellSize;
+            const float gap = HudInventoryCellGap;
+            const int columns = HudInventoryColumns;
             const int visibleRows = 4;
             // 트랙(3px)·핸들(5px) 원본은 격자(14px) 옆에서 너무 가늘다.
             // preserveAspect를 끄고 막대 자체를 8px로 늘려 트랙과 핸들의 중심을 맞춘다.
@@ -1549,6 +1568,9 @@ namespace Nyangbingo.UI
                     inventorySelectedIndex = capturedIndex;
                     ClickInventorySlot(runtimeServices.PlayerInventory, capturedIndex, pointer);
                 });
+                WireEquipmentDragSource(inventoryGridButtons[index], capturedIndex);
+                WireEquipmentDrop(inventoryGridButtons[index], pointer =>
+                    DropStorageItem(runtimeServices.PlayerInventory, capturedIndex, pointer));
                 var oldNumberHint = inventoryGridButtons[index].transform.Find("HotbarShortcut");
                 if (oldNumberHint != null) oldNumberHint.gameObject.SetActive(false);
             }
@@ -1573,6 +1595,7 @@ namespace Nyangbingo.UI
                     if (pointer.button == PointerEventData.InputButton.Right)
                         ShowEquipmentDescription(EquippedItemIdForVisualSlot(capturedIndex));
                 });
+                WireEquipmentDrop(equipmentSlotButtons[index], pointer => DropInventoryEquipment(capturedIndex, pointer));
                 // ColorTint Transition의 SelectedColor가 클릭 후에도 남아 그림자처럼 보인다.
                 // None으로 바꾸고 RefreshEquipmentVisual에서 직접 색을 지정한다.
                 equipmentSlotButtons[index].transition = Selectable.Transition.None;
@@ -1607,7 +1630,11 @@ namespace Nyangbingo.UI
 
             WireTransferGrid(storageLabels, TransferStorageSlot);
             WireTransferGrid(storagePlayerLabels, TransferPlayerSlot);
-            storageHintText.text = "좌클릭: 전체 집기/놓기 · 우클릭: 절반 집기/1개 놓기 · Shift+클릭: 전체/절반 즉시 이동 | E/ESC: 닫기";
+            for (var index = 0; index < storagePlayerLabels.Length; index++)
+                WireEquipmentDragSource(storagePlayerLabels[index].transform.parent.GetComponent<Button>(), index);
+            WireStorageDragSlots();
+            BuildStoragePopup();
+            storageHintText.text = StorageDragHelp;
             storageModeRoot.SetActive(false);
         }
 
@@ -1875,6 +1902,7 @@ namespace Nyangbingo.UI
         private void OpenPage(Page target)
         {
             HideDescription();
+            CancelEquipmentDrag();
             if (HasStorageMode && HasHeldInventoryItem && !ReturnHeldInventoryItem())
             {
                 ShowMessage("원래 보관함에 반환할 공간이 없습니다. 빈 슬롯에 놓아주세요.");
@@ -1949,6 +1977,80 @@ namespace Nyangbingo.UI
             Refresh();
             ResetDetailsScroll();
             EnsureSelectedRecipeVisible();
+        }
+
+        private void WireEquipmentDragSource(Button button, int index)
+        {
+            var source = button.GetComponent<InventoryEquipmentDragSource>() ??
+                         button.gameObject.AddComponent<InventoryEquipmentDragSource>();
+            source.Configure(pointer => BeginEquipmentDrag(index, button.gameObject, pointer), CancelEquipmentDrag);
+        }
+
+        public static void WireEquipmentDrop(Button button, Action<PointerEventData> dropped)
+        {
+            var trigger = button.GetComponent<EventTrigger>() ?? button.gameObject.AddComponent<EventTrigger>();
+            trigger.triggers ??= new List<EventTrigger.Entry>();
+            var entry = new EventTrigger.Entry { eventID = EventTriggerType.Drop };
+            entry.callback.AddListener(data =>
+            {
+                if (data is PointerEventData pointer && pointer.button == PointerEventData.InputButton.Left)
+                    dropped(pointer);
+            });
+            trigger.triggers.Add(entry);
+        }
+
+        private void BeginEquipmentDrag(int index, GameObject source, PointerEventData pointer)
+        {
+            if (HasStorageMode)
+            {
+                BeginStorageItemDrag(runtimeServices?.PlayerInventory, index, source, pointer);
+                return;
+            }
+            if (runtimeServices?.IsInitialized != true || HasHeldInventoryItem ||
+                source == null || !source.activeInHierarchy || equipmentVisualRoot == null ||
+                !equipmentVisualRoot.activeInHierarchy ||
+                (shell != null && shell.Screen != GameShellScreen.Gameplay)) return;
+            equipmentDrag ??= new EquipmentInventoryDrag(runtimeServices.PlayerInventory, gameDataCatalog.FindEquipment);
+            if (!equipmentDrag.Begin(index)) return;
+            equipmentDragSource = source;
+            equipmentDragPointerId = pointer.pointerId;
+            equipmentDropFeedback = null;
+            inventorySelectedIndex = index;
+            if (turretRuntime != null && turretRuntime.IsPlacementPreviewActive) turretRuntime.CancelPlacementPreview();
+            RefreshEquipmentVisual();
+        }
+
+        private void DropInventoryEquipment(int visualSlot, PointerEventData pointer)
+        {
+            if (!IsDraggingEquipment || pointer.pointerDrag != equipmentDragSource ||
+                pointer.pointerId != equipmentDragPointerId) return;
+            if (equipmentDragSource == null || !equipmentDragSource.activeInHierarchy ||
+                equipmentVisualRoot == null || !equipmentVisualRoot.activeInHierarchy ||
+                (shell != null && shell.Screen != GameShellScreen.Gameplay))
+            {
+                CancelEquipmentDrag();
+                return;
+            }
+            var name = gameDataCatalog.ItemDisplayName(equipmentDrag.ItemId, "장비");
+            var succeeded = equipmentDrag.TryDrop(visualSlot, runtimeServices.EquipmentSystem, runtimeServices.ActiveSlot);
+            CancelEquipmentDrag();
+            equipmentDropFeedback = succeeded ? "장착 완료" : "슬롯이 맞지 않음";
+            equipmentDropFeedbackUntil = Time.unscaledTime + 3f;
+            ShowMessage(succeeded ? $"{name} 장착 완료" : "이 칸에 장착할 수 없습니다. 맞는 장비 칸에 놓아주세요.");
+        }
+
+        private void CancelEquipmentDrag()
+        {
+            equipmentDrag?.Cancel();
+            storageDrag?.Cancel();
+            equipmentDragSource = null;
+            HideInventoryCursorPreview();
+            RefreshEquipmentVisual();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus) CancelEquipmentDrag();
         }
 
         public static void WireInventoryPointer(Button button, Action<PointerEventData> clicked)
@@ -2031,8 +2133,9 @@ namespace Nyangbingo.UI
         private void LateUpdate()
         {
             if (!initialized || runtimeServices?.InventoryCursor == null) return;
+            if (open && HasStorageMode) PositionStoragePopup();
             cursorOwner = this;
-            var visible = HasHeldInventoryItem &&
+            var visible = (HasHeldInventoryItem || IsDraggingItem) &&
                           (shell == null || shell.Screen == GameShellScreen.Gameplay);
             if (!visible)
             {
@@ -2051,7 +2154,9 @@ namespace Nyangbingo.UI
             }
             inventoryCursorIcon.gameObject.SetActive(true);
             inventoryCursorIcon.transform.SetAsLastSibling();
-            var slot = runtimeServices.InventoryCursor.Slots[0];
+            var slot = storageDrag?.IsActive == true ? storageDrag.Preview : IsDraggingEquipment
+                ? new InventorySlot { itemId = equipmentDrag.ItemId, amount = 1 }
+                : runtimeServices.InventoryCursor.Slots[0];
             var item = gameDataCatalog.FindItem(slot.itemId);
             inventoryCursorIcon.sprite = itemArtCatalog?.FindSprite(slot.itemId);
             inventoryCursorIcon.enabled = inventoryCursorIcon.sprite != null;
@@ -2531,6 +2636,7 @@ namespace Nyangbingo.UI
         private void SetOpen(bool value)
         {
             if (!value) HideDescription();
+            if (!value) CancelEquipmentDrag();
             if (!value && !ReturnHeldInventoryItem() &&
                 (shell == null || shell.Screen == GameShellScreen.Gameplay))
             {
@@ -2541,7 +2647,7 @@ namespace Nyangbingo.UI
             if (value) openedFrame = Time.frameCount;
             if (open == value)
             {
-                if (panel != null) panel.SetActive(value);
+                if (panel != null) panel.SetActive(value && !HasStorageMode);
                 return;
             }
             open = value;
@@ -2560,7 +2666,7 @@ namespace Nyangbingo.UI
             if (!open && codexModel != null) codexModel.TapOutside();
             if (!open && codexExpandedBackdrop != null) codexExpandedBackdrop.SetActive(false);
             openControllerCount = Mathf.Max(0, openControllerCount + (open ? 1 : -1));
-            if (panel != null) panel.SetActive(open);
+            if (panel != null) panel.SetActive(open && !HasStorageMode);
             message = string.Empty;
             Refresh();
         }
@@ -2572,6 +2678,7 @@ namespace Nyangbingo.UI
             foreach (Transform child in panel.transform)
                 if (child.name.StartsWith("MissingMaterialSource_", StringComparison.Ordinal))
                     child.gameObject.SetActive(false);
+            if (storageModeRoot != null) storageModeRoot.SetActive(open && HasStorageMode);
             // The inventory stays visible beside station UI, so inventory events
             // must update its slots regardless of the currently selected page.
             RefreshInventoryGridVisual();
@@ -2587,6 +2694,7 @@ namespace Nyangbingo.UI
             {
                 RefreshProductionQueue();
                 RefreshStorage();
+                RefreshCraftWindow();
                 return;
             }
             RefreshTabButtons();
@@ -2620,7 +2728,7 @@ namespace Nyangbingo.UI
                 collectButton.gameObject.SetActive(false);
                 debugCompleteButton.gameObject.SetActive(false);
                 messageText.gameObject.SetActive(false);
-                SetInventoryWindowActive(false);
+                SetInventoryWindowActive(true);
                 if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(true);
                 if (craftingListRoot != null) craftingListRoot.SetActive(false);
                 if (codexGridRoot != null) codexGridRoot.SetActive(false);
@@ -2716,13 +2824,16 @@ namespace Nyangbingo.UI
 
         private void RefreshStorage()
         {
+            // Chests only need their name and slots. Keep the cooling status for jars.
+            if (storageHintText != null) storageHintText.gameObject.SetActive(chestProgress == null);
+            if (storageHintText != null) storageHintText.text = string.IsNullOrEmpty(message) ? StorageDragHelp : message;
             if (storageTemperatureTrack != null) storageTemperatureTrack.gameObject.SetActive(false);
             Nyangbingo.Inventory.Inventory storage;
             if (chestProgress != null)
             {
                 titleText.text = "자연 상자 · 좌클릭 전체 · 우클릭 절반/1개";
                 if (storageLabelText != null)
-                    storageLabelText.text = $"상자 내용물 · {ChestProgress.StorageSlotCount}슬롯";
+                    storageLabelText.text = "상자";
                 if (!chestProgress.TryGetContents(chestId, out storage))
                 {
                     chestProgress = null;
@@ -2763,7 +2874,8 @@ namespace Nyangbingo.UI
                                 : condition.HasIce && condition.Met && storageTemperature.HasRecentSuccess(storageObjectId)
                                     ? gameDataCatalog.FindGuideMessage("storage_ok")?.Text ?? string.Empty
                                     : (condition.Met ? "❄ " : "") + values;
-                        if (!string.IsNullOrEmpty(message)) storageHintText.text = message;
+                        storageHintText.text = !string.IsNullOrEmpty(message) ? message :
+                            StorageDragHelp + (string.IsNullOrEmpty(storageHintText.text) ? "" : "\n" + storageHintText.text);
                         RefreshStorageTemperatureBar(condition);
                     }
                     RefreshTransferSlots(storageLabels, storageIcons, storage.Slots,
@@ -3245,6 +3357,8 @@ namespace Nyangbingo.UI
             if (tilePalette == null) tilePalette = FindAnyObjectByType<MainGameTilePaletteController>();
             inventorySelectedIndex = Mathf.Clamp(inventorySelectedIndex, 0, Mathf.Max(0, inventory.Slots.Count - 1));
             var selectedItem = CurrentInventoryItem();
+            var selectedEquipment = selectedItem != null &&
+                (ActiveSlotSystem.IsAllowedItemId(selectedItem.Id) || gameDataCatalog.FindEquipment(selectedItem.Id) != null);
             var summonBoss = selectedItem != null ? stationSource?.FindBossForSummonItem(selectedItem.Id) : null;
             var summonReason = string.Empty;
             var canSummon = summonBoss != null &&
@@ -3275,11 +3389,17 @@ namespace Nyangbingo.UI
                     ? $"E · {selectedItem.DisplayName} 사용" : "HP가 가득 찼습니다";
             if (iceShard || talismanItem)
                 primaryButton.GetComponentInChildren<Text>().text = $"E · {selectedItem.DisplayName} 사용";
+            if (selectedEquipment)
+                primaryButton.GetComponentInChildren<Text>().text = IsDraggingEquipment ? "초록 칸에 놓기" :
+                    !string.IsNullOrEmpty(equipmentDropFeedback) && Time.unscaledTime < equipmentDropFeedbackUntil
+                        ? equipmentDropFeedback : "드래그로 장착";
             primaryButton.interactable = canHeal || canCool || talismanItem || canSummon || canPlace;
             if (inventoryHintText != null)
             {
                 inventoryHintText.gameObject.SetActive(true);
-                inventoryHintText.text = isCatnip
+                inventoryHintText.text = !string.IsNullOrEmpty(message) ? message
+                    : selectedEquipment ? "장착 가능한 칸은 초록색 · 장비는 가방에 보관됩니다."
+                    : isCatnip
                     ? "사용 즉시 HP를 25 회복합니다."
                     : canSummon
                     ? $"사용 시 {summonBoss.DisplayName} 소환 확인창이 열립니다."
@@ -3449,9 +3569,12 @@ namespace Nyangbingo.UI
                 background.color = background.sprite != null
                     ? Color.white
                     : new Color(.14f, .2f, .28f, 1f);
-                RefreshSlotSelectionBorder(background, index == selectedSlot);
+                var validDrop = IsDraggingEquipment && equipmentDrag.CanDrop(index);
+                if (IsDraggingEquipment)
+                    background.color = validDrop ? new Color(.45f, 1f, .55f, 1f) : new Color(.55f, .55f, .55f, 1f);
+                RefreshSlotSelectionBorder(background, IsDraggingEquipment ? validDrop : index == selectedSlot);
                 var button = equipmentSlotButtons[index];
-                if (button != null) button.interactable = !string.IsNullOrEmpty(itemId);
+                if (button != null) button.interactable = IsDraggingEquipment || !string.IsNullOrEmpty(itemId);
                 var icon = equipmentSlotIcons[index];
                 if (icon == null) continue;
                 icon.sprite = itemArtCatalog?.FindSprite(itemId);
@@ -4123,6 +4246,8 @@ namespace Nyangbingo.UI
 
         private string DefaultHelpText()
         {
+            if (page == Page.Equipment)
+                return "장비를 가방에서 맞는 칸으로 드래그해 장착 · E 장착/해제 · ESC 닫기";
             if (page == Page.Crafting)
                 return IsSmeltingStation(openedStation)
                     ? furnaceSmeltingView
@@ -4235,6 +4360,7 @@ namespace Nyangbingo.UI
         private void OnDisable()
         {
             HideDescription();
+            CancelEquipmentDrag();
             ReturnHeldInventoryItem();
             HideInventoryCursorPreview();
             if (cursorOwner == this) cursorOwner = null;

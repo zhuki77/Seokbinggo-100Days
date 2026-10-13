@@ -365,6 +365,32 @@ namespace Nyangbingo.Inventory
             return true;
         }
 
+        // A drag is only a preview until release. Commit both cells before notifying
+        // observers, so saves/equipment listeners never see an item temporarily missing.
+        public bool TryDropSlotTo(int sourceIndex, Inventory target, int targetIndex, InventorySlot expectedSource)
+        {
+            if (target == null || sourceIndex < 0 || sourceIndex >= Capacity ||
+                targetIndex < 0 || targetIndex >= target.Capacity ||
+                ReferenceEquals(this, target) && sourceIndex == targetIndex ||
+                expectedSource.amount <= 0 ||
+                !EqualityComparer<InventorySlot>.Default.Equals(slots[sourceIndex], expectedSource)) return false;
+            var incoming = target.FindItem(expectedSource.itemId);
+            var destination = target.slots[targetIndex];
+            if (incoming == null || incoming.MaxStack < expectedSource.amount ||
+                destination.amount > 0 && (FindItem(destination.itemId)?.MaxStack ?? 0) < destination.amount)
+                return false;
+            var cursor = new Inventory(findItem, 1);
+            cursor.slots[0] = expectedSource;
+            var planned = new Inventory(target.findItem, 1);
+            planned.slots[0] = destination;
+            if (!planned.TryClickSlot(0, cursor, false)) return false;
+            slots[sourceIndex] = cursor.slots[0];
+            target.slots[targetIndex] = planned.slots[0];
+            Changed?.Invoke();
+            if (!ReferenceEquals(this, target)) target.Changed?.Invoke();
+            return true;
+        }
+
         public bool CanSwapSlots(int firstIndex, int secondIndex)
         {
             if (firstIndex < 0 || firstIndex >= slots.Count ||

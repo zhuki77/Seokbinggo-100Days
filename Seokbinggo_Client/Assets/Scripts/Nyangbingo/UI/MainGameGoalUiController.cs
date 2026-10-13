@@ -173,6 +173,16 @@ namespace Nyangbingo.UI
             services.StorageTemperature.DailyProcessed += HandleGuideDawn;
         }
 
+        /// <summary>Fold the quest without changing progress; the existing button/L key can reopen it.</summary>
+        public void CollapseWindow()
+        {
+            windowHidden = true;
+            listOpen = false;
+            if (list != null) list.gameObject.SetActive(false);
+            if (root != null) root.gameObject.SetActive(false);
+            if (questShadow != null) questShadow.enabled = false;
+        }
+
         private void LateUpdate()
         {
             if (root == null || services?.Goals == null) return;
