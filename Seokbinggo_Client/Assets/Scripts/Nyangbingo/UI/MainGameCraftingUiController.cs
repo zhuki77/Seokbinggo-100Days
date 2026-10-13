@@ -571,6 +571,7 @@ namespace Nyangbingo.UI
             selectedIndex = 0;
             SetOpen(true);
             Refresh();
+            FindAnyObjectByType<MainGameGoalUiController>()?.CollapseWindow();
             Debug.Log($"[Nyangbingo] Chest loot storage opened: id={id}, slots={ChestProgress.StorageSlotCount}.");
             return true;
         }

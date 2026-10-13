@@ -19,7 +19,7 @@ using Bag = Nyangbingo.Inventory.Inventory;
 public sealed class StorageDragLivePointerReplay : BaseInput
 {
     private Vector2 pointer;
-    private bool down, held, up, secondary, escape;
+    private bool down, held, up, secondary, escape, questToggle;
     private bool running;
     private StandaloneInputModule module;
     private BaseInput previousInput;
@@ -52,7 +52,7 @@ public sealed class StorageDragLivePointerReplay : BaseInput
     private void Update()
     {
         if (running) GameplayInput.Sample(0f, pointer, held, secondary,
-            escape ? new[] { KeyCode.Escape } : Array.Empty<KeyCode>());
+            escape ? new[] { KeyCode.Escape } : questToggle ? new[] { MainGameGoalUiController.WindowToggleKey } : Array.Empty<KeyCode>());
     }
 
     private IEnumerator Replay()
@@ -89,9 +89,25 @@ public sealed class StorageDragLivePointerReplay : BaseInput
             camera.transform.position = new Vector3(chestWorld.x, chestWorld.y, camera.transform.position.z);
             Time.timeScale = 1f;
             for (var frame = 0; frame < 10; frame++) { pointer = camera.WorldToScreenPoint(chestWorld); yield return null; }
+            var quest = FindAnyObjectByType<MainGameGoalUiController>();
+            Require(quest != null, "quest controller missing");
+            var questRoot = Get<RectTransform>(quest, "root");
+            var questList = Get<RectTransform>(quest, "list");
+            var questReopen = Get<Button>(quest, "reopenButton");
+            var selectedGoal = runtime.Goals.Progress.Current?.Id;
+            if (Get<bool>(quest, "windowHidden")) yield return Click(questReopen);
+            Require(questRoot.gameObject.activeInHierarchy, "quest should start expanded before opening chest");
+            Require(!ui.TryOpenChest(null, chest.id) && !ui.TryOpenChest(bootstrap.Session.ChestProgress, "missing-qa-chest") &&
+                    questRoot.gameObject.activeInHierarchy && !Get<bool>(quest, "windowHidden"),
+                "failed chest open must leave the quest unchanged");
+            pointer = camera.WorldToScreenPoint(chestWorld);
             secondary = true; yield return null; secondary = false; yield return null; yield return null;
             Require(ui.IsOpen && Get<string>(ui, "chestId") == chest.id,
                 $"world right-click did not open pointed chest (screen={shell.Screen}, ui={GameplayInput.IsPointerOverUi()}, blocked={MainGameCraftingUiController.BlocksGameplayInput}, target={player.TryGetHighlightedInteractionTarget(out _, out _, out _)})");
+            Require(Get<bool>(quest, "windowHidden") && !questRoot.gameObject.activeInHierarchy &&
+                    !Get<bool>(quest, "listOpen") && !questList.gameObject.activeInHierarchy &&
+                    runtime.Goals.Progress.Current?.Id == selectedGoal,
+                "opening chest must fold the quest and selection list without changing the goal");
             Require(bootstrap.Session.ChestProgress.TryGetContents(chest.id, out var storage), "chest contents missing");
             var catalog = Get<GameDataCatalog>(ui, "gameDataCatalog");
             var fixture = new Bag(catalog.FindItem, storage.Capacity);
@@ -181,10 +197,21 @@ public sealed class StorageDragLivePointerReplay : BaseInput
             Require(ui.IsOpen && Snapshot(runtime.PlayerInventory, storage) == beforeCancel, "escape must cancel only the drag");
             escape = true; yield return null; escape = false; yield return null; yield return null;
             Require(!ui.IsOpen && !popup.activeSelf && runtime.InventoryCursor.IsEmpty, "popup close");
+            Require(Get<bool>(quest, "windowHidden") && !questRoot.gameObject.activeInHierarchy && questReopen.gameObject.activeInHierarchy,
+                "quest must stay folded after chest close with its reopen button available");
+            yield return Click(questReopen);
+            Require(!Get<bool>(quest, "windowHidden") && questRoot.gameObject.activeInHierarchy,
+                "quest button must reopen after chest close");
+            questToggle = true; yield return null; questToggle = false; yield return null; yield return null;
+            Require(Get<bool>(quest, "windowHidden") && !questRoot.gameObject.activeInHierarchy, "L must fold the quest");
+            questToggle = true; yield return null; questToggle = false; yield return null; yield return null;
+            Require(!Get<bool>(quest, "windowHidden") && questRoot.gameObject.activeInHierarchy, "L must reopen the quest");
             pointer = camera.WorldToScreenPoint(chestWorld);
             secondary = true; yield return null; secondary = false; yield return null; yield return null;
             Require(ui.IsOpen && Get<string>(ui, "chestId") == chest.id && Snapshot(runtime.PlayerInventory, storage) == beforeCancel,
                 "right-click reopen must preserve chest contents");
+            Require(Get<bool>(quest, "windowHidden") && !questRoot.gameObject.activeInHierarchy,
+                "reopening chest must fold the quest again");
             // Exercise the last visible cell and drag again after the popup was reopened.
             yield return Drag(storageButtons[2], storageButtons[39]);
             Require(storage.Slots[39].itemId == "catnip" && storage.Slots[2].amount == 0, "last chest cell");
@@ -194,11 +221,16 @@ public sealed class StorageDragLivePointerReplay : BaseInput
             Invoke(ui, "Refresh");
             var output = Path.GetFullPath(Path.Combine(Application.dataPath, "../Temp/storage-drag-live.png"));
             ScreenCapture.CaptureScreenshot(output);
-            Debug.Log("[StorageDragDrop] LIVE PASS: aligned inventory slot art and hit areas, transparent chest with outer frame, popup bounds, unchanged HUD, eleven drags (transfer/swap/merge/cancel/equipment/last cell), right-click open/reopen, Escape close and item conservation. " + output);
+            Debug.Log("[StorageDragDrop] LIVE PASS: aligned inventory slot art and hit areas, transparent chest with outer frame, popup bounds, unchanged HUD, eleven drags (transfer/swap/merge/cancel/equipment/last cell), right-click open/reopen, quest auto-collapse, button/L reopen, invalid chest preserves quest, Escape close and item conservation. " + output);
         }
         finally { Restore(); Destroy(gameObject); }
     }
 
+    private IEnumerator Click(Button button)
+    {
+        yield return Press(button);
+        held = false; up = true; yield return null; up = false; yield return null; yield return null;
+    }
     private IEnumerator Press(Button button)
     {
         pointer = Centre(button); yield return null; yield return null;
