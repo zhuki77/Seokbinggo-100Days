@@ -274,6 +274,15 @@ namespace Nyangbingo.UI
         public string DisplayedText => displayedText;
         public int VisibleGlyphCount => activeGlyphCount;
         public float RenderedWidth => content != null ? content.sizeDelta.x : 0f;
+        public float GlyphScale => glyphScale;
+
+        public void SetScale(float scale)
+        {
+            scale = Mathf.Max(.1f, scale);
+            if (Mathf.Approximately(glyphScale, scale)) return;
+            glyphScale = scale;
+            RefreshImages();
+        }
 
         public void ConfigureForRuntime(IReadOnlyList<Sprite> source, float scale = 1f)
         {

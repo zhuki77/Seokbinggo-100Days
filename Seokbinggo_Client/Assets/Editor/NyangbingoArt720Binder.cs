@@ -148,7 +148,8 @@ public static class NyangbingoArt720Binder
         ("yokaiTearBalanceFrames", "Assets/Art/UI/yokai_tear_balance.aseprite", 4),
         ("fuelGaugeFrames", "Assets/Art/UI/fuel_gauge.aseprite", 4),
         ("saveIndicatorFrames", "Assets/Art/UI/save_indicator.aseprite", 6),
-        ("playerVitalsFrames", "Assets/Art/UI/player_vitals_hotbar.aseprite", 12),
+        ("playerVitalsFrames", "Assets/Art/UI/Hud/player_hp.aseprite", 12),
+        ("sealGaugeFrames", "Assets/Art/UI/Hud/seal_gauge.aseprite", 3),
         ("button1x1Frames", "Assets/Art/UI/Common/button_1x1.aseprite", 2),
         ("button1x2Frames", "Assets/Art/UI/Common/button_1x2.aseprite", 2),
         ("button1x4Frames", "Assets/Art/UI/Common/button_1x4.aseprite", 2),
@@ -255,7 +256,8 @@ public static class NyangbingoArt720Binder
         ("scrollHandle", "Assets/Art/UI/Common/scroll_handle.aseprite"),
         ("labelHp", "Assets/Art/UI/Shell/label_hp.aseprite"),
         ("labelDegree", "Assets/Art/UI/Shell/label_degree.aseprite"),
-        ("labelTemperature", "Assets/Art/UI/Shell/label_temperature.aseprite"),
+        ("labelTemperature", "Assets/Art/UI/Hud/temperature_word.aseprite"),
+        ("hotbarFrame", "Assets/Art/UI/Hud/hotbar.aseprite"),
         ("labelDay", "Assets/Art/UI/Shell/label_day.aseprite")
     };
 
@@ -603,7 +605,7 @@ public static class NyangbingoArt720Binder
         var sprite = frames.GetArrayElementAtIndex(0).objectReferenceValue as Sprite;
         return sprite != null && string.Equals(
             AssetDatabase.GetAssetPath(sprite),
-            "Assets/Art/UI/player_vitals_hotbar.aseprite",
+            "Assets/Art/UI/Hud/player_hp.aseprite",
             StringComparison.Ordinal);
     }
 

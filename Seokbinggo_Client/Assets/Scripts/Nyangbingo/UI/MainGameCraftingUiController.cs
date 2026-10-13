@@ -721,12 +721,12 @@ namespace Nyangbingo.UI
                 if (label != null) label.text = tabLabels[index];
             }
 
-            if (titleText != null)
-            {
-                var titleRect = titleText.rectTransform;
-                titleRect.anchoredPosition = new Vector2(46f, 38f);
-                titleRect.sizeDelta = new Vector2(110f, 14f);
-            }
+            // 체력 틀은 위 여백 4 + 높이 64. 슬롯은 루트 위쪽보다 약 5px 아래에서 시작하므로
+            // 루트를 74만큼 내려 칸이 틀과 겹치지 않게 한다.
+            equip.anchoredPosition = new Vector2(-4f, -74f);
+            var titleRect = titleText.rectTransform;
+            titleRect.anchoredPosition = new Vector2(46f, 38f);
+            titleRect.sizeDelta = new Vector2(110f, 14f);
         }
 
         private void FitInventorySlotContents(float cell)
@@ -1359,7 +1359,10 @@ namespace Nyangbingo.UI
                         ? new Color(.96f, .97f, 1f, 1f)
                         : new Color(.62f, .66f, .78f, 1f);
             }
-            if (craftWindowToggleButton != null) craftWindowToggleButton.gameObject.SetActive(true);
+            if (craftWindowToggleButton != null)
+                craftWindowToggleButton.gameObject.SetActive(
+                    open && page == Page.Crafting &&
+                    (IsShowingSmeltingList || StationOffersCraftAndSmelt(openedStation)));
             var frames = smelting
                 ? gameplayArtCatalog?.CraftSmeltButtonFrames
                 : gameplayArtCatalog?.CraftButtonFrames;
@@ -2713,6 +2716,8 @@ namespace Nyangbingo.UI
                 furnaceSmeltingView = false;
                 craftingFilter = CraftingStationFilter.None;
                 craftWindowIndex = 0;
+                if (craftWindowToggleButton != null)
+                    craftWindowToggleButton.gameObject.SetActive(false);
                 storageObjectId = string.Empty;
                 chestProgress = null;
                 chestId = string.Empty;
@@ -4066,6 +4071,37 @@ namespace Nyangbingo.UI
         }
 
         private void HandleEquipmentAdded(EquipmentDefinition _) => Refresh();
+
+        private bool StationOffersCraftAndSmelt(CraftingStation station)
+        {
+            if (station != CraftingStation.Furnace && station != CraftingStation.Foundry) return false;
+            if (gameDataCatalog == null) return false;
+            var smeltKind = station == CraftingStation.Foundry
+                ? SmeltingStationKind.Foundry
+                : SmeltingStationKind.Furnace;
+            var hasSmelt = false;
+            for (var index = 0; index < gameDataCatalog.Smelting.Count; index++)
+            {
+                var definition = gameDataCatalog.Smelting[index];
+                if (definition != null && definition.StationKind == smeltKind)
+                {
+                    hasSmelt = true;
+                    break;
+                }
+            }
+            if (!hasSmelt) return false;
+            if (visibleRecipes.Count == 0) RebuildVisibleRecipes();
+            var smithyUnlocked = runtimeServices?.Seokbinggo?.IsSmithyUnlocked == true;
+            for (var index = 0; index < visibleRecipes.Count; index++)
+            {
+                var recipe = visibleRecipes[index];
+                if (recipe == null) continue;
+                if (!IsRecipeVisibleAtStation(recipe.Station, station)) continue;
+                if (!IsSmithyRecipeAllowed(recipe.Station, smithyUnlocked)) continue;
+                if (RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook)) return true;
+            }
+            return false;
+        }
 
         private CraftingStation NearbyStation() => openedStation == CraftingStation.None
             ? CraftingStation.None

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Bosses;
@@ -519,18 +519,29 @@ namespace Nyangbingo.World
             bossObject.transform.localScale = Vector3.one * BossScale;
             bossObject.transform.position = position;
             var health = bossObject.AddComponent<Health>();
-            var collider = bossObject.AddComponent<CircleCollider2D>();
             // The boss root is enlarged for presentation. Divide every movement collider by
             // that scale so the world-space radius remains the value returned by
             // PhysicalRadiusForBoss; otherwise grounded bosses become 1.3 tiles wide and
             // continuously detect ordinary terrain as a step obstacle.
             var movementColliderScale = BossScale;
-            collider.radius =
-                WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind) /
-                movementColliderScale;
-            collider.offset =
-                Vector2.up * (WorldMobPhysicsBody.ColliderVerticalOffsetForBoss(definition.Kind) /
-                              movementColliderScale);
+            Collider2D collider;
+            if (locomotion == WorldMobLocomotion.Grounded)
+            {
+                // 발 캡슐은 한 칸 구덩이를 지나고, 겹친 몸통 박스는 피격 판정에만 쓴다.
+                collider = WorldMobPhysicsBody.AddGroundBossColliders(
+                    bossObject, movementColliderScale);
+            }
+            else
+            {
+                var circle = bossObject.AddComponent<CircleCollider2D>();
+                circle.radius =
+                    WorldMobPhysicsBody.PhysicalRadiusForBoss(definition.Kind) /
+                    movementColliderScale;
+                circle.offset =
+                    Vector2.up * (WorldMobPhysicsBody.ColliderVerticalOffsetForBoss(definition.Kind) /
+                                  movementColliderScale);
+                collider = circle;
+            }
             bossObject.AddComponent<Rigidbody2D>();
             var physicsBody = bossObject.AddComponent<WorldMobPhysicsBody>();
             physicsBody.ConfigureForRuntime(locomotion, bootstrap.TileService);
@@ -573,6 +584,10 @@ namespace Nyangbingo.World
             {
                 var characterAnimator = visualObject.AddComponent<RuntimeCharacterSpriteAnimator>();
                 characterAnimator.Configure(bossArt, 15);
+                if (locomotion == WorldMobLocomotion.Grounded)
+                    visualObject.transform.localPosition = Vector3.up *
+                        RuntimeCharacterSpriteAnimator.CalculateGroundedVisualLocalY(
+                            collider, bossRenderer);
                 if (definition.Kind == BossKind.Imugi)
                     characterAnimator.SetFacing(Vector2.right);
                 combat.BindCharacterAnimator(characterAnimator);

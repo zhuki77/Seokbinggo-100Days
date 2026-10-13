@@ -49,8 +49,13 @@ namespace Nyangbingo.World
             Collider2D movementCollider, SpriteRenderer renderer)
         {
             if (movementCollider == null) return 0f;
-            var halfHeight = movementCollider is BoxCollider2D box ? box.size.y * .5f
-                : movementCollider is CircleCollider2D circle ? circle.radius : 0f;
+            var halfHeight = movementCollider switch
+            {
+                BoxCollider2D box => box.size.y * .5f,
+                CircleCollider2D circle => circle.radius,
+                CapsuleCollider2D capsule => capsule.size.y * .5f,
+                _ => 0f
+            };
             var colliderBottom = movementCollider.offset.y - halfHeight;
             if (renderer?.sprite == null) return colliderBottom;
             var spriteBottom = renderer.sprite.bounds.min.y * renderer.transform.localScale.y;

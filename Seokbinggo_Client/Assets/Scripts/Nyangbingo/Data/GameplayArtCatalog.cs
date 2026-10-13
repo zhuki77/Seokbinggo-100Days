@@ -169,6 +169,10 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> FuelGaugeFrames => fuelGaugeFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> SaveIndicatorFrames => saveIndicatorFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerVitalsFrames => playerVitalsFrames ?? Array.Empty<Sprite>();
+        [SerializeField] private Sprite hotbarFrame;
+        [SerializeField] private Sprite[] sealGaugeFrames = Array.Empty<Sprite>();
+        public Sprite HotbarFrame => hotbarFrame;
+        public IReadOnlyList<Sprite> SealGaugeFrames => sealGaugeFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x1Frames => button1x1Frames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x2Frames => button1x2Frames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x4Frames => button1x4Frames ?? Array.Empty<Sprite>();
