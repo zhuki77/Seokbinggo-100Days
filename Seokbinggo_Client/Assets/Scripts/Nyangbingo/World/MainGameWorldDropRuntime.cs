@@ -46,6 +46,7 @@ namespace Nyangbingo.World
             public Rigidbody2D Body;
             public Collider2D Collider;
             public float PickupDelay;
+            public bool MagnetActive;
             public bool TheftProtected;
             public bool Escaping;
             public int EscapeRevision = -1;
@@ -498,15 +499,23 @@ namespace Nyangbingo.World
                 if (player == null || inventory == null) continue;
                 var delta = (Vector2)player.position - (Vector2)entry.Root.transform.position;
                 entry.PickupDelay = Mathf.Max(0f, entry.PickupDelay - Time.deltaTime);
-                var magnetActive = entry.PickupDelay <= 0f && delta.sqrMagnitude <= MagnetRadius * MagnetRadius;
+                var canReceive = inventory.CanAddWithStorageState(entry.Item.Id, entry.Amount,
+                    entry.StorageState.hasStorageCondition, entry.StorageState.EffectiveStorageCondition,
+                    entry.StorageState.storageMeltRemainder);
+                var magnetActive = canReceive && entry.PickupDelay <= 0f &&
+                    delta.sqrMagnitude <= MagnetRadius * MagnetRadius;
                 if (entry.Body != null)
                 {
+                    // Stop the pull already in flight if another pickup filled the inventory.
+                    if (entry.MagnetActive && !canReceive)
+                        entry.Body.linearVelocity = Vector2.zero;
                     entry.Body.gravityScale = magnetActive ? 0f : ResolveGravityScale();
                     if (magnetActive && delta.sqrMagnitude > Mathf.Epsilon)
                         entry.Body.linearVelocity = delta.normalized * MagnetSpeed;
                     else if (entry.Body.linearVelocity.y < -MaximumFallSpeed)
                         entry.Body.linearVelocity = new Vector2(entry.Body.linearVelocity.x, -MaximumFallSpeed);
                 }
+                entry.MagnetActive = magnetActive;
                 if (!magnetActive) continue;
                 if (((Vector2)player.position - (Vector2)entry.Root.transform.position).sqrMagnitude >
                     PickupRadius * PickupRadius) continue;

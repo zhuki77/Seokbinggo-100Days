@@ -149,14 +149,21 @@ namespace Nyangbingo.Inventory
         public bool TryAdd(string itemId, int amount)
             => TryAddWithStorageState(itemId, amount, false, 1f, 0f);
 
-        public bool TryAddWithStorageState(string itemId, int amount, bool hasCondition,
+        public bool CanAddWithStorageState(string itemId, int amount, bool hasCondition,
             float condition01, float meltRemainder)
         {
             var item = findItem(itemId);
-            if (item == null || item.MaxStack <= 0 || amount <= 0 ||
-                !IsValidStorageState(hasCondition, condition01, meltRemainder) ||
-                CapacityFor(itemId, item.MaxStack, hasCondition, condition01, meltRemainder) < amount)
+            return item != null && item.MaxStack > 0 && amount > 0 &&
+                IsValidStorageState(hasCondition, condition01, meltRemainder) &&
+                CapacityFor(itemId, item.MaxStack, hasCondition, condition01, meltRemainder) >= amount;
+        }
+
+        public bool TryAddWithStorageState(string itemId, int amount, bool hasCondition,
+            float condition01, float meltRemainder)
+        {
+            if (!CanAddWithStorageState(itemId, amount, hasCondition, condition01, meltRemainder))
                 return false;
+            var item = findItem(itemId);
             for (var i = 0; i < slots.Count && amount > 0; i++)
             {
                 var slot = slots[i];
