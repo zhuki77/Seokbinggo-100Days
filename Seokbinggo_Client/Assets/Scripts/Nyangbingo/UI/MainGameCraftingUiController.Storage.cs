@@ -10,8 +10,13 @@ namespace Nyangbingo.UI
     {
         private const string StorageDragHelp = "드래그: 이동 · Shift+클릭: 빠른 이동\n우클릭: 절반/1개 · E/ESC: 닫기";
         private InventorySlotDrag storageDrag;
+        private RectTransform storageHudCounter;
         private bool IsDraggingItem => IsDraggingEquipment || storageDrag?.IsActive == true;
-        private static readonly Vector2 StoragePopupSize = new Vector2(129f, 125f);
+        private const float StorageHeaderHeight = 14f;
+        private static readonly Vector2 StorageGridSize = new Vector2(
+            HudInventoryColumns * HudInventoryCellSize + (HudInventoryColumns - 1) * HudInventoryCellGap,
+            5 * HudInventoryCellSize + 4 * HudInventoryCellGap);
+        private static readonly Vector2 StoragePopupSize = StorageGridSize + new Vector2(0f, StorageHeaderHeight);
 
         private bool TryGetOpenStorage(out Bag storage)
         {
@@ -99,36 +104,54 @@ namespace Nyangbingo.UI
         {
             var canvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
             if (canvas == null) return;
+            storageHudCounter = FindAnyObjectByType<MainGameHudController>()?.TearBalanceRect;
             var root = (RectTransform)storageModeRoot.transform;
             root.SetParent(canvas.transform, false);
             PlaceTopLeft(root, 4f, 69f, StoragePopupSize.x, StoragePopupSize.y);
             var background = storageModeRoot.GetComponent<Image>() ?? storageModeRoot.AddComponent<Image>();
-            background.color = new Color(.075f, .085f, .13f, .98f);
+            // No large panel or border: the same individual cells as the HUD inventory.
+            background.color = Color.clear;
             background.raycastTarget = true;
-            var border = storageModeRoot.GetComponent<Outline>() ?? storageModeRoot.AddComponent<Outline>();
-            border.effectColor = new Color(.5f, .54f, .68f, 1f);
-            border.effectDistance = new Vector2(1f, -1f);
+            if (storageModeRoot.TryGetComponent<Outline>(out var border)) border.enabled = false;
             // Keep the authored storage slots and the existing HUD inventory. No duplicate player grid.
             storageModeRoot.transform.Find("PlayerGrid")?.gameObject.SetActive(false);
             storageModeRoot.transform.Find("PlayerLabel")?.gameObject.SetActive(false);
             var grid = (RectTransform)storageModeRoot.transform.Find("StorageGrid");
             if (grid != null)
             {
-                PlaceTopLeft(grid, 5f, 20f, 119f, 74f);
+                PlaceTopLeft(grid, 0f, StorageHeaderHeight, StorageGridSize.x, StorageGridSize.y);
                 var layout = grid.GetComponent<GridLayoutGroup>();
                 if (layout != null)
                 {
-                    layout.cellSize = new Vector2(14f, 14f);
-                    layout.spacing = Vector2.one;
+                    layout.cellSize = Vector2.one * HudInventoryCellSize;
+                    layout.spacing = Vector2.one * HudInventoryCellGap;
                     layout.padding = new RectOffset();
                     layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                    layout.constraintCount = 8;
+                    layout.constraintCount = HudInventoryColumns;
                     layout.startCorner = GridLayoutGroup.Corner.UpperLeft;
                     layout.startAxis = GridLayoutGroup.Axis.Horizontal;
                     layout.childAlignment = TextAnchor.UpperLeft;
                 }
-                // Authored empty cells are drawn by this atlas, not by each transparent button.
-                if (grid.TryGetComponent<Image>(out var gridImage)) gridImage.enabled = true;
+                // The old full-grid atlas had different padding and stretched the cells.
+                if (grid.TryGetComponent<Image>(out var gridImage)) gridImage.enabled = false;
+            }
+            foreach (var label in storageLabels)
+            {
+                if (label == null) continue;
+                var button = label.transform.parent.GetComponent<Button>();
+                var cellImage = button.GetComponent<Image>();
+                cellImage.sprite = gameplayArtCatalog?.InventorySlot;
+                cellImage.type = Image.Type.Simple;
+                cellImage.preserveAspect = true;
+                cellImage.color = cellImage.sprite != null ? Color.white : new Color(.12f, .17f, .25f, .96f);
+                cellImage.enabled = cellImage.raycastTarget = true;
+                button.targetGraphic = cellImage;
+                button.transition = Selectable.Transition.None;
+                if (inventoryGridLabels.Length > 0 && inventoryGridLabels[0] != null)
+                {
+                    label.font = inventoryGridLabels[0].font;
+                    label.fontStyle = inventoryGridLabels[0].fontStyle;
+                }
             }
             foreach (var icon in storageIcons)
                 if (icon != null)
@@ -136,22 +159,20 @@ namespace Nyangbingo.UI
                     var rect = icon.rectTransform;
                     rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one * .5f;
                     rect.anchoredPosition = Vector2.zero;
-                    rect.sizeDelta = new Vector2(12f, 12f);
+                    rect.sizeDelta = Vector2.one * (HudInventoryCellSize - 2f);
                     icon.preserveAspect = true;
                     icon.raycastTarget = false;
                 }
-            PlaceTopLeft(storageLabelText.rectTransform, 5f, 4f, 101f, 12f);
+            PlaceTopLeft(storageLabelText.rectTransform, 0f, 0f, StorageGridSize.x, 12f);
             storageLabelText.fontSize = 8;
             storageLabelText.alignment = TextAnchor.MiddleLeft;
             storageLabelText.raycastTarget = false;
-            PlaceTopLeft(storageHintText.rectTransform, 5f, 98f, 119f, 24f);
+            PlaceTopLeft(storageHintText.rectTransform, 0f, StoragePopupSize.y + 4f, StorageGridSize.x, 28f);
             storageHintText.fontSize = 6;
             storageHintText.alignment = TextAnchor.UpperLeft;
             storageHintText.horizontalOverflow = HorizontalWrapMode.Wrap;
             storageHintText.verticalOverflow = VerticalWrapMode.Truncate;
             storageHintText.raycastTarget = false;
-            var close = CreateButton(root, "CloseStoragePopup", "×", Vector2.zero, new Vector2(14f, 12f), () => SetOpen(false));
-            PlaceTopLeft(close.GetComponent<RectTransform>(), 110f, 3f, 14f, 12f);
         }
 
         // Top-left coordinates, independent of resolution; prefer below the unchanged inventory.
@@ -178,9 +199,17 @@ namespace Nyangbingo.UI
             var max = canvas.InverseTransformPoint(inventoryRect.TransformPoint(inventoryRect.rect.max));
             var inventory = new Rect(min.x - canvas.rect.xMin, canvas.rect.yMax - max.y,
                 max.x - min.x, max.y - min.y);
-            var scale = Mathf.Min(1f, (canvas.rect.width - 8f) / StoragePopupSize.x,
-                (canvas.rect.height - 8f) / StoragePopupSize.y);
-            var placement = ResolveStoragePopupRect(canvas.rect.size, inventory, StoragePopupSize * scale);
+            if (storageHudCounter != null && storageHudCounter.gameObject.activeInHierarchy)
+            {
+                var footerBottom = canvas.InverseTransformPoint(storageHudCounter.TransformPoint(storageHudCounter.rect.min));
+                inventory.yMax = Mathf.Max(inventory.yMax, canvas.rect.yMax - footerBottom.y);
+            }
+            var size = StoragePopupSize;
+            if (chestProgress == null) size.y += 32f; // Preserve the jar's cooling feedback.
+            root.sizeDelta = size;
+            var scale = Mathf.Min(1f, (canvas.rect.width - 8f) / size.x,
+                (canvas.rect.height - 8f) / size.y);
+            var placement = ResolveStoragePopupRect(canvas.rect.size, inventory, size * scale);
             root.anchoredPosition = new Vector2(placement.x, -placement.y);
             root.localScale = Vector3.one * scale;
         }

@@ -104,13 +104,41 @@ public sealed class StorageDragLivePointerReplay : BaseInput
             Require(popup.activeInHierarchy && !popup.transform.Find("PlayerGrid").gameObject.activeSelf,
                 "popup must reuse the existing inventory");
             var slotArt = popup.transform.Find("StorageGrid").GetComponent<Image>();
-            Require(slotArt.enabled && slotArt.sprite != null, "empty storage cells must remain visible");
+            Require(!slotArt.enabled, "stretched full-grid art must not cover the individual cells");
+            Require(Get<Text>(ui, "storageLabelText").text == "상자" &&
+                    !Get<Text>(ui, "storageHintText").gameObject.activeSelf &&
+                    popup.transform.Find("CloseStoragePopup") == null, "chest should show only its name and slots");
+            Require(popup.GetComponent<Image>().color.a == 0f &&
+                    (popup.GetComponent<Outline>() == null || !popup.GetComponent<Outline>().enabled),
+                "chest must not have a large panel border");
+            var bagLayout = Get<GameObject>(ui, "inventoryGridRoot").GetComponent<GridLayoutGroup>();
+            var storageLayout = popup.transform.Find("StorageGrid").GetComponent<GridLayoutGroup>();
+            Require(storageLayout.cellSize == bagLayout.cellSize && storageLayout.spacing == bagLayout.spacing &&
+                    storageLayout.constraintCount == bagLayout.constraintCount, "shared inventory grid dimensions");
+            for (var index = 0; index < storageButtons.Length; index++)
+            {
+                var art = storageButtons[index].targetGraphic as Image;
+                Require(art != null && art.enabled && art.sprite != null &&
+                        art.sprite == (bagButtons[0].targetGraphic as Image).sprite && art.color == Color.white,
+                    "storage cell must use the inventory slot art: " + index);
+                Require(((RectTransform)storageButtons[index].transform).rect.size ==
+                        ((RectTransform)bagButtons[0].transform).rect.size, "matching hit area: " + index);
+                Require(Mathf.Abs(Centre(storageButtons[index]).x - Centre(bagButtons[index % bagLayout.constraintCount]).x) < .5f,
+                    "storage columns must align with inventory: " + index);
+            }
             Require(inventoryRect.anchoredPosition == inventoryBefore && inventoryRect.gameObject.activeInHierarchy,
                 "inventory was moved or hidden");
             Require(!Get<GameObject>(ui, "craftWindowRoot").activeSelf, "craft tooltip leaked over storage");
             var corners = new Vector3[4];
             ((RectTransform)popup.transform).GetWorldCorners(corners);
             var canvas = popup.GetComponentInParent<Canvas>();
+            var footer = FindAnyObjectByType<MainGameHudController>().TearBalanceRect;
+            if (footer != null && footer.gameObject.activeInHierarchy)
+            {
+                var popupBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(canvas.transform, popup.transform);
+                var footerBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(canvas.transform, footer);
+                Require(!popupBounds.Intersects(footerBounds), "chest title overlaps the tear counter");
+            }
             foreach (var corner in corners)
             {
                 var screen = RectTransformUtility.WorldToScreenPoint(canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera, corner);
@@ -143,10 +171,16 @@ public sealed class StorageDragLivePointerReplay : BaseInput
             secondary = true; yield return null; secondary = false; yield return null; yield return null;
             Require(ui.IsOpen && Get<string>(ui, "chestId") == chest.id && Snapshot(runtime.PlayerInventory, storage) == beforeCancel,
                 "right-click reopen must preserve chest contents");
+            // Exercise the last visible cell and drag again after the popup was reopened.
+            yield return Drag(storageButtons[2], storageButtons[39]);
+            Require(storage.Slots[39].itemId == "catnip" && storage.Slots[2].amount == 0, "last chest cell");
+            yield return Drag(storageButtons[39], bagButtons[10]);
+            yield return Drag(bagButtons[10], storageButtons[2]);
+            Require(Snapshot(runtime.PlayerInventory, storage) == beforeCancel, "post-reopen drag round trip");
             Invoke(ui, "Refresh");
             var output = Path.GetFullPath(Path.Combine(Application.dataPath, "../Temp/storage-drag-live.png"));
             ScreenCapture.CaptureScreenshot(output);
-            Debug.Log("[StorageDragDrop] LIVE PASS: right-click open/reopen, popup bounds, unchanged HUD, eight drags (transfer/swap/merge/cancel/equipment), Escape close and item conservation. " + output);
+            Debug.Log("[StorageDragDrop] LIVE PASS: aligned inventory slot art and hit areas, name-only chest, popup bounds, unchanged HUD, eleven drags (transfer/swap/merge/cancel/equipment/last cell), right-click open/reopen, Escape close and item conservation. " + output);
         }
         finally { Restore(); Destroy(gameObject); }
     }

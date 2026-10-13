@@ -85,11 +85,13 @@ public static class NyangbingoStorageDragRegressionTests
                     source.Count("coal") + target.Count("coal") == 39, "random conservation " + i);
         }
         foreach (var screen in new[] { new Vector2(428, 240), new Vector2(320, 180), new Vector2(640, 360), new Vector2(256, 240) })
+        foreach (var size in new[] { new Vector2(119, 88), new Vector2(119, 120) })
+        foreach (var inventory in new[] { new Rect(4, 4, 129, 59), new Rect(4, 4, 129, 80) })
         {
-            var inventory = new Rect(4, 4, 129, 59);
-            var popup = MainGameCraftingUiController.ResolveStoragePopupRect(screen, inventory, new Vector2(129, 125));
+            var popup = MainGameCraftingUiController.ResolveStoragePopupRect(screen, inventory, size);
             Require(popup.xMin >= 4 && popup.yMin >= 4 && popup.xMax <= screen.x - 4 && popup.yMax <= screen.y - 4, "popup bounds " + screen);
             Require(!popup.Overlaps(inventory), "popup must not cover inventory " + screen);
+            Require(popup.size == size, "slot grid must not stretch " + screen);
         }
         NyangbingoEquipmentDragDropRegressionTests.RunAll();
         Debug.Log($"[StorageDragDrop] PASS: {assertions} assertions; atomic transfer/swap/merge, cancellation, stale data, metadata, random conservation and layout; equipment regression also passed.");

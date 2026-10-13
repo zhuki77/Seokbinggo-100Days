@@ -204,6 +204,9 @@ namespace Nyangbingo.UI
         public const int InventoryGridRows = 5;
         public const int InventoryHotbarSlotCount = 9;
         public const float InventorySlotPixelSize = 27f;
+        private const float HudInventoryCellSize = 14f;
+        private const float HudInventoryCellGap = 1f;
+        private const int HudInventoryColumns = 8;
         public const float InventoryCursorPixelSize = 12f;
         public const bool UsesIconOnlyCraftingList = true;
         public const KeyCode DebugGrantRequirementsKey = KeyCode.F12;
@@ -598,9 +601,9 @@ namespace Nyangbingo.UI
             var canvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
             if (canvas == null || inventoryGridRoot == null || equipmentVisualRoot == null) return;
 
-            const float cell = 14f;
-            const float gap = 1f;
-            const int columns = 8;
+            const float cell = HudInventoryCellSize;
+            const float gap = HudInventoryCellGap;
+            const int columns = HudInventoryColumns;
             const int visibleRows = 4;
             // 트랙(3px)·핸들(5px) 원본은 격자(14px) 옆에서 너무 가늘다.
             // preserveAspect를 끄고 막대 자체를 8px로 늘려 트랙과 핸들의 중심을 맞춘다.
@@ -2758,6 +2761,8 @@ namespace Nyangbingo.UI
 
         private void RefreshStorage()
         {
+            // Chests only need their name and slots. Keep the cooling status for jars.
+            if (storageHintText != null) storageHintText.gameObject.SetActive(chestProgress == null);
             if (storageHintText != null) storageHintText.text = string.IsNullOrEmpty(message) ? StorageDragHelp : message;
             if (storageTemperatureTrack != null) storageTemperatureTrack.gameObject.SetActive(false);
             Nyangbingo.Inventory.Inventory storage;
@@ -2765,7 +2770,7 @@ namespace Nyangbingo.UI
             {
                 titleText.text = "자연 상자 · 좌클릭 전체 · 우클릭 절반/1개";
                 if (storageLabelText != null)
-                    storageLabelText.text = $"상자 내용물 · {ChestProgress.StorageSlotCount}슬롯";
+                    storageLabelText.text = "상자";
                 if (!chestProgress.TryGetContents(chestId, out storage))
                 {
                     chestProgress = null;
