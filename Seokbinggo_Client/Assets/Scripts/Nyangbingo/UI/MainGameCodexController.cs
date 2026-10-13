@@ -106,11 +106,7 @@ namespace Nyangbingo.UI
         private void Update()
         {
             if (model == null || unifiedPanelMode) return;
-            if (Input.GetKeyDown(KeyCode.J) &&
-                !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt) &&
-                (open || gameShell == null ||
-                                                  gameShell.Screen == GameShellScreen.Gameplay)) SetOpen(!open);
-            else if (open && Nyangbingo.Core.GameplayInput.TryConsumeEscape()) SetOpen(false);
+            if (open && Nyangbingo.Core.GameplayInput.TryConsumeEscape()) SetOpen(false);
         }
 
         private void SetOpen(bool value)
