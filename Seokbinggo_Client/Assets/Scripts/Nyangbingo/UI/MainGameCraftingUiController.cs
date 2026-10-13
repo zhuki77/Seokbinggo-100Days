@@ -557,7 +557,10 @@ namespace Nyangbingo.UI
             const int columns = 8;
             const int visibleRows = 4;
             var trackSprite = gameplayArtCatalog?.ScrollTrack;
-            var barWidth = trackSprite != null ? trackSprite.rect.width : 3f;
+            // 핸들 스프라이트(5px)가 트랙(3px)보다 넓으므로 핸들 기준으로 바 너비를 결정
+            var handleSprite = gameplayArtCatalog?.ScrollHandle;
+            var barWidth = handleSprite != null ? handleSprite.rect.width
+                         : (trackSprite != null ? trackSprite.rect.width : 5f);
             const float barGap = 2f;
             var slotCount = inventoryGridButtons != null ? inventoryGridButtons.Length : 50;
             var contentRows = Mathf.Max(visibleRows, Mathf.CeilToInt(slotCount / (float)columns));
@@ -837,11 +840,13 @@ namespace Nyangbingo.UI
             scroll.inertia = false;
 
             var scrollSprite = gameplayArtCatalog?.CraftScroll;
-            var scrollWidth = scrollSprite != null ? scrollSprite.rect.width : 7f;
+            // 기존 7px → 9px로 확대 (craft_scroll 스프라이트 너비 + 2)
+            var scrollWidth = scrollSprite != null ? scrollSprite.rect.width + 2f : 9f;
             var barObject = new GameObject("RecipeScrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
             barObject.transform.SetParent(root, false);
             var barRect = (RectTransform)barObject.transform;
-            PlaceTopLeft(barRect, holeX + holeW + 1f, holeY, scrollWidth, holeH);
+            // gridY/gridH 사용: 스크롤바를 레시피 뷰포트와 정확히 정렬
+            PlaceTopLeft(barRect, holeX + holeW + 1f, gridY, scrollWidth, gridH);
             var track = barObject.GetComponent<Image>();
             track.color = new Color(1f, 1f, 1f, 0f);
             track.raycastTarget = true;
