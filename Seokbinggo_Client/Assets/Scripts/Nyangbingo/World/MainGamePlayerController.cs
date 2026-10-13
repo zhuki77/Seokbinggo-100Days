@@ -2053,14 +2053,15 @@ namespace Nyangbingo.World
 
         private void CompleteCatnipMining(string patchId, Vector3Int hitCell)
         {
-            if (worldDecorationRenderer == null || runtimeServices?.PlayerInventory == null)
+            var item = catalog?.FindItem(PlayerHealthRecoveryService.CatnipItemId);
+            if (item == null || worldDecorationRenderer == null ||
+                !worldDecorationRenderer.TryHarvestCatnip(patchId, out var dropPosition, out var healHitPoints))
                 return;
-            if (!worldDecorationRenderer.TryHarvestCatnip(patchId, runtimeServices.PlayerInventory))
-            {
-                ShowMiningFailure(hitCell, "인벤토리가 가득 차 캣닢을 담지 못했습니다.");
-                return;
-            }
-            interactionMessages?.ShowExternalMessage("캣닢 채집 ×1 · 2일 뒤 재생");
+            if (healHitPoints > 0)
+                runtimeServices?.PlayerHealthRecovery?.EnqueueCatnipHeal(healHitPoints);
+            WorldItemDropRequest.Request(item, 1, dropPosition);
+            Nyangbingo.Core.GameEvents.RaiseMiningResult(
+                hitCell, item.DisplayName, 1, false);
         }
 
         private void CancelMining()

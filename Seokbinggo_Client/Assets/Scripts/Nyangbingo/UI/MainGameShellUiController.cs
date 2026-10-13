@@ -1075,7 +1075,12 @@ namespace Nyangbingo.UI
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(shell != null && shell.Screen == GameShellScreen.Pause);
-                statusText.text = HasPauseBossWarning ? BossSaveRestrictionDetail : pauseStatusMessage;
+                var traitLine = SelectedTraitStatusLine();
+                var line = string.IsNullOrEmpty(pauseStatusMessage) ||
+                           pauseStatusMessage.EndsWith(" 선택", StringComparison.Ordinal)
+                    ? traitLine
+                    : pauseStatusMessage;
+                statusText.text = HasPauseBossWarning ? BossSaveRestrictionDetail : line;
                 statusText.rectTransform.anchoredPosition = new Vector2(0f, HasPauseBossWarning ? -90f : -83f);
                 statusText.rectTransform.sizeDelta = new Vector2(166f, HasPauseBossWarning ? 12f : 28f);
                 RefreshPauseBossWarning();
@@ -1316,6 +1321,13 @@ namespace Nyangbingo.UI
         {
             pauseStatusMessage = value ?? string.Empty;
             if (statusText != null) statusText.text = pauseStatusMessage;
+        }
+
+        private string SelectedTraitStatusLine()
+        {
+            var traitId = FindAnyObjectByType<MainGameRuntimeServices>()?.Traits?.SelectedTraitId;
+            var name = gameDataCatalog?.FindTrait(traitId)?.DisplayName;
+            return string.IsNullOrEmpty(name) ? string.Empty : $"{name} 선택";
         }
 
         private void OnDestroy()

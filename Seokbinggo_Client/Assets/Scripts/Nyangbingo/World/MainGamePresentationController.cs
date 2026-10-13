@@ -19,10 +19,15 @@ namespace Nyangbingo.World
         // and a dimmer underground ambient so portable lanterns actually matter.
         private const float TransitionSeconds = 90f;
         /// <summary>Tiles below the surface before the underground light fully replaces the surface light.</summary>
-        public const float UndergroundLightFadeTiles = 28f;
+        public const float UndergroundLightFadeTiles = 22f;
+        /// <summary>Further depth over which the cave light keeps getting darker.</summary>
+        public const float DepthDarkenTiles = 70f;
+        /// <summary>How much of the current light is removed at <see cref="DepthDarkenTiles"/> below the surface.</summary>
+        public const float DepthDarkenStrength = 0.28f;
 
         private static readonly Color NightColor = HtmlColor("#6B7FA8");
         private static readonly Color UndergroundColor = HtmlColor("#3E4A5C");
+        private static readonly Color DeepUndergroundColor = HtmlColor("#243044");
         private static readonly Color BaekjungNightColor = HtmlColor("#7A6BA8");
 
         [SerializeField] private DayNightService timeService;
@@ -125,12 +130,24 @@ namespace Nyangbingo.World
 
         private void ApplyLighting()
         {
+            var surfaceY = background != null ? background.UndergroundThreshold : transform.position.y;
             var blend = background != null
-                ? UndergroundLightBlend(transform.position.y, background.UndergroundThreshold)
+                ? UndergroundLightBlend(transform.position.y, surfaceY)
                 : 0f;
             var state = EvaluateLighting(timeService, blend, heatStage?.Current ?? 1);
-            globalLight.color = state.color;
-            globalLight.intensity = state.intensity;
+            var depthDarken = background != null
+                ? DepthDarkenBlend(transform.position.y, surfaceY)
+                : 0f;
+            globalLight.color = Color.Lerp(state.color, DeepUndergroundColor, depthDarken * .45f);
+            globalLight.intensity = state.intensity * (1f - DepthDarkenStrength * depthDarken);
+        }
+
+        /// <summary>0 on the surface, 1 after <see cref="DepthDarkenTiles"/> below the surface line.</summary>
+        public static float DepthDarkenBlend(float worldY, float surfaceThreshold)
+        {
+            var depth = surfaceThreshold - worldY;
+            if (depth <= 0f) return 0f;
+            return SmoothStep(depth / DepthDarkenTiles);
         }
 
         /// <summary>0 on the surface, 1 after <see cref="UndergroundLightFadeTiles"/> below the surface line.</summary>

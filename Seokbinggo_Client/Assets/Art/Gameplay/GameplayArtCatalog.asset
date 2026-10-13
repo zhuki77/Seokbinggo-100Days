@@ -403,6 +403,18 @@ MonoBehaviour:
   craftButtonFrames:
   - {fileID: -5978639560776834825, guid: 09725d58b169b5648acf37c2b6dd9d58, type: 3}
   - {fileID: 1769039371810824475, guid: 09725d58b169b5648acf37c2b6dd9d58, type: 3}
+  craftCategoryBarFrames:
+  - {fileID: -4294342899620778227, guid: 0e46f2382b644cb3ab8e83d96f6498ee, type: 3}
+  - {fileID: -8189911508295797698, guid: 0e46f2382b644cb3ab8e83d96f6498ee, type: 3}
+  - {fileID: 1497117700920425642, guid: 0e46f2382b644cb3ab8e83d96f6498ee, type: 3}
+  - {fileID: 6915420555011049756, guid: 0e46f2382b644cb3ab8e83d96f6498ee, type: 3}
+  craftSmeltPanel: {fileID: -4294342899620778227, guid: f818c7dfc22a4356beb027ff34d095be, type: 3}
+  craftSmeltButtonFrames:
+  - {fileID: -5978639560776834825, guid: 15063a0b13d0489eb133b8c4e18d3e35, type: 3}
+  - {fileID: 1769039371810824475, guid: 15063a0b13d0489eb133b8c4e18d3e35, type: 3}
+  craftViewToggleFrames:
+  - {fileID: -5978639560776834825, guid: 479be6309cbd4d64a81f7b37d8e2a500, type: 3}
+  - {fileID: 1769039371810824475, guid: 479be6309cbd4d64a81f7b37d8e2a500, type: 3}
   craftScroll: {fileID: -7892021517413963380, guid: 55227d29f3bf803449d19e90cac111b1, type: 3}
   questWindow: {fileID: -1553718283348301681, guid: 6986a20c125ca7642bf01346ab89235f, type: 3}
   scrollTrack: {fileID: -5279489369124325073, guid: e918a257718be4246978fecddd5f3ee2, type: 3}

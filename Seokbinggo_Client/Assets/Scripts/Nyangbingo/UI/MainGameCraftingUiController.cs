@@ -77,6 +77,13 @@ namespace Nyangbingo.UI
         private Image[] craftWindowSlotMarks = Array.Empty<Image>();
         private readonly List<RecipeDefinition> craftWindowRecipes = new List<RecipeDefinition>();
         private int craftWindowIndex;
+        private Image craftWindowFrame;
+        private Button craftWindowActionButton;
+        private Image craftWindowActionImage;
+        private Button craftWindowToggleButton;
+        private Button[] craftCategoryButtons = Array.Empty<Button>();
+        private Text[] craftCategoryLabels = Array.Empty<Text>();
+        private int craftCategoryIndex;
         private bool craftWindowPanelTintSaved;
         private Color craftWindowPanelColor;
         private Button[] craftingListButtons = Array.Empty<Button>();
@@ -339,6 +346,16 @@ namespace Nyangbingo.UI
             }
 
             if (TryHandlePageHotkey()) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var craftWindowVisible = !open && craftWindowRoot != null && craftWindowRoot.activeInHierarchy;
+            var craftingOrGearOpen = open && (page == Page.Crafting || page == Page.Equipment);
+            if ((craftingOrGearOpen || craftWindowVisible) &&
+                DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeMaterials))
+                GrantSelectedRequirementsForEditorTest();
+            if (open && page == Page.Crafting &&
+                DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeStation))
+                TeleportToRequiredStationForEditorTest();
+#endif
             if (!open) return;
             if (page != Page.Codex)
             {
@@ -368,14 +385,6 @@ namespace Nyangbingo.UI
                     Input.GetKeyDown(KeyCode.E))
                     TryPrimaryAction();
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.R)) TryRefuelPortableLantern();
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                if ((page == Page.Crafting || page == Page.Equipment) &&
-                    DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeMaterials))
-                    GrantSelectedRequirementsForEditorTest();
-                if (page == Page.Crafting &&
-                    DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeStation))
-                    TeleportToRequiredStationForEditorTest();
-#endif
             }
             if (!string.IsNullOrEmpty(message) && Time.unscaledTime >= messageUntil) message = string.Empty;
             Refresh();
@@ -556,11 +565,9 @@ namespace Nyangbingo.UI
             const float gap = 1f;
             const int columns = 8;
             const int visibleRows = 4;
-            var trackSprite = gameplayArtCatalog?.ScrollTrack;
-            // 핸들 스프라이트(5px)가 트랙(3px)보다 넓으므로 핸들 기준으로 바 너비를 결정
-            var handleSprite = gameplayArtCatalog?.ScrollHandle;
-            var barWidth = handleSprite != null ? handleSprite.rect.width
-                         : (trackSprite != null ? trackSprite.rect.width : 5f);
+            // 트랙(3px)·핸들(5px) 원본은 격자(14px) 옆에서 너무 가늘다.
+            // preserveAspect를 끄고 막대 자체를 8px로 늘려 트랙과 핸들의 중심을 맞춘다.
+            const float barWidth = 8f;
             const float barGap = 2f;
             var slotCount = inventoryGridButtons != null ? inventoryGridButtons.Length : 50;
             var contentRows = Mathf.Max(visibleRows, Mathf.CeilToInt(slotCount / (float)columns));
@@ -600,9 +607,9 @@ namespace Nyangbingo.UI
             bar.anchoredPosition = new Vector2(contentWidth + barGap, 0f);
             bar.sizeDelta = new Vector2(barWidth, viewHeight);
             if (bar.GetComponent<Image>() is Image trackImage)
-                trackImage.preserveAspect = true;
+                trackImage.preserveAspect = false;
             var handleImage = bar.Find("Handle")?.GetComponent<Image>();
-            if (handleImage != null) handleImage.preserveAspect = true;
+            if (handleImage != null) handleImage.preserveAspect = false;
             shell.SetAsLastSibling();
             FitInventorySlotContents(cell);
             SetInventoryWindowActive(true);
@@ -708,7 +715,7 @@ namespace Nyangbingo.UI
             {
                 track.sprite = gameplayArtCatalog.ScrollTrack;
                 track.type = Image.Type.Simple;
-                track.preserveAspect = true;
+                track.preserveAspect = false;
                 track.color = Color.white;
             }
             else track.color = new Color(.15f, .22f, .3f, .95f);
@@ -726,7 +733,7 @@ namespace Nyangbingo.UI
             {
                 handle.sprite = gameplayArtCatalog.ScrollHandle;
                 handle.type = Image.Type.Simple;
-                handle.preserveAspect = true;
+                handle.preserveAspect = false;
                 handle.color = Color.white;
             }
             else handle.color = new Color(.75f, .85f, .95f, 1f);
@@ -750,8 +757,13 @@ namespace Nyangbingo.UI
             root.pivot = new Vector2(0f, 0f);
             root.anchoredPosition = new Vector2(4f, 4f);
             var frame = craftWindowRoot.GetComponent<Image>();
+            craftWindowFrame = frame;
+            var categoryBars = gameplayArtCatalog?.CraftCategoryBarFrames;
+            var useCategoryArt = categoryBars != null && categoryBars.Count > 0 && categoryBars[0] != null;
             var topBars = gameplayArtCatalog?.CraftTopBarFrames;
-            var frameSprite = topBars != null && topBars.Count > 0 ? topBars[0] : gameplayArtCatalog?.CraftPanel;
+            var frameSprite = useCategoryArt
+                ? categoryBars[0]
+                : topBars != null && topBars.Count > 0 ? topBars[0] : gameplayArtCatalog?.CraftPanel;
             var frameSize = frameSprite != null ? frameSprite.rect.size : new Vector2(108f, 78f);
             root.sizeDelta = frameSize;
             frame.sprite = frameSprite;
@@ -760,13 +772,13 @@ namespace Nyangbingo.UI
             frame.color = frameSprite != null ? Color.white : new Color(.08f, .1f, .16f, .96f);
             frame.raycastTarget = true;
 
-            craftWindowOutputIcon = CreateArtImage(root, "Output", null, Vector2.zero, new Vector2(22f, 22f));
-            PlaceTopLeft(craftWindowOutputIcon.rectTransform, 9f, 9f, 22f, 22f);
+            craftWindowOutputIcon = CreateArtImage(root, "Output", null, Vector2.zero, new Vector2(16f, 16f));
+            PlaceTopLeft(craftWindowOutputIcon.rectTransform, 18f, 7f, 16f, 16f);
             craftWindowOutputIcon.preserveAspect = true;
             for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
             {
                 var icon = CreateArtImage(root, $"Ingredient_{index + 1}", null, Vector2.zero, new Vector2(8f, 8f));
-                PlaceTopLeft(icon.rectTransform, 8f + index * 9f, 45f, 8f, 8f);
+                PlaceTopLeft(icon.rectTransform, 8f + index * 9f, 26f, 8f, 8f);
                 icon.preserveAspect = true;
                 craftWindowIngredientIcons[index] = icon;
             }
@@ -777,13 +789,23 @@ namespace Nyangbingo.UI
             var buttonObject = new GameObject("CraftButton", typeof(RectTransform), typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(root, false);
             var buttonRect = (RectTransform)buttonObject.transform;
-            PlaceTopLeft(buttonRect, 4f, frameSize.y - buttonSize.y - 4f, buttonSize.x, buttonSize.y);
+            // 왼쪽 칸(x=1~36) 가로 가운데. 세로는 위 칸 바닥(y=59)과 창 바닥(y=76) 사이 가운데.
+            const float craftColumnX = 1f;
+            const float craftColumnWidth = 36f;
+            const float craftFooterTop = 59f;
+            const float craftFooterBottom = 76f;
+            PlaceTopLeft(buttonRect,
+                craftColumnX + (craftColumnWidth - buttonSize.x) * .5f,
+                craftFooterTop + (craftFooterBottom - craftFooterTop - buttonSize.y) * .5f + 1f,
+                buttonSize.x, buttonSize.y);
             var buttonImage = buttonObject.GetComponent<Image>();
             buttonImage.sprite = normal;
             buttonImage.type = Image.Type.Simple;
             buttonImage.preserveAspect = true;
             buttonImage.color = normal != null ? Color.white : new Color(.45f, .42f, .62f, 1f);
             var craftButton = buttonObject.GetComponent<Button>();
+            craftWindowActionButton = craftButton;
+            craftWindowActionImage = buttonImage;
             craftButton.targetGraphic = buttonImage;
             if (normal != null && buttonFrames.Count > 1 && buttonFrames[1] != null)
             {
@@ -793,7 +815,8 @@ namespace Nyangbingo.UI
                 craftButton.spriteState = state;
                 craftButton.transition = Selectable.Transition.SpriteSwap;
             }
-            craftButton.onClick.AddListener(TryCraftFromWindow);
+            craftButton.onClick.AddListener(OnCraftWindowAction);
+            BuildCraftCategoryChrome(root);
 
             var slotSprite = gameplayArtCatalog?.CraftMidSlot;
             var cell = slotSprite != null ? slotSprite.rect.size : new Vector2(18f, 18f);
@@ -840,13 +863,20 @@ namespace Nyangbingo.UI
             scroll.inertia = false;
 
             var scrollSprite = gameplayArtCatalog?.CraftScroll;
-            // 기존 7px → 9px로 확대 (craft_scroll 스프라이트 너비 + 2)
-            var scrollWidth = scrollSprite != null ? scrollSprite.rect.width + 2f : 9f;
+            // 프레임 오른쪽 홈(108×78 스프라이트 기준). 홈 중심 x=101.5, 세로 y=16~74.
+            // 손잡이 원본은 7×13이라 홈보다 가늘고, 비율 유지를 켜면 더 작게 그려진다.
+            const float scrollGrooveCenterX = 101.5f;
+            const float scrollGrooveY = 16f;
+            const float scrollGrooveH = 58f;
+            const float scrollWidth = 12f;
             var barObject = new GameObject("RecipeScrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
             barObject.transform.SetParent(root, false);
             var barRect = (RectTransform)barObject.transform;
-            // gridY/gridH 사용: 스크롤바를 레시피 뷰포트와 정확히 정렬
-            PlaceTopLeft(barRect, holeX + holeW + 1f, gridY, scrollWidth, gridH);
+            PlaceTopLeft(barRect,
+                scrollGrooveCenterX - scrollWidth * .5f,
+                scrollGrooveY,
+                scrollWidth,
+                scrollGrooveH);
             var track = barObject.GetComponent<Image>();
             track.color = new Color(1f, 1f, 1f, 0f);
             track.raycastTarget = true;
@@ -860,7 +890,7 @@ namespace Nyangbingo.UI
             var handle = handleObject.GetComponent<Image>();
             handle.sprite = scrollSprite;
             handle.type = Image.Type.Simple;
-            handle.preserveAspect = true;
+            handle.preserveAspect = false;
             handle.color = handle.sprite != null ? Color.white : new Color(.75f, .8f, .9f, 1f);
             var scrollbar = barObject.GetComponent<Scrollbar>();
             scrollbar.handleRect = handleRect;
@@ -881,7 +911,7 @@ namespace Nyangbingo.UI
                 slotImage.color = new Color(1f, 1f, 1f, 0f);
                 var slotButton = slotObject.GetComponent<Button>();
                 slotButton.targetGraphic = slotImage;
-                slotButton.onClick.AddListener(() => SelectCraftWindowRecipe(captured));
+                slotButton.onClick.AddListener(() => SelectCraftWindowSlot(captured));
                 var mark = CreateArtImage(slotObject.transform, "Selected", slotSprite, Vector2.zero, cell);
                 mark.preserveAspect = true;
                 mark.color = Color.white;
@@ -895,6 +925,7 @@ namespace Nyangbingo.UI
                 craftWindowSlotIcons[index] = icon;
                 craftWindowSlotMarks[index] = mark;
             }
+            if (craftWindowToggleButton != null) craftWindowToggleButton.transform.SetAsLastSibling();
             craftWindowRoot.SetActive(false);
         }
 
@@ -948,50 +979,95 @@ namespace Nyangbingo.UI
                 if (canvas == null) return;
                 BuildCraftWindow(canvas.transform);
             }
-            var show = !HasStorageMode && (!open || (page == Page.Crafting && !IsShowingSmeltingList));
+            var smelting = IsShowingSmeltingList;
+            var show = !HasStorageMode && (!open || page == Page.Crafting);
             var wasActive = craftWindowRoot.activeSelf;
             craftWindowRoot.SetActive(show);
             if (!show) return;
             if (!wasActive) craftWindowRoot.transform.SetAsLastSibling();
-            if (!(open && page == Page.Crafting)) RebuildCraftWindowRecipes();
+            ApplyCraftCategoryPresentation(smelting);
+            if (!smelting && !(open && page == Page.Crafting)) RebuildCraftWindowRecipes();
             var recipes = open && page == Page.Crafting ? filteredRecipes : craftWindowRecipes;
-            var selected = CurrentCraftWindowIndex(recipes);
-            var recipe = selected >= 0 && selected < recipes.Count ? recipes[selected] : null;
+            var selected = smelting
+                ? (smeltingRecipes.Count == 0 ? -1 : Mathf.Clamp(selectedIndex, 0, smeltingRecipes.Count - 1))
+                : CurrentCraftWindowIndex(recipes);
+            var recipe = !smelting && selected >= 0 && selected < recipes.Count ? recipes[selected] : null;
+            var smelt = smelting && selected >= 0 && selected < smeltingRecipes.Count
+                ? smeltingRecipes[selected] : null;
             if (craftWindowOutputIcon != null)
             {
-                craftWindowOutputIcon.sprite = recipe?.Output.item != null
-                    ? itemArtCatalog?.FindSprite(recipe.Output.item.Id) : null;
+                var output = smelting ? smelt?.Output.item : recipe?.Output.item;
+                craftWindowOutputIcon.sprite = output != null ? itemArtCatalog?.FindSprite(output.Id) : null;
                 craftWindowOutputIcon.enabled = craftWindowOutputIcon.sprite != null;
             }
             for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
             {
                 var icon = craftWindowIngredientIcons[index];
                 if (icon == null) continue;
-                var ingredient = recipe != null && recipe.Ingredients != null && index < recipe.Ingredients.Length
-                    ? recipe.Ingredients[index] : default;
-                var hasIngredient = ingredient.item != null;
-                icon.sprite = hasIngredient ? itemArtCatalog?.FindSprite(ingredient.item.Id) : null;
+                ItemDefinition ingredientItem = null;
+                var required = 0;
+                if (smelting && smelt != null)
+                {
+                    ItemAmount amount = default;
+                    if (index == 0) amount = smelt.Input;
+                    else if (index == 1) amount = smelt.Fuel;
+                    ingredientItem = amount.item;
+                    required = amount.amount;
+                }
+                else if (recipe?.Ingredients != null && index < recipe.Ingredients.Length)
+                {
+                    ingredientItem = recipe.Ingredients[index].item;
+                    required = recipe.Ingredients[index].amount;
+                }
+                icon.sprite = ingredientItem != null ? itemArtCatalog?.FindSprite(ingredientItem.Id) : null;
                 icon.enabled = icon.sprite != null;
-                if (!hasIngredient || runtimeServices.PlayerInventory == null) continue;
-                var missing = runtimeServices.PlayerInventory.Count(ingredient.item.Id) < ingredient.amount;
+                var missing = ingredientItem != null && required > 0 && runtimeServices.PlayerInventory != null &&
+                              runtimeServices.PlayerInventory.Count(ingredientItem.Id) < required;
                 icon.color = missing ? new Color(.55f, .55f, .6f, 1f) : Color.white;
             }
             for (var index = 0; index < craftWindowSlotButtons.Length; index++)
             {
                 var button = craftWindowSlotButtons[index];
                 if (button == null) continue;
-                var entry = index < recipes.Count ? recipes[index] : null;
-                button.interactable = entry != null;
+                ItemDefinition output = null;
+                var hasEntry = false;
+                if (smelting)
+                {
+                    hasEntry = index < smeltingRecipes.Count && smeltingRecipes[index] != null;
+                    output = hasEntry ? smeltingRecipes[index].Output.item : null;
+                }
+                else
+                {
+                    var entry = index < recipes.Count ? recipes[index] : null;
+                    hasEntry = entry != null;
+                    output = entry?.Output.item;
+                }
+                button.interactable = hasEntry;
                 var icon = craftWindowSlotIcons[index];
                 if (icon != null)
                 {
-                    icon.sprite = entry?.Output.item != null ? itemArtCatalog?.FindSprite(entry.Output.item.Id) : null;
+                    icon.sprite = output != null ? itemArtCatalog?.FindSprite(output.Id) : null;
                     icon.enabled = icon.sprite != null;
                 }
                 if (craftWindowSlotMarks[index] != null)
-                    craftWindowSlotMarks[index].enabled = entry != null && index == selected;
+                    craftWindowSlotMarks[index].enabled = hasEntry && index == selected;
             }
             if (productionQueueRoot != null) productionQueueRoot.SetActive(false);
+            if (open && page == Page.Crafting) HideCraftingTextChrome();
+        }
+
+        private void HideCraftingTextChrome()
+        {
+            if (previousButton != null) previousButton.gameObject.SetActive(false);
+            if (nextButton != null) nextButton.gameObject.SetActive(false);
+            if (primaryButton != null) primaryButton.gameObject.SetActive(false);
+            if (collectButton != null) collectButton.gameObject.SetActive(false);
+            if (messageText != null) messageText.gameObject.SetActive(false);
+            if (titleText != null) titleText.gameObject.SetActive(false);
+            if (craftingListRoot != null) craftingListRoot.SetActive(false);
+            if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(false);
+            if (detailsScrollbarRect != null) detailsScrollbarRect.gameObject.SetActive(false);
+            if (debugCompleteButton != null) debugCompleteButton.gameObject.SetActive(false);
         }
 
         private void RebuildCraftWindowRecipes()
@@ -1006,6 +1082,7 @@ namespace Nyangbingo.UI
                 if (recipe == null) continue;
                 if (!IsRecipeVisibleAtStation(recipe.Station, nearby)) continue;
                 if (!IsSmithyRecipeAllowed(recipe.Station, smithyUnlocked)) continue;
+                if (!RecipeMatchesCraftCategory(recipe)) continue;
                 if (RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook))
                     craftWindowRecipes.Add(recipe);
             }
@@ -1027,6 +1104,156 @@ namespace Nyangbingo.UI
             if (open && page == Page.Crafting) selectedIndex = index;
             else craftWindowIndex = index;
             Refresh();
+        }
+
+        private void SelectCraftWindowSlot(int index)
+        {
+            if (IsShowingSmeltingList)
+            {
+                if (index < 0 || index >= smeltingRecipes.Count) return;
+                selectedIndex = index;
+                Refresh();
+                return;
+            }
+            SelectCraftWindowRecipe(index);
+        }
+
+        private bool RecipeMatchesCraftCategory(RecipeDefinition recipe) =>
+            ItemCraftUiCategory.IndexOf(recipe?.Output.item) == craftCategoryIndex;
+
+        private void SelectCraftCategory(int index)
+        {
+            if (index < 0 || index >= ItemCraftUiCategory.Labels.Length) return;
+            if (IsShowingSmeltingList) furnaceSmeltingView = false;
+            craftCategoryIndex = index;
+            craftWindowIndex = 0;
+            selectedIndex = 0;
+            if (open && page == Page.Crafting) RebuildFilteredRecipes();
+            else RebuildCraftWindowRecipes();
+            Refresh();
+        }
+
+        private void OnCraftWindowAction()
+        {
+            if (IsShowingSmeltingList) TrySmeltSelected();
+            else TryCraftFromWindow();
+        }
+
+        private void OnCraftViewToggle()
+        {
+            var nearby = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+            if (page == Page.Crafting && IsSmeltingStation(openedStation) && furnaceSmeltingView)
+            {
+                furnaceSmeltingView = false;
+                RebuildFilteredRecipes();
+                if (open) selectedIndex = FindFirstEntryForFilter();
+                else
+                {
+                    craftWindowIndex = 0;
+                    RebuildCraftWindowRecipes();
+                }
+                message = string.Empty;
+                Refresh();
+                return;
+            }
+            if (!open || page != Page.Crafting)
+            {
+                if (!IsSmeltingStation(nearby) || !TryOpenForStation(nearby))
+                {
+                    ShowMessage("화로나 대장간 근처에서 제련으로 바꿀 수 있습니다.");
+                    return;
+                }
+            }
+            if (!TryToggleFurnaceCraftingSmeltingView())
+                ShowMessage("화로나 대장간 근처에서 제련으로 바꿀 수 있습니다.");
+        }
+
+        private void BuildCraftCategoryChrome(RectTransform root)
+        {
+            var tabXs = new[] { 39f, 53f, 67f, 81f };
+            craftCategoryButtons = new Button[tabXs.Length];
+            craftCategoryLabels = Array.Empty<Text>();
+            for (var index = 0; index < tabXs.Length; index++)
+            {
+                var captured = index;
+                var buttonObject = new GameObject($"CraftCategory_{index}", typeof(RectTransform), typeof(Image), typeof(Button));
+                buttonObject.transform.SetParent(root, false);
+                PlaceTopLeft((RectTransform)buttonObject.transform, tabXs[index], 4f, 14f, 8f);
+                var image = buttonObject.GetComponent<Image>();
+                image.color = new Color(1f, 1f, 1f, 0f);
+                var button = buttonObject.GetComponent<Button>();
+                button.targetGraphic = image;
+                button.onClick.AddListener(() => SelectCraftCategory(captured));
+                craftCategoryButtons[index] = button;
+            }
+
+            var toggleFrames = gameplayArtCatalog?.CraftViewToggleFrames;
+            var toggleNormal = toggleFrames != null && toggleFrames.Count > 0 ? toggleFrames[0] : null;
+            var toggleSize = toggleNormal != null ? toggleNormal.rect.size : new Vector2(13f, 16f);
+            var toggleObject = new GameObject("CraftViewToggle", typeof(RectTransform), typeof(Image), typeof(Button));
+            toggleObject.transform.SetParent(root, false);
+            // 오른쪽 테두리 픽셀까지 붙인다. 칸 안에만 두면 테두리와 한 픽셀 틈이 남는다.
+            PlaceTopLeft((RectTransform)toggleObject.transform,
+                root.sizeDelta.x - toggleSize.x + 1f, 1f, toggleSize.x, toggleSize.y);
+            toggleObject.transform.SetAsLastSibling();
+            var toggleImage = toggleObject.GetComponent<Image>();
+            toggleImage.sprite = toggleNormal;
+            toggleImage.type = Image.Type.Simple;
+            toggleImage.preserveAspect = true;
+            toggleImage.color = toggleNormal != null ? Color.white : new Color(.45f, .42f, .62f, 1f);
+            craftWindowToggleButton = toggleObject.GetComponent<Button>();
+            craftWindowToggleButton.targetGraphic = toggleImage;
+            if (toggleNormal != null && toggleFrames.Count > 1 && toggleFrames[1] != null)
+            {
+                var state = craftWindowToggleButton.spriteState;
+                state.pressedSprite = toggleFrames[1];
+                state.highlightedSprite = toggleFrames[1];
+                craftWindowToggleButton.spriteState = state;
+                craftWindowToggleButton.transition = Selectable.Transition.SpriteSwap;
+            }
+            craftWindowToggleButton.onClick.AddListener(OnCraftViewToggle);
+        }
+
+        private void ApplyCraftCategoryPresentation(bool smelting)
+        {
+            if (craftWindowFrame != null)
+            {
+                Sprite frameSprite = null;
+                if (smelting) frameSprite = gameplayArtCatalog?.CraftSmeltPanel;
+                var bars = gameplayArtCatalog?.CraftCategoryBarFrames;
+                if (!smelting && bars != null && craftCategoryIndex >= 0 && craftCategoryIndex < bars.Count)
+                    frameSprite = bars[craftCategoryIndex];
+                if (frameSprite != null)
+                {
+                    craftWindowFrame.sprite = frameSprite;
+                    craftWindowFrame.color = Color.white;
+                    var root = craftWindowFrame.rectTransform;
+                    if (root.sizeDelta != frameSprite.rect.size) root.sizeDelta = frameSprite.rect.size;
+                }
+            }
+            for (var index = 0; index < craftCategoryButtons.Length; index++)
+            {
+                if (craftCategoryButtons[index] != null)
+                    craftCategoryButtons[index].gameObject.SetActive(!smelting);
+                if (index < craftCategoryLabels.Length && craftCategoryLabels[index] != null)
+                    craftCategoryLabels[index].color = index == craftCategoryIndex
+                        ? new Color(.96f, .97f, 1f, 1f)
+                        : new Color(.62f, .66f, .78f, 1f);
+            }
+            if (craftWindowToggleButton != null) craftWindowToggleButton.gameObject.SetActive(true);
+            var frames = smelting
+                ? gameplayArtCatalog?.CraftSmeltButtonFrames
+                : gameplayArtCatalog?.CraftButtonFrames;
+            var normal = frames != null && frames.Count > 0 ? frames[0] : null;
+            if (craftWindowActionImage == null || normal == null) return;
+            craftWindowActionImage.sprite = normal;
+            craftWindowActionImage.color = Color.white;
+            if (craftWindowActionButton == null || frames.Count < 2 || frames[1] == null) return;
+            var buttonState = craftWindowActionButton.spriteState;
+            buttonState.pressedSprite = frames[1];
+            buttonState.highlightedSprite = frames[1];
+            craftWindowActionButton.spriteState = buttonState;
+            craftWindowActionButton.transition = Selectable.Transition.SpriteSwap;
         }
 
         private void SetInventoryWindowActive(bool active)
@@ -1795,6 +2022,7 @@ namespace Nyangbingo.UI
                 if (recipe == null) continue;
                 if (!IsRecipeVisibleAtStation(recipe.Station, openedStation)) continue;
                 if (!IsSmithyRecipeAllowed(recipe.Station, smithyUnlocked)) continue;
+                if (!RecipeMatchesCraftCategory(recipe)) continue;
                 if (RecipeUnlockPolicy.IsUnlocked(recipe, runtimeServices.RecipeBook))
                     filteredRecipes.Add(recipe);
             }
@@ -2268,7 +2496,7 @@ namespace Nyangbingo.UI
                 detailsScrollbarRect.sizeDelta = new Vector2(6f, 52f);
                 detailsScrollbarRect.anchoredPosition = new Vector2(104f, 12f);
             }
-            ApplyCraftWindowChrome(page == Page.Crafting && !IsShowingSmeltingList);
+            ApplyCraftWindowChrome(page == Page.Crafting);
         }
 
         private void RefreshCrafting()
@@ -3401,12 +3629,34 @@ namespace Nyangbingo.UI
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void GrantSelectedRequirementsForEditorTest()
         {
+            if (!(open && page == Page.Crafting) && !(open && page == Page.Equipment))
+            {
+                if (IsShowingSmeltingList)
+                {
+                    var windowSmelt = CurrentSmelting();
+                    var windowNeeds = windowSmelt == null ? null : new[] { windowSmelt.Input, windowSmelt.Fuel };
+                    if (windowNeeds != null && TryGrantItems(windowNeeds))
+                        ShowMessage($"F12 테스트 재료·연료 지급: {windowSmelt.Output.item.DisplayName}");
+                    else ShowMessage("F12 제련 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                }
+                else
+                {
+                    var windowRecipe = craftWindowIndex >= 0 && craftWindowIndex < craftWindowRecipes.Count
+                        ? craftWindowRecipes[craftWindowIndex] : null;
+                    if (windowRecipe != null && TryGrantItems(windowRecipe.Ingredients))
+                        ShowMessage($"F12 테스트 재료 지급: {windowRecipe.Output.item.DisplayName}");
+                    else ShowMessage("F12 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                }
+                Debug.Log("[Nyangbingo] " + message);
+                return;
+            }
             if (page == Page.Crafting && !IsShowingSmeltingList)
             {
                 var recipe = CurrentRecipe();
                 if (recipe != null && TryGrantItems(recipe.Ingredients))
                     ShowMessage($"F12 테스트 재료 지급: {recipe.Output.item.DisplayName}");
                 else ShowMessage("F12 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                Debug.Log("[Nyangbingo] " + message);
                 return;
             }
             if (page == Page.Crafting && IsShowingSmeltingList)
@@ -3416,6 +3666,7 @@ namespace Nyangbingo.UI
                 if (requirements != null && TryGrantItems(requirements))
                     ShowMessage($"F12 테스트 재료·연료 지급: {definition.Output.item.DisplayName}");
                 else ShowMessage("F12 제련 재료 지급 실패: 인벤토리 공간을 확인하세요.");
+                Debug.Log("[Nyangbingo] " + message);
                 return;
             }
             if (page == Page.Equipment)
@@ -3429,6 +3680,7 @@ namespace Nyangbingo.UI
                 if (activeCandidate != null && runtimeServices.PlayerInventory.TryAdd(activeCandidate.Id, 1))
                 {
                     ShowMessage($"F12 테스트 무기·도구 지급: {activeCandidate.DisplayName}");
+                    Debug.Log("[Nyangbingo] " + message);
                     return;
                 }
 
@@ -3440,6 +3692,7 @@ namespace Nyangbingo.UI
                 if (candidate != null && runtimeServices.EquipmentCollection.TryAdd(candidate))
                     ShowMessage($"F12 테스트 장비 지급: {gameDataCatalog.ItemDisplayName(candidate.Id, "장비")}");
                 else ShowMessage("F12 지급 가능한 새 장비가 없습니다.");
+                Debug.Log("[Nyangbingo] " + message);
             }
         }
 

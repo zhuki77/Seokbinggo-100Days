@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: trait_melee
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
   id: trait_melee
-  displayName: "\uD560\uD034\uB294 \uB188"
+  displayName: "\uD560\uD034\uB0E5\uC774"
   shortName: "\uADFC\uAC70\uB9AC"
   hookField: player-combat.csv attack_dmg
   hookSource: "\uB9E8\uBC1C\uD1B1 15 / 22.5 DPS"

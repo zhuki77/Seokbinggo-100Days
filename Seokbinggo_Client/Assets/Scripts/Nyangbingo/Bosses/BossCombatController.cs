@@ -292,7 +292,8 @@ namespace Nyangbingo.Bosses
                 var actualTravel = physicsBody != null
                     ? physicsBody.Move(direction * travel)
                     : MoveWithoutPhysics(direction * travel);
-                if (actualTravel > Mathf.Epsilon) SetAnimationMovement(direction);
+                if (actualTravel > Mathf.Epsilon)
+                    SetAnimationMovement(FacingForActualTravel(direction));
                 else if (travel > Mathf.Epsilon && physicsBody?.IsKnockbackActive != true &&
                          TryAttackBlockingStructure(direction, contactRange)) return;
                 targetOffset = (Vector2)(targetTransform.position - transform.position);
@@ -1132,6 +1133,16 @@ namespace Nyangbingo.Bosses
         {
             transform.position += (Vector3)displacement;
             return displacement.magnitude;
+        }
+
+        private Vector2 FacingForActualTravel(Vector2 commanded)
+        {
+            var moved = physicsBody != null ? physicsBody.LastMoveDisplacement : commanded;
+            // 명령은 플레이어 쪽인데 몸이 반대로 밀리면, 그 방향으로 뒤돌아 걷게 한다.
+            if (Mathf.Abs(moved.x) > .04f && Mathf.Abs(commanded.x) > .05f &&
+                Mathf.Sign(moved.x) != Mathf.Sign(commanded.x))
+                return new Vector2(Mathf.Sign(moved.x), 0f);
+            return commanded;
         }
 
         private void SetAnimationMovement(Vector2 direction)

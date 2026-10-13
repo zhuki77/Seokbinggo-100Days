@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: trait_labor
   m_EditorClassIdentifier: Assembly-CSharp::Nyangbingo.Data.TraitDefinition
   id: trait_labor
-  displayName: "\uD30C\uB294 \uB188"
+  displayName: "\uD30C\uB0E5\uC774"
   shortName: "\uB178\uB3D9"
   hookField: globals claw_t2_mine_crit
   hookSource: "\uBB34\uC1E0 \uBC1C\uD1B1 \uCC44\uAD74 \uD06C\uB9AC\uD2F0\uCEEC 0.15
