@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Data;
@@ -367,8 +367,7 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// Selection borders sit on the nine wells inside the vitals sheet, not in a separate row.
-        /// Wells stay on the sheet's native 208×62 pixels. The 18×22 border keeps its own size.
+        /// 퀵슬롯 아홉 칸은 우측 하단 핫바(176×28)의 16×16 홈에 올린다.
         /// </summary>
         public void PlaceInVitalsWells()
         {
@@ -387,44 +386,35 @@ namespace Nyangbingo.UI
                 viewport.offsetMax = Vector2.zero;
             }
 
-            const float sourceScale = 1f;
-            var border = gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected;
-            var slotSize = border != null ? border.rect.size : new Vector2(18f, 22f);
-            var wellSpriteX = new[] { 4f, 23f, 42f, 61f, 80f, 99f, 118f, 137f, 156f };
-            // 18×22 border top sits on the slot lip (sprite y 37). The dark well center is one pixel lower.
-            const float wellCenterSpriteY = 48f;
+            // 핫바 176×28. 어두운 홈은 x = 4 + 19n, y = 8, 한 칸 16×16.
+            const float slotSize = 16f;
+            const float wellY = 8f;
             content.anchorMin = content.anchorMax = new Vector2(0f, 1f);
             content.pivot = new Vector2(0f, 1f);
             content.anchoredPosition = Vector2.zero;
             content.localScale = Vector3.one;
-            content.sizeDelta = new Vector2(208f * sourceScale, 62f * sourceScale);
+            content.sizeDelta = new Vector2(176f, 28f);
 
-            for (var index = 0; index < wellSpriteX.Length; index++)
+            for (var index = 0; index < 9; index++)
             {
                 var slot = content.Find($"Slot_{index + 1}") as RectTransform;
                 if (slot == null) continue;
                 slot.anchorMin = slot.anchorMax = new Vector2(0f, 1f);
                 slot.pivot = new Vector2(0f, 1f);
                 slot.localScale = Vector3.one;
-                var centerX = (wellSpriteX[index] + 8f) * sourceScale;
-                var centerY = wellCenterSpriteY * sourceScale;
-                slot.anchoredPosition = new Vector2(centerX - slotSize.x * .5f, -(centerY - slotSize.y * .5f));
-                slot.sizeDelta = slotSize;
+                slot.anchoredPosition = new Vector2(4f + index * 19f, -wellY);
+                slot.sizeDelta = new Vector2(slotSize, slotSize);
                 var slotImage = slot.GetComponent<Image>();
                 if (slotImage != null) slotImage.preserveAspect = true;
-                // 18×22 테두리 안에서 어두운 홈은 왼쪽 1px, 위 6px부터 16×14이다.
-                const float wellInsetX = 1f;
-                const float wellInsetY = 6f;
-                const float wellWidth = 16f;
-                const float wellHeight = 14f;
+                const float wellInset = 2f;
+                const float iconSize = 12f;
                 var icon = slot.Find("Icon") as RectTransform;
                 if (icon != null)
                 {
                     icon.anchorMin = icon.anchorMax = new Vector2(0f, 1f);
                     icon.pivot = new Vector2(.5f, .5f);
-                    icon.anchoredPosition = new Vector2(
-                        wellInsetX + wellWidth * .5f, -(wellInsetY + wellHeight * .5f));
-                    icon.sizeDelta = new Vector2(12f, 12f);
+                    icon.anchoredPosition = new Vector2(slotSize * .5f, -slotSize * .5f);
+                    icon.sizeDelta = new Vector2(iconSize, iconSize);
                     if (icon.GetComponent<Image>() is Image iconImage)
                         iconImage.preserveAspect = true;
                 }
@@ -434,8 +424,8 @@ namespace Nyangbingo.UI
                 {
                     amount.anchorMin = amount.anchorMax = new Vector2(0f, 1f);
                     amount.pivot = new Vector2(0f, 1f);
-                    amount.anchoredPosition = new Vector2(wellInsetX, -wellInsetY);
-                    amount.sizeDelta = new Vector2(wellWidth, wellHeight);
+                    amount.anchoredPosition = new Vector2(wellInset, -wellInset);
+                    amount.sizeDelta = new Vector2(slotSize - wellInset * 2f, slotSize - wellInset * 2f);
                     if (amount.GetComponent<Text>() is Text amountText)
                     {
                         amountText.alignment = TextAnchor.LowerRight;
@@ -449,11 +439,10 @@ namespace Nyangbingo.UI
                 var shortcut = slot.Find("Shortcut") as RectTransform;
                 if (shortcut != null)
                 {
-                    // 폴더 탭은 칸 왼쪽 위 분홍 면. 속은 대략 x=1..6, y=0..4.
                     shortcut.gameObject.SetActive(true);
                     shortcut.anchorMin = shortcut.anchorMax = new Vector2(0f, 1f);
                     shortcut.pivot = new Vector2(.5f, .5f);
-                    shortcut.anchoredPosition = new Vector2(4f, -2.5f);
+                    shortcut.anchoredPosition = new Vector2(4f, -3f);
                     shortcut.sizeDelta = new Vector2(6f, 5f);
                     if (shortcut.GetComponent<Text>() is Text shortcutText)
                     {
@@ -462,7 +451,7 @@ namespace Nyangbingo.UI
                         shortcutText.alignment = TextAnchor.MiddleCenter;
                         shortcutText.fontSize = 5;
                         shortcutText.fontStyle = FontStyle.Normal;
-                        shortcutText.color = new Color(.18f, .1f, .14f, 1f);
+                        shortcutText.color = new Color(.86f, .9f, .96f, 1f);
                         shortcutText.horizontalOverflow = HorizontalWrapMode.Overflow;
                         shortcutText.verticalOverflow = VerticalWrapMode.Overflow;
                         shortcutText.raycastTarget = false;
@@ -473,10 +462,12 @@ namespace Nyangbingo.UI
             if (paletteRoot != null)
             {
                 var background = paletteRoot.GetComponent<Image>();
+                var hotbarFrame = gameplayArtCatalog?.HotbarFrame;
                 if (background != null)
                 {
-                    background.sprite = null;
-                    background.color = new Color(1f, 1f, 1f, 0f);
+                    background.sprite = hotbarFrame;
+                    background.color = hotbarFrame != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+                    background.preserveAspect = true;
                     background.raycastTarget = false;
                 }
             }
@@ -643,6 +634,56 @@ namespace Nyangbingo.UI
             return ReadPaletteMouseWheelSlot();
         }
 
+        private void SetHotbarSelectionArt(Transform slot, bool visible)
+        {
+            var rim = slot.Find("SelectionRim");
+            if (rim != null && rim.GetComponent<Image>() == null)
+            {
+                rim.name = "SelectionRim_Old";
+                Destroy(rim.gameObject);
+                rim = null;
+            }
+
+            if (!visible)
+            {
+                if (rim != null) rim.gameObject.SetActive(false);
+                return;
+            }
+
+            var sprite = gameplayArtCatalog?.TilePaletteSlotSelected;
+            if (sprite == null)
+            {
+                if (rim != null) rim.gameObject.SetActive(false);
+                return;
+            }
+
+            var image = rim != null ? rim.GetComponent<Image>() : null;
+            if (image == null)
+            {
+                var root = new GameObject("SelectionRim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                root.transform.SetParent(slot, false);
+                rim = root.transform;
+                image = root.GetComponent<Image>();
+            }
+
+            var rect = (RectTransform)rim;
+            var width = Mathf.Max(1f, sprite.rect.width);
+            var height = Mathf.Max(1f, sprite.rect.height);
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
+            rect.pivot = new Vector2(sprite.pivot.x / width, sprite.pivot.y / height);
+            rect.sizeDelta = new Vector2(width, height);
+            // 받은 18×22 파일 테두리의 밑변이 핫바 홈보다 한 픽셀 위에 앉는다.
+            rect.anchoredPosition = new Vector2(0f, -1f);
+            rect.localScale = Vector3.one;
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.color = Color.white;
+            image.raycastTarget = false;
+            rim.gameObject.SetActive(true);
+            rim.SetAsFirstSibling();
+        }
+
         private void RefreshSlotVisuals()
         {
             for (var index = 0; index < slotViews.Count; index++)
@@ -656,10 +697,11 @@ namespace Nyangbingo.UI
                 var background = view.Button.targetGraphic as Image;
                 if (background != null)
                 {
-                    if (vitalsWells && !selected)
+                    if (vitalsWells)
                     {
                         background.sprite = null;
                         background.color = new Color(1f, 1f, 1f, 0f);
+                        SetHotbarSelectionArt(view.Button.transform, selected);
                     }
                     else
                     {

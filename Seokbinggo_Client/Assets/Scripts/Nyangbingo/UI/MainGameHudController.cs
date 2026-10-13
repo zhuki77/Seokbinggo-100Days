@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Core;
 using Nyangbingo.Combat;
@@ -406,7 +406,6 @@ namespace Nyangbingo.UI
                 playerTemperatureGlyphs.SetText(displayedTemperature);
             else if (temperatureText != null)
                 temperatureText.text = displayedTemperature;
-            PlaceDegreeLabel();
             RefreshTemperatureArt();
             RefreshRoomTemperature();
             if (dayText != null)
@@ -439,6 +438,7 @@ namespace Nyangbingo.UI
                     playerHealthGlyphs.SetText(displayedHealth);
                 else playerHealthText.text = displayedHealth;
             }
+            PlaceClusterReadouts();
             RefreshBossStatus();
             RefreshNightSpawnBlockedIcon();
             RefreshCraftingProgress();
@@ -447,21 +447,17 @@ namespace Nyangbingo.UI
             RefreshStatusAlarmRow();
         }
 
+        private bool rightStatusCluster;
+
         private void PlaceSketchHud()
         {
-            // Art pixels stay 208×62 and 34×62. Full size covers nearly half the
-            // 480-wide HUD, so the corner is drawn a little smaller. Half scale
-            // made the plate text too small to read.
+            // 체력 틀 96×64는 우측 상단, 퀵슬롯 176×28은 우측 하단.
             const float margin = 4f;
-            const float gap = 2f;
-            const float hudScale = .75f;
-            const float frameWidth = 208f;
-            const float frameHeight = 62f;
-            const float thermoWidth = 34f;
-            var visualFrameHeight = frameHeight * hudScale;
-            var visualThermoWidth = thermoWidth * hudScale;
-            var frameBottom = margin + visualFrameHeight;
-            var clusterRight = margin + visualThermoWidth + gap;
+            const float frameWidth = 96f;
+            const float frameHeight = 64f;
+            const float hotbarWidth = 176f;
+            const float hotbarHeight = 28f;
+            rightStatusCluster = true;
 
             if (statusArtRoot != null)
             {
@@ -470,9 +466,9 @@ namespace Nyangbingo.UI
                 if (plate != null) Destroy(plate.gameObject);
                 vitals.anchorMin = vitals.anchorMax = new Vector2(1f, 1f);
                 vitals.pivot = new Vector2(1f, 1f);
-                vitals.anchoredPosition = new Vector2(-clusterRight, -margin);
+                vitals.anchoredPosition = new Vector2(-margin, -margin);
                 vitals.sizeDelta = new Vector2(frameWidth, frameHeight);
-                vitals.localScale = new Vector3(hudScale, hudScale, 1f);
+                vitals.localScale = Vector3.one;
                 if (playerVitalsArt != null)
                 {
                     var frame = playerVitalsArt.rectTransform;
@@ -483,44 +479,14 @@ namespace Nyangbingo.UI
                     playerVitalsArt.preserveAspect = true;
                     playerVitalsArt.type = Image.Type.Simple;
                 }
-                if (playerHealthFill != null)
-                {
-                    var health = playerHealthFill.rectTransform;
-                    health.anchoredPosition = new Vector2(4f, -27f);
-                }
-                if (playerTemperatureFill != null)
-                    playerTemperatureFill.enabled = false;
-                PlaceStatusIcon(nightSpawnBlockedIcon, new Vector2(92f, -1f));
-                PlaceStatusIcon(hypothermiaStatusIcon, new Vector2(92f, -11f));
+                if (playerTemperatureFill != null) playerTemperatureFill.enabled = false;
+                RefreshHealthFill();
+                PlaceStatusIcon(nightSpawnBlockedIcon, new Vector2(-14f, -8f));
+                PlaceStatusIcon(hypothermiaStatusIcon, new Vector2(-14f, -22f));
             }
 
-            if (temperatureArt != null)
-            {
-                var room = temperatureArt.rectTransform;
-                room.anchorMin = room.anchorMax = new Vector2(1f, 1f);
-                room.pivot = new Vector2(1f, 1f);
-                room.anchoredPosition = new Vector2(-margin, -margin);
-                room.sizeDelta = new Vector2(thermoWidth, frameHeight);
-                room.localScale = new Vector3(hudScale, hudScale, 1f);
-                temperatureArt.preserveAspect = true;
-                temperatureArt.type = Image.Type.Simple;
-            }
-
-            if (sealText != null)
-            {
-                // Room Celsius sits on the right-hand thermometer. The wide vitals sheet
-                // would otherwise push this label into the middle of the screen.
-                var seal = sealText.rectTransform;
-                seal.anchorMin = seal.anchorMax = new Vector2(1f, 1f);
-                seal.pivot = new Vector2(.5f, .5f);
-                seal.localScale = new Vector3(.2f, .2f, 1f);
-                seal.sizeDelta = new Vector2(100f, 40f);
-                seal.anchoredPosition = new Vector2(-(margin + visualThermoWidth * .5f), -(margin + 6f));
-                sealText.alignment = TextAnchor.MiddleCenter;
-                sealText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                sealText.verticalOverflow = VerticalWrapMode.Overflow;
-                sealText.raycastTarget = false;
-            }
+            if (temperatureArt != null) temperatureArt.enabled = false;
+            if (sealText != null) sealText.gameObject.SetActive(false);
 
             if (tearBalanceArt != null && tearBalanceArt.rectTransform.parent is RectTransform tearRoot)
             {
@@ -533,11 +499,11 @@ namespace Nyangbingo.UI
             if (palette != null)
             {
                 var hotbar = palette.GetComponent<RectTransform>();
-                hotbar.anchorMin = hotbar.anchorMax = new Vector2(1f, 1f);
-                hotbar.pivot = new Vector2(1f, 1f);
-                hotbar.anchoredPosition = new Vector2(-clusterRight, -margin);
-                hotbar.sizeDelta = new Vector2(frameWidth, frameHeight);
-                hotbar.localScale = new Vector3(hudScale, hudScale, 1f);
+                hotbar.anchorMin = hotbar.anchorMax = new Vector2(1f, 0f);
+                hotbar.pivot = new Vector2(1f, 0f);
+                hotbar.anchoredPosition = new Vector2(-margin, margin);
+                hotbar.sizeDelta = new Vector2(hotbarWidth, hotbarHeight);
+                hotbar.localScale = Vector3.one;
                 hotbar.SetAsLastSibling();
                 var paletteController = hotbar.GetComponent<MainGameTilePaletteController>() ??
                                         GetComponent<MainGameTilePaletteController>();
@@ -550,9 +516,12 @@ namespace Nyangbingo.UI
                 var equip = equipment.GetComponent<RectTransform>();
                 equip.anchorMin = equip.anchorMax = new Vector2(1f, 1f);
                 equip.pivot = new Vector2(1f, 1f);
-                equip.anchoredPosition = new Vector2(-margin, -(frameBottom + gap));
+                // 슬롯 그림이 루트 상단보다 아래에서 시작하므로 틀 아래 6px보다 더 내린다.
+                equip.anchoredPosition = new Vector2(-margin, -74f);
                 equip.localScale = new Vector3(.42f, .42f, 1f);
             }
+
+            PlaceClusterReadouts();
         }
 
         private static void PlaceStatusIcon(Image icon, Vector2 position)
@@ -581,14 +550,14 @@ namespace Nyangbingo.UI
                 playerHealthText.enabled = false;
                 playerHealthGlyphs = playerHealthText.GetComponent<RuntimePixelGlyphPresenter>() ??
                                      playerHealthText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                playerHealthGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .5f);
+                playerHealthGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, StatusGlyphScale);
                 AlignGlyphsToLeft(playerHealthText);
 
                 temperatureText.text = string.Empty;
                 temperatureText.enabled = false;
                 playerTemperatureGlyphs = temperatureText.GetComponent<RuntimePixelGlyphPresenter>() ??
                                           temperatureText.gameObject.AddComponent<RuntimePixelGlyphPresenter>();
-                playerTemperatureGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, .5f);
+                playerTemperatureGlyphs.ConfigureForRuntime(gameplayArtCatalog.ShellNumberGlyphs, StatusGlyphScale);
                 AlignGlyphsToLeft(temperatureText);
             }
 
@@ -613,35 +582,81 @@ namespace Nyangbingo.UI
                 temperatureText, gameplayArtCatalog?.LabelTemperature, true);
             degreeWordLabel = EnsureRowWord(degreeWordLabel, "DegreeWord",
                 temperatureText, gameplayArtCatalog?.LabelDegree, false);
-            PlaceDegreeLabel();
+            PlaceClusterReadouts();
+            if (hpWordLabel != null) hpWordLabel.enabled = false;
             playerHealthText?.transform.SetAsLastSibling();
             temperatureText?.transform.SetAsLastSibling();
         }
 
+        private const float StatusGlyphScale = .45f;
+
         private void SeparateStatusReadouts()
         {
-            // Empty plate on the hotbar sheet, sprite pixels x 117..182 and y 6..21.
-            const float boxX = 117f;
-            const float boxY = 6f;
-            const float rowH = 7f;
-            var labelW = 22f * (rowH / 15f);
-            var numberX = boxX + labelW + 1f;
+            PlaceClusterReadouts();
+        }
 
-            if (playerHealthText != null)
+        /// <summary>
+        /// 위 홈에 체온 글자를 원본 크기로 두고, 그 오른쪽에 체온·체력 숫자를 올린다.
+        /// 밀폐 게이지는 아래 홈, 물약은 체력 틀 오른쪽에 붙어 있다.
+        /// </summary>
+        private void PlaceClusterReadouts()
+        {
+            if (!rightStatusCluster) return;
+            const float wellLeft = 6f;
+            const float wellRight = 68f;
+            const float wellTop = 6f;
+            var rowHeight = 15f * StatusGlyphScale;
+
+            var wordWidth = 0f;
+            var wordHeight = rowHeight;
+            if (temperatureWordLabel != null && temperatureWordLabel.sprite != null)
             {
-                var health = playerHealthText.rectTransform;
-                health.anchorMin = health.anchorMax = new Vector2(0f, 1f);
-                health.pivot = new Vector2(0f, 1f);
-                health.anchoredPosition = new Vector2(numberX, -boxY);
-                health.sizeDelta = new Vector2(40f, rowH);
+                var native = temperatureWordLabel.sprite.rect.size;
+                wordWidth = native.x;
+                wordHeight = native.y;
+                var word = temperatureWordLabel.rectTransform;
+                word.anchorMin = word.anchorMax = new Vector2(0f, 1f);
+                word.pivot = new Vector2(0f, 1f);
+                word.anchoredPosition = new Vector2(wellLeft, -wellTop);
+                word.sizeDelta = native;
+                word.localScale = Vector3.one;
+                temperatureWordLabel.preserveAspect = false;
             }
 
-            if (temperatureText == null) return;
-            var temperature = temperatureText.rectTransform;
-            temperature.anchorMin = temperature.anchorMax = new Vector2(0f, 1f);
-            temperature.pivot = new Vector2(0f, 1f);
-            temperature.anchoredPosition = new Vector2(numberX, -(boxY + rowH + 1f));
-            temperature.sizeDelta = new Vector2(24f, rowH);
+            var numberY = wellTop + Mathf.Max(0f, (wordHeight - rowHeight) * .5f);
+            var temperatureWidth = playerTemperatureGlyphs != null
+                ? playerTemperatureGlyphs.RenderedWidth : 0f;
+            var temperatureX = wellLeft + (wordWidth > 0f ? wordWidth + 1f : 0f);
+            PlaceGlyphBox(temperatureText, temperatureX, numberY, temperatureWidth, rowHeight);
+
+            if (degreeWordLabel != null && degreeWordLabel.sprite != null && temperatureText != null)
+            {
+                var native = degreeWordLabel.sprite.rect.size;
+                var degreeWidth = native.y > 0f ? native.x * (rowHeight / native.y) : native.x;
+                var degree = degreeWordLabel.rectTransform;
+                degree.anchorMin = degree.anchorMax = new Vector2(0f, 1f);
+                degree.pivot = new Vector2(0f, 1f);
+                degree.anchoredPosition = new Vector2(temperatureX + temperatureWidth + 1f, -numberY);
+                degree.sizeDelta = new Vector2(degreeWidth, rowHeight);
+            }
+
+            var healthWidth = playerHealthGlyphs != null ? playerHealthGlyphs.RenderedWidth : 0f;
+            var healthX = Mathf.Max(wellLeft, wellRight - healthWidth);
+            PlaceGlyphBox(playerHealthText, healthX, numberY, healthWidth, rowHeight);
+        }
+
+        private static void PlaceGlyphBox(Text row, float x, float y, float width, float height)
+        {
+            if (row == null) return;
+            var rect = row.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, -y);
+            rect.sizeDelta = new Vector2(Mathf.Max(1f, width), height);
+            var glyphs = row.transform.Find("PixelGlyphs") as RectTransform;
+            if (glyphs == null) return;
+            glyphs.anchorMin = glyphs.anchorMax = glyphs.pivot = new Vector2(.5f, .5f);
+            glyphs.anchoredPosition = Vector2.zero;
         }
 
         private static void AlignGlyphsToLeft(Text row)
@@ -651,15 +666,6 @@ namespace Nyangbingo.UI
             glyphs.anchorMin = glyphs.anchorMax = new Vector2(0f, .5f);
             glyphs.pivot = new Vector2(0f, .5f);
             glyphs.anchoredPosition = Vector2.zero;
-        }
-
-        private void PlaceDegreeLabel()
-        {
-            if (degreeWordLabel == null || temperatureText == null) return;
-            var row = temperatureText.rectTransform;
-            var width = playerTemperatureGlyphs != null ? playerTemperatureGlyphs.RenderedWidth : row.sizeDelta.x;
-            var rect = degreeWordLabel.rectTransform;
-            rect.anchoredPosition = new Vector2(row.anchoredPosition.x + width + 1f, row.anchoredPosition.y);
         }
 
         private Image EnsureRowWord(Image existing, string name, Text row, Sprite sprite, bool placeOnLeft)
@@ -836,13 +842,8 @@ namespace Nyangbingo.UI
                 rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
                 rect.pivot = new Vector2(1f, .5f);
                 // Keep the earliest alarm next to the readout; later alarms grow left.
-                var label = hpWordLabel != null ? hpWordLabel.rectTransform : null;
-                // Match the 7px clearance from the icon bottom (y=20) to the
-                // health bar top (y=27), rather than hugging the readout frame.
-                const float readoutGap = 7f;
-                var rightEdge = label != null
-                    ? label.anchoredPosition.x - label.rect.width - readoutGap : 117f - readoutGap;
-                rect.anchoredPosition = new Vector2(rightEdge - index * 14f, -14f);
+                // 상태 아이콘은 체력 틀 왼쪽으로 늘어난다.
+                rect.anchoredPosition = new Vector2(-2f - index * 14f, -16f);
                 rect.sizeDelta = new Vector2(12f, 12f);
                 rect.localScale = Vector3.one;
                 image.enabled = visible;
@@ -861,7 +862,8 @@ namespace Nyangbingo.UI
 
         private void UpdateSealDiagnosticInput()
         {
-            if (temperatureArt == null || bootstrap?.SealSystem == null || Time.timeScale <= 0f)
+            if ((sealGaugeArt == null && temperatureArt == null) || bootstrap?.SealSystem == null ||
+                Time.timeScale <= 0f)
             {
                 ResetSealDiagnosticHold();
                 return;
@@ -883,12 +885,13 @@ namespace Nyangbingo.UI
 
         private bool IsPointerOverSealGauge()
         {
-            if (temperatureArt == null || !temperatureArt.isActiveAndEnabled) return false;
+            var gauge = sealGaugeArt != null && sealGaugeArt.isActiveAndEnabled ? sealGaugeArt : temperatureArt;
+            if (gauge == null || !gauge.isActiveAndEnabled) return false;
             var eventCamera = hudCanvas != null && hudCanvas.renderMode != RenderMode.ScreenSpaceOverlay
                 ? hudCanvas.worldCamera
                 : null;
             return RectTransformUtility.RectangleContainsScreenPoint(
-                temperatureArt.rectTransform, Input.mousePosition, eventCamera);
+                gauge.rectTransform, Input.mousePosition, eventCamera);
         }
 
         private void ResetSealDiagnosticHold()
@@ -1013,26 +1016,120 @@ namespace Nyangbingo.UI
             hasLastSealPercent = true;
         }
 
+        private Image sealGaugeArt;
+
+        private void EnsureSealGauge()
+        {
+            if (sealGaugeArt != null || statusArtRoot == null) return;
+            var gaugeObject = new GameObject("SealGauge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            gaugeObject.transform.SetParent(statusArtRoot.transform, false);
+            var rect = gaugeObject.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            sealGaugeArt = gaugeObject.GetComponent<Image>();
+            sealGaugeArt.raycastTarget = true;
+            sealGaugeArt.preserveAspect = false;
+            sealGaugeArt.enabled = false;
+        }
+
+        private void RefreshSealGauge()
+        {
+            EnsureSealGauge();
+            if (sealGaugeArt == null) return;
+            var frames = gameplayArtCatalog?.SealGaugeFrames;
+            var ratio = ResolveDisplayedSealRatio();
+            if (frames == null || frames.Count == 0)
+            {
+                sealGaugeArt.enabled = false;
+                return;
+            }
+
+            if (ratio <= 0f)
+            {
+                sealGaugeArt.enabled = false;
+                return;
+            }
+
+            // 0번이 세 칸 전부, 마지막이 오른쪽 한 칸이다. 비율이 낮으면 오른쪽만 남긴다.
+            var filled = Mathf.Clamp(Mathf.CeilToInt(ratio * frames.Count), 1, frames.Count);
+            var sprite = frames[frames.Count - filled];
+            if (sprite == null)
+            {
+                sealGaugeArt.enabled = false;
+                return;
+            }
+
+            sealGaugeArt.sprite = sprite;
+            sealGaugeArt.color = Color.white;
+            sealGaugeArt.enabled = true;
+            var rect = sealGaugeArt.rectTransform;
+            var width = sprite.rect.width;
+            var height = sprite.rect.height;
+            // 아래 홈(안쪽 오른쪽 끝 x 56, 위 y 41)에 둔다. 칸이 줄면 왼쪽부터 비운다.
+            rect.anchoredPosition = new Vector2(56f - width, -41f);
+            rect.sizeDelta = new Vector2(width, height);
+            rect.SetAsLastSibling();
+        }
+
+        private float ResolveDisplayedSealRatio()
+        {
+            var seals = bootstrap?.SealSystem;
+            if (seals == null) return 0f;
+            var ratio = Mathf.Clamp01(seals.SealPercent);
+            if (playerController == null || bootstrap.TileService == null) return ratio;
+            var cell = bootstrap.TileService.WorldToCell(playerController.transform.position);
+            if (seals.TryGetDebugRegion(cell, out _, out var localRatio, out _, out _))
+                ratio = Mathf.Max(ratio, Mathf.Clamp01(localRatio));
+            return ratio;
+        }
+
+        private void RefreshPlayerVitalsFrame()
+        {
+            if (playerVitalsArt == null) return;
+            var frames = gameplayArtCatalog?.PlayerVitalsFrames;
+            if (frames == null || frames.Count == 0)
+            {
+                playerVitalsArt.enabled = false;
+                return;
+            }
+
+            // 0번이 뜨거운 빨강, 마지막이 차가운 파랑이다. 체온이 같은 동안 같은 장을 유지한다.
+            var normalized = runtimeServices?.PlayerTemperature?.Normalized ?? 0f;
+            var index = ResolveDescendingGaugeFrame(normalized, frames.Count);
+            playerVitalsArt.sprite = frames[index];
+            playerVitalsArt.enabled = playerVitalsArt.sprite != null;
+        }
+
+        private void RefreshHealthFill()
+        {
+            if (playerHealthFill == null) return;
+            if (!rightStatusCluster)
+            {
+                playerHealthFill.enabled = false;
+                return;
+            }
+
+            var ratio = playerHealth != null && playerHealth.MaxHealth > 0
+                ? Mathf.Clamp01(playerHealth.Current / (float)playerHealth.MaxHealth)
+                : 0f;
+            var rect = playerHealthFill.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            // 숫자 칸 아래 뚫린 홈. 안쪽은 x 6..55, y 28..31.
+            rect.anchoredPosition = new Vector2(6f, -28f);
+            rect.sizeDelta = new Vector2(50f * ratio, 4f);
+            playerHealthFill.color = new Color(0.75f, 0.18f, 0.16f, 1f);
+            playerHealthFill.enabled = ratio > .001f;
+            rect.SetSiblingIndex(0);
+        }
+
         private void RefreshStatusArtHud()
         {
-            if (playerVitalsArt == null || runtimeServices?.PlayerTemperature == null) return;
-            var temperatureFrames = gameplayArtCatalog?.PlayerVitalsFrames;
-            var temperatureBucket = ResolveTemperatureBucket(runtimeServices.PlayerTemperature.Normalized);
-            if (temperatureFrames != null && temperatureFrames.Count >= 12)
-            {
-                var animationFrame = Mathf.FloorToInt(Time.unscaledTime / StatusAnimationFrameSeconds) & 1;
-                playerVitalsArt.sprite = temperatureFrames[temperatureBucket * 2 + animationFrame];
-                playerVitalsArt.enabled = playerVitalsArt.sprite != null;
-            }
-            else playerVitalsArt.enabled = false;
-
-            var healthRatio = playerHealth != null ? CalculateHealthRatio(playerHealth.Current, playerHealth.MaxHealth) : 0f;
-            playerHealthFill.rectTransform.anchoredPosition = new Vector2(4f, -27f);
-            playerHealthFill.color = new Color(.82f, .15f, .12f, 1f);
-            playerHealthFill.rectTransform.sizeDelta = new Vector2(166f * healthRatio, 4f);
-            playerHealthFill.enabled = healthRatio > 0f;
-            if (playerTemperatureFill != null)
-                playerTemperatureFill.enabled = false;
+            RefreshPlayerVitalsFrame();
+            RefreshHealthFill();
+            if (playerTemperatureFill != null) playerTemperatureFill.enabled = false;
+            RefreshSealGauge();
+            if (runtimeServices?.PlayerTemperature == null) return;
             RefreshHypothermiaStatusIcon();
 
             var tearFrames = gameplayArtCatalog?.YokaiTearBalanceFrames;
@@ -1481,6 +1578,11 @@ namespace Nyangbingo.UI
         private void RefreshTemperatureArt()
         {
             if (temperatureArt == null) return;
+            if (rightStatusCluster)
+            {
+                temperatureArt.enabled = false;
+                return;
+            }
             var frames = gameplayArtCatalog?.TemperatureFrames;
             if (frames == null || frames.Count == 0)
             {
@@ -1517,7 +1619,7 @@ namespace Nyangbingo.UI
             var formatted = RoomTempPresentation.FormatCelsius(celsius);
             sealText.text = formatted;
             sealText.color = RoomTempPresentation.BandColor(band);
-            sealText.gameObject.SetActive(!Mathf.Approximately(celsius, 0f));
+            sealText.gameObject.SetActive(!rightStatusCluster && !Mathf.Approximately(celsius, 0f));
             if (RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius) &&
                 !hypothermiaCuePlayed)
             {

@@ -493,7 +493,7 @@ namespace Nyangbingo.UI
                         saveCoordinator.TryApplyDemoSnapshot(demo))
                     {
                         launchSave = demo;
-                        return true;
+                    return true;
                     }
                     Debug.LogError("[Nyangbingo] 데모 세이브 적용 실패 — 타이틀로 복귀합니다.");
                     launchSave = null;

@@ -54,6 +54,8 @@ namespace Nyangbingo.World
         private WorldMobLocomotion locomotion;
         private ContactFilter2D movementFilter;
         private Collider2D attachedCollider;
+        private CapsuleCollider2D feetCollider;
+        private BoxCollider2D bodyCollider;
         private TileService navigationTiles;
         private System.Func<YokaiWallMaterial, bool> canDestroyWallMaterial;
         private bool requireFullBodyClearance;
@@ -71,6 +73,7 @@ namespace Nyangbingo.World
         private float stepJumpSettleUntil;
         private Vector2 stableNavigationDirection;
         private float navigationFacingX;
+        private float navigationTargetOffsetY;
         private float navigationDirectionHoldUntil;
         private float directPathClearSince = -1f;
         private Vector2 groundRouteDirection;
@@ -84,6 +87,7 @@ namespace Nyangbingo.World
         private bool groundRouteReachesTarget;
         private bool groundDropCommitted;
         private Vector3Int groundDropLandingCell;
+        private int narrowShaftExitSign;
         private Vector2 knockbackRemainingDisplacement;
         private float knockbackRemainingSeconds;
         private float knockbackGrabRemainingSeconds;
@@ -109,7 +113,8 @@ namespace Nyangbingo.World
         private void Awake()
         {
             body = GetComponent<Rigidbody2D>();
-            attachedCollider = GetComponent<Collider2D>();
+            BindSplitColliders();
+            if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
             movementFilter = new ContactFilter2D
             {
                 useTriggers = false,
@@ -153,6 +158,7 @@ namespace Nyangbingo.World
             groundRouteReachesTarget = false;
             groundDropCommitted = false;
             groundDropLandingCell = default;
+            narrowShaftExitSign = 0;
             LastMoveDisplacement = Vector2.zero;
             knockbackRemainingDisplacement = Vector2.zero;
             knockbackRemainingSeconds = 0f;
@@ -171,6 +177,7 @@ namespace Nyangbingo.World
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             if (IsFlying) body.linearVelocity = Vector2.zero;
 
+            BindSplitColliders();
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
             if (attachedCollider != null)
             {
@@ -252,6 +259,7 @@ namespace Nyangbingo.World
         public Vector2 NavigationDirection(Vector2 worldOffset)
         {
             var targetOffset = NavigationOffset(worldOffset);
+            navigationTargetOffsetY = targetOffset.y;
             if (targetOffset.sqrMagnitude <= Mathf.Epsilon) return Vector2.zero;
             if (!IsFlying)
                 return GroundNavigationDirection(targetOffset);
@@ -322,11 +330,9 @@ namespace Nyangbingo.World
         private Vector2 GroundNavigationDirection(Vector2 targetOffset)
         {
             var directHorizontal = new Vector2(Mathf.Sign(targetOffset.x), 0f);
-            if (navigationTiles == null || !requireFullBodyClearance && Mathf.Abs(targetOffset.y) <= 1f)
+            if (navigationTiles == null)
                 return WithNavigationFacing(
-                    Mathf.Abs(targetOffset.x) > .05f
-                        ? directHorizontal
-                        : Vector2.zero,
+                    Mathf.Abs(targetOffset.x) > .05f ? directHorizontal : Vector2.zero,
                     targetOffset.x);
 
             var current = body != null ? body.position : (Vector2)transform.position;
@@ -349,6 +355,12 @@ namespace Nyangbingo.World
                 // 착지 직후 한동안은 충돌로 뒤집힌 우회 경로를 받아들이지 않는다.
                 stepJumpSettleUntil = Time.unscaledTime + .4f;
             }
+            if (TryGetNarrowShaftMove(targetOffset, out var shaftMove))
+                return shaftMove;
+            if (!requireFullBodyClearance && Mathf.Abs(targetOffset.y) <= 1f)
+                return WithNavigationFacing(
+                    Mathf.Abs(targetOffset.x) > .05f ? directHorizontal : Vector2.zero,
+                    targetOffset.x);
             if (groundedOnTiles)
                 groundDropCommitted = false;
             // A drop edge is represented by a direct graph edge from the platform edge to
@@ -372,7 +384,11 @@ namespace Nyangbingo.World
 
             // 발밑이 이어져 있으면 그 칸까지 걷는다. 곧 끊기는 구덩이 벽은 예외다.
             // 넘을 수 없는 벽 쪽으로 다시 걸어 들어갔다가 백스텝으로 빠지지 않는다.
-            if (Mathf.Abs(targetOffset.x) > .05f &&
+            // 목표가 한 층 이상 아래면 이 지름길을 타지 않는다. 위층 벽을 점프로
+            // 오가는 대신, 아래 경로가 낭떠러지까지 걸어 내려가게 한다.
+            var targetIsBelow = targetOffset.y < -1.5f;
+            if (!targetIsBelow &&
+                Mathf.Abs(targetOffset.x) > .05f &&
                 HasSupportedWalkRoom(targetOffset.x, .55f))
             {
                 var towardTarget = Mathf.Sign(targetOffset.x);
@@ -439,13 +455,22 @@ namespace Nyangbingo.World
                         groundDropCommitted = true;
                         groundDropLandingCell = nextCell;
                     }
-                    groundRouteDirection = new Vector2(Mathf.Sign(horizontalDelta), 0f);
-                    if (ShouldKeepStepJumpDirection(groundRouteDirection, targetOffset))
-                        return LockedStepJumpDirection();
-                    return CommitGroundDirection(groundRouteDirection, targetOffset);
+                    // 한 칸 구덩이에서 빠져나온 뒤, 그 칸이 다음 웨이포인트면 다시 걸어 들어간다.
+                    var returnsToNarrowShaft =
+                        horizontalDelta * targetOffset.x < 0f && IsNarrowShaftColumn(nextCell);
+                    if (!returnsToNarrowShaft)
+                    {
+                        groundRouteDirection = new Vector2(Mathf.Sign(horizontalDelta), 0f);
+                        if (ShouldKeepStepJumpDirection(groundRouteDirection, targetOffset))
+                            return LockedStepJumpDirection();
+                        return CommitGroundDirection(groundRouteDirection, targetOffset);
+                    }
+                    groundPath.Clear();
+                    groundPathIndex = 0;
+                    groundRouteReachesTarget = false;
                 }
             }
-            if (Mathf.Abs(targetOffset.x) > .05f)
+            if (!targetIsBelow && Mathf.Abs(targetOffset.x) > .05f)
             {
                 if (ShouldKeepStepJumpDirection(directHorizontal, targetOffset))
                     return LockedStepJumpDirection();
@@ -477,8 +502,9 @@ namespace Nyangbingo.World
         private bool AcceptGroundReversal(Vector2 newDirection, Vector2 targetOffset)
         {
             if (groundRoutePreviousDirection.sqrMagnitude <= Mathf.Epsilon) return true;
-            // 목표가 돌아설 쪽에 충분히 가 있다. 그때는 한 번만 방향을 바꾼다.
-            if (targetOffset.x * newDirection.x > GroundReversalCommitDistance) return true;
+            // 목표가 돌아설 쪽에 있으면 구덩이 벽이 보여도 그쪽으로 돈다.
+            // 빠져나온 뒤 턱이 남아 있다고 다시 구덩이로 백스텝하지 않는다.
+            if (targetOffset.x * newDirection.x > .2f) return true;
             // 한 칸 턱이 앞에 있으면 구덩이 안에서 반대 벽으로 돌아가지 않는다.
             if (HasClimbableStepAhead(groundRoutePreviousDirection.x)) return false;
             return Time.unscaledTime < groundDetourAllowedUntil;
@@ -509,6 +535,8 @@ namespace Nyangbingo.World
                 return false;
             if (candidate.x * stepJumpDirectionX >= 0f) return false;
             if (targetOffset.x * stepJumpDirectionX > .2f) return true;
+            // 목표가 반대편이면 턱이 남아 있어도 점프 방향을 붙잡지 않는다.
+            if (targetOffset.x * stepJumpDirectionX < -.2f) return false;
             // 착지했어도 한 칸 턱이 그대로면 구덩이 반대편으로 걷지 않고 같은 쪽을 다시 오른다.
             return HasClimbableStepAhead(stepJumpDirectionX);
         }
@@ -1127,8 +1155,11 @@ namespace Nyangbingo.World
                 direction = remainingDisplacement / remainingDistance;
                 var allowedDistance = remainingDistance;
                 var blockingNormal = Vector2.zero;
-                var hitCount = body.Cast(
-                    direction, movementFilter, castHits, remainingDistance + CollisionSkin);
+                var movementCollider = ColliderForMovement;
+                var hitCount = movementCollider != null
+                    ? movementCollider.Cast(
+                        direction, movementFilter, castHits, remainingDistance + CollisionSkin)
+                    : 0;
                 for (var index = 0; index < hitCount; index++)
                 {
                     var hit = castHits[index];
@@ -1189,6 +1220,10 @@ namespace Nyangbingo.World
                     // 뒤로 걸어 나가게 만든다. 수직 분리만 남긴다.
                     if (correction.x * stepJumpDirectionX < 0f &&
                         (stepJumpLocked || Time.unscaledTime < stepJumpSettleUntil))
+                        correction.x = 0f;
+                    // 한 칸 구덩이 양 벽에 겹치면 좌우로 번갈아 밀려 제자리에서 흔들린다.
+                    if (Mathf.Abs(correction.x) > Mathf.Abs(correction.y) &&
+                        IsNarrowShaftColumn(ToCell((Vector2)attachedCollider.bounds.center)))
                         correction.x = 0f;
                     if (correction.sqrMagnitude <= Mathf.Epsilon) continue;
                     body.position += correction;
@@ -1255,7 +1290,7 @@ namespace Nyangbingo.World
                 if (!IsAirCell(cell) || !IsNavigationPassableCell(cell + Vector3Int.down))
                     return false;
                 if (IsGroundStandingCell(cell + Vector3Int.right * sign))
-                    return true;
+                    return attachedCollider.bounds.extents.x <= .5f || gap > 0;
             }
             return false;
         }
@@ -1293,6 +1328,8 @@ namespace Nyangbingo.World
             // 앞 칸 바닥에 아직 걸을 자리가 있으면 점프하지 않는다.
             // 넓은 몸통 프로브가 한 칸 일찍 벽에 닿아 제자리 점프를 반복했다.
             if (HasSupportedWalkRoom(direction.x, .55f)) return false;
+            // 목표가 아래층이면 위층 벽에 뛰어오르지 않는다. 낭떠러지에서는 그냥 떨어진다.
+            if (navigationTargetOffsetY < -1.5f) return false;
             // 넘을 수 없는 구덩이 벽에는 점프하지 않는다. 맞고 밀리면 뒤로 걸어 나간다.
             if (!HasJumpableLipAhead(direction.x) && !HasGapLandingAhead(direction.x))
                 return false;
@@ -1305,16 +1342,20 @@ namespace Nyangbingo.World
             var forwardProbe = (Vector2)bounds.center +
                                Vector2.right * horizontalSign * (extents.x + .08f);
             var blockingCell = ToCell(forwardProbe);
+            // 몸보다 좁은 한 칸 수직 구덩이는 뛰어넘지 않는다. 가장자리에 걸린 채 벽을 보게 된다.
+            if (extents.x > .5f && !IsNarrowShaftColumn(ToCell((Vector2)bounds.center)) &&
+                IsNarrowShaftColumn(blockingCell))
+                return false;
             if (IsAirCell(blockingCell) && !HasGapLandingAhead(horizontalSign))
                 return false;
 
-            var jumpVelocity = ResolveStepJumpVelocity(extents.x);
+            var jumpVelocity = ResolveStepJumpVelocity(
+                ColliderForBody != null ? ColliderForBody.bounds.extents.x : extents.x);
             var gravity = Mathf.Abs(Physics2D.gravity.y * body.gravityScale);
             if (gravity <= Mathf.Epsilon) return false;
             var jumpHeight = jumpVelocity * jumpVelocity / (2f * gravity);
-            // Sweep the whole movement collider to the jump apex. A point above the pivot
-            // misses low ceilings over the boss's shoulders and causes repeated head bumps.
             var ceilingLimit = jumpHeight;
+            // 몸통 박스는 한 칸 구덩이 벽에 겹친다. 천장과 낙하는 그 벽을 통과하는 발 캡슐만 본다.
             var ceilingHitCount = attachedCollider.Cast(
                 Vector2.up, movementFilter, castHits, jumpHeight + CollisionSkin);
             for (var index = 0; index < ceilingHitCount; index++)
@@ -1385,6 +1426,133 @@ namespace Nyangbingo.World
                    navigationTiles.TryGetDamageableWallMaterial(cell, out material);
         }
 
+        private bool IsWideGroundBody()
+        {
+            if (IsFlying) return false;
+            if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
+            return attachedCollider != null && attachedCollider.bounds.extents.x > .5f;
+        }
+
+        /// <summary>
+        /// 좌우 벽이 바닥보다 높은 한 칸 공기 기둥. 지름 1.3인 지상 보스는
+        /// 이 안에 들어가지 못해 입구에 걸리고, 바닥에 닿아도 양 벽에 끼어 흔들린다.
+        /// 좌우가 이어진 복도는 기둥이 아니므로 그대로 걷는다.
+        /// </summary>
+        private bool IsNarrowShaftColumn(Vector3Int column)
+        {
+            if (navigationTiles == null || !IsAirCell(column)) return false;
+            if (IsAirCell(column + Vector3Int.left) || IsAirCell(column + Vector3Int.right))
+                return false;
+            if (!TryGetShaftLandingTop(column, out var landingTop)) return false;
+            return TryGetSolidTop(column + Vector3Int.left, out var leftTop) &&
+                   TryGetSolidTop(column + Vector3Int.right, out var rightTop) &&
+                   leftTop > landingTop + .4f && rightTop > landingTop + .4f;
+        }
+
+        private bool TryGetSolidTop(Vector3Int cell, out float top)
+        {
+            top = 0f;
+            if (navigationTiles == null || !navigationTiles.InBounds(cell) || IsAirCell(cell))
+                return false;
+            var tile = navigationTiles.GetTile(cell);
+            if (!tile.BlocksMovement || navigationTiles.IsDoorOpen(cell)) return false;
+            top = navigationTiles.GetCellWorldBounds(cell).max.y;
+            return true;
+        }
+
+        private bool TryGetShaftLandingTop(Vector3Int column, out float landingTop)
+        {
+            landingTop = 0f;
+            for (var drop = 1; drop <= GroundRouteMaximumDropCells; drop++)
+            {
+                var below = column + Vector3Int.down * drop;
+                if (!navigationTiles.InBounds(below)) return false;
+                if (IsAirCell(below))
+                {
+                    // 아래가 두 칸 이상으로 넓어지면 물리 낙하에 맡긴다.
+                    if (IsAirCell(below + Vector3Int.left) || IsAirCell(below + Vector3Int.right))
+                        return false;
+                    continue;
+                }
+                if (!navigationTiles.GetTile(below).BlocksMovement || navigationTiles.IsDoorOpen(below))
+                    return false;
+                landingTop = navigationTiles.GetCellWorldBounds(below).max.y;
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryGetNarrowShaftMove(Vector2 targetOffset, out Vector2 direction)
+        {
+            direction = Vector2.zero;
+            if (!IsWideGroundBody() || body == null) return false;
+            var bounds = attachedCollider.bounds;
+            var column = ToCell(new Vector2(bounds.center.x, bounds.min.y + .05f));
+            if (!IsNarrowShaftColumn(column))
+                column = ToCell((Vector2)bounds.center);
+            if (!IsNarrowShaftColumn(column) || !TryGetShaftLandingTop(column, out var landingTop))
+            {
+                narrowShaftExitSign = 0;
+                return false;
+            }
+
+            var feet = attachedCollider.bounds.min.y;
+            if (feet > landingTop + .12f && !stepJumpLocked)
+            {
+                direction = WithNavigationFacing(Vector2.zero, narrowShaftExitSign);
+                return true;
+            }
+
+            if (narrowShaftExitSign == 0)
+                narrowShaftExitSign = ChooseNarrowShaftExit(targetOffset);
+            else if (targetOffset.x * narrowShaftExitSign < -.75f &&
+                     !HasJumpableLipAhead(narrowShaftExitSign) &&
+                     HasJumpableLipAhead(-narrowShaftExitSign))
+                narrowShaftExitSign = -narrowShaftExitSign;
+            if (groundRoutePreviousDirection.x * narrowShaftExitSign < 0f)
+                groundRoutePreviousDirection = Vector2.zero;
+            var exit = new Vector2(narrowShaftExitSign, 0f);
+            direction = CommitGroundDirection(exit,
+                new Vector2(narrowShaftExitSign * 2f, targetOffset.y));
+            return true;
+        }
+
+        private int ChooseNarrowShaftExit(Vector2 targetOffset)
+        {
+            var towardTarget = Mathf.Abs(targetOffset.x) > .05f
+                ? (targetOffset.x > 0f ? 1 : -1)
+                : groundRouteTieBias;
+            if (!HasJumpableLipAhead(towardTarget) && HasJumpableLipAhead(-towardTarget))
+                return -towardTarget;
+            return towardTarget;
+        }
+
+        private void LateUpdate()
+        {
+            if (IsFlying || stepJumpLocked || body == null || navigationTiles == null) return;
+            if (!IsWideGroundBody() || body.linearVelocity.y > .2f) return;
+            var bounds = attachedCollider.bounds;
+            var footColumn = ToCell(new Vector2(bounds.center.x, bounds.min.y + .05f));
+            var column = footColumn;
+            if (!IsNarrowShaftColumn(column))
+            {
+                var toward = groundRouteDirection.x;
+                if (Mathf.Abs(toward) <= .1f) return;
+                var ahead = footColumn + Vector3Int.right * (toward > 0f ? 1 : -1);
+                if (!IsNarrowShaftColumn(ahead)) return;
+                var shaftMin = CellCenter(ahead).x - .5f;
+                var shaftMax = CellCenter(ahead).x + .5f;
+                if (bounds.max.x <= shaftMin || bounds.min.x >= shaftMax) return;
+                column = ahead;
+            }
+            if (!TryGetShaftLandingTop(column, out var landingTop)) return;
+            if (bounds.min.y <= landingTop + .08f) return;
+            var centerX = CellCenter(column).x;
+            var deltaX = Mathf.Clamp(centerX - bounds.center.x, -.12f, .12f);
+            body.position += new Vector2(deltaX, -3.5f * Time.deltaTime);
+            body.linearVelocity = new Vector2(0f, Mathf.Min(body.linearVelocity.y, -1.5f));
+        }
+
         private bool IsGroundedOnTiles()
         {
             if (attachedCollider == null) attachedCollider = GetComponent<Collider2D>();
@@ -1448,6 +1616,52 @@ namespace Nyangbingo.World
 
         public static float PhysicalRadiusForBoss(BossKind kind) =>
             ForBoss(kind) == WorldMobLocomotion.Flying ? .34f : .65f;
+
+        // 지상 보스 발은 한 칸(1)보다 좁다. 몸통 박스는 그 위에 겹치고 피격에만 쓴다.
+        public const float GroundBossFootWidth = .72f;
+        public const float GroundBossFootHeight = .78f;
+        public const float GroundBossBodyWidth = 1.2f;
+        public const float GroundBossBodyHeight = 1.02f;
+
+        private void BindSplitColliders()
+        {
+            var capsule = GetComponent<CapsuleCollider2D>();
+            var box = GetComponent<BoxCollider2D>();
+            if (capsule == null || box == null) return;
+            feetCollider = capsule;
+            bodyCollider = box;
+            attachedCollider = capsule;
+            box.isTrigger = true;
+        }
+
+        public CapsuleCollider2D FeetCollider => feetCollider;
+        public BoxCollider2D BodyCollider => bodyCollider;
+        public Collider2D ColliderForMovement =>
+            feetCollider != null ? feetCollider : attachedCollider;
+        public Collider2D ColliderForBody =>
+            bodyCollider != null ? bodyCollider : attachedCollider;
+
+        public static CapsuleCollider2D AddGroundBossColliders(GameObject boss, float presentationScale)
+        {
+            var scale = Mathf.Max(.01f, presentationScale);
+            var feet = boss.AddComponent<CapsuleCollider2D>();
+            feet.direction = CapsuleDirection2D.Vertical;
+            var footWidth = GroundBossFootWidth / scale;
+            var footHeight = GroundBossFootHeight / scale;
+            feet.size = new Vector2(footWidth, Mathf.Max(footHeight, footWidth));
+            feet.offset = Vector2.up * (feet.size.y * .5f);
+            feet.isTrigger = false;
+
+            var torso = boss.AddComponent<BoxCollider2D>();
+            var bodyWidth = GroundBossBodyWidth / scale;
+            var bodyHeight = GroundBossBodyHeight / scale;
+            var bodyBottom = feet.size.y * .4f;
+            torso.size = new Vector2(bodyWidth, bodyHeight);
+            torso.offset = Vector2.up * (bodyBottom + bodyHeight * .5f);
+            // 지형 충돌은 발 캡슐만 한다. 몸통은 겹친 채 피격·범위 판정에 쓴다.
+            torso.isTrigger = true;
+            return feet;
+        }
 
         public static float ColliderVerticalOffsetForBoss(BossKind kind) =>
             ForBoss(kind) == WorldMobLocomotion.Grounded ? PhysicalRadiusForBoss(kind) : 0f;
