@@ -925,7 +925,7 @@ public static class NyangbingoMainGameSceneCreator
 
     private static void ConfigureText(Text text, TextAnchor alignment, int fontSize)
     {
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.font = UiTextFont.Source;
         text.fontSize = fontSize;
         text.alignment = alignment;
         text.color = new Color(.94f, .96f, 1f, 1f);

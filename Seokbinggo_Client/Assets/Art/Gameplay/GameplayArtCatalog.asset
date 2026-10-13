@@ -374,6 +374,7 @@ MonoBehaviour:
   traitCoolFrames:
   - {fileID: -3363601414907651746, guid: d22bbdf810ac23c4297f5d395de50bd0, type: 3}
   - {fileID: 5729145918424858977, guid: d22bbdf810ac23c4297f5d395de50bd0, type: 3}
+  traitWindow: {fileID: -3579021231072306896, guid: 32b56da26d205314a92f794b63d32a0d, type: 3}
   button1x1BlueFrames:
   - {fileID: -4982720259483930479, guid: 358b6f79377f9af439b9b63ed473f249, type: 3}
   - {fileID: 7657029713554222493, guid: 358b6f79377f9af439b9b63ed473f249, type: 3}

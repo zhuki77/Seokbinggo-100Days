@@ -124,6 +124,7 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite[] traitRangedFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] traitLaborFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] traitCoolFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite traitWindow;
         [SerializeField] private Sprite[] button1x1BlueFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] button1x2BlueFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] button1x4BlueFrames = Array.Empty<Sprite>();
@@ -235,6 +236,7 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> TraitRangedFrames => traitRangedFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> TraitLaborFrames => traitLaborFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> TraitCoolFrames => traitCoolFrames ?? Array.Empty<Sprite>();
+        public Sprite TraitWindow => traitWindow;
         public IReadOnlyList<Sprite> Button1x1BlueFrames => button1x1BlueFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x2BlueFrames => button1x2BlueFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x4BlueFrames => button1x4BlueFrames ?? Array.Empty<Sprite>();

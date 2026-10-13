@@ -1415,7 +1415,7 @@ namespace Nyangbingo.UI
                 label.alignment = TextAnchor.LowerCenter;
                 label.fontSize = 11;
                 label.raycastTarget = false;
-                var builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                var builtinFont = UiTextFont.Source;
                 if (builtinFont != null)
                     label.font = builtinFont;
                 label.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -3576,7 +3576,7 @@ namespace Nyangbingo.UI
             Vector2 size, Vector2 position)
         {
             var result = CreateUiObject(name, parent, size, position).AddComponent<Text>();
-            result.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            result.font = UiTextFont.Source;
             result.fontSize = fontSize;
             result.alignment = anchor;
             result.color = new Color(.93f, .96f, 1f);

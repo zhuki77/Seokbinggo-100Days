@@ -719,6 +719,88 @@ namespace Nyangbingo.World
             return patch != null;
         }
 
+        /// <summary>
+        /// 좌클릭 채굴용. 캣닢은 지지 칸 바로 위(공기)에 서 있으므로 그 칸·마우스 조준을 우선한다.
+        /// </summary>
+        public bool TryResolveCatnipMiningTarget(Vector2 playerPosition, Vector2? mouseWorld,
+            Vector2 direction, float reach, out string patchId, out Vector3Int hitCell)
+        {
+            patchId = string.Empty;
+            hitCell = default;
+            if (reach <= 0f) return false;
+            var reachSq = reach * reach;
+
+            if (mouseWorld.HasValue)
+            {
+                var mouse = mouseWorld.Value;
+                if (!float.IsNaN(mouse.x) && !float.IsInfinity(mouse.x) &&
+                    !float.IsNaN(mouse.y) && !float.IsInfinity(mouse.y))
+                {
+                    var mouseCell = bootstrap?.TileService != null
+                        ? bootstrap.TileService.WorldToCell(mouse)
+                        : new Vector3Int(
+                            Mathf.FloorToInt(mouse.x), Mathf.FloorToInt(mouse.y), 0);
+                    CatnipPatch mousePatch = null;
+                    var mouseBest = reachSq;
+                    foreach (var patch in catnipPatches.Values)
+                    {
+                        if (!IsCatnipAvailable(patch)) continue;
+                        var plantCell = patch.SupportCell + Vector3Int.up;
+                        if (mouseCell != plantCell && mouseCell != patch.SupportCell) continue;
+                        var position = patch.Renderer != null
+                            ? (Vector2)patch.Renderer.transform.position
+                            : new Vector2(plantCell.x + .5f, plantCell.y + .5f);
+                        var distance = (position - playerPosition).sqrMagnitude;
+                        if (distance > mouseBest) continue;
+                        mousePatch = patch;
+                        hitCell = plantCell;
+                        mouseBest = distance;
+                    }
+                    if (mousePatch != null)
+                    {
+                        patchId = mousePatch.Id;
+                        return true;
+                    }
+                }
+            }
+
+            if (direction.sqrMagnitude <= Mathf.Epsilon) return false;
+            var ray = new Ray(playerPosition, direction.normalized);
+            var nearestDistance = reach;
+            CatnipPatch nearest = null;
+            foreach (var patch in catnipPatches.Values)
+            {
+                if (!IsCatnipAvailable(patch)) continue;
+                var plantCell = patch.SupportCell + Vector3Int.up;
+                var bounds = bootstrap?.TileService?.GetCellWorldBounds(plantCell) ??
+                             new Bounds(
+                                 new Vector3(plantCell.x + .5f, plantCell.y + .5f, 0f),
+                                 new Vector3(1f, 1f, 1f));
+                if (!bounds.IntersectRay(ray, out var distance) ||
+                    distance < 0f || distance > nearestDistance)
+                    continue;
+                nearest = patch;
+                hitCell = plantCell;
+                nearestDistance = distance;
+            }
+            if (nearest == null) return false;
+            patchId = nearest.Id;
+            return true;
+        }
+
+        public bool TryHarvestCatnip(string patchId, Nyangbingo.Inventory.Inventory inventory)
+        {
+            if (inventory == null || string.IsNullOrWhiteSpace(patchId) ||
+                !catnipPatches.TryGetValue(patchId, out var patch) || !IsCatnipAvailable(patch) ||
+                !inventory.TryAdd(PlayerHealthRecoveryService.CatnipItemId, 1))
+                return false;
+            patch.HarvestedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
+            if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
+            if (patch.HealHitPoints > 0)
+                runtimeServices?.PlayerHealthRecovery?.EnqueueCatnipHeal(patch.HealHitPoints);
+            return true;
+        }
+
         public bool TryHarvestHemp(Vector2 playerPosition, float radius,
             Nyangbingo.Inventory.Inventory inventory, out int harvested)
         {

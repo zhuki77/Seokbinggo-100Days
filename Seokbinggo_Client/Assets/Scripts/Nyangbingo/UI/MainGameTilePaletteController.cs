@@ -410,20 +410,63 @@ namespace Nyangbingo.UI
                 slot.sizeDelta = slotSize;
                 var slotImage = slot.GetComponent<Image>();
                 if (slotImage != null) slotImage.preserveAspect = true;
+                // 18×22 테두리 안에서 어두운 홈은 왼쪽 1px, 위 6px부터 16×14이다.
+                const float wellInsetX = 1f;
+                const float wellInsetY = 6f;
+                const float wellWidth = 16f;
+                const float wellHeight = 14f;
                 var icon = slot.Find("Icon") as RectTransform;
                 if (icon != null)
                 {
-                    icon.anchorMin = icon.anchorMax = new Vector2(.5f, .5f);
+                    icon.anchorMin = icon.anchorMax = new Vector2(0f, 1f);
                     icon.pivot = new Vector2(.5f, .5f);
-                    icon.anchoredPosition = new Vector2(0f, 1f);
-                    var inner = Mathf.Max(1f, slotSize.x - 6f);
-                    icon.sizeDelta = new Vector2(inner, inner);
+                    icon.anchoredPosition = new Vector2(
+                        wellInsetX + wellWidth * .5f, -(wellInsetY + wellHeight * .5f));
+                    icon.sizeDelta = new Vector2(12f, 12f);
                     if (icon.GetComponent<Image>() is Image iconImage)
                         iconImage.preserveAspect = true;
                 }
 
-                var shortcut = slot.Find("Shortcut");
-                if (shortcut != null) shortcut.gameObject.SetActive(false);
+                var amount = slot.Find("Amount") as RectTransform;
+                if (amount != null)
+                {
+                    amount.anchorMin = amount.anchorMax = new Vector2(0f, 1f);
+                    amount.pivot = new Vector2(0f, 1f);
+                    amount.anchoredPosition = new Vector2(wellInsetX, -wellInsetY);
+                    amount.sizeDelta = new Vector2(wellWidth, wellHeight);
+                    if (amount.GetComponent<Text>() is Text amountText)
+                    {
+                        amountText.alignment = TextAnchor.LowerRight;
+                        amountText.fontSize = 7;
+                        amountText.fontStyle = FontStyle.Normal;
+                        amountText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        amountText.verticalOverflow = VerticalWrapMode.Overflow;
+                        amountText.raycastTarget = false;
+                    }
+                }
+
+                var shortcut = slot.Find("Shortcut") as RectTransform;
+                if (shortcut != null)
+                {
+                    // 폴더 탭은 칸 왼쪽 위 분홍 면. 속은 대략 x=1..6, y=0..4.
+                    shortcut.gameObject.SetActive(true);
+                    shortcut.anchorMin = shortcut.anchorMax = new Vector2(0f, 1f);
+                    shortcut.pivot = new Vector2(.5f, .5f);
+                    shortcut.anchoredPosition = new Vector2(4f, -2.5f);
+                    shortcut.sizeDelta = new Vector2(6f, 5f);
+                    if (shortcut.GetComponent<Text>() is Text shortcutText)
+                    {
+                        // Slot_9는 Slot_8 복제본이라 글자가 8로 남는다.
+                        shortcutText.text = (index + 1).ToString();
+                        shortcutText.alignment = TextAnchor.MiddleCenter;
+                        shortcutText.fontSize = 5;
+                        shortcutText.fontStyle = FontStyle.Normal;
+                        shortcutText.color = new Color(.18f, .1f, .14f, 1f);
+                        shortcutText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        shortcutText.verticalOverflow = VerticalWrapMode.Overflow;
+                        shortcutText.raycastTarget = false;
+                    }
+                }
             }
 
             if (paletteRoot != null)
@@ -564,6 +607,8 @@ namespace Nyangbingo.UI
                 if (shortcut != null)
                 {
                     shortcut.text = (slotIndex + 1).ToString();
+                    shortcut.fontStyle = FontStyle.Normal;
+                    shortcut.alignment = TextAnchor.MiddleCenter;
                     shortcut.gameObject.SetActive(true);
                 }
 
@@ -639,7 +684,8 @@ namespace Nyangbingo.UI
                 if (view.Amount != null)
                 {
                     view.Amount.alignment = TextAnchor.LowerRight;
-                    view.Amount.fontSize = 8;
+                    view.Amount.fontStyle = FontStyle.Normal;
+                    view.Amount.fontSize = 7;
                     var slots = runtimeServices.PlayerInventory.Slots;
                     view.Amount.text = view.SlotIndex < slots.Count
                         ? slots[view.SlotIndex].amount.ToString()
