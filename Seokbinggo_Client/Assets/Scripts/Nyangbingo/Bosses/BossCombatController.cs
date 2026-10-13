@@ -1159,7 +1159,14 @@ namespace Nyangbingo.Bosses
             if (targetTransform == null) return movement;
             var targetOffset = (Vector2)(targetTransform.position - transform.position);
             if (targetOffset.magnitude > 1.5f && Mathf.Abs(targetOffset.x) > .35f)
+            {
+                // 이동 방향이 목표 방향과 반대이면(장애물 우회 중) 이동 방향을 따른다.
+                // 반대 방향으로 우회하면서 목표를 향해 sprite가 뒤집히는 '문워크' 현상 방지.
+                if (Mathf.Abs(movement.x) > .05f &&
+                    Mathf.Sign(movement.x) != Mathf.Sign(targetOffset.x))
+                    return movement;
                 return targetOffset.x > 0f ? Vector2.right : Vector2.left;
+            }
             return movement;
         }
 

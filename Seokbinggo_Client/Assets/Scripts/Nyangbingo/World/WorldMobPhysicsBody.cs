@@ -28,6 +28,8 @@ namespace Nyangbingo.World
         public const float GroundBossStepJumpVelocity = 10.5f;
         private const float StepJumpCooldownSeconds = .35f;
         private const float NavigationReversalHoldSeconds = .5f;
+        // 지상 경로 방향 반전 시 적용하는 짧은 안정화 구간 (방향 전환 순간이동 완화)
+        private const float GroundNavigationReversalHoldSeconds = .15f;
         private const float DirectPathConfirmationSeconds = .2f;
         private const int PathTargetCellTolerance = 3;
         private const int GroundRouteSearchMargin = 32;
@@ -63,6 +65,8 @@ namespace Nyangbingo.World
         private float navigationDirectionHoldUntil;
         private float directPathClearSince = -1f;
         private Vector2 groundRouteDirection;
+        private Vector2 groundRoutePreviousDirection;
+        private float groundRouteReverseHoldUntil;
         private Vector3Int groundRouteTarget;
         private Vector2 groundRouteLastProgressPosition;
         private float groundRouteLastProgressTime;
@@ -384,8 +388,19 @@ namespace Nyangbingo.World
                         groundDropLandingCell = nextCell;
                     }
                     groundRouteDirection = new Vector2(Mathf.Sign(horizontalDelta), 0f);
-                    return WithNavigationFacing(
-                        groundRouteDirection, horizontalDelta);
+                    // 방향 전환 순간이동 완화: 직전 방향과 반대이면 짧은 홀드 구간 동안 이전 방향을 유지한다.
+                    // 경로 재계산 직후 급격한 방향 반전이 순간이동처럼 보이는 현상을 줄인다.
+                    if (groundRoutePreviousDirection.sqrMagnitude > Mathf.Epsilon &&
+                        groundRouteDirection.x * groundRoutePreviousDirection.x < 0f &&
+                        Time.unscaledTime < groundRouteReverseHoldUntil)
+                    {
+                        return WithNavigationFacing(groundRoutePreviousDirection,
+                            groundRoutePreviousDirection.x);
+                    }
+                    if (groundRouteDirection.x * groundRoutePreviousDirection.x < 0f)
+                        groundRouteReverseHoldUntil = Time.unscaledTime + GroundNavigationReversalHoldSeconds;
+                    groundRoutePreviousDirection = groundRouteDirection;
+                    return WithNavigationFacing(groundRouteDirection, horizontalDelta);
                 }
             }
             if (Mathf.Abs(targetOffset.x) > .05f)
@@ -553,6 +568,16 @@ namespace Nyangbingo.World
             TryAddGroundRouteNode(
                 from, stepUp, 1.25f, minX, maxX, minY, maxY,
                 open, openSet, closed, costs, cameFrom);
+            // 1칸 너비 수평 구멍 도약: walk 칸이 허공이고 그 아래도 허공(진짜 구멍)이면서
+            // 두 칸 앞이 서 있을 수 있는 칸이면 점프로 건넌다. cost 1.5로 평지 이동보다 비싸게 책정.
+            var belowWalk = walk + Vector3Int.down;
+            if (IsNavigationPassableCell(walk) && IsNavigationPassableCell(belowWalk))
+            {
+                var gapFar = walk + Vector3Int.right * horizontalSign;
+                TryAddGroundRouteNode(
+                    from, gapFar, 1.5f, minX, maxX, minY, maxY,
+                    open, openSet, closed, costs, cameFrom);
+            }
         }
 
         private void AddGroundDropNeighbour(
@@ -1061,7 +1086,17 @@ namespace Nyangbingo.World
             var forwardProbe = (Vector2)bounds.center +
                                Vector2.right * horizontalSign * (extents.x + .08f);
             var blockingCell = ToCell(forwardProbe);
-            if (IsAirCell(blockingCell)) return false;
+            if (IsAirCell(blockingCell))
+            {
+                // 구멍 점프: 앞 칸이 허공이어도 그 아래도 허공(진짜 구멍)이고
+                // 두 칸 앞에 서 있을 수 있는 칸이 있으면 점프해서 구멍을 넘는다.
+                // 이 경우 천장 체크는 여전히 수행한다.
+                var belowBlockingCell = blockingCell + Vector3Int.down;
+                if (!IsNavigationPassableCell(belowBlockingCell)) return false; // 일반 허공, 구멍 아님
+                var gapFarCell = blockingCell + Vector3Int.right * horizontalSign;
+                if (!IsGroundStandingCell(gapFarCell)) return false; // 반대편 착지 칸 없음
+                // 구멍 확인됨 → 이후 점프 시도
+            }
 
             var jumpVelocity = StepJumpVelocityForCollider(extents.x);
             var gravity = Mathf.Abs(Physics2D.gravity.y * body.gravityScale);
