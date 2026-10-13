@@ -550,13 +550,22 @@ namespace Nyangbingo.UI
                 return;
             }
 
-            statusText.text = string.Empty;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            statusText.text = BuildEditorBossSelectionStatusLine();
             RefreshDebugBossPickerBody();
+#else
+            statusText.text = string.Empty;
 #endif
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private string BuildEditorBossSelectionStatusLine()
+        {
+            var definition = SelectedBoss;
+            if (definition == null) return "[B] 보스 정의 없음";
+            return $"[B] {selectedIndex + 1}/{BossIds.Length} · {definition.DisplayName}";
+        }
+
         private string BuildEditorBossPickerBodyText()
         {
             var definition = SelectedBoss;
@@ -714,7 +723,7 @@ namespace Nyangbingo.UI
             Vector2 size, Vector2 position)
         {
             var text = CreateDebugHelpObject(name, parent, size, position).AddComponent<Text>();
-            text.font = UiTextFont.Source;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.alignment = anchor;
             text.color = new Color(.93f, .96f, 1f);

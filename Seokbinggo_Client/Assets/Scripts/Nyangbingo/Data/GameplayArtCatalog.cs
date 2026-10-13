@@ -67,7 +67,6 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite sealRepairCheck;
         [SerializeField] private Sprite[] sealSuccessFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite hypothermiaStatusIcon;
-        [SerializeField] private Sprite hypothermiaStatusIconAlert;
         [SerializeField] private Sprite nightSpawnBlockedIcon;
         [SerializeField] private Sprite deathTearPouch;
         [SerializeField] private Sprite bossWarningLarge;
@@ -120,29 +119,6 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite shellVolumeBar;
         [SerializeField] private Sprite shellVolumeHandle;
         [SerializeField] private Sprite[] shellLoadingFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] traitMeleeFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] traitRangedFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] traitLaborFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] traitCoolFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite traitWindow;
-        [SerializeField] private Sprite[] button1x1BlueFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] button1x2BlueFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] button1x4BlueFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] button1x6BlueFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite[] craftProgressFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite craftPanel;
-        [SerializeField] private Sprite[] craftTopBarFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite craftResultSlot;
-        [SerializeField] private Sprite craftMidSlot;
-        [SerializeField] private Sprite[] craftButtonFrames = Array.Empty<Sprite>();
-        [SerializeField] private Sprite craftScroll;
-        [SerializeField] private Sprite questWindow;
-        [SerializeField] private Sprite scrollTrack;
-        [SerializeField] private Sprite scrollHandle;
-        [SerializeField] private Sprite labelHp;
-        [SerializeField] private Sprite labelDegree;
-        [SerializeField] private Sprite labelTemperature;
-        [SerializeField] private Sprite labelDay;
 
         public IReadOnlyList<Sprite> TemperatureFrames => temperatureFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerAttackFrames => playerAttackFrames ?? Array.Empty<Sprite>();
@@ -178,8 +154,6 @@ namespace Nyangbingo.Data
         public Sprite SealRepairCheck => sealRepairCheck;
         public IReadOnlyList<Sprite> SealSuccessFrames => sealSuccessFrames ?? Array.Empty<Sprite>();
         public Sprite HypothermiaStatusIcon => hypothermiaStatusIcon;
-        // 저체온 피해 임박 시 쓰는 경고 변형(HypothermiaStatus_Icon2). 없으면 기본 아이콘을 쓴다.
-        public Sprite HypothermiaStatusIconAlert => hypothermiaStatusIconAlert;
         public Sprite NightSpawnBlockedIcon => nightSpawnBlockedIcon;
         public Sprite DeathTearPouch => deathTearPouch;
         public Sprite BossWarningLarge => bossWarningLarge;
@@ -232,28 +206,5 @@ namespace Nyangbingo.Data
         public Sprite ShellVolumeBar => shellVolumeBar;
         public Sprite ShellVolumeHandle => shellVolumeHandle;
         public IReadOnlyList<Sprite> ShellLoadingFrames => shellLoadingFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> TraitMeleeFrames => traitMeleeFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> TraitRangedFrames => traitRangedFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> TraitLaborFrames => traitLaborFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> TraitCoolFrames => traitCoolFrames ?? Array.Empty<Sprite>();
-        public Sprite TraitWindow => traitWindow;
-        public IReadOnlyList<Sprite> Button1x1BlueFrames => button1x1BlueFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> Button1x2BlueFrames => button1x2BlueFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> Button1x4BlueFrames => button1x4BlueFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> Button1x6BlueFrames => button1x6BlueFrames ?? Array.Empty<Sprite>();
-        public IReadOnlyList<Sprite> CraftProgressFrames => craftProgressFrames ?? Array.Empty<Sprite>();
-        public Sprite CraftPanel => craftPanel;
-        public IReadOnlyList<Sprite> CraftTopBarFrames => craftTopBarFrames ?? Array.Empty<Sprite>();
-        public Sprite CraftResultSlot => craftResultSlot;
-        public Sprite CraftMidSlot => craftMidSlot;
-        public IReadOnlyList<Sprite> CraftButtonFrames => craftButtonFrames ?? Array.Empty<Sprite>();
-        public Sprite CraftScroll => craftScroll;
-        public Sprite QuestWindow => questWindow;
-        public Sprite ScrollTrack => scrollTrack;
-        public Sprite ScrollHandle => scrollHandle;
-        public Sprite LabelHp => labelHp;
-        public Sprite LabelDegree => labelDegree;
-        public Sprite LabelTemperature => labelTemperature;
-        public Sprite LabelDay => labelDay;
     }
 }

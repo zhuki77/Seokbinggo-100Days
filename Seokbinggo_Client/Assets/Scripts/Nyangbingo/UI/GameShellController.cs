@@ -329,12 +329,7 @@ namespace Nyangbingo.UI
             if (resultCanvas != null) resultCanvas.SetActive(Screen == GameShellScreen.Result);
             if (settingsPanel != null) settingsPanel.SetActive(Screen == GameShellScreen.Settings);
             if (confirmationPanel != null) confirmationPanel.SetActive(Screen == GameShellScreen.Confirmation);
-            if (traitSelectPanel != null)
-            {
-                var showTraitSelect = Screen == GameShellScreen.TraitSelect;
-                traitSelectPanel.SetActive(showTraitSelect);
-                if (showTraitSelect) traitSelectPanel.transform.SetAsLastSibling();
-            }
+            if (traitSelectPanel != null) traitSelectPanel.SetActive(Screen == GameShellScreen.TraitSelect);
             if (openingPanel != null) openingPanel.SetActive(Screen == GameShellScreen.Opening);
         }
     }

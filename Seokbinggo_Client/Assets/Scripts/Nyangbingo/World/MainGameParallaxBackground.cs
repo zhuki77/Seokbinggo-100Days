@@ -149,30 +149,19 @@ namespace Nyangbingo.World
 
         private void RefreshVisibility()
         {
-            var blend = MainGamePresentationController.UndergroundLightBlend(
-                transform.position.y, undergroundThreshold);
-            ApplyLayerAlpha(skyRenderer, 1f - blend);
-            ApplyLayerAlpha(mountainRenderer, 1f - blend);
-            ApplyLayerAlpha(frontCloudRenderer, 1f - blend);
-            ApplyLayerAlpha(celestialRenderer, 1f - blend);
-            ApplyLayerAlpha(distantRenderer, 1f - blend);
-            ApplyLayerAlpha(cloudRenderer, 1f - blend);
-            ApplyLayerAlpha(undergroundRenderer, blend);
-            var showUnderground = blend >= .5f;
+            var showUnderground = transform.position.y < undergroundThreshold;
+            if (skyRenderer != null) skyRenderer.enabled = !showUnderground;
+            if (mountainRenderer != null) mountainRenderer.enabled = !showUnderground;
+            if (frontCloudRenderer != null) frontCloudRenderer.enabled = !showUnderground;
+            if (celestialRenderer != null) celestialRenderer.enabled = !showUnderground;
+            if (distantRenderer != null) distantRenderer.enabled = !showUnderground;
+            if (cloudRenderer != null) cloudRenderer.enabled = !showUnderground;
+            if (undergroundRenderer != null) undergroundRenderer.enabled = showUnderground;
             if (undergroundVisible == showUnderground) return;
             undergroundVisible = showUnderground;
             Debug.Log($"[Nyangbingo] Background switched: " +
                       $"{(showUnderground ? "underground" : "surface")} " +
                       $"(cameraY={transform.position.y:0.0}, threshold={undergroundThreshold:0.0}).");
-        }
-
-        private static void ApplyLayerAlpha(SpriteRenderer renderer, float alpha)
-        {
-            if (renderer == null) return;
-            renderer.enabled = alpha > .01f;
-            var color = renderer.color;
-            color.a = alpha;
-            renderer.color = color;
         }
 
         private SpriteRenderer CreateLayer(string objectName, Sprite sprite, int sortingOrder, float depth)

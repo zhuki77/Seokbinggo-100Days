@@ -12,7 +12,7 @@ using Input = Nyangbingo.Core.GameplayInput;
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 9칸을 고정 슬롯으로 보여 주며,
+    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 8칸을 고정 슬롯으로 보여 주며,
     /// 마우스 휠로 선택 슬롯을 순환한다.
     /// 빈 칸도 선택 가능하다. 전경 타일·설치물·벽지 배치를 같은 슬롯에서 처리한다.
     /// </summary>
@@ -39,7 +39,7 @@ namespace Nyangbingo.UI
         public const float BottomStatusLineHeight = 18f;
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
-        public const int ShortcutSlotCount = 9;
+        public const int ShortcutSlotCount = 8;
         public const bool UsesMouseWheelSelection = true;
         /// <summary>채굴과 동일 — globals <c>player_mining_reach_tiles</c> 기본값.</summary>
         public const float DefaultPlacementReachTiles = 4f;
@@ -61,7 +61,6 @@ namespace Nyangbingo.UI
 
         private readonly List<string> paletteItemIds = new List<string>();
         private readonly List<SlotView> slotViews = new List<SlotView>();
-        private bool vitalsWells;
         private readonly List<WorldRangeOverlay> rangeOverlays = new List<WorldRangeOverlay>();
         private readonly List<Vector2> rangePositions = new List<Vector2>();
         [SerializeField] private GameObject paletteRoot;
@@ -280,7 +279,7 @@ namespace Nyangbingo.UI
             runtimeServices.PlayerInventory.Changed += RefreshPalette;
             initialized = true;
             RefreshPalette();
-            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–9칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
+            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–8칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
         }
 
         private void Update()
@@ -364,125 +363,6 @@ namespace Nyangbingo.UI
 
         }
 
-        /// <summary>
-        /// Selection borders sit on the nine wells inside the vitals sheet, not in a separate row.
-        /// Wells stay on the sheet's native 208×62 pixels. The 18×22 border keeps its own size.
-        /// </summary>
-        public void PlaceInVitalsWells()
-        {
-            if (content == null) return;
-            vitalsWells = true;
-            EnsureHotbarSlotObjects();
-            var layout = content.GetComponent<HorizontalLayoutGroup>();
-            if (layout != null) layout.enabled = false;
-            var fitter = content.GetComponent<ContentSizeFitter>();
-            if (fitter != null) fitter.enabled = false;
-            if (content.parent is RectTransform viewport)
-            {
-                viewport.anchorMin = Vector2.zero;
-                viewport.anchorMax = Vector2.one;
-                viewport.offsetMin = Vector2.zero;
-                viewport.offsetMax = Vector2.zero;
-            }
-
-            const float sourceScale = 1f;
-            var border = gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected;
-            var slotSize = border != null ? border.rect.size : new Vector2(18f, 22f);
-            var wellSpriteX = new[] { 4f, 23f, 42f, 61f, 80f, 99f, 118f, 137f, 156f };
-            // 18×22 border top sits on the slot lip (sprite y 37). The dark well center is one pixel lower.
-            const float wellCenterSpriteY = 48f;
-            content.anchorMin = content.anchorMax = new Vector2(0f, 1f);
-            content.pivot = new Vector2(0f, 1f);
-            content.anchoredPosition = Vector2.zero;
-            content.localScale = Vector3.one;
-            content.sizeDelta = new Vector2(208f * sourceScale, 62f * sourceScale);
-
-            for (var index = 0; index < wellSpriteX.Length; index++)
-            {
-                var slot = content.Find($"Slot_{index + 1}") as RectTransform;
-                if (slot == null) continue;
-                slot.anchorMin = slot.anchorMax = new Vector2(0f, 1f);
-                slot.pivot = new Vector2(0f, 1f);
-                slot.localScale = Vector3.one;
-                var centerX = (wellSpriteX[index] + 8f) * sourceScale;
-                var centerY = wellCenterSpriteY * sourceScale;
-                slot.anchoredPosition = new Vector2(centerX - slotSize.x * .5f, -(centerY - slotSize.y * .5f));
-                slot.sizeDelta = slotSize;
-                var slotImage = slot.GetComponent<Image>();
-                if (slotImage != null) slotImage.preserveAspect = true;
-                // 18×22 테두리 안에서 어두운 홈은 왼쪽 1px, 위 6px부터 16×14이다.
-                const float wellInsetX = 1f;
-                const float wellInsetY = 6f;
-                const float wellWidth = 16f;
-                const float wellHeight = 14f;
-                var icon = slot.Find("Icon") as RectTransform;
-                if (icon != null)
-                {
-                    icon.anchorMin = icon.anchorMax = new Vector2(0f, 1f);
-                    icon.pivot = new Vector2(.5f, .5f);
-                    icon.anchoredPosition = new Vector2(
-                        wellInsetX + wellWidth * .5f, -(wellInsetY + wellHeight * .5f));
-                    icon.sizeDelta = new Vector2(12f, 12f);
-                    if (icon.GetComponent<Image>() is Image iconImage)
-                        iconImage.preserveAspect = true;
-                }
-
-                var amount = slot.Find("Amount") as RectTransform;
-                if (amount != null)
-                {
-                    amount.anchorMin = amount.anchorMax = new Vector2(0f, 1f);
-                    amount.pivot = new Vector2(0f, 1f);
-                    amount.anchoredPosition = new Vector2(wellInsetX, -wellInsetY);
-                    amount.sizeDelta = new Vector2(wellWidth, wellHeight);
-                    if (amount.GetComponent<Text>() is Text amountText)
-                    {
-                        amountText.alignment = TextAnchor.LowerRight;
-                        amountText.fontSize = 7;
-                        amountText.fontStyle = FontStyle.Normal;
-                        amountText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                        amountText.verticalOverflow = VerticalWrapMode.Overflow;
-                        amountText.raycastTarget = false;
-                    }
-                }
-
-                var shortcut = slot.Find("Shortcut") as RectTransform;
-                if (shortcut != null)
-                {
-                    // 폴더 탭은 칸 왼쪽 위 분홍 면. 속은 대략 x=1..6, y=0..4.
-                    shortcut.gameObject.SetActive(true);
-                    shortcut.anchorMin = shortcut.anchorMax = new Vector2(0f, 1f);
-                    shortcut.pivot = new Vector2(.5f, .5f);
-                    shortcut.anchoredPosition = new Vector2(4f, -2.5f);
-                    shortcut.sizeDelta = new Vector2(6f, 5f);
-                    if (shortcut.GetComponent<Text>() is Text shortcutText)
-                    {
-                        // Slot_9는 Slot_8 복제본이라 글자가 8로 남는다.
-                        shortcutText.text = (index + 1).ToString();
-                        shortcutText.alignment = TextAnchor.MiddleCenter;
-                        shortcutText.fontSize = 5;
-                        shortcutText.fontStyle = FontStyle.Normal;
-                        shortcutText.color = new Color(.18f, .1f, .14f, 1f);
-                        shortcutText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                        shortcutText.verticalOverflow = VerticalWrapMode.Overflow;
-                        shortcutText.raycastTarget = false;
-                    }
-                }
-            }
-
-            if (paletteRoot != null)
-            {
-                var background = paletteRoot.GetComponent<Image>();
-                if (background != null)
-                {
-                    background.sprite = null;
-                    background.color = new Color(1f, 1f, 1f, 0f);
-                    background.raycastTarget = false;
-                }
-            }
-
-            RefreshSlotVisuals();
-        }
-
         private void BuildPaletteUi()
         {
             if (paletteRoot == null || content == null || rangeToggleStatusText == null ||
@@ -563,24 +443,8 @@ namespace Nyangbingo.UI
             return results;
         }
 
-        /// <summary>
-        /// The delivered palette prefab stops at Slot_8. The hotbar sheet has a ninth well,
-        /// so the missing slot is cloned from Slot_8 before wiring.
-        /// </summary>
-        private void EnsureHotbarSlotObjects()
-        {
-            if (content == null || content.Find("Slot_9") != null) return;
-            var template = content.Find("Slot_8");
-            if (template == null) return;
-            var clone = Instantiate(template.gameObject, content);
-            clone.name = "Slot_9";
-            var trigger = clone.GetComponent<EventTrigger>();
-            if (trigger != null) Destroy(trigger);
-        }
-
         private void RebuildSlots()
         {
-            EnsureHotbarSlotObjects();
             slotViews.Clear();
             for (var slotIndex = 0; slotIndex < ShortcutSlotCount; slotIndex++)
             {
@@ -607,8 +471,6 @@ namespace Nyangbingo.UI
                 if (shortcut != null)
                 {
                     shortcut.text = (slotIndex + 1).ToString();
-                    shortcut.fontStyle = FontStyle.Normal;
-                    shortcut.alignment = TextAnchor.MiddleCenter;
                     shortcut.gameObject.SetActive(true);
                 }
 
@@ -651,21 +513,12 @@ namespace Nyangbingo.UI
                 var background = view.Button.targetGraphic as Image;
                 if (background != null)
                 {
-                    if (vitalsWells && !selected)
-                    {
-                        background.sprite = null;
-                        background.color = new Color(1f, 1f, 1f, 0f);
-                    }
-                    else
-                    {
-                        background.sprite = selected
-                            ? gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected
-                            : gameplayArtCatalog?.InventorySlot;
-                        background.preserveAspect = true;
-                        background.color = background.sprite != null
-                            ? Color.white
-                            : selected ? new Color(.24f, .55f, .8f, 1f) : new Color(.12f, .17f, .25f, 1f);
-                    }
+                    background.sprite = selected
+                        ? gameplayArtCatalog?.TilePaletteSlotSelected ?? gameplayArtCatalog?.InventorySlotSelected
+                        : gameplayArtCatalog?.InventorySlot;
+                    background.color = background.sprite != null
+                        ? Color.white
+                        : selected ? new Color(.24f, .55f, .8f, 1f) : new Color(.12f, .17f, .25f, 1f);
                 }
 
                 if (isEmpty)
@@ -684,8 +537,7 @@ namespace Nyangbingo.UI
                 if (view.Amount != null)
                 {
                     view.Amount.alignment = TextAnchor.LowerRight;
-                    view.Amount.fontStyle = FontStyle.Normal;
-                    view.Amount.fontSize = 7;
+                    view.Amount.fontSize = 8;
                     var slots = runtimeServices.PlayerInventory.Slots;
                     view.Amount.text = view.SlotIndex < slots.Count
                         ? slots[view.SlotIndex].amount.ToString()

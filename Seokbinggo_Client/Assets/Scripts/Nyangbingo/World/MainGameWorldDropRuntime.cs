@@ -34,7 +34,6 @@ namespace Nyangbingo.World
         }
     }
 
-    [ExecuteAlways]
     public sealed class MainGameWorldDropRuntime : MonoBehaviour
     {
         private sealed class Entry
@@ -301,27 +300,21 @@ namespace Nyangbingo.World
             }
         }
 
-        private bool dropRequestsBound;
-
         private void OnEnable()
         {
-            if (dropRequestsBound) return;
             WorldItemDropRequest.Requested += Spawn;
             WorldItemDropRequest.ReturnedTheftRequested += SpawnReturnedTheft;
             GameEvents.OnTilePlaced += HandleTilePlaced;
             GameEvents.OnTileBroken += HandleEscapeTileBroken;
             GameEvents.OnSealChanged += HandleEscapeSealChanged;
-            dropRequestsBound = true;
         }
         private void OnDisable()
         {
-            if (!dropRequestsBound) return;
             WorldItemDropRequest.Requested -= Spawn;
             WorldItemDropRequest.ReturnedTheftRequested -= SpawnReturnedTheft;
             GameEvents.OnTilePlaced -= HandleTilePlaced;
             GameEvents.OnTileBroken -= HandleEscapeTileBroken;
             GameEvents.OnSealChanged -= HandleEscapeSealChanged;
-            dropRequestsBound = false;
         }
 
         private void HandleTilePlaced(Vector3Int cell)
@@ -473,7 +466,7 @@ namespace Nyangbingo.World
 
         private void Update()
         {
-            if (!Application.isPlaying || Time.deltaTime <= 0f) return;
+            if (Time.deltaTime <= 0f) return;
             var acquiredAny = false;
             for (var index = drops.Count - 1; index >= 0; index--)
             {
@@ -697,8 +690,7 @@ namespace Nyangbingo.World
                 if (entry?.Root != null)
                 {
                     entry.Root.SetActive(false);
-                    if (Application.isPlaying) Destroy(entry.Root);
-                    else DestroyImmediate(entry.Root);
+                    Destroy(entry.Root);
                 }
             }
             drops.Clear();
