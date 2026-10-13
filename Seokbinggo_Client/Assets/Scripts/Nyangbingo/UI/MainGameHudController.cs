@@ -196,6 +196,7 @@ namespace Nyangbingo.UI
 
         public static string InvasionBedLockedMessage => InvasionScheduleRules.BedLockedMessage;
 
+        public RectTransform TearBalanceRect => tearBalanceArt != null ? tearBalanceArt.rectTransform.parent as RectTransform : null;
         public int BoundSlotCount => inventorySlotTexts?.Length ?? 0;
         public int BoundIconCount => inventorySlotIcons?.Length ?? 0;
         public ItemArtCatalog BoundItemArtCatalog => itemArtCatalog;
