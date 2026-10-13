@@ -180,7 +180,6 @@ namespace Nyangbingo.World
             if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.GoblinBoss)) TryStartEditorBossEncounter("king_dokkaebi");
             if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.BulgasariBoss)) TryStartEditorBossEncounter("mother_bulgasari");
             if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.ImugiBoss)) TryStartEditorBossEncounter("imugi_boss");
-            if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Samdugumi)) TryStartEditorBossEncounter("samdugumi");
             if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.Eop)) TryStartEditorBossEncounter("eop_guryeongi");
             if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.ClearYokai)) DefeatAllYokaiForEditorTest();
             if (DevelopmentShortcuts.IsPressed(DevelopmentShortcut.DefeatBoss)) DefeatActiveBossForEditorTest();

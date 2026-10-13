@@ -71,6 +71,9 @@ namespace Nyangbingo.UI
         public bool HasPauseBossWarning => shell != null && shell.Screen == GameShellScreen.Pause &&
             bossManager?.IsBossActive == true && statusText != null;
         public bool IsPauseMenuOpen => shell != null && shell.Screen == GameShellScreen.Pause;
+        public bool IsPauseOverlayOpen => shell != null &&
+            (shell.Screen == GameShellScreen.Pause || shell.Screen == GameShellScreen.Settings ||
+             shell.Screen == GameShellScreen.Confirmation);
 
         public int BoundSaveSlotCount => saveButtons?.Length ?? 0;
         public bool IsInitialized { get; private set; }

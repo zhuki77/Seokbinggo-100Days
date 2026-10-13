@@ -630,17 +630,45 @@ namespace Nyangbingo.World
 
         public bool TryInteractNearestPlacedObject()
         {
-            if (!TryGetNearestPlacedObject(out var record)) return false;
+            if (playerController == null || !playerController.TryGetHighlightedInteractionTarget(
+                    out var record, out _, out var chest) || chest) return false;
             return TryInteractPlacedObject(record);
+        }
+
+        public bool TryEnterDifferentCraftingStation(string currentObjectId)
+        {
+            if (!TryGetHoveredCraftingStation(out var record) ||
+                string.Equals(record.objectId, currentObjectId, StringComparison.Ordinal)) return false;
+            var station = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
+            if (station == CraftingStation.None) return false;
+            productCraftingUi ??= FindAnyObjectByType<MainGameCraftingUiController>();
+            return productCraftingUi != null && productCraftingUi.TryOpenForStation(station, record.objectId);
+        }
+
+        public bool TryInteractFromCraftingUi(string currentObjectId, Func<bool> leaveCrafting)
+        {
+            if (playerController == null || environmentState == null || Input.IsPointerOverUi()) return false;
+            if (playerController.TryGetHighlightedInteractionTarget(out var record, out _, out var chest) && !chest)
+            {
+                if (string.Equals(record.objectId, currentObjectId, StringComparison.Ordinal)) return false;
+                if (!leaveCrafting()) return false;
+                return TryInteractPlacedObject(record);
+            }
+            return playerController.TryInteractChestFromCraftingUi(leaveCrafting);
+        }
+
+        private bool TryGetHoveredCraftingStation(out PlacedObjectRecord record)
+        {
+            record = default;
+            return playerController != null &&
+                playerController.TryGetHighlightedInteractionTarget(out record, out _, out var chest) && !chest &&
+                MainGameBossSummonUiController.StationForDefinitionId(record.definitionId) != CraftingStation.None;
         }
 
         public bool TryInteractPlacedObjectClosestToAim(Vector2 aimWorld)
         {
-            if (playerController == null || environmentState == null) return false;
-            var origin = (Vector2)playerController.transform.position;
-            if (!environmentState.TryResolvePlacedObjectMiningTarget(
-                    origin, aimWorld, InteractionRange, out var record))
-                return false;
+            if (playerController == null || !playerController.TryGetHighlightedInteractionTarget(
+                    out var record, out _, out var chest) || chest) return false;
             return TryInteractPlacedObject(record);
         }
 
@@ -649,6 +677,8 @@ namespace Nyangbingo.World
             var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
             if (craftingStation != CraftingStation.None)
             {
+                if (!TryGetHoveredCraftingStation(out var hovered) || hovered.objectId != record.objectId)
+                    return false;
                 if (productCraftingUi == null)
                     productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
                 if (productCraftingUi != null && productCraftingUi.TryOpenForStation(craftingStation, record.objectId)) return true;

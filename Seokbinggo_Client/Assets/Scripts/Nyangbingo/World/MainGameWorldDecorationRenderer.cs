@@ -776,7 +776,7 @@ namespace Nyangbingo.World
                              new Bounds(
                                  new Vector3(plantCell.x + .5f, plantCell.y + .5f, 0f),
                                  new Vector3(1f, 1f, 1f));
-                if (!bounds.IntersectRay(ray, out var distance) ||
+                if (!TryIntersectMiningBounds(bounds, ray, out var distance) ||
                     distance < 0f || distance > nearestDistance)
                     continue;
                 nearest = patch;
@@ -883,7 +883,7 @@ namespace Nyangbingo.World
                              new Bounds(
                                  new Vector3(plantCell.x + .5f, plantCell.y + .5f, 0f),
                                  new Vector3(1f, 1f, 1f));
-                if (!bounds.IntersectRay(ray, out var distance) ||
+                if (!TryIntersectMiningBounds(bounds, ray, out var distance) ||
                     distance < 0f || distance > nearestDistance)
                     continue;
                 nearest = patch;
@@ -901,9 +901,7 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(hempId) ||
                 !hempPatches.TryGetValue(hempId, out var patch) || !IsHempAvailable(patch))
                 return false;
-            dropPosition = patch.Renderer != null
-                ? (Vector2)patch.Renderer.transform.position
-                : new Vector2(patch.SupportCell.x + .5f, patch.SupportCell.y + 1f);
+            dropPosition = ResolveDecorationDropPosition(patch.SupportCell);
             patch.Harvested = true;
             if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
             return true;
@@ -1122,7 +1120,7 @@ namespace Nyangbingo.World
                                          candidateCell.y + .5f,
                                          0f),
                                      new Vector3(1f, 1f, 1f));
-                    if (!bounds.IntersectRay(ray, out var distance) ||
+                    if (!TryIntersectMiningBounds(bounds, ray, out var distance) ||
                         distance < 0f || distance > nearestDistance)
                         continue;
                     nearest = tree;
@@ -1135,6 +1133,20 @@ namespace Nyangbingo.World
             return true;
         }
 
+        private static bool TryIntersectMiningBounds(Bounds bounds, Ray ray, out float distance)
+        {
+            // A ray starting inside a harvestable plant can report a negative
+            // entry distance. Overlapping the plant is a valid zero-distance hit.
+            var origin = ray.origin;
+            if (origin.x >= bounds.min.x && origin.x <= bounds.max.x &&
+                origin.y >= bounds.min.y && origin.y <= bounds.max.y)
+            {
+                distance = 0f;
+                return true;
+            }
+            return bounds.IntersectRay(ray, out distance);
+        }
+
         public bool TryHarvestTree(string treeId, out Vector3Int supportCell, out Vector2 dropPosition)
         {
             supportCell = default;
@@ -1143,9 +1155,7 @@ namespace Nyangbingo.World
                 !treePatches.TryGetValue(treeId, out var tree) || !IsTreeAvailable(tree))
                 return false;
             supportCell = tree.SupportCell;
-            dropPosition = tree.Renderer != null
-                ? (Vector2)tree.Renderer.transform.position
-                : new Vector2(supportCell.x + .5f, supportCell.y + 1f);
+            dropPosition = ResolveDecorationDropPosition(supportCell);
             tree.Harvested = true;
             if (tree.Renderer != null) tree.Renderer.gameObject.SetActive(false);
             return true;
@@ -1168,7 +1178,7 @@ namespace Nyangbingo.World
                              new Bounds(
                                  new Vector3(cell.x + .5f, cell.y + .5f, 0f),
                                  new Vector3(1f, 1f, 1f));
-                if (!bounds.IntersectRay(ray, out var distance) ||
+                if (!TryIntersectMiningBounds(bounds, ray, out var distance) ||
                     distance < 0f || distance > nearestDistance)
                     continue;
                 nearest = rebar;
@@ -1186,9 +1196,7 @@ namespace Nyangbingo.World
             if (string.IsNullOrWhiteSpace(rebarId) ||
                 !rebarPatches.TryGetValue(rebarId, out var rebar) || !IsRebarAvailable(rebar))
                 return false;
-            dropPosition = rebar.Renderer != null
-                ? (Vector2)rebar.Renderer.transform.position
-                : new Vector2(rebar.SupportCell.x + .5f, rebar.SupportCell.y + .5f);
+            dropPosition = ResolveDecorationDropPosition(rebar.SupportCell);
             rebar.Harvested = true;
             if (rebar.Renderer != null) rebar.Renderer.gameObject.SetActive(false);
             return true;
@@ -1338,6 +1346,16 @@ namespace Nyangbingo.World
             return tile;
         }
 
+        private Vector2 ResolveDecorationDropPosition(Vector3Int supportCell)
+        {
+            // Artwork pivots are visual anchors, not safe circle-collider spawn positions.
+            // Use the same ground clearance as ordinary mined tiles, above the support.
+            var dropCell = supportCell + Vector3Int.up;
+            return bootstrap?.TileService?.ResolveForegroundMiningDropWorldPosition(dropCell) ??
+                   new Vector2(dropCell.x + .5f,
+                       dropCell.y + MainGameWorldDropRuntime.DropColliderRadius);
+        }
+
         private void HandleTileBroken(Vector3Int cell)
         {
             // The shared event is also raised when wallpaper is removed. Decorations only
@@ -1349,11 +1367,7 @@ namespace Nyangbingo.World
             foreach (var tree in treePatches.Values)
             {
                 if (tree.SupportCell != cell || tree.Harvested) continue;
-                var dropPosition = tree.Renderer != null
-                    ? (Vector2)tree.Renderer.transform.position
-                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
-                        cell + Vector3Int.up) ??
-                                new Vector3(cell.x + .5f, cell.y + 1f, 0f));
+                var dropPosition = ResolveDecorationDropPosition(cell);
                 tree.Harvested = true;
                 if (tree.Renderer != null) tree.Renderer.gameObject.SetActive(false);
                 WorldItemDropRequest.Request(
@@ -1362,10 +1376,7 @@ namespace Nyangbingo.World
             foreach (var rebar in rebarPatches.Values)
             {
                 if (rebar.SupportCell != cell || rebar.Harvested) continue;
-                var dropPosition = rebar.Renderer != null
-                    ? (Vector2)rebar.Renderer.transform.position
-                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(cell) ??
-                                new Vector3(cell.x + .5f, cell.y, 0f));
+                var dropPosition = ResolveDecorationDropPosition(cell);
                 rebar.Harvested = true;
                 if (rebar.Renderer != null) rebar.Renderer.gameObject.SetActive(false);
                 WorldItemDropRequest.Request(
@@ -1379,11 +1390,7 @@ namespace Nyangbingo.World
                 // IsCatnipAvailable here would always fail. HarvestedDay is the pre-break
                 // maturity state and prevents duplicate drops from an already harvested patch.
                 var shouldDrop = patch.HarvestedDay == 0;
-                var dropPosition = patch.Renderer != null
-                    ? (Vector2)patch.Renderer.transform.position
-                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
-                        cell + Vector3Int.up) ??
-                                new Vector3(cell.x + .5f, cell.y + 1f, 0f));
+                var dropPosition = ResolveDecorationDropPosition(cell);
                 patch.HarvestedDay = Mathf.Max(1, bootstrap?.TimeService?.Day ?? 1);
                 if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
                 if (shouldDrop)
@@ -1395,11 +1402,7 @@ namespace Nyangbingo.World
             {
                 if (patch.SupportCell != cell) continue;
                 var shouldDrop = !patch.Harvested && IsHempInCurrentStage(patch);
-                var dropPosition = patch.Renderer != null
-                    ? (Vector2)patch.Renderer.transform.position
-                    : (Vector2)(bootstrap?.TileService?.GetCellVisualAnchorWorld(
-                        cell + Vector3Int.up) ??
-                                new Vector3(cell.x + .5f, cell.y + 1f, 0f));
+                var dropPosition = ResolveDecorationDropPosition(cell);
                 patch.Harvested = true;
                 if (patch.Renderer != null) patch.Renderer.gameObject.SetActive(false);
                 if (shouldDrop)

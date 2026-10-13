@@ -105,18 +105,27 @@ namespace Nyangbingo.UI
             return range > 0f && (position - (Vector2)playerTarget.transform.position).sqrMagnitude <= range * range;
         }
         public bool IsNight => bootstrap?.TimeService?.IsNight == true;
+        public float CraftingStationEntryRange =>
+            playerTarget != null ? playerTarget.GetComponent<MainGamePlayerController>()?.MiningReach ?? 4f : 4f;
         public bool TryGetCraftingStationIdentity(CraftingStation station, string objectId,
-            out string resolvedId, out Vector2 position)
+            out string resolvedId, out Vector2 position, bool requireInRange = true)
         {
             resolvedId = null;
             position = default;
             if (!initialized || environmentState == null || playerTarget == null) return false;
-            var bestDistance = MainGameTurretRuntime.InteractionRange * MainGameTurretRuntime.InteractionRange;
+            // Remote access must refer to an explicitly entered, still-existing station.
+            if (!requireInRange && string.IsNullOrEmpty(objectId)) return false;
+            var entryRange = CraftingStationEntryRange;
+            var playerController = playerTarget.GetComponent<MainGamePlayerController>();
+            var entryOrigin = playerController != null ? playerController.AimOrigin : (Vector2)playerTarget.transform.position;
+            var bestDistance = requireInRange
+                ? entryRange * entryRange
+                : float.PositiveInfinity;
             foreach (var record in environmentState.ExportPlacedObjects())
             {
                 if (StationForDefinitionId(record.definitionId) != station ||
                     !string.IsNullOrEmpty(objectId) && record.objectId != objectId) continue;
-                var distance = ((Vector2)playerTarget.transform.position - record.position).sqrMagnitude;
+                var distance = (entryOrigin - record.position).sqrMagnitude;
                 if (distance > bestDistance) continue;
                 bestDistance = distance;
                 resolvedId = record.objectId;

@@ -39,9 +39,12 @@ namespace Nyangbingo.World
         private RuntimeOneShotSpriteEffect miningBreakEffect;
         private RuntimeOneShotSpriteEffect miningCriticalEffect;
         private RuntimeOneShotSpriteEffect playerFireHitEffect;
+        private readonly List<Sprite> fireOnlyFrames = new List<Sprite>();
+        private const int LegacyFireBodyHeightPixels = 10;
         private Health playerHealth;
         private SpriteRenderer miningProgressRenderer;
         private SpriteRenderer miningTargetRenderer;
+        private SpriteRenderer playerBodyRenderer;
         private System.Collections.Generic.IReadOnlyList<Sprite> miningProgressFrames;
         private Vector3Int miningProgressCell;
         private MiningImpactSurface lastMiningSurface = MiningImpactSurface.Mineral;
@@ -72,6 +75,7 @@ namespace Nyangbingo.World
             var playerAnimator = playerTransform.GetComponentInChildren<RuntimeCharacterSpriteAnimator>();
             var playerRenderer = playerAnimator?.Renderer ??
                                  playerTransform.GetComponentInChildren<SpriteRenderer>();
+            playerBodyRenderer = playerRenderer;
             var playerVisualTransform = playerRenderer != null
                 ? playerRenderer.transform
                 : playerTransform;
@@ -79,7 +83,7 @@ namespace Nyangbingo.World
                 ? playerRenderer.sortingOrder - 1
                 : PlayerFireHitFallbackSortingOrder;
             playerFireHitEffect = CreateEffect(
-                "PlayerFireHitEffect", playerVisualTransform, artCatalog.PlayerFireHitFrames,
+                "PlayerFireHitEffect", playerVisualTransform, BuildFireOnlyFrames(artCatalog.PlayerFireHitFrames),
                 fireSortingOrder);
             var fireRenderer = playerFireHitEffect.GetComponent<SpriteRenderer>();
             if (playerRenderer != null && fireRenderer != null)
@@ -127,6 +131,28 @@ namespace Nyangbingo.World
         }
 #endif
 
+        private IReadOnlyList<Sprite> BuildFireOnlyFrames(IReadOnlyList<Sprite> sourceFrames)
+        {
+            // Delivered player_fire_hit frames contain the old body in the bottom
+            // 10 pixels. Preserve the lower flame rim above the old body's head.
+            // Keep the flame's original position/pivot while excluding the body.
+            foreach (var source in sourceFrames)
+            {
+                if (source == null) continue;
+                var rect = source.rect;
+                if (rect.height <= LegacyFireBodyHeightPixels) continue;
+                rect.y += LegacyFireBodyHeightPixels;
+                rect.height -= LegacyFireBodyHeightPixels;
+                var pivot = new Vector2(source.pivot.x / rect.width,
+                    (source.pivot.y - LegacyFireBodyHeightPixels) / rect.height);
+                var flame = Sprite.Create(source.texture, rect, pivot, source.pixelsPerUnit,
+                    0, SpriteMeshType.FullRect);
+                flame.name = source.name + "_FlameOnly";
+                fireOnlyFrames.Add(flame);
+            }
+            return fireOnlyFrames;
+        }
+
         private void HandleMiningImpact(MiningImpactSurface surface) => lastMiningSurface = surface;
 
         private bool tileFaded;
@@ -165,6 +191,14 @@ namespace Nyangbingo.World
         /// </summary>
         private bool TryFadeForegroundTile(Vector3Int cell)
         {
+            // Plants and doors use a direct-cursor bright overlay, even though
+            // their artwork may be stored in the foreground tilemap.
+            if (tileService != null && tileService.InBounds(cell))
+            {
+                var id = tileService.GetTile(cell).elementType;
+                if (WorldTileTypes.IsPassableMushroom(id) || id == TileService.DoorElementType ||
+                    id == TileService.DoorTopElementType) return false;
+            }
             var foreground = worldRenderer != null ? worldRenderer.Foreground : null;
             if (foreground == null || foreground.GetSprite(cell) == null)
                 return false;
@@ -416,6 +450,16 @@ namespace Nyangbingo.World
         private void AlignMiningOverlayToCell(SpriteRenderer renderer, Vector3Int cell)
         {
             if (renderer == null) return;
+            if (renderer == miningTargetRenderer || renderer == miningProgressRenderer)
+            {
+                var passable = tileService != null && tileService.InBounds(cell) &&
+                    !tileService.GetTile(cell).BlocksMovement;
+                renderer.sortingLayerID = passable && playerBodyRenderer != null
+                    ? playerBodyRenderer.sortingLayerID : 0;
+                renderer.sortingOrder = passable
+                    ? playerBodyRenderer != null ? playerBodyRenderer.sortingOrder - 1 : PlayerFireHitFallbackSortingOrder
+                    : renderer == miningProgressRenderer ? 25 : 24;
+            }
             if (tileService != null)
                 tileService.AlignSpriteBoundsToCellBase(renderer, cell);
         }
@@ -446,6 +490,9 @@ namespace Nyangbingo.World
 
         private void OnDestroy()
         {
+            foreach (var frame in fireOnlyFrames)
+                if (frame != null) Destroy(frame);
+            fireOnlyFrames.Clear();
             RestoreFadedTile();
             if (playerHealth != null) playerHealth.Damaged -= HandlePlayerDamaged;
             GameEvents.OnMiningTargetChanged -= HandleMiningTargetChanged;

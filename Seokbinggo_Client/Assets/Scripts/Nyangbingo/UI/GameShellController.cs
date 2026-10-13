@@ -336,6 +336,25 @@ namespace Nyangbingo.UI
                 if (showTraitSelect) traitSelectPanel.transform.SetAsLastSibling();
             }
             if (openingPanel != null) openingPanel.SetActive(Screen == GameShellScreen.Opening);
+            BringPauseViewsToFront();
+        }
+
+        private void LateUpdate()
+        {
+            // Inventory/crafting/equipment windows are created at runtime and may
+            // reorder themselves during Update. Keep the dimmer above all of them.
+            BringPauseViewsToFront();
+        }
+
+        private void BringPauseViewsToFront()
+        {
+            if (Screen != GameShellScreen.Pause && Screen != GameShellScreen.Settings &&
+                Screen != GameShellScreen.Confirmation) return;
+            if (pauseCanvas != null) pauseCanvas.transform.SetAsLastSibling();
+            if (Screen == GameShellScreen.Settings && settingsPanel != null)
+                settingsPanel.transform.SetAsLastSibling();
+            if (Screen == GameShellScreen.Confirmation && confirmationPanel != null)
+                confirmationPanel.transform.SetAsLastSibling();
         }
     }
 }
