@@ -186,6 +186,9 @@ namespace Nyangbingo.UI
                 guides.BeginDay(bootstrap?.TimeService?.Day ?? 1);
             }
             shell ??= FindAnyObjectByType<MainGameShellUiController>();
+            // Keep the last displayed quest behind the pause dimmer, including
+            // its expanded/collapsed state. Do not advance guides or accept input.
+            if (shell != null && shell.IsPauseOverlayOpen) return;
             if (shell != null && shell.IsInitialized && !services.Goals.IsSuspended && Time.unscaledTime >= nextEvaluation)
             {
                 services.StorageTemperature.RefreshConditions();
@@ -204,8 +207,8 @@ namespace Nyangbingo.UI
             if (ready && !menuOpen) services.BuildingGuide.RefreshMiningWarning(player.transform.position);
             SetGuide("seal_boundary_dig", ready && !menuOpen && services.BuildingGuide.MiningSealBoundary,
                 context: services.BuildingGuide.MiningCell.ToString());
-            var visible = ready && !menuOpen;
-            if (visible && Input.GetKeyDown(WindowToggleKey) &&
+            var visible = ready && Time.timeScale > 0f;
+            if (visible && !menuOpen && Input.GetKeyDown(WindowToggleKey) &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
                 !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&
                 !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt))

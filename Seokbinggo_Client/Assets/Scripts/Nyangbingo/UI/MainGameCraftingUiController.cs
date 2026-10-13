@@ -84,6 +84,8 @@ namespace Nyangbingo.UI
         private Button[] craftCategoryButtons = Array.Empty<Button>();
         private Text[] craftCategoryLabels = Array.Empty<Text>();
         private int craftCategoryIndex;
+        private ScrollRect craftWindowScrollRect;
+        private const int CraftWindowColumns = 3;
         private bool craftWindowPanelTintSaved;
         private Color craftWindowPanelColor;
         private Button[] craftingListButtons = Array.Empty<Button>();
@@ -115,6 +117,7 @@ namespace Nyangbingo.UI
         [SerializeField] private GameObject equipmentVisualRoot;
         [SerializeField] private Image equipmentCharacter;
         [SerializeField] private Image[] equipmentSlotBackgrounds = new Image[6];
+        private readonly Dictionary<Image, GameObject> slotSelectionBorders = new Dictionary<Image, GameObject>();
         [SerializeField] private Button[] equipmentSlotButtons = new Button[6];
         [SerializeField] private Image[] equipmentSlotIcons = new Image[6];
         [SerializeField] private Text[] equipmentSlotFallbackLabels = new Text[6];
@@ -156,9 +159,10 @@ namespace Nyangbingo.UI
         private string openedStationObjectId;
         private bool bindingProductionStation;
         private GameObject productionQueueRoot;
-        private Text productionQueueHeader;
-        private readonly List<Text> productionQueueLabels = new List<Text>();
-        private readonly List<Button> productionQueueCancelButtons = new List<Button>();
+        private readonly List<Button> productionQueueSlots = new List<Button>();
+        private readonly List<Image> productionQueueIcons = new List<Image>();
+        private readonly List<Image> productionQueueTimers = new List<Image>();
+        private Sprite productionQueueTimerSprite;
         private readonly StationJobRecord[] displayedProductionJobs =
             new StationJobRecord[StationProductionService.WaitingCapacity + 1];
         private Button productionQueueCollectButton;
@@ -169,11 +173,15 @@ namespace Nyangbingo.UI
         private CharacterArtCatalog characterArtCatalog;
         private static int openControllerCount;
         private static int escapeConsumedFrame = -1;
+        private static int worldInteractionConsumedFrame = -1;
+        public static bool ConsumedWorldInteractionThisFrame => worldInteractionConsumedFrame == Time.frameCount;
         private int openedFrame = -1;
 
         public static bool BlocksGameplayInput => openControllerCount > 0 ||
             (cursorOwner != null && cursorOwner.HasHeldInventoryItem);
-        public static bool BlocksPlayerMovement => openControllerCount > 0;
+        public static bool BlocksPlayerMovement => openControllerCount > 1 ||
+            openControllerCount > 0 && (cursorOwner == null || !cursorOwner.open ||
+                cursorOwner.page != Page.Crafting || cursorOwner.HasStorageMode);
         public static bool ShowsInventoryPointer => cursorOwner != null &&
             (cursorOwner.HasHeldInventoryItem || cursorOwner.open &&
                 (cursorOwner.page == Page.Gathering || cursorOwner.HasStorageMode));
@@ -190,6 +198,7 @@ namespace Nyangbingo.UI
         public const int InventoryGridRows = 5;
         public const int InventoryHotbarSlotCount = 9;
         public const float InventorySlotPixelSize = 27f;
+        public const float InventoryCursorPixelSize = 12f;
         public const bool UsesIconOnlyCraftingList = true;
         public const KeyCode DebugGrantRequirementsKey = KeyCode.F12;
         private int CurrentDay => FindAnyObjectByType<DayNightService>()?.Day ?? 1;
@@ -346,25 +355,14 @@ namespace Nyangbingo.UI
             }
 
             if (TryHandlePageHotkey()) return;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            var craftWindowVisible = !open && craftWindowRoot != null && craftWindowRoot.activeInHierarchy;
-            var craftingOrGearOpen = open && (page == Page.Crafting || page == Page.Equipment);
-            if ((craftingOrGearOpen || craftWindowVisible) &&
-                DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeMaterials))
-                GrantSelectedRequirementsForEditorTest();
-            if (open && page == Page.Crafting &&
-                DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeStation))
-                TeleportToRequiredStationForEditorTest();
-#endif
-            if (!open) return;
+            if (!open)
+            {
+                RefreshProductionQueue();
+                return;
+            }
             if (page != Page.Codex)
             {
-                if (page == Page.Crafting && !IsShowingSmeltingList)
-                {
-                    if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) SelectRelative(-1);
-                    if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) SelectRelative(1);
-                }
-                else
+                if (page != Page.Crafting)
                 {
                     if (Input.GetKeyDown(KeyCode.LeftArrow) ||
                         page != Page.Gathering && Input.GetKeyDown(KeyCode.A)) SubmitNavigation(-1);
@@ -383,8 +381,30 @@ namespace Nyangbingo.UI
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.Q)) ToggleActiveSlotFromEquipmentPage();
                 if (openedFrame != Time.frameCount &&
                     Input.GetKeyDown(KeyCode.E))
-                    TryPrimaryAction();
+                {
+                    if (page == Page.Crafting)
+                    {
+                        worldInteractionConsumedFrame = Time.frameCount;
+                        turretRuntime?.TryInteractFromCraftingUi(openedStationObjectId, () =>
+                        {
+                            SetOpen(false);
+                            return !open;
+                        });
+                    }
+                    else TryPrimaryAction();
+                }
                 if (page == Page.Equipment && Input.GetKeyDown(KeyCode.R)) TryRefuelPortableLantern();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if ((page == Page.Crafting || page == Page.Equipment) &&
+                    DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeMaterials))
+                    GrantSelectedRequirementsForEditorTest();
+                if (page == Page.Crafting &&
+                    DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeStation))
+                    TeleportToRequiredStationForEditorTest();
+                if (page == Page.Crafting &&
+                    DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeComplete))
+                    TryCompleteCurrentProcessForDebug();
+#endif
             }
             if (!string.IsNullOrEmpty(message) && Time.unscaledTime >= messageUntil) message = string.Empty;
             Refresh();
@@ -461,12 +481,14 @@ namespace Nyangbingo.UI
         {
             if (!initialized || station == CraftingStation.None ||
                 shell != null && shell.Screen != GameShellScreen.Gameplay || Time.timeScale <= 0f) return false;
+            if (stationSource == null || !stationSource.TryGetCraftingStationIdentity(station, objectId,
+                    out var enteredId, out _)) return false;
 
             bindingProductionStation = true;
             OpenPage(Page.Crafting);
             bindingProductionStation = false;
             openedStation = station;
-            openedStationObjectId = objectId;
+            openedStationObjectId = enteredId;
             ResolveProductionQueue();
             craftingFilter = FilterForStation(station);
             furnaceSmeltingView = false;
@@ -748,7 +770,7 @@ namespace Nyangbingo.UI
 
         private void BuildCraftWindow(Transform canvas)
         {
-            const int columns = 3;
+            const int columns = CraftWindowColumns;
             const int visibleRows = 3;
             craftWindowRoot = new GameObject("CraftWindow", typeof(RectTransform), typeof(Image));
             craftWindowRoot.transform.SetParent(canvas, false);
@@ -772,8 +794,12 @@ namespace Nyangbingo.UI
             frame.color = frameSprite != null ? Color.white : new Color(.08f, .1f, .16f, .96f);
             frame.raycastTarget = true;
 
-            craftWindowOutputIcon = CreateArtImage(root, "Output", null, Vector2.zero, new Vector2(16f, 16f));
-            PlaceTopLeft(craftWindowOutputIcon.rectTransform, 18f, 7f, 16f, 16f);
+            craftWindowOutputIcon = CreateArtImage(root, "Output", null, Vector2.zero, new Vector2(22f, 22f));
+            PlaceTopLeft(craftWindowOutputIcon.rectTransform, 9f, 9f, 22f, 22f);
+            // PreserveAspect aligns unused space using the RectTransform pivot.
+            // Use a centred pivot like the recipe grid, keeping the same preview bounds.
+            craftWindowOutputIcon.rectTransform.pivot = Vector2.one * .5f;
+            craftWindowOutputIcon.rectTransform.anchoredPosition = new Vector2(20f, -20f);
             craftWindowOutputIcon.preserveAspect = true;
             for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
             {
@@ -855,6 +881,7 @@ namespace Nyangbingo.UI
             layout.constraintCount = columns;
 
             var scroll = viewportObject.AddComponent<ScrollRect>();
+            craftWindowScrollRect = scroll;
             scroll.content = content;
             scroll.viewport = viewport;
             scroll.horizontal = false;
@@ -967,7 +994,6 @@ namespace Nyangbingo.UI
             if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(false);
             if (detailsScrollbarRect != null) detailsScrollbarRect.gameObject.SetActive(false);
             if (debugCompleteButton != null) debugCompleteButton.gameObject.SetActive(false);
-            if (productionQueueRoot != null) productionQueueRoot.SetActive(false);
         }
 
         private void RefreshCraftWindow()
@@ -1051,7 +1077,9 @@ namespace Nyangbingo.UI
                     icon.enabled = icon.sprite != null;
                 }
                 if (craftWindowSlotMarks[index] != null)
-                    craftWindowSlotMarks[index].enabled = hasEntry && index == selected;
+                    craftWindowSlotMarks[index].enabled = false;
+                if (button.targetGraphic is Image background)
+                    RefreshSlotSelectionBorder(background, hasEntry && index == selected);
             }
             if (productionQueueRoot != null) productionQueueRoot.SetActive(false);
             if (open && page == Page.Crafting) HideCraftingTextChrome();
@@ -1075,7 +1103,7 @@ namespace Nyangbingo.UI
         {
             craftWindowRecipes.Clear();
             if (visibleRecipes.Count == 0 && gameDataCatalog != null) RebuildVisibleRecipes();
-            var nearby = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+            var nearby = open && page == Page.Crafting ? NearbyStation() : CraftingStation.None;
             var smithyUnlocked = runtimeServices?.Seokbinggo?.IsSmithyUnlocked == true;
             for (var index = 0; index < visibleRecipes.Count; index++)
             {
@@ -1105,6 +1133,21 @@ namespace Nyangbingo.UI
             if (open && page == Page.Crafting) selectedIndex = index;
             else craftWindowIndex = index;
             Refresh();
+            EnsureCraftGridSelectionVisible();
+        }
+
+        private void EnsureCraftGridSelectionVisible()
+        {
+            if (craftWindowScrollRect == null || !craftWindowScrollRect.gameObject.activeInHierarchy) return;
+            var index = open && page == Page.Crafting ? selectedIndex : craftWindowIndex;
+            if (index < 0 || index >= craftWindowSlotButtons.Length) return;
+            Canvas.ForceUpdateCanvases();
+            var viewport = craftWindowScrollRect.viewport;
+            var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, craftWindowSlotButtons[index].transform);
+            var offset = bounds.max.y > viewport.rect.yMax ? viewport.rect.yMax - bounds.max.y
+                : bounds.min.y < viewport.rect.yMin ? viewport.rect.yMin - bounds.min.y : 0f;
+            craftWindowScrollRect.StopMovement();
+            craftWindowScrollRect.content.anchoredPosition += new Vector2(0f, offset);
         }
 
         private void SelectCraftWindowSlot(int index)
@@ -1802,7 +1845,7 @@ namespace Nyangbingo.UI
             chestId = string.Empty;
             if (!open)
             {
-                openedStation = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+                openedStation = CraftingStation.None;
                 openedStationObjectId = null;
             }
             craftingFilter = FilterForStation(openedStation);
@@ -1871,6 +1914,19 @@ namespace Nyangbingo.UI
                      pointer.button == PointerEventData.InputButton.Right)) clicked(pointer);
             });
             trigger.triggers.Add(entry);
+            // EventTrigger handles IScrollHandler itself, so Unity stops bubbling the
+            // wheel event here even when only a click callback was registered.
+            if (!trigger.triggers.Exists(existing => existing.eventID == EventTriggerType.Scroll))
+            {
+                var scrollEntry = new EventTrigger.Entry { eventID = EventTriggerType.Scroll };
+                scrollEntry.callback.AddListener(data =>
+                {
+                    if (data is not PointerEventData pointer) return;
+                    var scroll = button.GetComponentInParent<ScrollRect>();
+                    if (scroll != null && scroll.isActiveAndEnabled) scroll.OnScroll(pointer);
+                });
+                trigger.triggers.Add(scrollEntry);
+            }
         }
 
         public static bool TryClickQuickslot(int index, PointerEventData pointer)
@@ -1933,14 +1989,11 @@ namespace Nyangbingo.UI
             var canvas = panel.GetComponentInParent<Canvas>().rootCanvas;
             if (inventoryCursorIcon == null)
             {
-                // 드래그 아이콘은 인벤 슬롯(27px)보다 작게 해서 커서 아래가 가려지지 않도록 한다.
-                const float dragIconSize = 14f;
                 inventoryCursorIcon = CreateArtImage(canvas.transform, "InventoryCursor", null,
-                    Vector2.zero, new Vector2(dragIconSize, dragIconSize));
+                    Vector2.zero, new Vector2(InventoryCursorPixelSize, InventoryCursorPixelSize));
                 inventoryCursorIcon.raycastTarget = false;
                 inventoryCursorCount = CreateText(inventoryCursorIcon.transform, "Count", 6,
-                    TextAnchor.LowerRight, new Vector2(dragIconSize, dragIconSize), Vector2.zero);
-                inventoryCursorCount.font = UiTextFont.Source;
+                    TextAnchor.LowerRight, new Vector2(InventoryCursorPixelSize, InventoryCursorPixelSize), Vector2.zero);
                 inventoryCursorCount.raycastTarget = false;
             }
             inventoryCursorIcon.gameObject.SetActive(true);
@@ -1950,13 +2003,48 @@ namespace Nyangbingo.UI
             inventoryCursorIcon.sprite = itemArtCatalog?.FindSprite(slot.itemId);
             inventoryCursorIcon.enabled = inventoryCursorIcon.sprite != null;
             inventoryCursorIcon.color = inventoryCursorIcon.sprite != null ? Color.white : Color.clear;
+            MatchCursorCountToInventory();
             inventoryCursorCount.text = inventoryCursorIcon.sprite != null
-                ? (slot.amount > 1 ? slot.amount.ToString() : string.Empty)
+                ? slot.amount.ToString()
                 : $"{item?.DisplayName} ×{slot.amount}";
             var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform,
                     Input.mousePosition, camera, out var point))
                 inventoryCursorIcon.rectTransform.localPosition = new Vector3(point.x, point.y, 0f);
+        }
+
+        private void MatchCursorCountToInventory()
+        {
+            if (inventoryGridIcons == null || inventoryGridLabels == null ||
+                inventoryGridIcons.Length == 0 || inventoryGridLabels.Length == 0) return;
+            var sourceIcon = inventoryGridIcons[0];
+            var sourceCount = inventoryGridLabels[0];
+            if (sourceIcon == null || sourceCount == null) return;
+            var iconRect = sourceIcon.rectTransform;
+            var countRect = sourceCount.rectTransform;
+            var cursorRect = inventoryCursorIcon.rectTransform;
+            var sourceHeight = iconRect.rect.height * Mathf.Abs(iconRect.lossyScale.y);
+            var cursorHeight = cursorRect.rect.height * Mathf.Abs(cursorRect.lossyScale.y);
+            if (sourceHeight <= Mathf.Epsilon || cursorHeight <= Mathf.Epsilon) return;
+            var ratio = cursorHeight / sourceHeight;
+            var textScale = ratio * Mathf.Abs(countRect.lossyScale.y) /
+                Mathf.Max(.0001f, Mathf.Abs(cursorRect.lossyScale.y));
+            inventoryCursorCount.font = sourceCount.font;
+            inventoryCursorCount.fontStyle = sourceCount.fontStyle;
+            inventoryCursorCount.fontSize = Mathf.Max(1, Mathf.RoundToInt(sourceCount.fontSize * textScale));
+            inventoryCursorCount.resizeTextForBestFit = false;
+            inventoryCursorCount.alignment = sourceCount.alignment;
+            inventoryCursorCount.color = sourceCount.color;
+            inventoryCursorCount.horizontalOverflow = HorizontalWrapMode.Overflow;
+            inventoryCursorCount.verticalOverflow = VerticalWrapMode.Overflow;
+            // Copy the count's placement relative to its icon, scaled to the cursor icon.
+            var labelRect = inventoryCursorCount.rectTransform;
+            labelRect.anchorMin = labelRect.anchorMax = Vector2.one * .5f;
+            labelRect.pivot = countRect.pivot;
+            labelRect.sizeDelta = countRect.rect.size * textScale;
+            var localOffset = iconRect.InverseTransformPoint(countRect.position);
+            var iconRatio = cursorRect.rect.height / Mathf.Max(.0001f, iconRect.rect.height);
+            labelRect.anchoredPosition = new Vector2(localOffset.x, localOffset.y) * iconRatio;
         }
 
         private bool ReturnHeldInventoryItem()
@@ -2187,7 +2275,7 @@ namespace Nyangbingo.UI
                 return;
             }
             var recipe = craftWindowRecipes[craftWindowIndex];
-            var nearby = stationSource != null ? stationSource.NearbyCraftingStation : CraftingStation.None;
+            var nearby = CraftingStation.None;
             var previousStation = openedStation;
             var previousId = openedStationObjectId;
             openedStation = recipe.Station == CraftingStation.None ? CraftingStation.None : nearby;
@@ -2400,6 +2488,11 @@ namespace Nyangbingo.UI
             open = value;
             if (!open)
             {
+                openedStation = CraftingStation.None;
+                openedStationObjectId = null;
+                furnaceSmeltingView = false;
+                craftingFilter = CraftingStationFilter.None;
+                craftWindowIndex = 0;
                 storageObjectId = string.Empty;
                 chestProgress = null;
                 chestId = string.Empty;
@@ -2416,11 +2509,14 @@ namespace Nyangbingo.UI
         private void Refresh()
         {
             if (panel == null || runtimeServices == null || !runtimeServices.IsInitialized) return;
+            // The inventory stays visible beside station UI, so inventory events
+            // must update its slots regardless of the currently selected page.
+            RefreshInventoryGridVisual();
             RefreshEquipmentVisual();
             if (!open)
             {
-                RefreshInventoryGridVisual();
                 RefreshCraftWindow();
+                RefreshProductionQueue();
                 return;
             }
             RefreshPageLayout();
@@ -2523,16 +2619,7 @@ namespace Nyangbingo.UI
             }
             var readyToPlace = turretRuntime != null && IsProductPlaceableRecipe(recipe, CurrentDay) &&
                                turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
-            primaryButton.GetComponentInChildren<Text>().text = "E · 제작 예약";
-            collectButton.gameObject.SetActive(readyToPlace);
-            if (readyToPlace)
-            {
-                var placementRect = collectButton.GetComponent<RectTransform>();
-                placementRect.anchoredPosition = new Vector2(0f, -34f);
-                placementRect.sizeDelta = new Vector2(44f, 16f);
-                collectButton.GetComponentInChildren<Text>().text = "설치";
-                collectButton.interactable = true;
-            }
+            primaryButton.GetComponentInChildren<Text>().text = "제작 예약";
             titleText.text =
                 $"{CraftingFilterTitlePrefix()} {selectedIndex + 1}/{filteredRecipes.Count} · {recipe.Output.item.DisplayName}";
             var stationOk = recipe.Station == CraftingStation.None || recipe.Station == NearbyStation();
@@ -2553,13 +2640,13 @@ namespace Nyangbingo.UI
             }
             if (turretRuntime != null && IsProductPlaceableRecipe(recipe, CurrentDay))
                 builder.AppendLine($"\n완성품 보유: {turretRuntime.GetInventoryCount(recipe.Output.item.Id)} · " +
-                                   (readyToPlace ? "설치 버튼으로 배치 가능" : "제작 완료 후 설치 가능"));
+                                   (readyToPlace ? "퀵슬롯에서 선택해 설치 가능" : "제작 완료 후 설치 가능"));
             if (runtimeServices.CraftingProcess.IsCrafting)
                 builder.AppendLine($"\n진행 중: {runtimeServices.CraftingProcess.Active.Output.item.DisplayName} " +
                                    $"{runtimeServices.CraftingProcess.RemainingSeconds:0.0}초");
             if (recipe.Id == "workbench")
                 builder.AppendLine(readyToPlace
-                    ? "\n다음: 설치 버튼 → 초록 위치에 우클릭"
+                    ? "\n다음: 퀵슬롯에서 선택 → 초록 위치에 우클릭"
                     : "\n흙·돌 블록에 좌클릭 유지로 채굴\n떨어진 재료 가까이 이동해 줍기");
             detailsText.text = builder.ToString();
             RefreshMaterialSources(recipe.Id, recipe.Ingredients);
@@ -2790,7 +2877,7 @@ namespace Nyangbingo.UI
 
         private void RefreshSmelting()
         {
-            primaryButton.GetComponentInChildren<Text>().text = "E · 제련 예약";
+            primaryButton.GetComponentInChildren<Text>().text = "제련 예약";
             collectButton.GetComponentInChildren<Text>().text = "완료품 회수";
             collectButton.gameObject.SetActive(true);
             debugCompleteButton.interactable = ResolveProductionQueue()?.jobs.Count > 0 ||
@@ -2994,9 +3081,8 @@ namespace Nyangbingo.UI
                 if (label == null) continue;
                 if (buttonImage != null)
                 {
-                    buttonImage.sprite = index == selectedIndex
-                        ? gameplayArtCatalog?.InventorySlotSelected
-                        : gameplayArtCatalog?.InventorySlot;
+                    buttonImage.sprite = gameplayArtCatalog?.InventorySlot;
+                    RefreshSlotSelectionBorder(buttonImage, index == selectedIndex);
                     buttonImage.preserveAspect = true;
                     buttonImage.type = Image.Type.Simple;
                     buttonImage.color = buttonImage.sprite != null
@@ -3039,15 +3125,33 @@ namespace Nyangbingo.UI
             }
         }
 
-        private string FormatInventorySlotCount(ItemDefinition item, int amount)
+        public static string FormatInventoryCount(ItemDefinition item, int amount,
+            Nyangbingo.Inventory.Inventory inventory, GameDataCatalog catalog)
         {
             if (item == null || amount <= 0) return string.Empty;
             if (BowCombatRules.IsBowWeaponId(item.Id))
-                return (runtimeServices?.PlayerInventory?.Count(BowCombatRules.AmmoItemId) ?? 0).ToString();
+                return (inventory?.Count(BowCombatRules.AmmoItemId) ?? 0).ToString();
             if (item.Category == ItemCategory.Weapon ||
-                item.Category == ItemCategory.Tool && gameDataCatalog?.FindCombatProfile(item.Id) != null)
+                item.Category == ItemCategory.Tool && catalog?.FindCombatProfile(item.Id) != null)
                 return string.Empty;
             return amount.ToString();
+        }
+
+        private string FormatInventorySlotCount(ItemDefinition item, int amount) =>
+            FormatInventoryCount(item, amount, runtimeServices?.PlayerInventory, gameDataCatalog);
+
+        public static void MatchInventoryCountFont(Text target)
+        {
+            var labels = cursorOwner?.inventoryGridLabels;
+            var source = labels != null && labels.Length > 0 ? labels[0] : null;
+            target.font = source != null ? source.font : UiTextFont.Source;
+            target.fontStyle = source != null ? source.fontStyle : FontStyle.Normal;
+            target.fontSize = source != null ? source.fontSize : 8;
+            target.resizeTextForBestFit = false;
+            target.color = source != null ? source.color : Color.white;
+            target.raycastTarget = false;
+            target.horizontalOverflow = HorizontalWrapMode.Overflow;
+            target.verticalOverflow = VerticalWrapMode.Overflow;
         }
 
         private ItemDefinition CurrentInventoryItem()
@@ -3164,13 +3268,16 @@ namespace Nyangbingo.UI
             {
                 var background = equipmentSlotBackgrounds[index];
                 if (background == null) continue;
-                background.sprite = EquipmentSlotSprite(index, index == selectedSlot);
+                var itemId = EquippedItemIdForVisualSlot(index);
+                // The body-part silhouette is baked into the empty equipment art.
+                // Occupied slots use the plain inventory frame beneath the item.
+                background.sprite = !string.IsNullOrEmpty(itemId)
+                    ? gameplayArtCatalog?.InventorySlot
+                    : EquipmentSlotSprite(index, false);
                 background.color = background.sprite != null
                     ? Color.white
-                    : index == selectedSlot
-                        ? new Color(.95f, .65f, .12f, 1f)
-                        : new Color(.14f, .2f, .28f, 1f);
-                var itemId = EquippedItemIdForVisualSlot(index);
+                    : new Color(.14f, .2f, .28f, 1f);
+                RefreshSlotSelectionBorder(background, index == selectedSlot);
                 var button = equipmentSlotButtons[index];
                 if (button != null) button.interactable = !string.IsNullOrEmpty(itemId);
                 var icon = equipmentSlotIcons[index];
@@ -3189,6 +3296,33 @@ namespace Nyangbingo.UI
                 equipmentCharacter.sprite = gameplayArtCatalog?.EquipmentCharacter;
                 equipmentCharacter.enabled = equipmentCharacter.sprite != null;
             }
+        }
+
+        private void RefreshSlotSelectionBorder(Image background, bool selected)
+        {
+            if (!slotSelectionBorders.TryGetValue(background, out var border))
+            {
+                border = CreateUiObject("SelectionBorder", background.transform, Vector2.zero, Vector2.zero);
+                var rect = (RectTransform)border.transform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+                for (var side = 0; side < 4; side++)
+                {
+                    var image = CreateUiObject($"Edge_{side}", rect, Vector2.zero, Vector2.zero).AddComponent<Image>();
+                    image.color = Color.white;
+                    image.raycastTarget = false;
+                    var edge = image.rectTransform;
+                    var horizontal = side < 2;
+                    edge.anchorMin = horizontal ? new Vector2(0f, side) : new Vector2(side - 2, 0f);
+                    edge.anchorMax = horizontal ? new Vector2(1f, side) : new Vector2(side - 2, 1f);
+                    edge.pivot = horizontal ? new Vector2(.5f, side) : new Vector2(side - 2, .5f);
+                    edge.sizeDelta = horizontal ? new Vector2(0f, 1f) : new Vector2(1f, 0f);
+                }
+                slotSelectionBorders[background] = border;
+            }
+            border.SetActive(selected);
+            border.transform.SetAsLastSibling();
         }
 
         private int ResolveSelectedEquipmentVisualSlot()
@@ -3553,7 +3687,7 @@ namespace Nyangbingo.UI
         private CraftingStation NearbyStation() => openedStation == CraftingStation.None
             ? CraftingStation.None
             : stationSource != null && stationSource.TryGetCraftingStationIdentity(openedStation,
-                openedStationObjectId, out _, out _) ? openedStation : CraftingStation.None;
+                openedStationObjectId, out _, out _, requireInRange: false) ? openedStation : CraftingStation.None;
 
         private StationQueueRecord ResolveProductionQueue()
         {
@@ -3563,7 +3697,7 @@ namespace Nyangbingo.UI
             if (openedStation != CraftingStation.None)
             {
                 if (stationSource == null || !stationSource.TryGetCraftingStationIdentity(openedStation,
-                        openedStationObjectId, out id, out position)) return null;
+                        openedStationObjectId, out id, out position, requireInRange: false)) return null;
                 openedStationObjectId = id;
             }
             var queue = runtimeServices.StationProduction.Get(id, openedStation, position);
@@ -3575,68 +3709,113 @@ namespace Nyangbingo.UI
 
         private void RefreshProductionQueue()
         {
-            var visible = open && page == Page.Crafting && !HasStorageMode;
+            if (runtimeServices?.StationProduction == null || panel == null) return;
+            var visible = !HasStorageMode && (!open || page == Page.Crafting);
             if (productionQueueRoot == null && visible)
             {
-                productionQueueRoot = CreateUiObject("ProductionQueue", panel.transform,
-                    new Vector2(250f, 76f), new Vector2(89f, -36f));
-                var background = productionQueueRoot.AddComponent<Image>();
-                background.color = new Color(.035f, .055f, .08f, .95f);
-                background.raycastTarget = true;
-                productionQueueHeader = CreateText(productionQueueRoot.transform, "Header", 8,
-                    TextAnchor.MiddleLeft, new Vector2(175f, 12f), new Vector2(-34f, 31f));
-                productionQueueCollectButton = CreateButton(productionQueueRoot.transform, "Collect",
-                    "회수", new Vector2(91f, 31f), new Vector2(58f, 12f), () =>
-                    {
-                        var queue = ResolveProductionQueue();
-                        var count = runtimeServices.StationProduction.Collect(queue);
-                        ShowMessage(count > 0 ? "완료품·반환 재료를 회수했습니다." : "인벤토리 공간이 부족합니다.");
-                        Refresh();
-                    }, false);
+                var canvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
+                if (canvas == null) return;
+                productionQueueRoot = CreateUiObject("ProductionQueue", canvas.transform,
+                    new Vector2(100f, 18f), Vector2.zero);
+                var root = (RectTransform)productionQueueRoot.transform;
+                root.anchorMin = root.anchorMax = root.pivot = Vector2.zero;
+                var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+                texture.SetPixel(0, 0, Color.white);
+                texture.filterMode = FilterMode.Point;
+                texture.Apply();
+                productionQueueTimerSprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), Vector2.one * .5f);
+                productionQueueCollectButton = CreateButton(root, "Collect", "회수",
+                    new Vector2(22f, 29f), new Vector2(44f, 14f), CollectDisplayedProduction, false);
+                var collectRect = (RectTransform)productionQueueCollectButton.transform;
+                collectRect.anchorMin = collectRect.anchorMax = Vector2.zero;
                 productionQueueCollectButton.GetComponentInChildren<Text>().fontSize = 7;
-                for (var i = 0; i < StationProductionService.WaitingCapacity + 1; i++)
+                for (var i = 0; i <= StationProductionService.WaitingCapacity; i++)
                 {
                     var capturedIndex = i;
-                    var y = 18f - i * 12f;
-                    productionQueueLabels.Add(CreateText(productionQueueRoot.transform, $"Job_{i}", 7,
-                        TextAnchor.MiddleLeft, new Vector2(197f, 11f), new Vector2(-21f, y)));
-                    var cancel = CreateButton(productionQueueRoot.transform, $"Cancel_{i}", "취소",
-                        new Vector2(101f, y), new Vector2(36f, 11f), () =>
-                        {
-                            var queue = ResolveProductionQueue();
-                            var displayedJob = displayedProductionJobs[capturedIndex];
-                            var jobIndex = queue != null && displayedJob != null
-                                ? queue.jobs.IndexOf(displayedJob) : -1;
-                            if (runtimeServices.StationProduction.Cancel(queue, jobIndex))
-                                ShowMessage(queue.returns.Count > 0
-                                    ? "제작 취소 · 반환 대기분은 회수 버튼으로 받으세요."
-                                    : "제작 취소 · 재료를 반환했습니다.");
-                            Refresh();
-                        }, false);
-                    cancel.GetComponentInChildren<Text>().fontSize = 7;
-                    productionQueueCancelButtons.Add(cancel);
+                    var button = CreateButton(root, $"Job_{i}", string.Empty,
+                        new Vector2(9f + i * 20f, 9f), new Vector2(18f, 18f), () => { }, false);
+                    var slotRect = (RectTransform)button.transform;
+                    slotRect.anchorMin = slotRect.anchorMax = Vector2.zero;
+                    button.GetComponent<Image>().color = new Color(.08f, .12f, .18f, 1f);
+                    RefreshSlotSelectionBorder(button.GetComponent<Image>(), true);
+                    var icon = CreateArtImage(button.transform, "Output", null,
+                        Vector2.zero, new Vector2(14f, 14f));
+                    var timer = CreateArtImage(button.transform, "Timer", productionQueueTimerSprite,
+                        Vector2.zero, new Vector2(16f, 16f));
+                    timer.type = Image.Type.Filled;
+                    timer.fillMethod = Image.FillMethod.Radial360;
+                    timer.fillOrigin = (int)Image.Origin360.Top;
+                    timer.fillClockwise = true;
+                    timer.color = new Color(.15f, .65f, 1f, .55f);
+                    WireInventoryPointer(button, pointer =>
+                    {
+                        if (pointer.button != PointerEventData.InputButton.Right ||
+                            shell != null && shell.Screen != GameShellScreen.Gameplay) return;
+                        var queue = ResolveProductionQueue();
+                        var job = displayedProductionJobs[capturedIndex];
+                        var index = queue != null && job != null ? queue.jobs.IndexOf(job) : -1;
+                        if (runtimeServices.StationProduction.Cancel(queue, index))
+                            ShowMessage(queue.returns.Count > 0
+                                ? "제작 취소 · 반환 대기분은 회수 버튼으로 받으세요."
+                                : "제작 취소 · 재료를 반환했습니다.");
+                        Refresh();
+                    });
+                    productionQueueSlots.Add(button);
+                    productionQueueIcons.Add(icon);
+                    productionQueueTimers.Add(timer);
                 }
             }
             if (productionQueueRoot == null) return;
             productionQueueRoot.SetActive(visible);
             if (!visible) return;
-            var state = ResolveProductionQueue();
-            productionQueueHeader.text = state == null ? "제작대를 사용할 수 없습니다." :
-                $"진행 {(state.jobs.Count > 0 ? 1 : 0)}/1 · 대기 {Mathf.Max(0, state.jobs.Count - 1)}/4 · 회수 {state.returns.Count}";
-            productionQueueCollectButton.interactable = state?.returns.Count > 0;
-            for (var i = 0; i < productionQueueLabels.Count; i++)
+            var queueRect = (RectTransform)productionQueueRoot.transform;
+            var craftRect = craftWindowRoot != null ? (RectTransform)craftWindowRoot.transform : null;
+            if (craftRect != null && queueRect.parent is RectTransform canvasRect)
             {
-                var hasJob = state != null && i < state.jobs.Count;
-                displayedProductionJobs[i] = hasJob ? state.jobs[i] : null;
-                productionQueueCancelButtons[i].gameObject.SetActive(hasJob);
-                string FormatRemaining(float sec) =>
-                    sec >= 60f ? $"{Mathf.FloorToInt(sec / 60f)}분 {Mathf.FloorToInt(sec % 60f):00}초"
-                               : $"{Mathf.CeilToInt(sec)}초";
-                productionQueueLabels[i].text = hasJob
-                    ? $"{(i == 0 ? "진행" : "대기 " + i)} · {runtimeServices.StationProduction.OutputName(state.jobs[i])}" +
-                      (i == 0 ? $" · {FormatRemaining(state.jobs[i].remaining)}" : string.Empty)
-                    : i == 0 ? "진행 중인 작업 없음" : $"대기 {i} · 비어 있음";
+                var rightEdge = canvasRect.InverseTransformPoint(craftRect.TransformPoint(
+                    new Vector3(craftRect.rect.xMax, craftRect.rect.yMin, 0f)));
+                var thirdRowCenter = rightEdge.y + 9f;
+                if (craftWindowScrollRect != null && craftWindowSlotButtons.Length > 0)
+                {
+                    var viewport = craftWindowScrollRect.viewport;
+                    var rowHeight = ((RectTransform)craftWindowSlotButtons[0].transform).rect.height;
+                    var center = canvasRect.InverseTransformPoint(viewport.TransformPoint(
+                        new Vector3(viewport.rect.center.x, viewport.rect.yMax - rowHeight * 2.5f, 0f)));
+                    thirdRowCenter = center.y;
+                }
+                // Slots are anchored to the queue's bottom-left, not its centre.
+                queueRect.anchoredPosition = new Vector2(rightEdge.x - canvasRect.rect.xMin + 4f,
+                    thirdRowCenter - canvasRect.rect.yMin - 9f);
             }
+            else queueRect.anchoredPosition = new Vector2(116f, 4f);
+            var state = ResolveProductionQueue();
+            var hasReturns = state?.returns.Count > 0 ||
+                IsShowingSmeltingList && ResolveDisplayedSmeltingStation()?.Completed.Count > 0;
+            productionQueueCollectButton.gameObject.SetActive(hasReturns);
+            productionQueueCollectButton.interactable = hasReturns;
+            for (var i = 0; i < productionQueueSlots.Count; i++)
+            {
+                var job = state != null && i < state.jobs.Count ? state.jobs[i] : null;
+                displayedProductionJobs[i] = job;
+                productionQueueSlots[i].gameObject.SetActive(job != null);
+                if (job == null) continue;
+                var output = job.smelting ? gameDataCatalog.FindSmelting(job.recipeId)?.Output.item
+                    : gameDataCatalog.FindRecipe(job.recipeId)?.Output.item;
+                productionQueueIcons[i].sprite = output != null ? itemArtCatalog?.FindSprite(output.Id) : null;
+                productionQueueIcons[i].enabled = productionQueueIcons[i].sprite != null;
+                productionQueueTimers[i].enabled = i == 0;
+                productionQueueTimers[i].fillAmount = job.duration > 0f
+                    ? Mathf.Clamp01(1f - job.remaining / job.duration) : 0f;
+            }
+        }
+
+        private void CollectDisplayedProduction()
+        {
+            if (shell != null && shell.Screen != GameShellScreen.Gameplay) return;
+            if (IsShowingSmeltingList) { TryCollectOutputs(); return; }
+            var count = runtimeServices.StationProduction.Collect(ResolveProductionQueue());
+            ShowMessage(count > 0 ? "완료품·반환 재료를 회수했습니다." : "인벤토리 공간이 부족합니다.");
+            Refresh();
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -3775,9 +3954,9 @@ namespace Nyangbingo.UI
             if (page == Page.Crafting)
                 return IsSmeltingStation(openedStation)
                     ? furnaceSmeltingView
-                        ? "Q 제작 목록으로 전환 · A/D·←/→ 선택 · E 제련 · ESC 닫기"
-                        : "Q 제련 목록으로 전환 · W/S·↑/↓ 선택 · E 제작 · ESC 닫기"
-                    : "C 제작 탭 · ESC 닫기 · W/S·↑/↓ 선택 · E 실행";
+                        ? "Q 제작 목록으로 전환 · 클릭 선택·제련 · ESC 닫기"
+                        : "Q 제련 목록으로 전환 · 클릭 선택·제작 · ESC 닫기"
+                    : "C 제작 탭 · ESC 닫기 · 클릭 선택·제작";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             return page == Page.Gathering
                 ? "좌클릭 전체 · 우클릭 절반 집기/1개 놓기 · E 사용/설치 · ESC 닫기"
@@ -3890,6 +4069,11 @@ namespace Nyangbingo.UI
 
         private void OnDestroy()
         {
+            if (productionQueueTimerSprite != null)
+            {
+                Destroy(productionQueueTimerSprite.texture);
+                Destroy(productionQueueTimerSprite);
+            }
             HideInventoryCursorPreview();
             if (cursorOwner == this) cursorOwner = null;
             if (inventoryCursorIcon != null) Destroy(inventoryCursorIcon.gameObject);

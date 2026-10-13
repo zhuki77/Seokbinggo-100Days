@@ -289,9 +289,11 @@ namespace Nyangbingo.UI
                 runtimeServices.PlayerInventory == null) return;
             var gameplayVisible = (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
                                   !MainGameCraftingUiController.BlocksGameplayInput;
-            var paletteVisible = gameplayVisible ||
-                (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
-                MainGameCraftingUiController.ShowsInventoryPointer;
+            // Keep the hotbar rendered behind menus; only its gameplay input
+            // depends on whether crafting/equipment/pause UI is active.
+            var paletteVisible = shell == null || shell.Screen == GameShellScreen.Gameplay ||
+                shell.Screen == GameShellScreen.Pause || shell.Screen == GameShellScreen.Settings ||
+                shell.Screen == GameShellScreen.Confirmation;
             if (paletteRoot != null && paletteRoot.activeSelf != paletteVisible)
                 paletteRoot.SetActive(paletteVisible);
 
@@ -437,8 +439,7 @@ namespace Nyangbingo.UI
                     if (amount.GetComponent<Text>() is Text amountText)
                     {
                         amountText.alignment = TextAnchor.LowerRight;
-                        amountText.fontSize = 7;
-                        amountText.fontStyle = FontStyle.Normal;
+                        MainGameCraftingUiController.MatchInventoryCountFont(amountText);
                         amountText.horizontalOverflow = HorizontalWrapMode.Overflow;
                         amountText.verticalOverflow = VerticalWrapMode.Overflow;
                         amountText.raycastTarget = false;
@@ -625,8 +626,12 @@ namespace Nyangbingo.UI
             RefreshSlotVisuals();
         }
 
-        private int ReadPaletteMouseWheelSlot() => ResolveMouseWheelSlot(
-            selectedSlotIndex, Input.mouseScrollDelta.y, ShortcutSlotCount);
+        private int ReadPaletteMouseWheelSlot()
+        {
+            // UI scrolling owns the wheel; number-key selection stays independent.
+            if (MainGameCraftingUiController.BlocksGameplayInput || Input.IsPointerOverUi()) return -1;
+            return ResolveMouseWheelSlot(selectedSlotIndex, Input.mouseScrollDelta.y, ShortcutSlotCount);
+        }
 
         private int ReadPaletteShortcutSlot()
         {
@@ -684,12 +689,13 @@ namespace Nyangbingo.UI
                 if (view.Amount != null)
                 {
                     view.Amount.alignment = TextAnchor.LowerRight;
-                    view.Amount.fontStyle = FontStyle.Normal;
-                    view.Amount.fontSize = 7;
+                    MainGameCraftingUiController.MatchInventoryCountFont(view.Amount);
                     var slots = runtimeServices.PlayerInventory.Slots;
                     view.Amount.text = view.SlotIndex < slots.Count
-                        ? slots[view.SlotIndex].amount.ToString()
-                        : "0";
+                        ? MainGameCraftingUiController.FormatInventoryCount(
+                            gameDataCatalog.FindItem(slots[view.SlotIndex].itemId), slots[view.SlotIndex].amount,
+                            runtimeServices.PlayerInventory, gameDataCatalog)
+                        : string.Empty;
                 }
             }
         }

@@ -116,7 +116,6 @@ namespace Nyangbingo.UI
         private readonly List<Transform> activeThreats = new List<Transform>();
         private readonly HashSet<Transform> bellTargetsInside = new HashSet<Transform>();
         private readonly HashSet<Transform> nextBellTargetsInside = new HashSet<Transform>();
-        private float damageWarningRemaining;
         private float yokaiDamageAlarmRemaining;
         private float bellWarningRemaining;
         private Vector2 bellWarningTargetPosition;
@@ -131,7 +130,6 @@ namespace Nyangbingo.UI
         private UnityEngine.UI.Image baekjungStatusIcon;
         private UnityEngine.UI.Image yokaiDamageStatusIcon;
         private UnityEngine.UI.Image sealLeakStatusIcon;
-        private DamageTag damageWarningTag;
         private readonly List<UnityEngine.UI.Image> activeStatusAlarms = new List<UnityEngine.UI.Image>();
         private RuntimePixelGlyphPresenter playerHealthGlyphs;
         private RuntimePixelGlyphPresenter playerTemperatureGlyphs;
@@ -247,6 +245,7 @@ namespace Nyangbingo.UI
             gameplayArtCatalog = gameplayArt;
             environmentArtCatalog = environmentArt;
             craftingProgressPanel = craftingPanel;
+            if (craftingProgressPanel != null) craftingProgressPanel.SetActive(false);
             craftingProgressText = craftingText;
             craftingProgressFill = craftingFill;
         }
@@ -376,7 +375,6 @@ namespace Nyangbingo.UI
         private void LateUpdate()
         {
             if (runtimeServices == null || !runtimeServices.IsInitialized) return;
-            damageWarningRemaining = Mathf.Max(0f, damageWarningRemaining - Time.unscaledDeltaTime);
             yokaiDamageAlarmRemaining = Mathf.Max(0f, yokaiDamageAlarmRemaining - Time.unscaledDeltaTime);
             bellWarningRemaining = Mathf.Max(0f, bellWarningRemaining - Time.unscaledDeltaTime);
             bossEntranceFlashRemaining = Mathf.Max(0f,
@@ -831,27 +829,22 @@ namespace Nyangbingo.UI
 
             // Hide in menus without deleting activation order. Re-activation appends at the end.
             var visible = ready && !MainGameCraftingUiController.BlocksGameplayInput && Time.timeScale > 0f;
-            var row = 0;
             for (var index = 0; index < activeStatusAlarms.Count; index++)
             {
                 var image = activeStatusAlarms[index];
                 var rect = image.rectTransform;
-                rect.localScale = Vector3.one;
+                rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(1f, .5f);
+                // Keep the earliest alarm next to the readout; later alarms grow left.
+                var label = hpWordLabel != null ? hpWordLabel.rectTransform : null;
+                // Match the 7px clearance from the icon bottom (y=20) to the
+                // health bar top (y=27), rather than hugging the readout frame.
+                const float readoutGap = 7f;
+                var rightEdge = label != null
+                    ? label.anchoredPosition.x - label.rect.width - readoutGap : 117f - readoutGap;
+                rect.anchoredPosition = new Vector2(rightEdge - index * 14f, -14f);
                 rect.sizeDelta = new Vector2(12f, 12f);
-                if (image == burnStatusIcon)
-                {
-                    // 체력 홈은 x=170, 온도 홈은 x=179에서 끝난다. 그 오른쪽에 붙인다.
-                    rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
-                    rect.pivot = new Vector2(1f, .5f);
-                    rect.anchoredPosition = new Vector2(193f, -31f);
-                }
-                else
-                {
-                    rect.anchorMin = rect.anchorMax = new Vector2(0f, 0f);
-                    rect.pivot = new Vector2(0f, 1f);
-                    rect.anchoredPosition = new Vector2(3f + row * 14f, -2f);
-                    row++;
-                }
+                rect.localScale = Vector3.one;
                 image.enabled = visible;
             }
         }
@@ -1181,12 +1174,6 @@ namespace Nyangbingo.UI
         private void RefreshAlertOverlay()
         {
             if (alertOverlayRoot == null) return;
-            if (damageWarningRemaining > 0f)
-            {
-                SetAlertOverlay(new Color(.72f, .03f, .02f, .2f), string.Empty,
-                    new Color(1f, .75f, .72f), false);
-                return;
-            }
             if (bellWarningRemaining > 0f)
             {
                 SetAlertOverlay(new Color(.72f, .34f, .02f, .1f), string.Empty,
@@ -1460,23 +1447,8 @@ namespace Nyangbingo.UI
 
         private void RefreshCraftingProgress()
         {
-            if (craftingProgressPanel == null || craftingProgressText == null || craftingProgressFill == null) return;
-            craftingProgressText.text = string.Empty;
-            craftingProgressText.enabled = false;
-            var queue = playerController != null
-                ? runtimeServices?.StationProduction?.FindNearestActive(
-                    playerController.transform.position, MainGameTurretRuntime.InteractionRange,
-                    includeHandCrafting: false)
-                : null;
-            var job = queue != null ? queue.jobs[0] : null;
-            var active = job != null;
-            craftingProgressPanel.SetActive(active);
-            if (!active) return;
-
-            var duration = Mathf.Max(.0001f, job.duration);
-            var remaining = Mathf.Clamp(job.remaining, 0f, duration);
-            var completion = Mathf.Clamp01(1f - remaining / duration);
-            ResizeCraftingProgressFill(completion);
+            // Each station's active queue icon owns the progress display.
+            if (craftingProgressPanel != null) craftingProgressPanel.SetActive(false);
         }
 
         private void ResizeCraftingProgressFill(float completion)
@@ -1815,7 +1787,7 @@ namespace Nyangbingo.UI
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
                 elapsedDayLabel = new RuntimeArtNumberLabel(dayText,
                     gameplayArtCatalog.ShellNumberGlyphs, string.Empty, string.Empty, 1f,
-                    gameplayArtCatalog.LabelDay);
+                    gameplayArtCatalog.LabelDay, spriteAfterNumber: true);
             if (gameplayArtCatalog?.ShellNumberGlyphs.Count == RuntimePixelGlyphPresenter.ExpectedGlyphCount)
             {
                 dayClockGlyphs = dayClockText.GetComponent<RuntimePixelGlyphPresenter>() ??
@@ -1842,7 +1814,7 @@ namespace Nyangbingo.UI
             if (elapsedDayLabel != null) elapsedDayLabel.SetValue(day, visible);
             else
             {
-                dayText.text = $"Day {day}";
+                dayText.text = $"{day}일차";
                 dayText.enabled = visible;
             }
         }
@@ -2169,8 +2141,6 @@ namespace Nyangbingo.UI
         {
             if (amount > 0)
             {
-                damageWarningRemaining = PlayerDamageWarningSeconds;
-                damageWarningTag = tag;
                 // Environmental damage must not erase a recent monster-hit alarm.
                 if (tag == DamageTag.Melee)
                     yokaiDamageAlarmRemaining = YokaiDamageAlarmMinimumSeconds;

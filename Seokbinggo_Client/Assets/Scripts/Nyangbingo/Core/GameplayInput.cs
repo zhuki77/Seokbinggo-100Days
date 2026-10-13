@@ -165,7 +165,8 @@ namespace Nyangbingo.Core
         GoblinBoss, BulgasariBoss, ImugiBoss, ClearYokai, DefeatBoss, ForcedAnchor, SummonAnchor,
         Eoduksini, Gangcheori, Gaekgwi, EoduksiniKit, RoofKit,
         MiningBreak, MiningCritical, TowerItem, TowerMaterials, TowerFuel,
-        ArtItems, Rope, Magpie, RecipeMaterials, RecipeStation, Samdugumi, Eop, MapSave, MapLoad
+        ArtItems, Rope, Magpie, RecipeMaterials, RecipeStation, Samdugumi, Eop, MapSave, MapLoad,
+        RecipeComplete
     }
 
     [System.Flags]
@@ -218,7 +219,7 @@ namespace Nyangbingo.Core
             new(DevelopmentShortcut.Magpie, KeyCode.F11, DevelopmentModifiers.Control, "까치 테스트 활성/비활성"),
             new(DevelopmentShortcut.RecipeMaterials, KeyCode.F12, DevelopmentModifiers.None, "제작·제련·장비창: 선택 재료/장비 지급"),
             new(DevelopmentShortcut.RecipeStation, KeyCode.F12, DevelopmentModifiers.Shift, "제작·제련창: 필요한 제작대 이동"),
-            new(DevelopmentShortcut.Samdugumi, KeyCode.F12, DevelopmentModifiers.Control, "[확장] 삼두구미(밤·활성 보스 없음)"),
+            new(DevelopmentShortcut.RecipeComplete, KeyCode.F12, DevelopmentModifiers.Control, "제작·제련창: 현재 진행 작업 즉시 완료"),
             new(DevelopmentShortcut.Eop, KeyCode.F12, DevelopmentModifiers.Alt, "[확장] 업구렁이(밤·활성 보스 없음)"),
             new(DevelopmentShortcut.MapSave, KeyCode.F1, DevelopmentModifiers.Control | DevelopmentModifiers.Alt, "[DevA 테스트씬 전용] 저장"),
             new(DevelopmentShortcut.MapLoad, KeyCode.F2, DevelopmentModifiers.Control | DevelopmentModifiers.Alt, "[DevA 테스트씬 전용] 불러오기")
