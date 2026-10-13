@@ -7,6 +7,8 @@ namespace Nyangbingo.Data
     [CreateAssetMenu(menuName = "Nyangbingo/Data/Gameplay Art Catalog")]
     public sealed class GameplayArtCatalog : ScriptableObject
     {
+        [SerializeField] private Sprite descriptionFrame;
+        public Sprite DescriptionFrame => descriptionFrame;
         [Serializable]
         public sealed class WeaponAttackArt
         {

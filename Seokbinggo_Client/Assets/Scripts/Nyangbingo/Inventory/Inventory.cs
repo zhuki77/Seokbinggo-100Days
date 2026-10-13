@@ -365,12 +365,61 @@ namespace Nyangbingo.Inventory
             return true;
         }
 
+        // A drag is only a preview until release. Commit both cells before notifying
+        // observers, so saves/equipment listeners never see an item temporarily missing.
+        public bool TryDropSlotTo(int sourceIndex, Inventory target, int targetIndex, InventorySlot expectedSource)
+        {
+            if (target == null || sourceIndex < 0 || sourceIndex >= Capacity ||
+                targetIndex < 0 || targetIndex >= target.Capacity ||
+                ReferenceEquals(this, target) && sourceIndex == targetIndex ||
+                expectedSource.amount <= 0 ||
+                !EqualityComparer<InventorySlot>.Default.Equals(slots[sourceIndex], expectedSource)) return false;
+            var incoming = target.FindItem(expectedSource.itemId);
+            var destination = target.slots[targetIndex];
+            if (incoming == null || incoming.MaxStack < expectedSource.amount ||
+                destination.amount > 0 && (FindItem(destination.itemId)?.MaxStack ?? 0) < destination.amount)
+                return false;
+            var cursor = new Inventory(findItem, 1);
+            cursor.slots[0] = expectedSource;
+            var planned = new Inventory(target.findItem, 1);
+            planned.slots[0] = destination;
+            if (!planned.TryClickSlot(0, cursor, false)) return false;
+            slots[sourceIndex] = cursor.slots[0];
+            target.slots[targetIndex] = planned.slots[0];
+            Changed?.Invoke();
+            if (!ReferenceEquals(this, target)) target.Changed?.Invoke();
+            return true;
+        }
+
         public bool CanSwapSlots(int firstIndex, int secondIndex)
         {
             if (firstIndex < 0 || firstIndex >= slots.Count ||
                 secondIndex < 0 || secondIndex >= slots.Count || firstIndex == secondIndex)
                 return false;
             // Manual reordering accepts any item, including the first eight hotbar slots.
+            return true;
+        }
+
+        public bool TryExchangeEquipment(string incomingId, string returnedId, Action commitEquipment,
+            int sourceIndex = -1, int targetIndex = -1)
+        {
+            if (commitEquipment == null) return false;
+            var planned = new Inventory(findItem, Capacity);
+            if (!planned.TryImport(slots)) return false;
+            if (!string.IsNullOrEmpty(incomingId) && !planned.TryRemove(incomingId, 1, sourceIndex)) return false;
+            if (!string.IsNullOrEmpty(returnedId))
+            {
+                if (targetIndex >= 0)
+                {
+                    if (targetIndex >= Capacity || planned.slots[targetIndex].amount > 0 ||
+                        findItem(returnedId) == null) return false;
+                    planned.slots[targetIndex] = new InventorySlot { itemId = returnedId, amount = 1 };
+                }
+                else if (!planned.TryAdd(returnedId, 1)) return false;
+            }
+            for (var index = 0; index < slots.Count; index++) slots[index] = planned.slots[index];
+            commitEquipment();
+            Changed?.Invoke();
             return true;
         }
 
@@ -594,7 +643,7 @@ namespace Nyangbingo.Inventory
         public static bool IsAllowedItemId(string itemId) =>
             !string.IsNullOrWhiteSpace(itemId) && AllowedItemIds.Contains(itemId);
 
-        public bool TryEquip(string itemId)
+        public bool TryEquip(string itemId, int sourceIndex = -1)
         {
             if (keepInInventory)
             {
@@ -604,25 +653,26 @@ namespace Nyangbingo.Inventory
                 Changed?.Invoke();
                 return true;
             }
-            if (!IsValidDefinition(itemId) || equippedItemId == itemId || !inventory.TryRemove(itemId, 1))
+            if (!IsValidDefinition(itemId) || equippedItemId == itemId)
                 return false;
-
-            var previousItemId = equippedItemId;
-            if (!string.IsNullOrEmpty(previousItemId) && !inventory.TryAdd(previousItemId, 1))
+            return inventory.TryExchangeEquipment(itemId, equippedItemId, () =>
             {
-                inventory.TryAdd(itemId, 1);
-                return false;
-            }
-
-            equippedItemId = itemId;
-            usingEquippedItem = true;
-            Changed?.Invoke();
-            return true;
+                equippedItemId = itemId;
+                usingEquippedItem = true;
+                Changed?.Invoke();
+            }, sourceIndex);
         }
 
-        public bool TryUnequip()
+        public bool TryUnequip(int targetIndex = -1)
         {
-            if (!HasEquippedItem || !keepInInventory && !inventory.TryAdd(equippedItemId, 1)) return false;
+            if (!HasEquippedItem) return false;
+            if (!keepInInventory)
+                return inventory.TryExchangeEquipment(null, equippedItemId, () =>
+                {
+                    equippedItemId = string.Empty;
+                    usingEquippedItem = false;
+                    Changed?.Invoke();
+                }, targetIndex: targetIndex);
             equippedItemId = string.Empty;
             usingEquippedItem = false;
             Changed?.Invoke();

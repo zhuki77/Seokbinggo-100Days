@@ -173,6 +173,16 @@ namespace Nyangbingo.UI
             services.StorageTemperature.DailyProcessed += HandleGuideDawn;
         }
 
+        /// <summary>Fold the quest without changing progress; the existing button/L key can reopen it.</summary>
+        public void CollapseWindow()
+        {
+            windowHidden = true;
+            listOpen = false;
+            if (list != null) list.gameObject.SetActive(false);
+            if (root != null) root.gameObject.SetActive(false);
+            if (questShadow != null) questShadow.enabled = false;
+        }
+
         private void LateUpdate()
         {
             if (root == null || services?.Goals == null) return;
@@ -207,7 +217,7 @@ namespace Nyangbingo.UI
             if (ready && !menuOpen) services.BuildingGuide.RefreshMiningWarning(player.transform.position);
             SetGuide("seal_boundary_dig", ready && !menuOpen && services.BuildingGuide.MiningSealBoundary,
                 context: services.BuildingGuide.MiningCell.ToString());
-            var visible = ready && Time.timeScale > 0f;
+            var visible = ready && Time.timeScale > 0f && !MainGameCraftingUiController.IsStorageWindowOpen;
             if (visible && !menuOpen && Input.GetKeyDown(WindowToggleKey) &&
                 !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
                 !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl) &&
@@ -218,6 +228,7 @@ namespace Nyangbingo.UI
             }
             root.gameObject.SetActive(visible && !windowHidden);
             if (reopenButton != null) reopenButton.gameObject.SetActive(visible);
+            RefreshQuestButtonHighlight();
             if (!visible)
             {
                 arrow.gameObject.SetActive(false);
@@ -480,6 +491,14 @@ namespace Nyangbingo.UI
             questShadow.enabled = over;
         }
 
+        private void RefreshQuestButtonHighlight()
+        {
+            if (reopenButton == null || reopenButton.targetGraphic is not UnityEngine.UI.Image image) return;
+            // SpriteSwap still handles the transient button press. The normal
+            // sprite itself stays highlighted for as long as the quest is open.
+            image.sprite = !windowHidden && reopenPressed != null ? reopenPressed : reopenNormal;
+        }
+
         private void BuildReopenButton(Transform parent, Vector2 position)
         {
             var frames = gameplayArt?.Button1x1BlueFrames;
@@ -512,6 +531,7 @@ namespace Nyangbingo.UI
             {
                 windowHidden = !windowHidden;
                 if (windowHidden) listOpen = false;
+                RefreshQuestButtonHighlight();
             });
             reopenIcon = Image("Icon", rect, new Vector2(3f, -3f), new Vector2(10f, 10f));
             reopenIcon.raycastTarget = false;

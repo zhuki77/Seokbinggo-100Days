@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Combat;
@@ -143,7 +143,7 @@ namespace Nyangbingo.World
             CraftingService = new CraftingService(PlayerInventory);
             CraftingProcess = new CraftingProcess(CraftingService);
             UtilityService = new UtilityService(PlayerInventory);
-            EquipmentSystem = new EquipmentSystem();
+            EquipmentSystem = new EquipmentSystem(PlayerInventory);
             if (!EquipmentColdPenaltyRules.TryCreate(gameDataCatalog, out var equipmentColdPenalty))
             {
                 Debug.LogError("[Nyangbingo] MainGameRuntimeServices: v74 equipment cold-penalty globals are invalid.");
@@ -151,7 +151,8 @@ namespace Nyangbingo.World
             }
             EquipmentColdPenalty = equipmentColdPenalty;
             EquipmentCollection = new EquipmentCollection(gameDataCatalog.FindEquipment, PlayerInventory, InventoryCursor);
-            ActiveSlot = new ActiveSlotSystem(PlayerInventory, gameDataCatalog.FindItem, keepInInventory: true);
+            ActiveSlot = new ActiveSlotSystem(PlayerInventory, gameDataCatalog.FindItem, keepInInventory: false);
+            EquipmentCollection.EquippedIds = () => EquipmentSystem.Export().Values.Where(e => e != null).Select(e => e.Id);
             var lanternRadiusDefinition = gameDataCatalog.FindGlobal(GlobalKeys.PortableLanternRadius);
             if (lanternRadiusDefinition == null || !lanternRadiusDefinition.TryGetFloat(out var lanternRadius) ||
                 lanternRadius <= 0f)
@@ -287,8 +288,6 @@ namespace Nyangbingo.World
                     worldLoadedHooked = true;
                 }
                 GameEvents.OnYokaiKilled += HandleRecipeUnlockYokaiKilled;
-                PlayerInventory.Changed += SynchronizeEquippedOwnership;
-                InventoryCursor.Changed += SynchronizeEquippedOwnership;
                 YokaiCodexBinding.CodexEntryChanged += HandleCodexEntryChanged;
                 Debug.Log($"[Nyangbingo] MainGameRuntimeServices: {PlayerInventory.Capacity}슬롯 인벤토리와 제작·유틸리티·" +
                           $"화로({furnaceCapacity})·용광로({foundryCapacity})·체온·등불·부적·모듈유지 Tick 소비자 8개 등록 완료.");
@@ -470,8 +469,6 @@ namespace Nyangbingo.World
             GameEvents.OnBossDefeated -= HandleBossDefeated;
             GameEvents.OnDayStart -= HandleArtifactDayStart;
             GameEvents.OnYokaiKilled -= HandleRecipeUnlockYokaiKilled;
-            if (PlayerInventory != null) PlayerInventory.Changed -= SynchronizeEquippedOwnership;
-            if (InventoryCursor != null) InventoryCursor.Changed -= SynchronizeEquippedOwnership;
             YokaiCodexBinding.CodexEntryChanged -= HandleCodexEntryChanged;
             if (bootstrap != null && worldLoadedHooked)
             {
@@ -559,18 +556,8 @@ namespace Nyangbingo.World
             Debug.Log($"[Nyangbingo] 이무기 최초 처치로 제작법을 해금했습니다: {recipe.Output.item.DisplayName}.");
         }
 
-        // Equipment now remains in the bag; collection reads that same ownership.
+        // Equipment is transferred only by explicit equip/unequip actions.
         public int PromoteInventoryEquipmentItems() => 0;
-
-        private void SynchronizeEquippedOwnership()
-        {
-            if (!IsInitialized || FindAnyObjectByType<MainGameSaveCoordinator>()?.IsRestoring == true) return;
-            bool Has(string id) => PlayerInventory.Count(id) > 0 || InventoryCursor.Count(id) > 0 ||
-                InventoryRuntime.Pending.Any(p => p.item?.Id == id && p.amount > 0);
-            if (ActiveSlot.HasEquippedItem && !Has(ActiveSlot.EquippedItemId)) ActiveSlot.TryUnequip();
-            foreach (var pair in EquipmentSystem.Export())
-                if (pair.Value != null && !Has(pair.Value.Id)) EquipmentSystem.TryUnequip(pair.Key);
-        }
 
         public bool IsEquippedItem(string itemId) => !string.IsNullOrEmpty(itemId) &&
             (ActiveSlot?.EquippedItemId == itemId || EquipmentSystem != null &&
@@ -578,18 +565,27 @@ namespace Nyangbingo.World
 
         public void MigrateEquipmentToInventory(SaveGame save)
         {
-            if (save == null || save.equipmentStoredInInventory) return;
-            foreach (var id in save.ownedEquipmentIds ?? new List<string>())
+            if (save == null || save.equippedItemsSeparated) return;
+            var worn = EquipmentSystem.Export().Values.Where(e => e != null).Select(e => e.Id).ToList();
+            if (ActiveSlot.HasEquippedItem) worn.Add(ActiveSlot.EquippedItemId);
+            if (save.equipmentStoredInInventory)
             {
-                var item = gameDataCatalog.FindItem(id);
-                if (item != null) InventoryRuntime.Receive(item, 1);
+                // Previous saves include the worn item's original in the bag/cursor.
+                // Remove exactly one per equipped slot, preserving genuinely spare copies.
+                foreach (var id in worn)
+                    if (!PlayerInventory.TryRemove(id, 1)) InventoryCursor.TryRemove(id, 1);
             }
-            if (!string.IsNullOrEmpty(save.activeSlotItemId))
+            else
             {
-                var item = gameDataCatalog.FindItem(save.activeSlotItemId);
-                if (item != null) InventoryRuntime.Receive(item, 1);
+                foreach (var id in save.ownedEquipmentIds ?? new List<string>())
+                {
+                    if (worn.Contains(id) || PlayerInventory.Has(id, 1)) continue;
+                    var item = gameDataCatalog.FindItem(id);
+                    if (item != null) InventoryRuntime.Receive(item, 1);
+                }
             }
-            save.equipmentStoredInInventory = true;
+            save.equipmentStoredInInventory = false;
+            save.equippedItemsSeparated = true;
         }
 
         private void HandleCodexEntryChanged(YokaiDefinition definition, bool isFirstEntry)

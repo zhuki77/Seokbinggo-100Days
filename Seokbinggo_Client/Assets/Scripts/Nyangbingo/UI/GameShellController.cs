@@ -53,6 +53,10 @@ namespace Nyangbingo.UI
         public void ConfigureResultCatalog(GameDataCatalog catalog) => resultCatalog = catalog;
         private float resumeTimeScale = 1f;
         private bool isMobile;
+        private bool settingsSnapshotActive;
+        private float settingsOriginalBgm;
+        private float settingsOriginalSfx;
+        private bool settingsOriginalFullscreen;
 
         public GameShellScreen Screen { get; private set; } = GameShellScreen.Gameplay;
         public GameShellConfirmation PendingConfirmation { get; private set; }
@@ -190,6 +194,10 @@ namespace Nyangbingo.UI
             if (Screen != GameShellScreen.Settings || audioService == null ||
                 !audioService.TrySetBusVolumes(bgmVolume, sfxVolume)) return false;
             if (!isMobile) UnityEngine.Screen.fullScreen = fullscreen;
+            // Applying commits the preview. Later edits remain a new draft until applied.
+            CaptureSettingsSnapshot();
+            // Fullscreen changes may complete after this frame; retain the committed request.
+            if (!isMobile) settingsOriginalFullscreen = fullscreen;
             return true;
         }
 
@@ -317,9 +325,32 @@ namespace Nyangbingo.UI
 
         private void SetScreen(GameShellScreen screen)
         {
+            if (Screen == GameShellScreen.Settings && screen != GameShellScreen.Settings)
+                RestoreUnappliedSettings();
+            else if (Screen != GameShellScreen.Settings && screen == GameShellScreen.Settings)
+                CaptureSettingsSnapshot();
             Screen = screen;
             ApplyViewState();
         }
+
+        private void CaptureSettingsSnapshot()
+        {
+            settingsOriginalBgm = audioService != null ? audioService.BgmVolume : 1f;
+            settingsOriginalSfx = audioService != null ? audioService.SfxVolume : 1f;
+            settingsOriginalFullscreen = UnityEngine.Screen.fullScreen;
+            settingsSnapshotActive = true;
+        }
+
+        private void RestoreUnappliedSettings()
+        {
+            if (!settingsSnapshotActive) return;
+            audioService?.TryPreviewBusVolumes(settingsOriginalBgm, settingsOriginalSfx);
+            if (!isMobile && UnityEngine.Screen.fullScreen != settingsOriginalFullscreen)
+                UnityEngine.Screen.fullScreen = settingsOriginalFullscreen;
+            settingsSnapshotActive = false;
+        }
+
+        private void OnDestroy() => RestoreUnappliedSettings();
 
         private void ApplyViewState()
         {
