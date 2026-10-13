@@ -131,6 +131,30 @@ namespace Nyangbingo.Inventory
             return true;
         }
         public EquipmentDefinition Get(EquipmentSlot slot) => equipped.TryGetValue(slot, out var item) ? item : null;
+        public static bool CanEquipInSlot(EquipmentDefinition item, EquipmentSlot slot)
+        {
+            if (item == null || string.IsNullOrWhiteSpace(item.Id)) return false;
+            if (slot == EquipmentSlot.AccessoryOne || slot == EquipmentSlot.AccessoryTwo)
+                return item.IsAccessory && (item.Slot == EquipmentSlot.AccessoryOne ||
+                                            item.Slot == EquipmentSlot.AccessoryTwo);
+            return !item.IsAccessory && item.Slot == slot &&
+                   (slot == EquipmentSlot.Head || slot == EquipmentSlot.Body || slot == EquipmentSlot.Feet);
+        }
+
+        // Explicit UI drop target: move an already worn accessory atomically, without
+        // duplicating its effects. Replaced equipment is still owned by the inventory.
+        public bool TryEquipInSlot(EquipmentDefinition item, EquipmentSlot slot)
+        {
+            if (!CanEquipInSlot(item, slot)) return false;
+            if (Get(slot) == item) return true;
+            EquipmentSlot? previousSlot = null;
+            foreach (var pair in equipped)
+                if (pair.Value != null && pair.Value.Id == item.Id) previousSlot = pair.Key;
+            if (previousSlot.HasValue) equipped.Remove(previousSlot.Value);
+            equipped[slot] = item;
+            Changed?.Invoke();
+            return true;
+        }
         public bool ColdOk(int roomTemperatureC)
         {
             foreach (var slot in new[] { EquipmentSlot.Head, EquipmentSlot.Body, EquipmentSlot.Feet })
