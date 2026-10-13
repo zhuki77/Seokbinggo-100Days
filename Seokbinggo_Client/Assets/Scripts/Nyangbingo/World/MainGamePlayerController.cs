@@ -7,6 +7,7 @@ using Nyangbingo.Inventory;
 using Nyangbingo.UI;
 using Nyangbingo.Yokai;
 using UnityEngine;
+using Nyangbingo.Save;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
@@ -91,6 +92,13 @@ namespace Nyangbingo.World
         private float fallDamagePerTile;
         private float iceShardTemperatureRelief;
         private float miningReach = DefaultMiningReach;
+        public float MiningReach => miningReach;
+        public const float AimOriginVerticalInsetTiles = .05f;
+        public Vector2 AimOrigin => playerCollider != null
+            ? (Vector2)playerCollider.bounds.center - Vector2.up *
+              (AimOriginVerticalInsetTiles * Mathf.Abs(playerCollider.transform.lossyScale.y))
+            : (Vector2)transform.position + Vector2.up *
+              (PlayerColliderHeightTiles * .5f - PlayerFeetBelowRoot - AimOriginVerticalInsetTiles);
         private float fallPeakWorldY;
         private bool trackingFall;
         private bool fallDamageBounceAscending;
@@ -150,6 +158,7 @@ namespace Nyangbingo.World
         private int attackIndicatorFrameIndex;
         private float attackIndicatorFrameRemaining;
         private Vector2 attackIndicatorDirection = Vector2.right;
+        private Vector2 attackIndicatorRowOffset;
         private bool loggedFirstAttackInput;
         private bool loggedFirstAttackHit;
         private bool dead;
@@ -517,7 +526,8 @@ namespace Nyangbingo.World
                     active ? "까치 테스트 활성화" : "까치 테스트 비활성화");
             }
 #endif
-            if (Input.GetKeyDown(KeyCode.Q) && runtimeServices.ActiveSlot.Toggle())
+            if (!MainGameCraftingUiController.BlocksGameplayInput &&
+                Input.GetKeyDown(KeyCode.Q) && runtimeServices.ActiveSlot.Toggle())
             {
                 var activeItemId = runtimeServices.ActiveSlot.EquippedItemId;
                 var statusMessage = !runtimeServices.ActiveSlot.IsUsingEquippedItem
@@ -530,10 +540,12 @@ namespace Nyangbingo.World
             UpdateAimDirection();
             runtimeServices.DeathTearPouches?.TryCollectWithin(transform.position, TearPouchPickupRadius);
             if (Input.GetKeyDown(KeyCode.E) && !MainGameTurretRuntime.BlocksCombatInput &&
+                !MainGameCraftingUiController.ConsumedWorldInteractionThisFrame &&
+                !MainGameCraftingUiController.BlocksGameplayInput &&
                 !MainGameTilePaletteController.BlocksGameplayInput)
             {
-                var handled = TryInteractClosestWorldTarget(includePlacedObjects: true) ||
-                      TryOpenRemoteJangdok();
+                var handled = placedObjectInteractions?.TryEnterDifferentCraftingStation(null) == true ||
+                      TryInteractClosestWorldTarget(includePlacedObjects: true);
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
                         "가까이 있는 상호작용 대상을 찾지 못했습니다.");
@@ -596,7 +608,7 @@ namespace Nyangbingo.World
                     TickMining();
             }
             else CancelMining();
-            UpdateMiningTargetFeedback(!IsClawMiningActive || pointerOverUi || buildingPlacementActive ||
+            UpdateMiningTargetFeedback(pointerOverUi || buildingPlacementActive ||
                                        (lastBasicAttackHitTarget && attackCooldown > 0f));
             // E opens chests and facilities; right-click uses the selected item.
             if (!buildingPlacementActive && !pointerOverUi && Input.GetMouseButtonDown(1) &&
@@ -828,7 +840,7 @@ namespace Nyangbingo.World
         {
             if (followCamera == null || body == null) return;
             var mouse = followCamera.ScreenToWorldPoint(Input.mousePosition);
-            var aim = (Vector2)mouse - body.position;
+            var aim = (Vector2)mouse - AimOrigin;
             if (aim.sqrMagnitude > Mathf.Epsilon) facing = aim.normalized;
         }
 
@@ -1095,7 +1107,7 @@ namespace Nyangbingo.World
             if (isBow &&
                 !BowCombatRules.TryConsumeAmmo(runtimeServices?.PlayerInventory))
                 return false;
-            var direction = isBow ? facing.normalized : SnapAttackFeedbackDirection(facing);
+            var direction = isBow ? facing.normalized : ResolveBodyAttackDirection();
             if (isBow)
                 lastBasicAttackHitTarget = false;
             else if (EvolvedClawCombatRules.IsSangunClaw(activeProfile))
@@ -1122,9 +1134,9 @@ namespace Nyangbingo.World
         {
             cell = default;
             var hasMouse = TryGetInteractionAimWorld(out var mouseAim);
-            var aim = hasMouse ? mouseAim : (Vector2)transform.position;
-            var origin = (Vector2)transform.position;
-            var facingDir = SnapAttackFeedbackDirection(facing);
+            var aim = hasMouse ? mouseAim : AimOrigin;
+            var origin = AimOrigin;
+            var facingDir = facing.normalized;
             Vector2? mouseWorld = hasMouse ? mouseAim : (Vector2?)null;
             var bestAimDist = float.PositiveInfinity;
             var bestKind = MiningWorldTargetKind.None;
@@ -1166,7 +1178,9 @@ namespace Nyangbingo.World
             // Cursor picking also returns air cells for background interaction. Air cannot
             // compete with a harvestable decoration in the primary mining target list.
             if (TryResolveMiningCell(tileService, out var tileCell) &&
-                IsMineableForegroundCell(tileService, tileCell))
+                IsMineableForegroundCell(tileService, tileCell) &&
+                (!IsDoorMiningCell(tileService, tileCell) ||
+                 IsDoorUnderCursor(origin, mouseWorld, tileCell)))
             {
                 ConsiderMiningTarget(CellAimPoint(tileCell), aim, MiningWorldTargetKind.Tile, ref bestAimDist, ref bestKind);
                 if (bestKind == MiningWorldTargetKind.Tile) cell = tileCell;
@@ -1177,10 +1191,29 @@ namespace Nyangbingo.World
                 blockingCell != cell &&
                 IsWithinMiningReach(tileService, origin, blockingCell, miningReach * miningReach))
             {
+                // Doors block the ray, but are not automatically selected by it.
+                // Their highlight/mining target requires a direct cursor hit.
+                if (IsDoorMiningCell(tileService, blockingCell) &&
+                    !IsDoorUnderCursor(origin, mouseWorld, blockingCell))
+                    return MiningWorldTargetKind.None;
                 cell = blockingCell;
                 return MiningWorldTargetKind.Tile;
             }
             return bestKind;
+        }
+
+        private static bool IsDoorMiningCell(TileService tiles, Vector3Int cell)
+        {
+            var id = tiles.GetTile(cell).elementType;
+            return id == TileService.DoorElementType || id == TileService.DoorTopElementType;
+        }
+
+        private bool IsDoorUnderCursor(Vector2 origin, Vector2? mouseWorld, Vector3Int cell)
+        {
+            return environmentState != null &&
+                environmentState.TryResolvePlacedObjectMiningTarget(origin, mouseWorld, miningReach,
+                    out var record, out var hitCell) && record.definitionId == TileService.DoorElementType &&
+                (hitCell == cell || hitCell + Vector3Int.up == cell || hitCell + Vector3Int.down == cell);
         }
 
         private bool IsClawMiningActive => runtimeServices?.ActiveSlot != null &&
@@ -1290,8 +1323,8 @@ namespace Nyangbingo.World
         private bool TryTickTreeMining(int clawTier, float miningDelta)
         {
             if (worldDecorationRenderer == null ||
-                !worldDecorationRenderer.TryResolveTreeMiningTarget(transform.position,
-                    SnapAttackFeedbackDirection(facing), miningReach, out var treeId, out var hitCell))
+                !worldDecorationRenderer.TryResolveTreeMiningTarget(AimOrigin,
+                    facing.normalized, miningReach, out var treeId, out var hitCell))
                 return false;
             var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.WoodItemId);
             var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
@@ -1535,8 +1568,8 @@ namespace Nyangbingo.World
         private bool TryTickRebarMining(int clawTier, float miningDelta)
         {
             if (worldDecorationRenderer == null ||
-                !worldDecorationRenderer.TryResolveRebarMiningTarget(transform.position,
-                    SnapAttackFeedbackDirection(facing), miningReach, out var rebarId, out var hitCell))
+                !worldDecorationRenderer.TryResolveRebarMiningTarget(AimOrigin,
+                    facing.normalized, miningReach, out var rebarId, out var hitCell))
                 return false;
             var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.RebarItemId);
             var requiredSeconds = definition?.MiningSecondsForClawTier(clawTier) ?? -1f;
@@ -1577,7 +1610,7 @@ namespace Nyangbingo.World
                 : null;
             if (worldDecorationRenderer == null ||
                 !worldDecorationRenderer.TryResolveHempMiningTarget(
-                    transform.position, mouseWorld, SnapAttackFeedbackDirection(facing), miningReach,
+                    AimOrigin, mouseWorld, facing.normalized, miningReach,
                     out var hempId, out var hitCell))
                 return false;
             var definition = catalog?.FindMineralTier(MainGameWorldDecorationRenderer.HempItemId);
@@ -1618,7 +1651,7 @@ namespace Nyangbingo.World
                 : null;
             if (worldDecorationRenderer == null ||
                 !worldDecorationRenderer.TryResolveCatnipMiningTarget(
-                    transform.position, mouseWorld, SnapAttackFeedbackDirection(facing), miningReach,
+                    AimOrigin, mouseWorld, facing.normalized, miningReach,
                     out var patchId, out var hitCell))
                 return false;
             var definition = catalog?.FindMineralTier(PlayerHealthRecoveryService.CatnipItemId)
@@ -1663,7 +1696,7 @@ namespace Nyangbingo.World
                 ? followCamera.ScreenToWorldPoint(Input.mousePosition)
                 : null;
             if (!environmentState.TryResolvePlacedObjectMiningTarget(
-                    transform.position, mouseWorld, miningReach, out var record, out var hitCell))
+                    AimOrigin, mouseWorld, miningReach, out var record, out var hitCell))
                 return false;
 
             var requiredSeconds = ResolvePlacedObjectMiningSeconds(clawTier);
@@ -1761,43 +1794,47 @@ namespace Nyangbingo.World
         /// 사거리 안 상자와 설치물 중 마우스에 가장 가까운 대상을 E로 고른다.
         /// 캣닢·삼줄기·나무처럼 얻는 자원은 좌클릭 채굴로 통일한다.
         /// </summary>
+        public bool TryGetHighlightedInteractionTarget(out PlacedObjectRecord placed,
+            out Vector3Int cell, out bool chest)
+        {
+            placed = default;
+            cell = default;
+            chest = false;
+            var tiles = bootstrap?.TileService;
+            if (tiles == null || Input.IsPointerOverUi() || Time.timeScale <= 0f ||
+                MainGameTurretRuntime.BlocksCombatInput || MainGameTilePaletteController.BlocksGameplayInput ||
+                !TryGetInteractionAimWorld(out var aim)) return false;
+            var origin = AimOrigin;
+            if (environmentState != null && environmentState.TryResolvePlacedObjectMiningTarget(
+                    origin, aim, miningReach, out placed, out cell))
+            {
+                // The installation resolver also checks sprites extending outside their occupied cells.
+            }
+            else
+            {
+                cell = tiles.WorldToCell(aim);
+                var session = bootstrap?.Session;
+                if (session == null || !session.HasWorld || !session.TryPeekChestAt(cell) ||
+                    !IsWithinMiningReach(tiles, origin, cell, miningReach * miningReach)) return false;
+                chest = true;
+            }
+            if (TryFindFirstForegroundOnSegment(tiles, origin, CellAimPoint(cell), out var obstacle) &&
+                obstacle != cell) return false;
+            return true;
+        }
+
+        public bool TryInteractChestFromCraftingUi(Func<bool> leaveCrafting)
+        {
+            if (!TryGetHighlightedInteractionTarget(out _, out var cell, out var chest) ||
+                !chest || !leaveCrafting()) return false;
+            return TryOpenChestAt(cell);
+        }
+
         private bool TryInteractClosestWorldTarget(bool includePlacedObjects)
         {
-            var origin = (Vector2)transform.position;
-            var aim = TryGetInteractionAimWorld(out var mouseAim) ? mouseAim : origin;
-            var bestAimDist = float.PositiveInfinity;
-            var bestKind = WorldInteractKind.None;
-            var bestChestCell = default(Vector3Int);
-
-            var session = bootstrap?.Session;
-            if (session != null && session.HasWorld &&
-                TryFindChestClosestToAim(session, origin, aim, ChestInteractReach * ChestInteractReach,
-                    out var chestCell, out var chestAimDist) &&
-                chestAimDist < bestAimDist)
-            {
-                bestAimDist = chestAimDist;
-                bestKind = WorldInteractKind.Chest;
-                bestChestCell = chestCell;
-            }
-
-            if (includePlacedObjects && environmentState != null &&
-                environmentState.TryGetNearestPlacedObject(origin, MainGameTurretRuntime.InteractionRange, aim,
-                    out var placed))
-            {
-                var placedAimDist = (placed.position - aim).sqrMagnitude;
-                if (placedAimDist < bestAimDist)
-                    bestKind = WorldInteractKind.PlacedObject;
-            }
-
-            switch (bestKind)
-            {
-                case WorldInteractKind.Chest:
-                    return TryOpenChestAt(bestChestCell);
-                case WorldInteractKind.PlacedObject:
-                    return placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
-                default:
-                    return false;
-            }
+            if (!TryGetHighlightedInteractionTarget(out _, out var cell, out var chest)) return false;
+            return chest ? TryOpenChestAt(cell) : includePlacedObjects &&
+                placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
         }
 
         private bool TryInteractPlacedObjectAtPointer()
@@ -1816,7 +1853,7 @@ namespace Nyangbingo.World
         {
             cell = default;
             if (tileService == null) return false;
-            var origin = (Vector2)transform.position;
+            var origin = AimOrigin;
             Vector2? mouseWorld = followCamera != null
                 ? followCamera.ScreenToWorldPoint(Input.mousePosition)
                 : null;
@@ -1839,8 +1876,7 @@ namespace Nyangbingo.World
                 return false;
 
             var direction = SnapAttackFeedbackDirection(facing);
-            // MeleeArcAttack and the player's Rigidbody2D both use playerOrigin. The visual claw
-            // has a separate hand-height offset and must never raise the authoritative mining ray.
+            // The caller supplies the shared body-centre aim origin; visual offsets are separate.
             var attackOrigin = playerOrigin;
             var reachSq = miningReach * miningReach;
 
@@ -2086,14 +2122,16 @@ namespace Nyangbingo.World
         private void UpdateMiningTargetFeedback(bool blocked)
         {
             var tileService = bootstrap?.TileService;
-            if (!IsClawMiningActive || blocked || tileService == null)
+            if (blocked || tileService == null)
             {
                 HideMiningTargetFeedback();
                 return;
             }
 
-            var kind = ResolveMiningWorldTarget(tileService, out var cell);
-            if (kind == MiningWorldTargetKind.None)
+            var interactive = TryGetHighlightedInteractionTarget(out _, out var cell, out _);
+            var kind = interactive ? MiningWorldTargetKind.PlacedObject
+                : ResolveMiningWorldTarget(tileService, out cell);
+            if (kind == MiningWorldTargetKind.None || !interactive && !IsClawMiningActive)
             {
                 HideMiningTargetFeedback();
                 return;
@@ -2234,7 +2272,8 @@ namespace Nyangbingo.World
                 return;
             }
             if (attackIndicator == null) return;
-            attackIndicatorDirection = SnapAttackFeedbackDirection(facing);
+            attackIndicatorDirection = ResolveBodyAttackDirection();
+            attackIndicatorRowOffset = ResolveAttackFeedbackRowOffset(attackIndicatorDirection);
             var attackAngle = CalculateAttackFeedbackRotationDegrees(attackIndicatorDirection);
             attackIndicator.transform.localRotation = Quaternion.Euler(0f, 0f, attackAngle);
             attackIndicator.enabled = true;
@@ -2255,7 +2294,7 @@ namespace Nyangbingo.World
         {
             var frames = gameplayArtCatalog?.FindWeaponAttackFrames(activeProfile?.Id);
             var direction = BowCombatRules.IsBowProfile(activeProfile)
-                ? facing.normalized : SnapAttackFeedbackDirection(facing);
+                ? facing.normalized : ResolveBodyAttackDirection();
             characterAnimator?.PlayWeaponAttack(frames, ResolveWeaponAttackDuration(frames?.Count ?? 0));
             characterAnimator?.HoldAttackFacing(direction);
         }
@@ -2459,7 +2498,38 @@ namespace Nyangbingo.World
             if (attackIndicator.flipX) renderedSpriteCenter.x = -renderedSpriteCenter.x;
             if (attackIndicator.flipY) renderedSpriteCenter.y = -renderedSpriteCenter.y;
             attackIndicator.transform.localPosition = CalculateAttackFeedbackLocalPosition(
-                attackIndicatorDirection, referenceSpriteCenter, renderedSpriteCenter);
+                attackIndicatorDirection, referenceSpriteCenter, renderedSpriteCenter) + attackIndicatorRowOffset;
+        }
+
+        private Vector2 ResolveAttackFeedbackRowOffset(Vector2 direction)
+        {
+            var tiles = bootstrap?.TileService;
+            if (tiles == null) return Vector2.zero;
+            var bodyCell = tiles.WorldToCell(AimOrigin);
+            var upperRow = direction.y > .1f;
+            if (Mathf.Abs(direction.y) <= .1f && TryGetInteractionAimWorld(out var mouse))
+                upperRow = tiles.WorldToCell(mouse).y > bodyCell.y;
+            if (!upperRow) return Vector2.zero;
+            var tileHeight = tiles.GetCellWorldBounds(bodyCell).size.y;
+            return (Vector2)transform.InverseTransformVector(Vector3.up * tileHeight);
+        }
+
+        private Vector2 ResolveBodyAttackDirection()
+        {
+            var tiles = bootstrap?.TileService;
+            if (tiles != null && playerCollider != null && TryGetInteractionAimWorld(out var mouse))
+            {
+                var bounds = playerCollider.bounds;
+                var target = tiles.WorldToCell(mouse);
+                var bodyColumn = tiles.WorldToCell(bounds.center).x;
+                // Two logical body rows produce ten neighbouring aim cells:
+                // three above, three below, and two on each side.
+                var bottom = tiles.WorldToCell(AimOrigin).y;
+                var top = bottom + 1;
+                if (target.y >= bottom && target.y <= top && target.x != bodyColumn)
+                    return target.x < bodyColumn ? Vector2.left : Vector2.right;
+            }
+            return SnapAttackFeedbackDirection(facing);
         }
 
         public static Vector2 SnapAttackFeedbackDirection(Vector2 direction)
