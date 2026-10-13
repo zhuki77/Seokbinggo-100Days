@@ -3348,7 +3348,9 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 playerSource.Contains("PlayerHealthRecoveryService.IsSupportedHealingItemId(itemId)") &&
                 playerSource.Contains("recovery.TryUseHealingItem(itemId, out var restoredHealth, tilePalette.SelectedSlotIndex)") &&
                 playerSource.Contains("TryInteractClosestWorldTarget(includePlacedObjects: true)") &&
-                playerSource.Contains("TryHarvestNearbyCatnip()") &&
+                playerSource.Contains("TryTickCatnipMining(") &&
+                playerSource.Contains("TryResolveCatnipMiningTarget(") &&
+                !playerSource.Contains("WorldInteractKind.Catnip") &&
                 !playerSource.Contains("TryHarvestNearbyHemp() ||") &&
                 playerSource.Contains("TryTickHempMining(") &&
                 source.Contains("TryResolveHempMiningTarget(") &&
@@ -3356,7 +3358,7 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 source.Contains("FindItem(PlayerHealthRecoveryService.CatnipItemId)") &&
                 saveSource.Contains("save.hempPatches = worldDecorationRenderer.ExportHempPatches();") &&
                 saveSource.Contains("worldDecorationRenderer.RestoreHempPatches(save.hempPatches)"),
-            "Catnip stays on E; surface hemp is harvested by left-click mining like trees/rebar.");
+            "Catnip and surface hemp are both harvested by left-click mining. E still opens chests and placed objects.");
         Require(source.Contains("decorationSupportCells[visual.transform] = supportCell;") &&
                 source.Contains("RemoveDecorationsSupportedBy(cell);") &&
                 source.Contains("visual.gameObject.SetActive(false);") &&

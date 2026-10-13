@@ -714,7 +714,7 @@ namespace Nyangbingo.UI
             Vector2 size, Vector2 position)
         {
             var text = CreateDebugHelpObject(name, parent, size, position).AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = UiTextFont.Source;
             text.fontSize = fontSize;
             text.alignment = anchor;
             text.color = new Color(.93f, .96f, 1f);

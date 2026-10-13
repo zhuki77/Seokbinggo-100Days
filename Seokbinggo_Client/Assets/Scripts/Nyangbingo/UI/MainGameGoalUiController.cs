@@ -82,14 +82,17 @@ namespace Nyangbingo.UI
                 questImage.type = UnityEngine.UI.Image.Type.Simple;
                 questImage.preserveAspect = true;
             }
-            var innerWidth = Mathf.Max(24f, questSize.x - 8f);
+            const float sideInset = 12f;
+            var innerWidth = Mathf.Max(24f, questSize.x - sideInset * 2f);
             const float titleRow = 14f;
-            icon = Image("Icon", root, new Vector2(4, -3), new Vector2(titleRow, titleRow));
+            icon = Image("Icon", root, new Vector2(sideInset, -4), new Vector2(titleRow, titleRow));
             icon.preserveAspect = true;
-            title = Label("GoalTitle", root, textTemplate, new Vector2(20, -6),
-                new Vector2(innerWidth - 16f, titleRow), 10);
+            var titleX = sideInset + titleRow + 2f;
+            title = Label("GoalTitle", root, textTemplate, new Vector2(titleX, -6),
+                new Vector2(Mathf.Max(24f, questSize.x - titleX - sideInset), titleRow), 10);
             KeepInside(title);
-            title.alignment = TextAnchor.MiddleLeft;
+            title.alignment = TextAnchor.MiddleCenter;
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;
             title.fontStyle = FontStyle.Bold;
             title.verticalOverflow = VerticalWrapMode.Overflow;
             title.raycastTarget = true;
@@ -99,13 +102,15 @@ namespace Nyangbingo.UI
             titleColors.disabledColor = Color.white;
             titleButton.colors = titleColors;
             titleButton.onClick.AddListener(() => listOpen = !listOpen);
-            hint = Label("GoalHint", root, textTemplate, new Vector2(4, -19),
-                new Vector2(innerWidth, Mathf.Max(12f, questSize.y - 23f)), 7);
+            hint = Label("GoalHint", root, textTemplate, new Vector2(sideInset, -21),
+                new Vector2(innerWidth, Mathf.Max(18f, questSize.y - 29f)), 7);
             KeepInside(hint);
+            hint.alignment = TextAnchor.UpperCenter;
             hint.horizontalOverflow = HorizontalWrapMode.Overflow;
             completion = Label("GoalCompleted", root, textTemplate,
-                new Vector2(4, -(questSize.y - 16f)), new Vector2(innerWidth, 14), 7);
+                new Vector2(sideInset, -(questSize.y - 16f)), new Vector2(innerWidth, 14), 7);
             KeepInside(completion);
+            completion.alignment = TextAnchor.MiddleCenter;
             completion.color = new Color(.55f, 1f, .7f);
             var goals = services.Goals.Progress.SelectableGoals;
             var listHeight = Mathf.Clamp(goals.Count * 17f + 6f, 20f, 90f);
@@ -540,6 +545,7 @@ namespace Nyangbingo.UI
             var rect = label.rectTransform;
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
             rect.anchoredPosition = position; rect.sizeDelta = size; rect.localScale = Vector3.one;
+            label.font = UiTextFont.Source;
             label.raycastTarget = false; label.fontSize = fontSize; label.resizeTextForBestFit = false;
             label.alignment = TextAnchor.UpperLeft; label.color = Color.white;
             label.horizontalOverflow = HorizontalWrapMode.Wrap; label.verticalOverflow = VerticalWrapMode.Overflow;

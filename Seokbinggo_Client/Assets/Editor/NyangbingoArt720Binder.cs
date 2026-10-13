@@ -246,6 +246,7 @@ public static class NyangbingoArt720Binder
         ("shellVolumeBar", "Assets/Art/UI/Shell/spbar.aseprite"),
         ("shellVolumeHandle", "Assets/Art/UI/Shell/spbar2.aseprite"),
         ("questWindow", "Assets/Art/UI/Quest/quest_window.aseprite"),
+        ("traitWindow", "Assets/Art/UI/Trait/trait_window.aseprite"),
         ("scrollTrack", "Assets/Art/UI/Common/scroll_track.aseprite"),
         ("scrollHandle", "Assets/Art/UI/Common/scroll_handle.aseprite"),
         ("labelHp", "Assets/Art/UI/Shell/label_hp.aseprite"),
@@ -470,6 +471,7 @@ public static class NyangbingoArt720Binder
             gameplaySerialized.FindProperty("button1x6Frames")?.arraySize == 2 &&
             gameplaySerialized.FindProperty("codexCard")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("questWindow")?.objectReferenceValue != null &&
+            gameplaySerialized.FindProperty("traitWindow")?.objectReferenceValue != null &&
             gameplaySerialized.FindProperty("traitMeleeFrames")?.arraySize == 2 &&
             gameplaySerialized.FindProperty("craftProgressFrames")?.arraySize == 4 &&
             gameplaySerialized.FindProperty("craftPanel")?.objectReferenceValue != null &&

@@ -478,7 +478,7 @@ namespace Nyangbingo.UI
         private static IReadOnlyList<Sprite> ClosestFrames(GameplayArtCatalog catalog, float aspect)
         {
             if (aspect < 1.5f) return catalog.Button1x1Frames;
-            if (aspect < 3f) return catalog.Button1x2Frames;
+            // 1x2 셀은 32px 버튼 옆에 빈 칸이 붙어 있어, 좁은 버튼이 가운데서 갈라져 보인다.
             if (aspect < 5f) return catalog.Button1x4Frames;
             return catalog.Button1x6Frames;
         }
