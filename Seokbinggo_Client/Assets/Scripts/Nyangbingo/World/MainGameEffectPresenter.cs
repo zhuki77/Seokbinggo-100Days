@@ -158,6 +158,10 @@ namespace Nyangbingo.World
         private bool tileFaded;
         private Vector3Int fadedTileCell;
         private Color fadedTileColor = Color.white;
+        private bool plantFaded;
+        private SpriteRenderer fadedPlant;
+        private Color fadedPlantColor = Color.white;
+        private MainGameWorldDecorationRenderer decorationRenderer;
         private static readonly Color FadedBlockHighlight = new Color(.38f, .4f, .46f, 1f);
 
         private void HandleMiningTargetChanged(Vector3Int cell, bool visible, bool mineable)
@@ -165,18 +169,28 @@ namespace Nyangbingo.World
             if (!visible)
             {
                 RestoreFadedTile();
+                RestoreFadedPlant();
                 if (miningTargetRenderer != null) miningTargetRenderer.enabled = false;
                 return;
             }
 
             if (TryFadeForegroundTile(cell))
             {
+                RestoreFadedPlant();
+                if (miningTargetRenderer != null) miningTargetRenderer.enabled = false;
+                return;
+            }
+
+            if (TryFadePlant(cell))
+            {
+                RestoreFadedTile();
                 if (miningTargetRenderer != null) miningTargetRenderer.enabled = false;
                 return;
             }
 
             if (miningTargetRenderer == null) return;
             RestoreFadedTile();
+            RestoreFadedPlant();
             miningTargetRenderer.enabled = true;
             miningTargetRenderer.transform.localRotation = Quaternion.identity;
             RuntimePlaceholderVisual.Configure(
@@ -191,8 +205,7 @@ namespace Nyangbingo.World
         /// </summary>
         private bool TryFadeForegroundTile(Vector3Int cell)
         {
-            // Plants and doors use a direct-cursor bright overlay, even though
-            // their artwork may be stored in the foreground tilemap.
+            // 버섯·문은 칸 전체를 덮는 하얀 조준 막을 유지한다.
             if (tileService != null && tileService.InBounds(cell))
             {
                 var id = tileService.GetTile(cell).elementType;
@@ -229,6 +242,36 @@ namespace Nyangbingo.World
             foreground.SetTileFlags(fadedTileCell,
                 foreground.GetTileFlags(fadedTileCell) & ~UnityEngine.Tilemaps.TileFlags.LockColor);
             foreground.SetColor(fadedTileCell, fadedTileColor);
+        }
+
+        /// <summary>나무·삼·캣닢은 하얀 칸 대신 스프라이트 색을 블록과 같은 비율로 낮춘다.</summary>
+        private bool TryFadePlant(Vector3Int cell)
+        {
+            decorationRenderer ??= FindAnyObjectByType<MainGameWorldDecorationRenderer>();
+            if (decorationRenderer == null ||
+                !decorationRenderer.TryGetPlantHighlightRenderer(cell, out var renderer) ||
+                renderer == null)
+                return false;
+            if (plantFaded && fadedPlant == renderer) return true;
+
+            RestoreFadedPlant();
+            fadedPlant = renderer;
+            fadedPlantColor = renderer.color;
+            plantFaded = true;
+            renderer.color = new Color(
+                fadedPlantColor.r * FadedBlockHighlight.r,
+                fadedPlantColor.g * FadedBlockHighlight.g,
+                fadedPlantColor.b * FadedBlockHighlight.b,
+                fadedPlantColor.a);
+            return true;
+        }
+
+        private void RestoreFadedPlant()
+        {
+            if (!plantFaded) return;
+            plantFaded = false;
+            if (fadedPlant != null) fadedPlant.color = fadedPlantColor;
+            fadedPlant = null;
         }
 
         private void HandlePlayerDamaged(DamageTag tag, int amount)
@@ -495,6 +538,7 @@ namespace Nyangbingo.World
                 if (frame != null) Destroy(frame);
             fireOnlyFrames.Clear();
             RestoreFadedTile();
+            RestoreFadedPlant();
             if (playerHealth != null) playerHealth.Damaged -= HandlePlayerDamaged;
             GameEvents.OnMiningTargetChanged -= HandleMiningTargetChanged;
             GameEvents.OnMiningProgress -= HandleMiningProgress;

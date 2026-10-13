@@ -227,6 +227,41 @@ namespace Nyangbingo.World
             return found;
         }
 
+        /// <summary>
+        /// 채굴 조준 중인 나무·삼·캣닢 스프라이트. 블록과 같이 아트 색을 낮추기 위해 쓴다.
+        /// </summary>
+        public bool TryGetPlantHighlightRenderer(Vector3Int cell, out SpriteRenderer renderer)
+        {
+            renderer = null;
+            foreach (var tree in treePatches.Values)
+            {
+                if (!IsTreeAvailable(tree) || tree.Renderer == null) continue;
+                if (cell != tree.SupportCell + Vector3Int.up &&
+                    cell != tree.SupportCell + Vector3Int.up * 2)
+                    continue;
+                renderer = tree.Renderer;
+                return true;
+            }
+
+            foreach (var patch in hempPatches.Values)
+            {
+                if (!IsHempAvailable(patch) || patch.Renderer == null) continue;
+                if (cell != patch.SupportCell && cell != patch.SupportCell + Vector3Int.up) continue;
+                renderer = patch.Renderer;
+                return true;
+            }
+
+            foreach (var patch in catnipPatches.Values)
+            {
+                if (!IsCatnipAvailable(patch) || patch.Renderer == null) continue;
+                if (cell != patch.SupportCell && cell != patch.SupportCell + Vector3Int.up) continue;
+                renderer = patch.Renderer;
+                return true;
+            }
+
+            return false;
+        }
+
         private bool TryPickOccupiedCellUnderSprite(Vector2 worldPosition, SpriteRenderer renderer,
             Vector3Int occupiedCell, out Vector3Int cell, out float area, out float distance)
         {
