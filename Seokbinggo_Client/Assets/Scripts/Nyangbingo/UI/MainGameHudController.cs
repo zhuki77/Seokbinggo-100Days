@@ -233,6 +233,7 @@ namespace Nyangbingo.UI
             runtimeServices = services;
             temperatureText = temperature;
             sealText = seal;
+            if (sealText != null) sealText.gameObject.SetActive(false);
             dayText = day;
             clawText = claw;
             playerHealthText = healthText;
@@ -247,6 +248,7 @@ namespace Nyangbingo.UI
             gameplayArtCatalog = gameplayArt;
             environmentArtCatalog = environmentArt;
             craftingProgressPanel = craftingPanel;
+            if (craftingProgressPanel != null) craftingProgressPanel.SetActive(false);
             craftingProgressText = craftingText;
             craftingProgressFill = craftingFill;
         }
@@ -1252,23 +1254,8 @@ namespace Nyangbingo.UI
 
         private void RefreshCraftingProgress()
         {
-            if (craftingProgressPanel == null || craftingProgressText == null || craftingProgressFill == null) return;
-            craftingProgressText.text = string.Empty;
-            craftingProgressText.enabled = false;
-            var queue = playerController != null
-                ? runtimeServices?.StationProduction?.FindNearestActive(
-                    playerController.transform.position, MainGameTurretRuntime.InteractionRange,
-                    includeHandCrafting: false)
-                : null;
-            var job = queue != null ? queue.jobs[0] : null;
-            var active = job != null;
-            craftingProgressPanel.SetActive(active);
-            if (!active) return;
-
-            var duration = Mathf.Max(.0001f, job.duration);
-            var remaining = Mathf.Clamp(job.remaining, 0f, duration);
-            var completion = Mathf.Clamp01(1f - remaining / duration);
-            ResizeCraftingProgressFill(completion);
+            // Progress belongs to the active job icon inside each station's queue.
+            if (craftingProgressPanel != null) craftingProgressPanel.SetActive(false);
         }
 
         private void ResizeCraftingProgressFill(float completion)
@@ -1313,15 +1300,12 @@ namespace Nyangbingo.UI
 
         private void RefreshRoomTemperature()
         {
-            if (sealText == null || runtimeServices?.RoomTemperature == null ||
+            // The room thermometer art already presents this information.
+            if (sealText != null) sealText.gameObject.SetActive(false);
+            if (runtimeServices?.RoomTemperature == null ||
                 playerController == null) return;
             var roomService = runtimeServices.RoomTemperature;
             var celsius = roomService.Resolve(playerController.transform.position);
-            var band = RoomTempPresentation.ResolveBand(celsius, roomService.ColdEnterCelsius,
-                roomService.FrozenEnterCelsius);
-            sealText.text = RoomTempPresentation.FormatCelsius(celsius);
-            sealText.color = RoomTempPresentation.BandColor(band);
-            sealText.gameObject.SetActive(true);
             if (RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius) &&
                 !hypothermiaCuePlayed)
             {

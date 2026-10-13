@@ -137,9 +137,17 @@ namespace Nyangbingo.UI
         private string openedStationObjectId;
         private bool bindingProductionStation;
         private GameObject productionQueueRoot;
-        private Text productionQueueHeader;
         private readonly List<Text> productionQueueLabels = new List<Text>();
         private readonly List<Button> productionQueueCancelButtons = new List<Button>();
+        private readonly List<Image> productionQueueIcons = new List<Image>();
+        private readonly List<Image> productionQueueTimers = new List<Image>();
+        private Sprite productionTimerSprite;
+        private Vector2 defaultMessagePosition, defaultMessageSize;
+        private int defaultMessageFontSize;
+        private GameObject smeltingListRoot;
+        private ScrollRect smeltingListScrollRect;
+        private readonly List<Button> smeltingListButtons = new List<Button>();
+        private readonly List<Image> smeltingListIcons = new List<Image>();
         private readonly StationJobRecord[] displayedProductionJobs =
             new StationJobRecord[StationProductionService.WaitingCapacity + 1];
         private Button productionQueueCollectButton;
@@ -330,7 +338,7 @@ namespace Nyangbingo.UI
             if (!open) return;
             if (page != Page.Codex)
             {
-                if (page == Page.Crafting && !IsShowingSmeltingList)
+                if (page == Page.Crafting)
                 {
                     if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) SelectRelative(-1);
                     if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) SelectRelative(1);
@@ -560,7 +568,11 @@ namespace Nyangbingo.UI
                 if (label != null) label.text = $"{UnifiedTabHotkey(index)} · {UnifiedTabLabel(index)}";
             }
             BuildDetailsScrollArea();
+            defaultMessagePosition = messageText.rectTransform.anchoredPosition;
+            defaultMessageSize = messageText.rectTransform.sizeDelta;
+            defaultMessageFontSize = messageText.fontSize;
             BuildCraftingList();
+            BuildSmeltingList();
             BuildInventoryGrid();
             BuildEquipmentVisual();
             BuildStorageUi();
@@ -690,6 +702,69 @@ namespace Nyangbingo.UI
             craftingListScrollRect.movementType = ScrollRect.MovementType.Clamped;
             craftingListScrollRect.scrollSensitivity = 18f;
             craftingListRoot.SetActive(false);
+        }
+
+        private void BuildSmeltingList()
+        {
+            smeltingListRoot = CreateUiObject("SmeltingRecipeList", panel.transform,
+                new Vector2(64f, 134f), new Vector2(-187f, 11f));
+            var viewportObject = CreateUiObject("Viewport", smeltingListRoot.transform,
+                new Vector2(64f, 134f), Vector2.zero);
+            var viewport = (RectTransform)viewportObject.transform;
+            viewportObject.AddComponent<Image>().color = new Color(.025f, .035f, .045f, .72f);
+            viewportObject.AddComponent<RectMask2D>();
+            var content = (RectTransform)CreateUiObject("Content", viewport, Vector2.zero, Vector2.zero).transform;
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = Vector2.one;
+            content.pivot = new Vector2(.5f, 1f);
+            var layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 3, 3);
+            layout.spacing = 3f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            for (var index = 0; index < gameDataCatalog.Smelting.Count; index++)
+            {
+                var selected = index;
+                var button = CreateButton(content, $"Smelting_{index}", string.Empty,
+                    Vector2.zero, new Vector2(48f, 34f), () =>
+                    {
+                        if (!IsShowingSmeltingList || selected >= smeltingRecipes.Count) return;
+                        selectedIndex = selected;
+                        message = string.Empty;
+                        Refresh();
+                        ResetDetailsScroll();
+                        EnsureSelectedRecipeVisible();
+                    }, false);
+                button.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+                smeltingListButtons.Add(button);
+                smeltingListIcons.Add(CreateArtImage(button.transform, "Output", null,
+                    Vector2.zero, new Vector2(26f, 26f)));
+            }
+            smeltingListScrollRect = smeltingListRoot.AddComponent<ScrollRect>();
+            smeltingListScrollRect.viewport = viewport;
+            smeltingListScrollRect.content = content;
+            smeltingListScrollRect.horizontal = false;
+            smeltingListScrollRect.vertical = true;
+            smeltingListScrollRect.movementType = ScrollRect.MovementType.Clamped;
+            smeltingListScrollRect.scrollSensitivity = 18f;
+            smeltingListRoot.SetActive(false);
+        }
+
+        private void RefreshSmeltingList()
+        {
+            for (var index = 0; index < smeltingListButtons.Count; index++)
+            {
+                var recipe = index < smeltingRecipes.Count ? smeltingRecipes[index] : null;
+                smeltingListButtons[index].gameObject.SetActive(recipe != null);
+                if (recipe == null) continue;
+                smeltingListIcons[index].sprite = itemArtCatalog?.FindSprite(recipe.Output.item.Id);
+                smeltingListIcons[index].enabled = smeltingListIcons[index].sprite != null;
+                ((Image)smeltingListButtons[index].targetGraphic).color = index == selectedIndex
+                    ? new Color(.18f, .38f, .58f, 1f) : new Color(.08f, .12f, .18f, 1f);
+            }
         }
 
         private void SelectCraftingRecipe(int index)
@@ -1075,6 +1150,11 @@ namespace Nyangbingo.UI
 
         private void ResetCraftingListScroll()
         {
+            if (smeltingListScrollRect != null)
+            {
+                smeltingListScrollRect.StopMovement();
+                smeltingListScrollRect.verticalNormalizedPosition = 1f;
+            }
             if (craftingListScrollRect == null) return;
             Canvas.ForceUpdateCanvases();
             craftingListScrollRect.StopMovement();
@@ -1083,17 +1163,19 @@ namespace Nyangbingo.UI
 
         private void EnsureSelectedRecipeVisible()
         {
-            if (page != Page.Crafting || IsShowingSmeltingList || craftingListScrollRect == null ||
-                selectedIndex < 0 || selectedIndex >= craftingListButtons.Length) return;
-            var row = craftingListButtons[selectedIndex];
+            if (page != Page.Crafting || selectedIndex < 0) return;
+            var scroll = IsShowingSmeltingList ? smeltingListScrollRect : craftingListScrollRect;
+            if (scroll == null || selectedIndex >= (IsShowingSmeltingList
+                    ? smeltingListButtons.Count : craftingListButtons.Length)) return;
+            var row = IsShowingSmeltingList ? smeltingListButtons[selectedIndex] : craftingListButtons[selectedIndex];
             if (row == null || !row.gameObject.activeInHierarchy) return;
             Canvas.ForceUpdateCanvases();
-            var viewport = craftingListScrollRect.viewport;
-            var content = craftingListScrollRect.content;
+            var viewport = scroll.viewport;
+            var content = scroll.content;
             var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, row.transform);
             var offset = bounds.max.y > viewport.rect.yMax ? viewport.rect.yMax - bounds.max.y
                 : bounds.min.y < viewport.rect.yMin ? viewport.rect.yMin - bounds.min.y : 0f;
-            craftingListScrollRect.StopMovement();
+            scroll.StopMovement();
             content.anchoredPosition += new Vector2(0f, offset);
         }
 
@@ -1637,6 +1719,9 @@ namespace Nyangbingo.UI
 
         private void RefreshPageLayout()
         {
+            messageText.rectTransform.anchoredPosition = defaultMessagePosition;
+            messageText.rectTransform.sizeDelta = defaultMessageSize;
+            messageText.fontSize = defaultMessageFontSize;
             foreach (var button in materialSourceButtons) button.gameObject.SetActive(false);
             var storageMode = HasStorageMode;
             if (storageModeRoot != null) storageModeRoot.SetActive(storageMode);
@@ -1652,6 +1737,7 @@ namespace Nyangbingo.UI
                 if (inventoryGridRoot != null) inventoryGridRoot.SetActive(false);
                 if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(false);
                 if (craftingListRoot != null) craftingListRoot.SetActive(false);
+                if (smeltingListRoot != null) smeltingListRoot.SetActive(false);
                 if (codexGridRoot != null) codexGridRoot.SetActive(false);
                 if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(false);
                 if (detailsScrollbarRect != null) detailsScrollbarRect.gameObject.SetActive(false);
@@ -1663,8 +1749,8 @@ namespace Nyangbingo.UI
             var codex = page == Page.Codex;
             var recipeList = page == Page.Crafting && !IsShowingSmeltingList;
             var hasListActions = !gathering && !codex;
-            previousButton.gameObject.SetActive(hasListActions && !recipeList);
-            nextButton.gameObject.SetActive(hasListActions && !recipeList);
+            previousButton.gameObject.SetActive(hasListActions && page != Page.Crafting);
+            nextButton.gameObject.SetActive(hasListActions && page != Page.Crafting);
             primaryButton.gameObject.SetActive(!codex);
             var primaryRect = primaryButton.GetComponent<RectTransform>();
             primaryRect.anchoredPosition = new Vector2(110f, -91f);
@@ -1679,6 +1765,7 @@ namespace Nyangbingo.UI
             if (inventoryHintText != null) inventoryHintText.gameObject.SetActive(false);
             if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(equipment);
             if (craftingListRoot != null) craftingListRoot.SetActive(recipeList);
+            if (smeltingListRoot != null) smeltingListRoot.SetActive(IsShowingSmeltingList);
             if (codexGridRoot != null) codexGridRoot.SetActive(codex);
             if (detailsViewportRect != null) detailsViewportRect.gameObject.SetActive(!gathering && !codex);
             if (detailsScrollbarRect != null) detailsScrollbarRect.gameObject.SetActive(!gathering && !codex);
@@ -1687,19 +1774,24 @@ namespace Nyangbingo.UI
             {
                 detailsViewportRect.sizeDelta = recipeList
                     ? new Vector2(250f, 134f)
-                    : equipment ? new Vector2(286f, 134f) : new Vector2(438f, 134f);
+                    : equipment ? new Vector2(286f, 134f) : new Vector2(358f, 134f);
                 detailsViewportRect.anchoredPosition = recipeList
                     ? new Vector2(89f, 11f)
-                    : equipment ? new Vector2(73f, 11f) : new Vector2(-5f, 11f);
+                    : equipment ? new Vector2(73f, 11f) : new Vector2(35f, 11f);
                 detailsScrollbarRect.sizeDelta = new Vector2(6f, 134f);
                 detailsScrollbarRect.anchoredPosition = new Vector2(222f, 11f);
                 if (page == Page.Crafting)
                 {
                     // Reserve a row for missing material selectors; retain the existing scroll content.
-                    detailsViewportRect.sizeDelta = new Vector2(detailsViewportRect.sizeDelta.x, 44f);
-                    detailsViewportRect.anchoredPosition += new Vector2(0f, 19f);
-                    detailsScrollbarRect.sizeDelta = new Vector2(6f, 44f);
-                    detailsScrollbarRect.anchoredPosition += new Vector2(0f, 19f);
+                    detailsViewportRect.sizeDelta = new Vector2(detailsViewportRect.sizeDelta.x, 124f);
+                    detailsViewportRect.anchoredPosition += new Vector2(0f, -10f);
+                    detailsScrollbarRect.sizeDelta = new Vector2(6f, 124f);
+                    detailsScrollbarRect.anchoredPosition += new Vector2(0f, -10f);
+                    messageText.rectTransform.anchoredPosition = new Vector2(
+                        IsShowingSmeltingList ? 35f : 89f, -71f);
+                    messageText.rectTransform.sizeDelta = new Vector2(
+                        IsShowingSmeltingList ? 358f : 250f, 16f);
+                    messageText.fontSize = 7;
                 }
             }
         }
@@ -1723,14 +1815,14 @@ namespace Nyangbingo.UI
                                turretRuntime.GetInventoryCount(recipe.Output.item.Id) > 0;
             primaryButton.GetComponentInChildren<Text>().text = "E · 제작 예약";
             var primaryRect = primaryButton.GetComponent<RectTransform>();
-            primaryRect.anchoredPosition = new Vector2(65f, -91f);
-            primaryRect.sizeDelta = new Vector2(150f, 22f);
+            primaryRect.anchoredPosition = new Vector2(55f, -91f);
+            primaryRect.sizeDelta = new Vector2(130f, 22f);
             collectButton.gameObject.SetActive(readyToPlace);
             if (readyToPlace)
             {
                 var placementRect = collectButton.GetComponent<RectTransform>();
-                placementRect.anchoredPosition = new Vector2(-100f, -91f);
-                placementRect.sizeDelta = new Vector2(150f, 22f);
+                placementRect.anchoredPosition = new Vector2(-60f, -118f);
+                placementRect.sizeDelta = new Vector2(90f, 20f);
                 collectButton.GetComponentInChildren<Text>().text = "설치";
                 collectButton.interactable = true;
             }
@@ -1991,9 +2083,13 @@ namespace Nyangbingo.UI
 
         private void RefreshSmelting()
         {
+            RefreshSmeltingList();
             primaryButton.GetComponentInChildren<Text>().text = "E · 제련 예약";
+            var primaryRect = (RectTransform)primaryButton.transform;
+            primaryRect.anchoredPosition = new Vector2(55f, -91f);
+            primaryRect.sizeDelta = new Vector2(130f, 22f);
             collectButton.GetComponentInChildren<Text>().text = "완료품 회수";
-            collectButton.gameObject.SetActive(true);
+            collectButton.gameObject.SetActive(false);
             debugCompleteButton.interactable = ResolveProductionQueue()?.jobs.Count > 0 ||
                                               ResolveDisplayedSmeltingStation()?.IsSmelting == true;
             var definition = CurrentSmelting();
@@ -2045,8 +2141,8 @@ namespace Nyangbingo.UI
             }
             missingSourceItems.Clear();
             missingSourceItems.AddRange(missing);
-            var width = IsShowingSmeltingList ? 438f : 250f;
-            var center = IsShowingSmeltingList ? -5f : 89f;
+            var width = IsShowingSmeltingList ? 358f : 250f;
+            var center = IsShowingSmeltingList ? 35f : 89f;
             for (var index = 0; index < missing.Length; index++)
             {
                 if (index >= materialSourceButtons.Count)
@@ -2766,29 +2862,50 @@ namespace Nyangbingo.UI
             if (productionQueueRoot == null && visible)
             {
                 productionQueueRoot = CreateUiObject("ProductionQueue", panel.transform,
-                    new Vector2(250f, 76f), new Vector2(89f, -36f));
-                var background = productionQueueRoot.AddComponent<Image>();
-                background.color = new Color(.035f, .055f, .08f, .95f);
-                background.raycastTarget = true;
-                productionQueueHeader = CreateText(productionQueueRoot.transform, "Header", 8,
-                    TextAnchor.MiddleLeft, new Vector2(175f, 12f), new Vector2(-34f, 31f));
+                    new Vector2(178f, 54f), new Vector2(-130f, -84f));
+                var timerTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+                timerTexture.SetPixel(0, 0, Color.white);
+                timerTexture.filterMode = FilterMode.Point;
+                timerTexture.Apply();
+                productionTimerSprite = Sprite.Create(timerTexture, new Rect(0, 0, 1, 1), Vector2.one * .5f);
                 productionQueueCollectButton = CreateButton(productionQueueRoot.transform, "Collect",
-                    "회수", new Vector2(91f, 31f), new Vector2(58f, 12f), () =>
+                    "회수", new Vector2(295f, -7f), new Vector2(70f, 22f), () =>
                     {
-                        var queue = ResolveProductionQueue();
-                        var count = runtimeServices.StationProduction.Collect(queue);
-                        ShowMessage(count > 0 ? "완료품·반환 재료를 회수했습니다." : "인벤토리 공간이 부족합니다.");
-                        Refresh();
+                        if (IsShowingSmeltingList) TryCollectOutputs();
+                        else
+                        {
+                            var queue = ResolveProductionQueue();
+                            var count = runtimeServices.StationProduction.Collect(queue);
+                            ShowMessage(count > 0 ? "완료품·반환 재료를 회수했습니다." : "인벤토리 공간이 부족합니다.");
+                            Refresh();
+                        }
                     }, false);
-                productionQueueCollectButton.GetComponentInChildren<Text>().fontSize = 7;
+                productionQueueCollectButton.GetComponentInChildren<Text>().fontSize = 8;
                 for (var i = 0; i < StationProductionService.WaitingCapacity + 1; i++)
                 {
                     var capturedIndex = i;
-                    var y = 18f - i * 12f;
+                    var x = -70f + i * 35f;
                     productionQueueLabels.Add(CreateText(productionQueueRoot.transform, $"Job_{i}", 7,
-                        TextAnchor.MiddleLeft, new Vector2(197f, 11f), new Vector2(-21f, y)));
+                        TextAnchor.MiddleCenter, new Vector2(34f, 10f), new Vector2(x, 21f)));
+                    var border = CreateArtImage(productionQueueRoot.transform, $"Slot_{i}",
+                        productionTimerSprite, new Vector2(x, 0f), new Vector2(30f, 30f));
+                    border.color = Color.white;
+                    var well = CreateArtImage(border.transform, "Well", productionTimerSprite,
+                        Vector2.zero, new Vector2(28f, 28f));
+                    well.color = new Color(.04f, .06f, .09f, 1f);
+                    productionQueueIcons.Add(CreateArtImage(well.transform, "Output", null,
+                        Vector2.zero, new Vector2(24f, 24f)));
+                    var timer = CreateArtImage(well.transform, "Timer", productionTimerSprite,
+                        Vector2.zero, new Vector2(28f, 28f));
+                    timer.type = Image.Type.Filled;
+                    timer.fillMethod = Image.FillMethod.Radial360;
+                    timer.fillOrigin = (int)Image.Origin360.Top;
+                    timer.fillClockwise = true;
+                    timer.color = new Color(.15f, .65f, 1f, .55f);
+                    timer.raycastTarget = false;
+                    productionQueueTimers.Add(timer);
                     var cancel = CreateButton(productionQueueRoot.transform, $"Cancel_{i}", "취소",
-                        new Vector2(101f, y), new Vector2(36f, 11f), () =>
+                        new Vector2(x, -19f), new Vector2(30f, 8f), () =>
                         {
                             var queue = ResolveProductionQueue();
                             var displayedJob = displayedProductionJobs[capturedIndex];
@@ -2800,7 +2917,7 @@ namespace Nyangbingo.UI
                                     : "제작 취소 · 재료를 반환했습니다.");
                             Refresh();
                         }, false);
-                    cancel.GetComponentInChildren<Text>().fontSize = 7;
+                    cancel.GetComponentInChildren<Text>().fontSize = 6;
                     productionQueueCancelButtons.Add(cancel);
                 }
             }
@@ -2808,18 +2925,23 @@ namespace Nyangbingo.UI
             productionQueueRoot.SetActive(visible);
             if (!visible) return;
             var state = ResolveProductionQueue();
-            productionQueueHeader.text = state == null ? "제작대를 사용할 수 없습니다." :
-                $"진행 {(state.jobs.Count > 0 ? 1 : 0)}/1 · 대기 {Mathf.Max(0, state.jobs.Count - 1)}/4 · 회수 {state.returns.Count}";
-            productionQueueCollectButton.interactable = state?.returns.Count > 0;
+            productionQueueCollectButton.interactable = state?.returns.Count > 0 ||
+                IsShowingSmeltingList && ResolveDisplayedSmeltingStation()?.Completed.Count > 0;
             for (var i = 0; i < productionQueueLabels.Count; i++)
             {
                 var hasJob = state != null && i < state.jobs.Count;
                 displayedProductionJobs[i] = hasJob ? state.jobs[i] : null;
                 productionQueueCancelButtons[i].gameObject.SetActive(hasJob);
-                productionQueueLabels[i].text = hasJob
-                    ? $"{(i == 0 ? "진행" : "대기 " + i)} · {runtimeServices.StationProduction.OutputName(state.jobs[i])}" +
-                      (i == 0 ? $" · {state.jobs[i].remaining:0.0}초" : string.Empty)
-                    : i == 0 ? "진행 중인 작업 없음" : $"대기 {i} · 비어 있음";
+                productionQueueLabels[i].text = i == 0 ? "진행" : $"대기 {i}";
+                var job = displayedProductionJobs[i];
+                var output = job == null ? null : job.smelting
+                    ? gameDataCatalog.FindSmelting(job.recipeId)?.Output.item
+                    : gameDataCatalog.FindRecipe(job.recipeId)?.Output.item;
+                productionQueueIcons[i].sprite = output != null ? itemArtCatalog?.FindSprite(output.Id) : null;
+                productionQueueIcons[i].enabled = productionQueueIcons[i].sprite != null;
+                productionQueueTimers[i].enabled = hasJob && i == 0;
+                productionQueueTimers[i].fillAmount = job != null && job.duration > 0f
+                    ? Mathf.Clamp01(1f - job.remaining / job.duration) : 0f;
             }
         }
 
@@ -2934,7 +3056,7 @@ namespace Nyangbingo.UI
             if (page == Page.Crafting)
                 return IsSmeltingStation(openedStation)
                     ? furnaceSmeltingView
-                        ? "Q 제작 목록으로 전환 · A/D·←/→ 선택 · E 제련 · ESC 닫기"
+                        ? "Q 제작 전환 · W/S·↑/↓ 선택 · E 제련 · ESC 닫기"
                         : "Q 제련 목록으로 전환 · W/S·↑/↓ 선택 · E 제작 · ESC 닫기"
                     : "C 제작 탭 · ESC 닫기 · W/S·↑/↓ 선택 · E 실행";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -3039,6 +3161,11 @@ namespace Nyangbingo.UI
 
         private void OnDestroy()
         {
+            if (productionTimerSprite != null)
+            {
+                Destroy(productionTimerSprite.texture);
+                Destroy(productionTimerSprite);
+            }
             HideInventoryCursorPreview();
             if (cursorOwner == this) cursorOwner = null;
             if (inventoryCursorIcon != null) Destroy(inventoryCursorIcon.gameObject);
