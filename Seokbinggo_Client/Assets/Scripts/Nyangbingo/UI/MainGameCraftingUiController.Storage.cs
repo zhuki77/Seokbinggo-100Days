@@ -109,10 +109,11 @@ namespace Nyangbingo.UI
             root.SetParent(canvas.transform, false);
             PlaceTopLeft(root, 4f, 69f, StoragePopupSize.x, StoragePopupSize.y);
             var background = storageModeRoot.GetComponent<Image>() ?? storageModeRoot.AddComponent<Image>();
-            // No large panel or border: the same individual cells as the HUD inventory.
+            // Keep the interior transparent; only the outer frame separates storage from the world.
             background.color = Color.clear;
             background.raycastTarget = true;
             if (storageModeRoot.TryGetComponent<Outline>(out var border)) border.enabled = false;
+            BuildStorageFrame(root);
             // Keep the authored storage slots and the existing HUD inventory. No duplicate player grid.
             storageModeRoot.transform.Find("PlayerGrid")?.gameObject.SetActive(false);
             storageModeRoot.transform.Find("PlayerLabel")?.gameObject.SetActive(false);
@@ -173,6 +174,35 @@ namespace Nyangbingo.UI
             storageHintText.horizontalOverflow = HorizontalWrapMode.Wrap;
             storageHintText.verticalOverflow = VerticalWrapMode.Truncate;
             storageHintText.raycastTarget = false;
+        }
+
+        private static void BuildStorageFrame(RectTransform root)
+        {
+            var frame = new GameObject("StorageFrame", typeof(RectTransform)).GetComponent<RectTransform>();
+            frame.SetParent(root, false);
+            frame.SetAsFirstSibling();
+            frame.anchorMin = Vector2.zero;
+            frame.anchorMax = Vector2.one;
+            // Expand outward so the existing slot positions and hit areas do not move.
+            frame.offsetMin = new Vector2(-2f, -2f);
+            frame.offsetMax = new Vector2(2f, 2f);
+            Edge("Top", new Vector2(0f, 1f), Vector2.one, new Vector2(0f, -1f), Vector2.zero);
+            Edge("Bottom", Vector2.zero, new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, 1f));
+            Edge("Left", Vector2.zero, new Vector2(0f, 1f), Vector2.zero, new Vector2(1f, 0f));
+            Edge("Right", new Vector2(1f, 0f), Vector2.one, new Vector2(-1f, 0f), Vector2.zero);
+
+            void Edge(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+            {
+                var image = new GameObject(name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                var rect = image.rectTransform;
+                rect.SetParent(frame, false);
+                rect.anchorMin = anchorMin;
+                rect.anchorMax = anchorMax;
+                rect.offsetMin = offsetMin;
+                rect.offsetMax = offsetMax;
+                image.color = new Color(.5f, .54f, .68f, 1f);
+                image.raycastTarget = false;
+            }
         }
 
         // Top-left coordinates, independent of resolution; prefer below the unchanged inventory.

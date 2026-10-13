@@ -110,7 +110,14 @@ public sealed class StorageDragLivePointerReplay : BaseInput
                     popup.transform.Find("CloseStoragePopup") == null, "chest should show only its name and slots");
             Require(popup.GetComponent<Image>().color.a == 0f &&
                     (popup.GetComponent<Outline>() == null || !popup.GetComponent<Outline>().enabled),
-                "chest must not have a large panel border");
+                "chest interior must remain transparent");
+            var borderFrame = popup.transform.Find("StorageFrame") as RectTransform;
+            Require(borderFrame != null && borderFrame.childCount == 4 && borderFrame.GetComponent<Image>() == null,
+                "chest needs only four outer border edges, without a filled panel");
+            foreach (var edge in borderFrame.GetComponentsInChildren<Image>())
+                Require(edge.enabled && edge.color.a == 1f && !edge.raycastTarget &&
+                        Mathf.Approximately(Mathf.Min(edge.rectTransform.rect.width, edge.rectTransform.rect.height), 1f),
+                    "border must be one pixel thick and must not intercept drags");
             var bagLayout = Get<GameObject>(ui, "inventoryGridRoot").GetComponent<GridLayoutGroup>();
             var storageLayout = popup.transform.Find("StorageGrid").GetComponent<GridLayoutGroup>();
             Require(storageLayout.cellSize == bagLayout.cellSize && storageLayout.spacing == bagLayout.spacing &&
@@ -130,7 +137,7 @@ public sealed class StorageDragLivePointerReplay : BaseInput
                 "inventory was moved or hidden");
             Require(!Get<GameObject>(ui, "craftWindowRoot").activeSelf, "craft tooltip leaked over storage");
             var corners = new Vector3[4];
-            ((RectTransform)popup.transform).GetWorldCorners(corners);
+            borderFrame.GetWorldCorners(corners);
             var canvas = popup.GetComponentInParent<Canvas>();
             var footer = FindAnyObjectByType<MainGameHudController>().TearBalanceRect;
             if (footer != null && footer.gameObject.activeInHierarchy)
@@ -180,7 +187,7 @@ public sealed class StorageDragLivePointerReplay : BaseInput
             Invoke(ui, "Refresh");
             var output = Path.GetFullPath(Path.Combine(Application.dataPath, "../Temp/storage-drag-live.png"));
             ScreenCapture.CaptureScreenshot(output);
-            Debug.Log("[StorageDragDrop] LIVE PASS: aligned inventory slot art and hit areas, name-only chest, popup bounds, unchanged HUD, eleven drags (transfer/swap/merge/cancel/equipment/last cell), right-click open/reopen, Escape close and item conservation. " + output);
+            Debug.Log("[StorageDragDrop] LIVE PASS: aligned inventory slot art and hit areas, transparent chest with outer frame, popup bounds, unchanged HUD, eleven drags (transfer/swap/merge/cancel/equipment/last cell), right-click open/reopen, Escape close and item conservation. " + output);
         }
         finally { Restore(); Destroy(gameObject); }
     }
