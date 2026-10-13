@@ -66,6 +66,8 @@ namespace Nyangbingo.UI
         private GameObject craftingListRoot;
         private ScrollRect craftingListScrollRect;
         private GameObject craftWindowRoot;
+        private bool sideHudVisible;
+        private RectTransform tearBalanceRoot;
         private Image craftWindowOutputIcon;
         private Image[] craftWindowIngredientIcons = new Image[3];
         private readonly Text[] craftWindowIngredientCounts = new Text[3];
@@ -267,10 +269,7 @@ namespace Nyangbingo.UI
         {
             switch (index)
             {
-                case 0:
-                case 2:
-                case 3:
-                    return KeyCode.None;
+                case 0: return KeyCode.Tab;
                 case 1: return KeyCode.C;
                 default: return KeyCode.None;
             }
@@ -684,7 +683,7 @@ namespace Nyangbingo.UI
             if (handleImage != null) handleImage.preserveAspect = false;
             shell.SetAsLastSibling();
             FitInventorySlotContents(cell);
-            SetInventoryWindowActive(true);
+            ApplySideHudVisibility();
 
             var equip = (RectTransform)equipmentVisualRoot.transform;
             equip.SetParent(canvas.transform, false);
@@ -694,7 +693,7 @@ namespace Nyangbingo.UI
             equip.anchoredPosition = new Vector2(-4f, -52.5f);
             equip.localScale = new Vector3(.42f, .42f, 1f);
             equip.SetAsLastSibling();
-            equipmentVisualRoot.SetActive(true);
+            ApplySideHudVisibility();
             RefreshEquipmentVisual();
 
             var panelRect = (RectTransform)panel.transform;
@@ -1074,7 +1073,7 @@ namespace Nyangbingo.UI
                 BuildCraftWindow(canvas.transform);
             }
             var smelting = IsShowingSmeltingList;
-            var show = !HasStorageMode && (!open || page == Page.Crafting);
+            var show = sideHudVisible && !HasStorageMode && (!open || page == Page.Crafting);
             var wasActive = craftWindowRoot.activeSelf;
             craftWindowRoot.SetActive(show);
             if (!show) return;
@@ -1888,8 +1887,32 @@ namespace Nyangbingo.UI
 
         private bool TryHandlePageHotkey()
         {
-            // 재료·제작·장비·도감 창은 열지 않는다.
-            return false;
+            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) ||
+                Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) ||
+                Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) return false;
+            if (!Input.GetKeyDown(KeyCode.Tab)) return false;
+            if ((shell != null && shell.Screen != GameShellScreen.Gameplay) || Time.timeScale <= 0f) return true;
+            if (IsDraggingItem || HasHeldInventoryItem) return true;
+            sideHudVisible = !sideHudVisible;
+            if (sideHudVisible) RefreshCraftWindow();
+            ApplySideHudVisibility();
+            return true;
+        }
+
+        /// <summary>
+        /// 왼쪽 위 인벤, 왼쪽 아래 제작, 오른쪽 위 장비, 인벤 아래 요괴 눈물을 함께 켜고 끈다.
+        /// 장독·상자를 연 동안에는 인벤과 장비를 그대로 보여 준다.
+        /// </summary>
+        private void ApplySideHudVisibility()
+        {
+            var showCluster = sideHudVisible || HasStorageMode;
+            if (inventoryScrollRoot != null) inventoryScrollRoot.SetActive(showCluster);
+            if (inventoryGridRoot != null) inventoryGridRoot.SetActive(showCluster);
+            if (equipmentVisualRoot != null) equipmentVisualRoot.SetActive(showCluster);
+            if (!sideHudVisible && craftWindowRoot != null) craftWindowRoot.SetActive(false);
+            if (tearBalanceRoot == null)
+                tearBalanceRoot = FindAnyObjectByType<MainGameHudController>()?.TearBalanceRect;
+            if (tearBalanceRoot != null) tearBalanceRoot.gameObject.SetActive(sideHudVisible);
         }
 
         private void TogglePage(Page target)
@@ -2777,6 +2800,7 @@ namespace Nyangbingo.UI
             {
                 RefreshCraftWindow();
                 RefreshProductionQueue();
+                ApplySideHudVisibility();
                 return;
             }
             RefreshPageLayout();
@@ -2785,6 +2809,7 @@ namespace Nyangbingo.UI
                 RefreshProductionQueue();
                 RefreshStorage();
                 RefreshCraftWindow();
+                ApplySideHudVisibility();
                 return;
             }
             RefreshTabButtons();
@@ -2803,6 +2828,7 @@ namespace Nyangbingo.UI
                 : message;
             RefreshCraftWindow();
             RefreshProductionQueue();
+            ApplySideHudVisibility();
         }
 
         private void RefreshPageLayout()
