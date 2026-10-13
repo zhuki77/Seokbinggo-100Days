@@ -811,7 +811,8 @@ namespace Nyangbingo.UI
             {
                 var state = craftButton.spriteState;
                 state.pressedSprite = buttonFrames[1];
-                state.highlightedSprite = buttonFrames[1];
+                state.highlightedSprite = null;
+                state.selectedSprite = null;
                 craftButton.spriteState = state;
                 craftButton.transition = Selectable.Transition.SpriteSwap;
             }
@@ -1484,6 +1485,9 @@ namespace Nyangbingo.UI
             {
                 var capturedIndex = index;
                 equipmentSlotButtons[index].onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex));
+                // ColorTint Transition의 SelectedColor가 클릭 후에도 남아 그림자처럼 보인다.
+                // None으로 바꾸고 RefreshEquipmentVisual에서 직접 색을 지정한다.
+                equipmentSlotButtons[index].transition = Selectable.Transition.None;
             }
             if (equipmentAmmoCount == null && equipmentSlotIcons[0] != null)
             {
@@ -1929,11 +1933,14 @@ namespace Nyangbingo.UI
             var canvas = panel.GetComponentInParent<Canvas>().rootCanvas;
             if (inventoryCursorIcon == null)
             {
+                // 드래그 아이콘은 인벤 슬롯(27px)보다 작게 해서 커서 아래가 가려지지 않도록 한다.
+                const float dragIconSize = 14f;
                 inventoryCursorIcon = CreateArtImage(canvas.transform, "InventoryCursor", null,
-                    Vector2.zero, new Vector2(InventorySlotPixelSize, InventorySlotPixelSize));
+                    Vector2.zero, new Vector2(dragIconSize, dragIconSize));
                 inventoryCursorIcon.raycastTarget = false;
-                inventoryCursorCount = CreateText(inventoryCursorIcon.transform, "Count", 7,
-                    TextAnchor.LowerRight, new Vector2(InventorySlotPixelSize, InventorySlotPixelSize), Vector2.zero);
+                inventoryCursorCount = CreateText(inventoryCursorIcon.transform, "Count", 6,
+                    TextAnchor.LowerRight, new Vector2(dragIconSize, dragIconSize), Vector2.zero);
+                inventoryCursorCount.font = UiTextFont.Source;
                 inventoryCursorCount.raycastTarget = false;
             }
             inventoryCursorIcon.gameObject.SetActive(true);
@@ -3149,7 +3156,10 @@ namespace Nyangbingo.UI
                     : string.Empty;
                 equipmentAmmoCount.enabled = usesAmmo;
             }
-            var selectedSlot = ResolveSelectedEquipmentVisualSlot();
+            // 선택 테두리는 장비 탭을 연 동안에만 보여 준다.
+            var selectedSlot = open && page == Page.Equipment
+                ? ResolveSelectedEquipmentVisualSlot()
+                : -1;
             for (var index = 0; index < equipmentSlotBackgrounds.Length; index++)
             {
                 var background = equipmentSlotBackgrounds[index];
@@ -3619,9 +3629,12 @@ namespace Nyangbingo.UI
                 var hasJob = state != null && i < state.jobs.Count;
                 displayedProductionJobs[i] = hasJob ? state.jobs[i] : null;
                 productionQueueCancelButtons[i].gameObject.SetActive(hasJob);
+                string FormatRemaining(float sec) =>
+                    sec >= 60f ? $"{Mathf.FloorToInt(sec / 60f)}분 {Mathf.FloorToInt(sec % 60f):00}초"
+                               : $"{Mathf.CeilToInt(sec)}초";
                 productionQueueLabels[i].text = hasJob
                     ? $"{(i == 0 ? "진행" : "대기 " + i)} · {runtimeServices.StationProduction.OutputName(state.jobs[i])}" +
-                      (i == 0 ? $" · {state.jobs[i].remaining:0.0}초" : string.Empty)
+                      (i == 0 ? $" · {FormatRemaining(state.jobs[i].remaining)}" : string.Empty)
                     : i == 0 ? "진행 중인 작업 없음" : $"대기 {i} · 비어 있음";
             }
         }

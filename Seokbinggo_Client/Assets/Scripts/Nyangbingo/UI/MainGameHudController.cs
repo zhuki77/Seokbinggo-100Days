@@ -831,16 +831,27 @@ namespace Nyangbingo.UI
 
             // Hide in menus without deleting activation order. Re-activation appends at the end.
             var visible = ready && !MainGameCraftingUiController.BlocksGameplayInput && Time.timeScale > 0f;
+            var row = 0;
             for (var index = 0; index < activeStatusAlarms.Count; index++)
             {
                 var image = activeStatusAlarms[index];
                 var rect = image.rectTransform;
-                rect.anchorMin = rect.anchorMax = new Vector2(0f, 0f);
-                rect.pivot = new Vector2(0f, 1f);
-                // First 12px icon centre at x=9, aligned with the thermometer bulb.
-                rect.anchoredPosition = new Vector2(3f + index * 14f, -2f);
-                rect.sizeDelta = new Vector2(12f, 12f);
                 rect.localScale = Vector3.one;
+                rect.sizeDelta = new Vector2(12f, 12f);
+                if (image == burnStatusIcon)
+                {
+                    // 체력 홈은 x=170, 온도 홈은 x=179에서 끝난다. 그 오른쪽에 붙인다.
+                    rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+                    rect.pivot = new Vector2(1f, .5f);
+                    rect.anchoredPosition = new Vector2(193f, -31f);
+                }
+                else
+                {
+                    rect.anchorMin = rect.anchorMax = new Vector2(0f, 0f);
+                    rect.pivot = new Vector2(0f, 1f);
+                    rect.anchoredPosition = new Vector2(3f + row * 14f, -2f);
+                    row++;
+                }
                 image.enabled = visible;
             }
         }
@@ -1530,9 +1541,11 @@ namespace Nyangbingo.UI
             var celsius = roomService.Resolve(playerController.transform.position);
             var band = RoomTempPresentation.ResolveBand(celsius, roomService.ColdEnterCelsius,
                 roomService.FrozenEnterCelsius);
-            sealText.text = RoomTempPresentation.FormatCelsius(celsius);
+            // 0도는 의미 없는 기본값이라 숨긴다.
+            var formatted = RoomTempPresentation.FormatCelsius(celsius);
+            sealText.text = formatted;
             sealText.color = RoomTempPresentation.BandColor(band);
-            sealText.gameObject.SetActive(true);
+            sealText.gameObject.SetActive(!Mathf.Approximately(celsius, 0f));
             if (RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius) &&
                 !hypothermiaCuePlayed)
             {
