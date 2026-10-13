@@ -162,6 +162,7 @@ namespace Nyangbingo.UI
         private readonly Text prefix;
         private readonly Text suffix;
         private readonly Image leadingArt;
+        private readonly bool artAfterNumber;
         private readonly RectTransform root;
         private readonly RectTransform numberRect;
         private readonly RuntimePixelGlyphPresenter numbers;
@@ -170,11 +171,13 @@ namespace Nyangbingo.UI
         private string displayed;
 
         public RuntimeArtNumberLabel(Text template, IReadOnlyList<Sprite> glyphs,
-            string leadingText, string trailingText, float numberScale, Sprite leadingSprite = null)
+            string leadingText, string trailingText, float numberScale, Sprite leadingSprite = null,
+            bool spriteAfterNumber = false)
         {
             source = template;
-            before = leadingSprite == null ? leadingText : string.Empty;
-            after = trailingText;
+            artAfterNumber = spriteAfterNumber;
+            before = leadingSprite == null || artAfterNumber ? leadingText : string.Empty;
+            after = leadingSprite != null && artAfterNumber ? string.Empty : trailingText;
             root = new GameObject("ArtNumberLabel", typeof(RectTransform)).GetComponent<RectTransform>();
             root.SetParent(template.transform, false);
             root.anchorMin = root.anchorMax = root.pivot = new Vector2(.5f, .5f);
@@ -224,17 +227,23 @@ namespace Nyangbingo.UI
             {
                 displayed = text;
                 numbers.SetText(text);
-                var leftWidth = leadingArt != null ? leadingArt.sprite.rect.width : prefix.preferredWidth;
-                var gap = leadingArt != null && leftWidth > 0f ? 2f : 0f;
-                var rightWidth = suffix.preferredWidth;
+                var leftWidth = leadingArt != null && !artAfterNumber
+                    ? leadingArt.sprite.rect.width : prefix.preferredWidth;
+                var gap = leadingArt != null ? 2f : 0f;
+                var rightWidth = leadingArt != null && artAfterNumber
+                    ? leadingArt.sprite.rect.width : suffix.preferredWidth;
                 var total = leftWidth + gap + numbers.RenderedWidth + rightWidth;
-                if (leadingArt != null)
+                if (leadingArt != null && !artAfterNumber)
                     Place(leadingArt.rectTransform, -total * .5f + leftWidth * .5f, leftWidth, leadingArt.sprite.rect.height);
                 else
                     Place(prefix.rectTransform, -total * .5f + leftWidth * .5f, leftWidth, source.rectTransform.sizeDelta.y);
-                Place(numberRect, -total * .5f + leftWidth + gap + numbers.RenderedWidth * .5f,
+                Place(numberRect, -total * .5f + leftWidth + (artAfterNumber ? 0f : gap) + numbers.RenderedWidth * .5f,
                     numbers.RenderedWidth, source.rectTransform.sizeDelta.y);
-                Place(suffix.rectTransform, total * .5f - rightWidth * .5f, rightWidth, source.rectTransform.sizeDelta.y);
+                if (leadingArt != null && artAfterNumber)
+                    Place(leadingArt.rectTransform, total * .5f - rightWidth * .5f,
+                        rightWidth, leadingArt.sprite.rect.height);
+                else
+                    Place(suffix.rectTransform, total * .5f - rightWidth * .5f, rightWidth, source.rectTransform.sizeDelta.y);
             }
             source.text = string.Empty;
             source.enabled = false;
