@@ -4916,14 +4916,14 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "v28 crafting list must use icon and quantity presentation without narrative row text.");
         Require(MainGameBossSummonUiController.DebugShortcutHelpKey == KeyCode.F5,
             "MainGame Editor test shortcut help must be assigned to F5.");
-        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.Tab &&
+        Require(MainGameCraftingUiController.UnifiedTabHotkey(0) == KeyCode.None &&
                 MainGameCraftingUiController.UnifiedTabHotkey(1) == KeyCode.C &&
-                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.G &&
-                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.J &&
+                MainGameCraftingUiController.UnifiedTabHotkey(2) == KeyCode.None &&
+                MainGameCraftingUiController.UnifiedTabHotkey(3) == KeyCode.None &&
                 MainGameCraftingUiController.UnifiedTabHotkey(4) == KeyCode.None,
-            "The four unified panels must use Tab, C, G, and J so number keys 1-9 stay on the hotbar.");
+            "Crafting keeps C. Inventory, equipment, and codex have no hotkey, so number keys 1-9 stay on the hotbar.");
         Require(MainGameCraftingUiController.DebugGrantRequirementsKey == KeyCode.F12,
-            "Crafting test grants use F12; F5 remains help and Tab/C/G/J remain product panels.");
+            "Crafting test grants use F12; F5 remains help and C remains the crafting panel key.");
         Require(MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Furnace) &&
                 MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Foundry) &&
                 !MainGameCraftingUiController.CanToggleCraftingSmelting(CraftingStation.Workbench),

@@ -267,10 +267,11 @@ namespace Nyangbingo.UI
         {
             switch (index)
             {
-                case 0: return KeyCode.Tab;
+                case 0:
+                case 2:
+                case 3:
+                    return KeyCode.None;
                 case 1: return KeyCode.C;
-                case 2: return KeyCode.G;
-                case 3: return KeyCode.J;
                 default: return KeyCode.None;
             }
         }
@@ -719,6 +720,7 @@ namespace Nyangbingo.UI
                 rect.sizeDelta = new Vector2(56f, 16f);
                 var label = tabButtons[index].GetComponentInChildren<Text>();
                 if (label != null) label.text = tabLabels[index];
+                tabButtons[index].gameObject.SetActive(false);
             }
 
             // 체력 틀은 위 여백 4 + 높이 64. 슬롯은 루트 위쪽보다 약 5px 아래에서 시작하므로
@@ -1120,13 +1122,8 @@ namespace Nyangbingo.UI
                 displayedIngredientMissing[index] = missing;
                 var ingredientButton = icon.GetComponent<Button>();
                 if (ingredientButton != null) ingredientButton.interactable = missing;
-                var count = craftWindowIngredientCounts[index];
-                if (count != null)
-                {
-                    MatchCountToInventory(icon, count);
-                    count.text = ingredientItem != null && required > 0 ? required.ToString() : string.Empty;
-                    count.enabled = icon.enabled && required > 0;
-                }
+                ShowCraftIngredientCount(icon, craftWindowIngredientCounts[index],
+                    ingredientItem != null ? required : 0);
             }
             for (var index = 0; index < craftWindowSlotButtons.Length; index++)
             {
@@ -1411,7 +1408,12 @@ namespace Nyangbingo.UI
             for (var index = 0; index < tabButtons.Length; index++)
             {
                 var label = tabButtons[index]?.GetComponentInChildren<Text>();
-                if (label != null) label.text = $"{UnifiedTabHotkey(index)} · {UnifiedTabLabel(index)}";
+                if (label == null) continue;
+                // 인벤토리·장비·도감에는 키 이름을 붙이지 않는다.
+                var hotkey = UnifiedTabHotkey(index);
+                label.text = hotkey == KeyCode.None
+                    ? UnifiedTabLabel(index)
+                    : $"{UnifiedTabHotkey(index)} · {UnifiedTabLabel(index)}";
             }
             BuildDetailsScrollArea();
             BuildCraftingList();
@@ -1886,28 +1888,8 @@ namespace Nyangbingo.UI
 
         private bool TryHandlePageHotkey()
         {
-            // Number keys belong to the hotbar. Modified keys are reserved for debug tools.
-            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) ||
-                Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) return false;
-            if (Input.GetKeyDown(KeyCode.I))
-            {
-                if ((shell == null || shell.Screen == GameShellScreen.Gameplay) && Time.timeScale > 0f)
-                    TogglePage(Page.Gathering);
-                return true;
-            }
-            var targetIndex = -1;
-            for (var index = 0; index < UnifiedTabCount; index++)
-            {
-                if (!Input.GetKeyDown(UnifiedTabHotkey(index))) continue;
-                targetIndex = index;
-                break;
-            }
-            if (targetIndex < 0) return false;
-            var target = (Page)targetIndex;
-
-            if ((shell != null && shell.Screen != GameShellScreen.Gameplay) || Time.timeScale <= 0f) return true;
-            TogglePage(target);
-            return true;
+            // 재료·제작·장비·도감 창은 열지 않는다.
+            return false;
         }
 
         private void TogglePage(Page target)
@@ -2231,6 +2213,54 @@ namespace Nyangbingo.UI
 
         private void MatchCursorCountToInventory() =>
             MatchCountToInventory(inventoryCursorIcon, inventoryCursorCount);
+
+        /// <summary>
+        /// 재료 개수는 볼드 글꼴 대신 숫자 그림을 쓴다. 글꼴 8과 9가 비슷하게 뭉개지지 않게 하고,
+        /// 8×8 칸의 오른쪽 아래에 붙인다.
+        /// </summary>
+        private void ShowCraftIngredientCount(Image icon, Text legacyCount, int required)
+        {
+            if (legacyCount != null)
+            {
+                legacyCount.text = string.Empty;
+                legacyCount.enabled = false;
+            }
+            if (icon == null) return;
+            var presenter = CraftCountGlyphs(icon);
+            var visible = icon.enabled && required > 0 && presenter != null;
+            if (!visible)
+            {
+                if (presenter != null) presenter.SetVisible(false);
+                return;
+            }
+            const float height = 5f;
+            presenter.SetScale(height / 15f);
+            presenter.SetText(required.ToString());
+            presenter.SetColor(Color.white);
+            presenter.SetVisible(true);
+            var iconRect = icon.rectTransform;
+            var width = Mathf.Max(height, presenter.RenderedWidth);
+            var rect = presenter.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.localScale = Vector3.one;
+            rect.anchoredPosition = new Vector2(
+                iconRect.rect.width - width * .5f,
+                -(iconRect.rect.height - height * .5f));
+        }
+
+        private RuntimePixelGlyphPresenter CraftCountGlyphs(Image icon)
+        {
+            var glyphs = gameplayArtCatalog?.ShellNumberGlyphs;
+            if (glyphs == null || glyphs.Count != RuntimePixelGlyphPresenter.ExpectedGlyphCount) return null;
+            var existing = icon.transform.Find("RequiredGlyphs");
+            if (existing != null) return existing.GetComponent<RuntimePixelGlyphPresenter>();
+            var root = new GameObject("RequiredGlyphs", typeof(RectTransform));
+            root.transform.SetParent(icon.transform, false);
+            var presenter = root.AddComponent<RuntimePixelGlyphPresenter>();
+            presenter.ConfigureForRuntime(glyphs, 5f / 15f);
+            return presenter;
+        }
 
         private void MatchCountToInventory(Image targetIcon, Text targetCount)
         {
@@ -2797,7 +2827,7 @@ namespace Nyangbingo.UI
                 ApplyCraftWindowChrome(false);
                 return;
             }
-            foreach (var tab in tabButtons) if (tab != null) tab.gameObject.SetActive(true);
+            foreach (var tab in tabButtons) if (tab != null) tab.gameObject.SetActive(false);
             var gathering = page == Page.Gathering;
             var equipment = page == Page.Equipment;
             var codex = page == Page.Codex;
@@ -4381,11 +4411,11 @@ namespace Nyangbingo.UI
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             return page == Page.Gathering
                 ? "좌클릭 전체 · 우클릭 절반 집기/1개 놓기 · E 사용/설치 · ESC 닫기"
-                : "Tab 인벤 · C 제작 · G 장비 · J 도감 · ESC 닫기 · E 실행";
+                : "C 제작 · ESC 닫기 · E 실행";
 #else
             return page == Page.Gathering
                 ? "좌클릭 전체 · 우클릭 절반 집기/1개 놓기 · E 사용/설치 · ESC 닫기"
-                : "Tab 인벤 · C 제작 · G 장비 · J 도감 · ESC 닫기 · E 실행";
+                : "C 제작 · ESC 닫기 · E 실행";
 #endif
         }
 
