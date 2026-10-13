@@ -231,6 +231,7 @@ namespace Nyangbingo.UI
             runtimeServices = services;
             temperatureText = temperature;
             sealText = seal;
+            HideLegacySealTemperatureText();
             dayText = day;
             clawText = claw;
             playerHealthText = healthText;
@@ -1505,19 +1506,21 @@ namespace Nyangbingo.UI
             temperatureArt.enabled = temperatureArt.sprite != null;
         }
 
+        private void HideLegacySealTemperatureText()
+        {
+            if (sealText == null) return;
+            sealText.text = string.Empty;
+            sealText.enabled = false;
+            sealText.gameObject.SetActive(false);
+        }
+
         private void RefreshRoomTemperature()
         {
-            if (sealText == null || runtimeServices?.RoomTemperature == null ||
+            HideLegacySealTemperatureText();
+            if (runtimeServices?.RoomTemperature == null ||
                 playerController == null) return;
             var roomService = runtimeServices.RoomTemperature;
             var celsius = roomService.Resolve(playerController.transform.position);
-            var band = RoomTempPresentation.ResolveBand(celsius, roomService.ColdEnterCelsius,
-                roomService.FrozenEnterCelsius);
-            // 0도는 의미 없는 기본값이라 숨긴다.
-            var formatted = RoomTempPresentation.FormatCelsius(celsius);
-            sealText.text = formatted;
-            sealText.color = RoomTempPresentation.BandColor(band);
-            sealText.gameObject.SetActive(!Mathf.Approximately(celsius, 0f));
             if (RoomTempPresentation.ShouldWarnHypothermia(celsius, roomService.FrozenEnterCelsius) &&
                 !hypothermiaCuePlayed)
             {
