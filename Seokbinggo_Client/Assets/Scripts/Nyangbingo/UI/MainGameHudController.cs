@@ -1168,12 +1168,16 @@ namespace Nyangbingo.UI
             var rect = playerHealthFill.rectTransform;
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
-            // 숫자 칸 아래 홈. 위·아래는 x 6부터, 가운데 두 줄은 x 5부터 뚫려 있다.
-            rect.anchoredPosition = new Vector2(5f, -28f);
-            rect.sizeDelta = new Vector2(51f * ratio, 4f);
+            // 홈은 x 5부터 뚫려 있고, 그 왼쪽 한 줄(x 4)은 어두운 테두리라 비어 보인다.
+            rect.anchoredPosition = new Vector2(4f, -28f);
+            rect.sizeDelta = new Vector2(52f * ratio, 4f);
             playerHealthFill.color = new Color(0.75f, 0.18f, 0.16f, 1f);
             playerHealthFill.enabled = ratio > .001f;
-            rect.SetSiblingIndex(0);
+            var frame = playerVitalsArt != null ? playerVitalsArt.rectTransform : null;
+            if (frame != null && frame.parent == rect.parent)
+                rect.SetSiblingIndex(frame.GetSiblingIndex() + 1);
+            else
+                rect.SetAsLastSibling();
         }
 
         private void RefreshStatusArtHud()
