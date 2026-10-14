@@ -572,6 +572,7 @@ namespace Nyangbingo.World
                 // 이동 중에는 애니메이터의 공격 방향 잠금이 해제된 뒤 이동 방향을 적용한다.
                 characterAnimator?.SetFacing(horizontalFacing);
             }
+            UpdateFootGroundFacing();
             if (!ropeClimbing && !ropeDetachedThisFrame &&
                 (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) ||
                  Input.GetKeyDown(KeyCode.Space)))
@@ -2330,6 +2331,9 @@ namespace Nyangbingo.World
             var frames = gameplayArtCatalog?.FindWeaponAttackFrames(activeProfile?.Id);
             var direction = BowCombatRules.IsBowProfile(activeProfile)
                 ? facing.normalized : ResolveBodyAttackDirection();
+            if (!BowCombatRules.IsBowProfile(activeProfile) &&
+                TryResolveFootGroundLook(out var lookX))
+                direction = new Vector2(lookX, 0f);
             characterAnimator?.PlayWeaponAttack(frames, ResolveWeaponAttackDuration(frames?.Count ?? 0));
             characterAnimator?.HoldAttackFacing(direction);
         }
@@ -2547,6 +2551,34 @@ namespace Nyangbingo.World
             if (!upperRow) return Vector2.zero;
             var tileHeight = tiles.GetCellWorldBounds(bodyCell).size.y;
             return (Vector2)transform.InverseTransformVector(Vector3.up * tileHeight);
+        }
+
+        private void UpdateFootGroundFacing()
+        {
+            if (Mathf.Abs(movementInput.x) > Mathf.Epsilon) return;
+            if (!TryResolveFootGroundLook(out var directionX)) return;
+            horizontalFacing = directionX < 0f ? Vector2.left : Vector2.right;
+            characterAnimator?.SetFacing(horizontalFacing);
+        }
+
+        /// <summary>
+        /// 발 밑 칸은 칸 중심이 아니라 마우스의 좌우로 몸을 돌린다.
+        /// 몸통과 같은 높이의 옆 칸은 기존처럼 칸 열을 유지한다.
+        /// </summary>
+        private bool TryResolveFootGroundLook(out float directionX)
+        {
+            directionX = 0f;
+            var tiles = bootstrap?.TileService;
+            if (tiles == null || playerCollider == null || !TryGetInteractionAimWorld(out var mouse))
+                return false;
+            var bounds = playerCollider.bounds;
+            var target = tiles.WorldToCell(mouse);
+            var groundY = tiles.WorldToCell(new Vector2(bounds.center.x, bounds.min.y - .02f)).y;
+            if (target.y > groundY) return false;
+            var delta = mouse.x - bounds.center.x;
+            if (Mathf.Abs(delta) <= .0001f) return false;
+            directionX = Mathf.Sign(delta);
+            return true;
         }
 
         private Vector2 ResolveBodyAttackDirection()
