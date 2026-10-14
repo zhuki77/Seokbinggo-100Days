@@ -107,7 +107,11 @@ namespace Nyangbingo.UI
             var titleColors = titleButton.colors;
             titleColors.disabledColor = Color.white;
             titleButton.colors = titleColors;
-            titleButton.onClick.AddListener(() => listOpen = !listOpen);
+            titleButton.onClick.AddListener(() =>
+            {
+                listOpen = !listOpen;
+                PersistUiState();
+            });
             hint = Label("GoalHint", root, textTemplate, new Vector2(sideInset, -21),
                 new Vector2(innerWidth, Mathf.Max(18f, questSize.y - 29f)), 7);
             KeepInside(hint);
@@ -119,8 +123,9 @@ namespace Nyangbingo.UI
             completion.alignment = TextAnchor.MiddleCenter;
             completion.color = new Color(.55f, 1f, .7f);
             var goals = services.Goals.Progress.SelectableGoals;
-            var listHeight = Mathf.Clamp(goals.Count * 17f + 6f, 20f, 90f);
-            list = Panel("GoalSelection", root, new Vector2(0, -questSize.y), new Vector2(questSize.x, listHeight));
+            var listHeight = Mathf.Max(20f, goals.Count * 17f + 6f);
+            list = Panel("GoalSelection", root, new Vector2(questSize.x + 4f, 0f),
+                new Vector2(questSize.x, listHeight));
             list.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
             options = new UnityEngine.UI.Button[goals.Count];
             var rowWidth = Mathf.Max(20f, questSize.x - 6f);
@@ -134,7 +139,12 @@ namespace Nyangbingo.UI
                 var name = Label("Name", row, textTemplate, new Vector2(4, 0), new Vector2(rowWidth - 8f, 16), 7);
                 KeepInside(name);
                 name.text = goal.DisplayName;
-                options[i].onClick.AddListener(() => { services.Goals.Progress.Select(goal.Id); listOpen = false; });
+                options[i].onClick.AddListener(() =>
+                {
+                    services.Goals.Progress.Select(goal.Id);
+                    listOpen = false;
+                    PersistUiState();
+                });
             }
             dawnRoot = Panel("DawnPreservationConfirmation", parent.transform, Vector2.zero, new Vector2(260, 168));
             dawnRoot.anchorMin = dawnRoot.anchorMax = dawnRoot.pivot = Vector2.one * .5f;
@@ -178,10 +188,13 @@ namespace Nyangbingo.UI
         {
             windowHidden = true;
             listOpen = false;
+            PersistUiState();
             if (list != null) list.gameObject.SetActive(false);
             if (root != null) root.gameObject.SetActive(false);
             if (questShadow != null) questShadow.enabled = false;
         }
+
+        private void PersistUiState() => services?.Goals?.Progress.SetUiState(windowHidden, listOpen);
 
         private void LateUpdate()
         {
@@ -191,7 +204,10 @@ namespace Nyangbingo.UI
                 restoreVersion = services.Goals.RestoreVersion;
                 dawnDayShown = dawnShownFrame = 0;
                 completionUntil = nextEvaluation = nextGuideEvaluation = 0f;
-                listOpen = firstShelterCompleteShown = false;
+                var savedProgress = services.Goals.Progress;
+                windowHidden = savedProgress.HasSavedUiState && savedProgress.WindowHidden;
+                listOpen = savedProgress.HasSavedUiState && savedProgress.SelectionListOpen;
+                firstShelterCompleteShown = savedProgress.HasSavedUiState && savedProgress.FirstShelterComplete;
                 // Restore owns the queue's persisted once-per-day history.
                 guides.BeginDay(bootstrap?.TimeService?.Day ?? 1);
             }
@@ -225,6 +241,7 @@ namespace Nyangbingo.UI
             {
                 windowHidden = !windowHidden;
                 if (windowHidden) listOpen = false;
+                PersistUiState();
             }
             root.gameObject.SetActive(visible && !windowHidden);
             if (reopenButton != null) reopenButton.gameObject.SetActive(visible);
@@ -284,6 +301,7 @@ namespace Nyangbingo.UI
                 if (reopenButton != null) reopenButton.gameObject.SetActive(false);
             }
             RefreshArrow();
+            PersistUiState();
         }
 
         private void RefreshDawn()
@@ -531,6 +549,7 @@ namespace Nyangbingo.UI
             {
                 windowHidden = !windowHidden;
                 if (windowHidden) listOpen = false;
+                PersistUiState();
                 RefreshQuestButtonHighlight();
             });
             reopenIcon = Image("Icon", rect, new Vector2(3f, -3f), new Vector2(10f, 10f));

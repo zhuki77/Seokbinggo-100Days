@@ -2,11 +2,10 @@ using System.Collections.Generic;
 using Nyangbingo.Data;
 using Nyangbingo.World;
 using UnityEngine;
-using Input = Nyangbingo.Core.GameplayInput;
 
 namespace Nyangbingo.UI
 {
-    /// <summary>v86 S2. 예시·진단 표식만 그리며 설치 및 밀폐 규칙을 변경하지 않는다.</summary>
+    /// <summary>v86 S2. 진단 표식만 그리며 설치 및 밀폐 규칙을 변경하지 않는다.</summary>
     public sealed class MainGameBuildingGuideUiController : MonoBehaviour
     {
         private MainGameRuntimeServices services;
@@ -18,12 +17,10 @@ namespace Nyangbingo.UI
         private MainGameTurretRuntime placement;
         private Canvas canvas;
         private Camera worldCamera;
-        private RectTransform worldRoot, toggle;
+        private RectTransform worldRoot;
         private RectTransform miningWarning, recoveryPanel, baseArrow;
         private UnityEngine.UI.Image baseArrowImage;
         private UnityEngine.UI.Text recoveryText;
-        private UnityEngine.UI.Image toggleIcon;
-        private Sprite checkOn, checkOff;
         private IReadOnlyList<Sprite> leakFrames;
         private IReadOnlyList<Sprite> sealSuccessFrames;
         private RectTransform sealSuccess;
@@ -34,19 +31,15 @@ namespace Nyangbingo.UI
         // 납품 파동의 전체 프레임 공통 바닥 기준: 16px 캔버스 아래 투명 여백 5px.
         private const float SealSuccessBottomPaddingPixels = 5f;
         private Sprite repairSprite;
-        private bool outlineEnabled = true, g05Complete;
         private int restoreVersion = -1;
         private float nextEvaluation, successUntil;
-        private readonly List<RectTransform> outlines = new List<RectTransform>();
-        private readonly List<Vector3Int> outlineOffsets = new List<Vector3Int>();
         private readonly List<RectTransform> holes = new List<RectTransform>();
         private readonly List<RectTransform> doors = new List<RectTransform>();
         private readonly List<RepairView> repairs = new List<RepairView>();
         private sealed class RepairView
         { public Vector3Int Cell; public RectTransform Rect; public float Until, VisualYOffset; }
         public string CurrentMessage { get; private set; } = string.Empty;
-        public bool IsPointerOverInteraction => toggle != null && toggle.gameObject.activeInHierarchy &&
-            RectTransformUtility.RectangleContainsScreenPoint(toggle, Input.mousePosition, EventCamera);
+        public bool IsPointerOverInteraction => false;
         private Camera EventCamera => canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
 
         public void Configure(Canvas parent, UnityEngine.UI.Text template, GameDataCatalog data,
@@ -55,7 +48,7 @@ namespace Nyangbingo.UI
         {
             if (worldRoot != null || parent == null || template == null || runtime.BuildingGuide == null) return;
             canvas = parent; catalog = data; services = runtime; bootstrap = mainBootstrap; player = controller;
-            worldCamera = Camera.main; checkOn = art?.ShellCheckOn; checkOff = art?.ShellCheckOff;
+            worldCamera = Camera.main;
             leakFrames = art?.SealLeakMarkerFrames; repairSprite = art?.SealRepairCheck;
             sealSuccessFrames = art?.SealSuccessFrames;
             worldRoot = Rect("BuildingGuideWorld", parent.transform);
@@ -94,41 +87,10 @@ namespace Nyangbingo.UI
             baseLabel.rectTransform.anchoredPosition = new Vector2(0, -15);
             recoveryPanel.gameObject.SetActive(false); baseArrow.gameObject.SetActive(false);
             sealSuccess = ArtMarker("SealSuccessWave", null);
-            toggle = Rect("ShelterExampleToggle", parent.transform);
-            toggle.anchorMin = toggle.anchorMax = toggle.pivot = Vector2.one;
-            toggle.anchoredPosition = new Vector2(-12, -62); toggle.sizeDelta = new Vector2(150, 20);
-            var bg = toggle.gameObject.AddComponent<UnityEngine.UI.Image>();
-            bg.color = new Color(.05f, .12f, .16f, .9f); bg.raycastTarget = true;
-            var button = toggle.gameObject.AddComponent<UnityEngine.UI.Button>(); button.targetGraphic = bg;
-            button.onClick.AddListener(() => outlineEnabled = !outlineEnabled);
-            toggleIcon = Rect("Enabled", toggle).gameObject.AddComponent<UnityEngine.UI.Image>();
-            toggleIcon.rectTransform.anchoredPosition = new Vector2(-61, 0);
-            toggleIcon.rectTransform.sizeDelta = new Vector2(12, 12); toggleIcon.raycastTarget = false;
-            var label = Instantiate(template, toggle); label.gameObject.SetActive(true); label.enabled = true;
-            label.name = "ExampleSize"; label.raycastTarget = false; label.color = Color.white;
-            label.fontSize = 7; label.resizeTextForBestFit = false; label.alignment = TextAnchor.MiddleLeft;
-            label.rectTransform.anchorMin = label.rectTransform.anchorMax = label.rectTransform.pivot = Vector2.one * .5f;
-            label.rectTransform.anchoredPosition = new Vector2(8, 0); label.rectTransform.sizeDelta = new Vector2(120, 18);
-            label.rectTransform.localScale = Vector3.one;
-            var size = services.BuildingGuide.OutlineInnerSize;
-            // 조작 버튼명은 S2 명세의 용어다. 행동 안내 문장은 Message()로 CSV에서만 읽는다.
-            label.text = "예시 윤곽 · " + size.x + "×" + size.y;
-            // 코어를 내부 왼쪽 두 번째 칸에 놓은 예시. 바닥은 코어 한 칸 아래이며 문은 오른쪽 1×2.
-            for (var x = -2; x <= size.x - 1; x++)
-                for (var y = -1; y <= size.y; y++)
-                {
-                    if (x != -2 && x != size.x - 1 && y != -1 && y != size.y) continue;
-                    if (x == size.x - 1 && (y == 0 || y == 1)) continue;
-                    outlineOffsets.Add(new Vector3Int(x, y, 0));
-                    outlines.Add(Border("ExampleBoundary", new Color(.55f, .8f, 1f, .3f)));
-                }
-            // 문 두 칸은 같은 외곽선으로 그려 한 문임을 표시한다.
-            outlineOffsets.Add(new Vector3Int(size.x - 1, 0, 0));
-            outlines.Add(Border("ExampleDoor", new Color(.8f, .9f, 1f, .5f)));
             for (var i = 0; i < 3; i++) holes.Add(ArtMarker("MissingBoundary", null));
             services.BuildingGuide.Repaired += HandleRepaired;
             services.BuildingGuide.SealedNow += HandleSealed;
-            worldRoot.gameObject.SetActive(false); toggle.gameObject.SetActive(false);
+            worldRoot.gameObject.SetActive(false);
         }
 
         private void LateUpdate()
@@ -145,7 +107,6 @@ namespace Nyangbingo.UI
                 restoreVersion = services.Goals.RestoreVersion;
                 ClearRepairs(); successUntil = nextEvaluation = 0;
                 ClearSuccessAnimation();
-                g05Complete = services.Goals.Progress.IsComplete("g05"); outlineEnabled = !g05Complete;
             }
             var visible = shell != null && shell.IsInitialized && !services.Goals.IsSuspended &&
                 !SceneTransitionRequest.IsTransitionActive && !SceneTransitionRequest.IsLoadingSceneLoaded() &&
@@ -163,19 +124,12 @@ namespace Nyangbingo.UI
             RefreshMaintenanceUi(gameplayVisible, visible);
             if (!visible)
             {
-                services.BuildingGuide.SetPlacement(null, default); toggle.gameObject.SetActive(false);
+                services.BuildingGuide.SetPlacement(null, default);
                 ClearSuccessAnimation();
                 return;
             }
             var guide = services.BuildingGuide;
             RefreshSuccessAnimation();
-            if (!g05Complete && services.Goals.Progress.IsComplete("g05")) { g05Complete = true; outlineEnabled = false; }
-            toggle.gameObject.SetActive(guide.Core.HasValue);
-            toggleIcon.sprite = outlineEnabled ? checkOn : checkOff;
-            toggleIcon.enabled = toggleIcon.sprite != null;
-            for (var i = 0; i < outlines.Count; i++)
-                Position(outlines[i], guide.Core.GetValueOrDefault() + outlineOffsets[i],
-                    i == outlines.Count - 1 ? 2 : 1, guide.Core.HasValue && outlineEnabled);
             for (var i = 0; i < holes.Count; i++)
             {
                 var frame = leakFrames != null && leakFrames.Count > 0
@@ -353,7 +307,7 @@ namespace Nyangbingo.UI
             { rect.sizeDelta = b - a; rect.localScale = Vector3.one; }
             else
             {
-                // 예시 윤곽·문 테두리는 단위 선을 실제 셀 크기로 확대한다.
+                // 진단 테두리는 단위 선을 실제 셀 크기로 확대한다.
                 rect.sizeDelta = Vector2.zero; rect.localScale = new Vector3(b.x - a.x, b.y - a.y, 1);
             }
             rect.gameObject.SetActive(true);
@@ -364,7 +318,6 @@ namespace Nyangbingo.UI
             if (services?.BuildingGuide != null)
             { services.BuildingGuide.Repaired -= HandleRepaired; services.BuildingGuide.SealedNow -= HandleSealed; }
             if (worldRoot != null) Destroy(worldRoot.gameObject);
-            if (toggle != null) Destroy(toggle.gameObject);
             if (recoveryPanel != null) Destroy(recoveryPanel.gameObject);
             if (baseArrow != null) Destroy(baseArrow.gameObject);
         }
