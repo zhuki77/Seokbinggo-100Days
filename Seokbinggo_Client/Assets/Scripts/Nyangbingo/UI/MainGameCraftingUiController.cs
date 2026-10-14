@@ -3181,7 +3181,7 @@ namespace Nyangbingo.UI
                 var condition = item != null && slot.hasStorageCondition
                     ? $" {Mathf.RoundToInt(slot.EffectiveStorageCondition * 100f)}%"
                     : string.Empty;
-                label.text = count + warning + condition;
+                label.text = count;
                 label.gameObject.SetActive(true);
                 label.enabled = true;
                 label.alignment = TextAnchor.LowerRight;
@@ -3195,6 +3195,32 @@ namespace Nyangbingo.UI
                 transferCountRect.anchorMax = Vector2.one;
                 transferCountRect.offsetMin = new Vector2(1f, 1f);
                 transferCountRect.offsetMax = new Vector2(-1f, -1f);
+                var status = label.transform.parent.Find("StorageConditionStatus")?.GetComponent<Text>();
+                var statusText = (warning + condition).Trim();
+                if (status == null && statusText.Length > 0)
+                    status = CreateText(label.transform.parent, "StorageConditionStatus", 6,
+                        TextAnchor.UpperLeft, Vector2.zero, Vector2.zero);
+                if (status != null)
+                {
+                    status.gameObject.SetActive(statusText.Length > 0);
+                    status.text = statusText;
+                    status.font = label.font;
+                    status.fontStyle = label.fontStyle;
+                    status.alignment = TextAnchor.UpperLeft;
+                    status.raycastTarget = false;
+                    status.resizeTextForBestFit = true;
+                    status.resizeTextMinSize = 3;
+                    status.resizeTextMaxSize = 6;
+                    status.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    status.verticalOverflow = VerticalWrapMode.Truncate;
+                    var statusRect = status.rectTransform;
+                    statusRect.anchorMin = new Vector2(0f, 1f);
+                    statusRect.anchorMax = Vector2.one;
+                    statusRect.pivot = new Vector2(0f, 1f);
+                    statusRect.anchoredPosition = new Vector2(-1f, 1f);
+                    statusRect.sizeDelta = new Vector2(-2f, 6f);
+                    status.transform.SetAsLastSibling();
+                }
             }
         }
 
