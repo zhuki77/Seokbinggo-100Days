@@ -697,8 +697,8 @@ namespace Nyangbingo.UI
             equip.SetParent(canvas.transform, false);
             equip.anchorMin = equip.anchorMax = new Vector2(1f, 1f);
             equip.pivot = new Vector2(1f, 1f);
-            // Flush with the right edge, directly under the 0.75-scale vitals sheet.
-            equip.anchoredPosition = new Vector2(-4f, -52.5f);
+            // 체력 틀은 96×64, 위 여백 4. 발톱 칸이 틀 맨 위에 있으므로 틀 아래까지 내려야 드롭이 닿는다.
+            equip.anchoredPosition = new Vector2(-4f, -74f);
             equip.localScale = new Vector3(.42f, .42f, 1f);
             equip.SetAsLastSibling();
             ApplySideHudVisibility();
@@ -1712,7 +1712,9 @@ namespace Nyangbingo.UI
             Array.Resize(ref equipmentSlotIcons, 7);
             Array.Resize(ref equipmentSlotFallbackLabels, 7);
             equipmentSlotButtons[ClawSlotSystem.VisualSlotIndex] = button;
-            equipmentSlotBackgrounds[ClawSlotSystem.VisualSlotIndex] = clone.GetComponent<Image>();
+            var background = clone.GetComponent<Image>();
+            if (background != null) background.raycastTarget = true;
+            equipmentSlotBackgrounds[ClawSlotSystem.VisualSlotIndex] = background;
             equipmentSlotIcons[ClawSlotSystem.VisualSlotIndex] = icon;
             equipmentSlotFallbackLabels[ClawSlotSystem.VisualSlotIndex] = fallback;
         }
@@ -2165,7 +2167,8 @@ namespace Nyangbingo.UI
         {
             var source = button.GetComponent<InventoryEquipmentDragSource>() ??
                          button.gameObject.AddComponent<InventoryEquipmentDragSource>();
-            source.Configure(pointer => BeginEquipmentDrag(index, button.gameObject, pointer), CancelEquipmentDrag);
+            source.Configure(pointer => BeginEquipmentDrag(index, button.gameObject, pointer),
+                CancelEquipmentDrag, TryDropEquipmentUnderPointer);
         }
 
         public static void WireEquipmentDrop(Button button, Action<PointerEventData> dropped)
@@ -2198,8 +2201,32 @@ namespace Nyangbingo.UI
             equipmentDragPointerId = pointer.pointerId;
             equipmentDropFeedback = null;
             inventorySelectedIndex = index;
+            // 체력 틀이 위에 있으면 발톱 칸이 보여도 드롭이 틀에 먹힌다.
+            equipmentVisualRoot.transform.SetAsLastSibling();
             if (turretRuntime != null && turretRuntime.IsPlacementPreviewActive) turretRuntime.CancelPlacementPreview();
             RefreshEquipmentVisual();
+        }
+
+        private void TryDropEquipmentUnderPointer(PointerEventData pointer)
+        {
+            if (!IsDraggingEquipment || pointer == null || equipmentSlotButtons == null ||
+                pointer.pointerDrag != equipmentDragSource || pointer.pointerId != equipmentDragPointerId)
+                return;
+            var canvas = equipmentVisualRoot != null
+                ? equipmentVisualRoot.GetComponentInParent<Canvas>()?.rootCanvas : null;
+            var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera : null;
+            for (var index = equipmentSlotButtons.Length - 1; index >= 0; index--)
+            {
+                var button = equipmentSlotButtons[index];
+                if (button == null || !button.gameObject.activeInHierarchy || !equipmentDrag.CanDrop(index))
+                    continue;
+                if (!RectTransformUtility.RectangleContainsScreenPoint(
+                        (RectTransform)button.transform, pointer.position, camera))
+                    continue;
+                DropInventoryEquipment(index, pointer);
+                return;
+            }
         }
 
         private void DropInventoryEquipment(int visualSlot, PointerEventData pointer)

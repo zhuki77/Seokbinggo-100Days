@@ -168,7 +168,20 @@ public static class NyangbingoEquipmentDragDropRegressionTests
             Require(drag.Begin(0) && drag.TryDrop(0, new EquipmentSystem(), active) &&
                     active.EquippedItemId == item.Id && bag.Count(item.Id) == 1, "weapon equip " + item.Id);
         }
-        Require(checkedEquipment > 0 && weapons.Length > 0, "empty catalog test");
+        var claws = catalog.Items.Where(item => item != null && ClawSlotSystem.IsClawItem(item.Id)).ToArray();
+        foreach (var item in claws)
+        {
+            var bag = new Inventory(catalog.FindItem, 2);
+            Require(bag.TryAdd(item.Id, 1), "claw fixture " + item.Id);
+            var drag = new EquipmentInventoryDrag(bag, catalog.FindEquipment);
+            var claw = new ClawSlotSystem(bag, catalog.FindItem);
+            var active = new ActiveSlotSystem(bag, catalog.FindItem, true);
+            Require(drag.Begin(0) && drag.CanDrop(ClawSlotSystem.VisualSlotIndex) && !drag.CanDrop(0) &&
+                    drag.TryDrop(ClawSlotSystem.VisualSlotIndex, new EquipmentSystem(), active, claw) &&
+                    claw.EquippedItemId == item.Id && bag.Count(item.Id) == 0,
+                "claw drag equip " + item.Id);
+        }
+        Require(checkedEquipment > 0 && weapons.Length > 0 && claws.Length > 0, "empty catalog test");
         Debug.Log($"[EquipmentDragDrop] Catalog: {checkedEquipment} equipment x 6 slots, {weapons.Length} weapons/tools.");
     }
 

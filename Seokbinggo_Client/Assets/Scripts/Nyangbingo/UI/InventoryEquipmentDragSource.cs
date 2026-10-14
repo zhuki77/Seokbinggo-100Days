@@ -10,12 +10,15 @@ namespace Nyangbingo.UI
     {
         private Action<PointerEventData> begin;
         private Action end;
+        private Action<PointerEventData> endDrag;
         private bool dragging;
 
-        public void Configure(Action<PointerEventData> onBegin, Action onEnd)
+        public void Configure(Action<PointerEventData> onBegin, Action onEnd,
+            Action<PointerEventData> onEndDrag = null)
         {
             begin = onBegin;
             end = onEnd;
+            endDrag = onEndDrag;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -32,12 +35,14 @@ namespace Nyangbingo.UI
         public void OnEndDrag(PointerEventData eventData)
         {
             eventData.eligibleForClick = false;
-            Finish();
+            if (!dragging) return;
+            dragging = false;
+            // 슬롯의 Drop보다 나중에 온다. 이미 장착됐으면 드래그가 꺼져 있어 아래는 빈 동작이다.
+            endDrag?.Invoke(eventData);
+            end?.Invoke();
         }
 
-        private void OnDisable() => Finish();
-
-        private void Finish()
+        private void OnDisable()
         {
             if (!dragging) return;
             dragging = false;
