@@ -205,12 +205,14 @@ namespace Nyangbingo.World
         /// </summary>
         private bool TryFadeForegroundTile(Vector3Int cell)
         {
-            // 버섯·문은 칸 전체를 덮는 하얀 조준 막을 유지한다.
+            // 표고·석이·문은 칸 전체를 덮는 하얀 조준 막을 유지한다.
+            // 느타리는 캣닢처럼 칸 아트 색만 낮춘다.
             if (tileService != null && tileService.InBounds(cell))
             {
                 var id = tileService.GetTile(cell).elementType;
-                if (WorldTileTypes.IsPassableMushroom(id) || id == TileService.DoorElementType ||
-                    id == TileService.DoorTopElementType) return false;
+                if (id != WorldTileTypes.OysterMushroom &&
+                    (WorldTileTypes.IsPassableMushroom(id) || id == TileService.DoorElementType ||
+                     id == TileService.DoorTopElementType)) return false;
             }
             var foreground = worldRenderer != null ? worldRenderer.Foreground : null;
             if (foreground == null || foreground.GetSprite(cell) == null)
