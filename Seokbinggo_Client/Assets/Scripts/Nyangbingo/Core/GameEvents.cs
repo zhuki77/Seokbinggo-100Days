@@ -21,6 +21,8 @@ namespace Nyangbingo.Core
         public static event Action OnBaekjungEnd;
         public static event Action<MiningImpactSurface> OnMiningImpact;
         public static event Action OnItemAcquired;
+        public static event Action OnEquipmentUnequipped;
+        public static event Action OnEquipmentEquipped;
         public static event Action<ItemDefinition, int, Vector2> OnWorldItemPickedUp;
         public static event Action OnPlayerDamaged;
         public static event Action OnYokaiDamaged;
@@ -81,6 +83,8 @@ namespace Nyangbingo.Core
             if (!string.IsNullOrWhiteSpace(definitionId)) OnPlacedObjectBuilt?.Invoke(definitionId);
         }
         public static void RaiseChestOpened() => OnChestOpened?.Invoke();
+        public static void RaiseEquipmentUnequipped() => OnEquipmentUnequipped?.Invoke();
+        public static void RaiseEquipmentEquipped() => OnEquipmentEquipped?.Invoke();
         public static void RaiseWallDamaged() => OnWallDamaged?.Invoke();
         public static void RaiseWallDurabilityChanged(
             Vector3Int cell, float current, float maximum, bool destroyed) =>

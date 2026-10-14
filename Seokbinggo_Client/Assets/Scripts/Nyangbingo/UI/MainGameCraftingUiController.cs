@@ -1648,6 +1648,7 @@ namespace Nyangbingo.UI
                 equipmentSlotButtons[index].onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex));
                 WireInventoryPointer(equipmentSlotButtons[index], pointer =>
                 {
+                    if (TryShiftUnequipVisualSlot(capturedIndex, pointer)) return;
                     if (pointer.button == PointerEventData.InputButton.Right)
                         ShowEquipmentDescription(EquippedItemIdForVisualSlot(capturedIndex));
                 });
@@ -1711,7 +1712,66 @@ namespace Nyangbingo.UI
         private void TransferPlayerSlot(int index, PointerEventData pointer)
         {
             if (TryShiftStorageTransfer(runtimeServices.PlayerInventory, index, pointer)) return;
+            if (TryShiftEquipInventorySlot(index, pointer)) return;
             ClickInventorySlot(runtimeServices.PlayerInventory, index, pointer);
+        }
+
+        private bool IsQuickEquipmentClick(PointerEventData pointer) => !HasStorageMode &&
+            pointer.button == PointerEventData.InputButton.Left &&
+            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
+
+        private bool CanQuickChangeEquipment => runtimeServices?.IsInitialized == true &&
+            Time.timeScale > 0f && (shell == null || shell.Screen == GameShellScreen.Gameplay) &&
+            !HasHeldInventoryItem && !IsDraggingItem;
+
+        private bool TryShiftEquipInventorySlot(int index, PointerEventData pointer)
+        {
+            if (!IsQuickEquipmentClick(pointer)) return false;
+            if (!CanQuickChangeEquipment) return true;
+            var inventory = runtimeServices.PlayerInventory;
+            if (index < 0 || index >= inventory.Capacity) return true;
+            var source = inventory.Slots[index];
+            if (source.amount <= 0) return false;
+            var equipment = gameDataCatalog.FindEquipment(source.itemId);
+            if (equipment == null && !ActiveSlotSystem.IsAllowedItemId(source.itemId)) return false;
+            bool succeeded;
+            if (ActiveSlotSystem.IsAllowedItemId(source.itemId))
+            {
+                var active = runtimeServices.ActiveSlot;
+                succeeded = active.EquippedItemId == source.itemId
+                    ? active.IsUsingEquippedItem || active.Toggle()
+                    : active.TryEquip(source.itemId, index);
+            }
+            else
+            {
+                var system = runtimeServices.EquipmentSystem;
+                var slot = equipment.Slot;
+                if (equipment.IsAccessory)
+                    slot = system.Get(EquipmentSlot.AccessoryOne) == null ? EquipmentSlot.AccessoryOne :
+                        system.Get(EquipmentSlot.AccessoryTwo) == null ? EquipmentSlot.AccessoryTwo :
+                        EquipmentSlot.AccessoryOne;
+                // Spare copies must not move an already worn accessory between slots.
+                succeeded = FindEquippedSlot(equipment).HasValue || system.TryEquipInSlot(equipment, slot, index);
+            }
+            ShowMessage(succeeded ? $"{gameDataCatalog.ItemDisplayName(source.itemId, "장비")} 장착 완료" :
+                "장착할 수 없습니다. 인벤토리 공간을 확인하세요.");
+            Refresh();
+            return true;
+        }
+
+        private bool TryShiftUnequipVisualSlot(int visualSlot, PointerEventData pointer)
+        {
+            if (!IsQuickEquipmentClick(pointer)) return false;
+            if (!CanQuickChangeEquipment) return true;
+            var id = EquippedItemIdForVisualSlot(visualSlot);
+            if (string.IsNullOrEmpty(id)) return true;
+            var succeeded = visualSlot == 0 ? runtimeServices.ActiveSlot.TryUnequip() :
+                EquipmentInventoryDrag.TryGetEquipmentSlot(visualSlot, out var slot) &&
+                runtimeServices.EquipmentSystem.TryUnequip(slot);
+            ShowMessage(succeeded ? $"{gameDataCatalog.ItemDisplayName(id, "장비")} 장착 해제" :
+                "인벤토리에 빈 공간이 없어 장비를 해제할 수 없습니다.");
+            Refresh();
+            return true;
         }
 
         private void TransferStorageSlot(int index, PointerEventData pointer)
