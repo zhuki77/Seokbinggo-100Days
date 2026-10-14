@@ -69,6 +69,7 @@ namespace Nyangbingo.UI
         private bool sideHudVisible;
         private RectTransform tearBalanceRoot;
         private Image craftWindowOutputIcon;
+        private string displayedCraftOutputId;
         private Image[] craftWindowIngredientIcons = new Image[3];
         private readonly Text[] craftWindowIngredientCounts = new Text[3];
         private Button[] craftWindowSlotButtons = Array.Empty<Button>();
@@ -146,6 +147,10 @@ namespace Nyangbingo.UI
         private int selectedIndex;
         private int inventorySelectedIndex;
         private GameObject descriptionRoot;
+        private static readonly Vector2 DescriptionDefaultPosition = new Vector2(2f, 3f);
+        private int descriptionDragPointerId = int.MinValue;
+        private Vector2 descriptionDragStartPointer;
+        private Vector2 descriptionDragStartPosition;
         private Text descriptionTitle;
         private Text descriptionBody;
         private ScrollRect descriptionScroll;
@@ -851,6 +856,16 @@ namespace Nyangbingo.UI
             craftWindowOutputIcon.rectTransform.pivot = Vector2.one * .5f;
             craftWindowOutputIcon.rectTransform.anchoredPosition = new Vector2(20f, -20f);
             craftWindowOutputIcon.preserveAspect = true;
+            var outputButton = craftWindowOutputIcon.gameObject.AddComponent<Button>();
+            outputButton.targetGraphic = craftWindowOutputIcon;
+            outputButton.transition = Selectable.Transition.None;
+            craftWindowOutputIcon.raycastTarget = true;
+            outputButton.onClick.AddListener(() => ShowCraftOutputDescription(displayedCraftOutputId));
+            WireInventoryPointer(outputButton, pointer =>
+            {
+                if (pointer.button == PointerEventData.InputButton.Right && outputButton.interactable)
+                    ShowCraftOutputDescription(displayedCraftOutputId);
+            });
             for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
             {
                 var icon = CreateArtImage(root, $"Ingredient_{index + 1}", null, Vector2.zero, new Vector2(8f, 8f));
@@ -1090,6 +1105,8 @@ namespace Nyangbingo.UI
             if (craftWindowOutputIcon != null)
             {
                 var output = smelting ? smelt?.Output.item : recipe?.Output.item;
+                displayedCraftOutputId = output?.Id;
+                craftWindowOutputIcon.GetComponent<Button>().interactable = output != null;
                 craftWindowOutputIcon.sprite = output != null ? itemArtCatalog?.FindSprite(output.Id) : null;
                 craftWindowOutputIcon.enabled = craftWindowOutputIcon.sprite != null;
             }
@@ -2168,7 +2185,8 @@ namespace Nyangbingo.UI
             if (index < 0 || index >= inventory.Capacity) return;
             if (inventory == runtimeServices.PlayerInventory &&
                 pointer.button == PointerEventData.InputButton.Right &&
-                ShowEquipmentDescription(inventory.Slots[index].itemId)) return;
+                (ShowEquipmentDescription(inventory.Slots[index].itemId) ||
+                 !HasHeldInventoryItem && ShowGeneralItemDescription(inventory.Slots[index].itemId))) return;
             if (inventory == runtimeServices.PlayerInventory) inventorySelectedIndex = index;
             var heldBefore = runtimeServices.InventoryCursor.Slots[0];
             var clickedBefore = inventory.Slots[index];
@@ -3210,8 +3228,50 @@ namespace Nyangbingo.UI
 
         private void HideDescription()
         {
+            descriptionDragPointerId = int.MinValue;
             if (descriptionRoot != null) descriptionRoot.SetActive(false);
             descriptionItemId = null;
+        }
+
+        private void ResetDescriptionPosition()
+        {
+            if (descriptionRoot == null) return;
+            descriptionDragPointerId = int.MinValue;
+            ((RectTransform)descriptionRoot.transform).anchoredPosition = DescriptionDefaultPosition;
+        }
+
+        private void BeginDescriptionDrag(PointerEventData pointer)
+        {
+            descriptionDragPointerId = int.MinValue;
+            if (pointer.button != PointerEventData.InputButton.Left || descriptionRoot == null ||
+                !descriptionRoot.activeSelf || Time.timeScale <= 0f ||
+                shell != null && shell.Screen != GameShellScreen.Gameplay) return;
+            var rect = (RectTransform)descriptionRoot.transform;
+            if (rect.parent is not RectTransform parent ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, pointer.position,
+                    pointer.pressEventCamera, out descriptionDragStartPointer)) return;
+            descriptionDragStartPosition = rect.anchoredPosition;
+            descriptionDragPointerId = pointer.pointerId;
+            rect.SetAsLastSibling();
+        }
+
+        private void DragDescription(PointerEventData pointer)
+        {
+            if (descriptionDragPointerId != pointer.pointerId || descriptionRoot == null ||
+                !descriptionRoot.activeSelf || Time.timeScale <= 0f ||
+                shell != null && shell.Screen != GameShellScreen.Gameplay) return;
+            var rect = (RectTransform)descriptionRoot.transform;
+            if (rect.parent is not RectTransform parent ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, pointer.position,
+                    pointer.pressEventCamera, out var localPointer)) return;
+            var position = descriptionDragStartPosition + localPointer - descriptionDragStartPointer;
+            // Keep the frame and its close button reachable within the canvas.
+            var halfSize = Vector2.Scale(rect.rect.size, new Vector2(
+                Mathf.Abs(rect.localScale.x), Mathf.Abs(rect.localScale.y))) * .5f;
+            var limit = parent.rect.size * .5f - halfSize;
+            position.x = Mathf.Clamp(position.x, -Mathf.Max(0f, limit.x), Mathf.Max(0f, limit.x));
+            position.y = Mathf.Clamp(position.y, -Mathf.Max(0f, limit.y), Mathf.Max(0f, limit.y));
+            rect.anchoredPosition = position;
         }
 
         private void ShowIngredientDescription(int index)
@@ -3235,6 +3295,27 @@ namespace Nyangbingo.UI
                 return false;
             ShowDescription(id, false, item.DisplayName, BuildItemEquipmentDescription(item, equipment));
             return true;
+        }
+
+        private bool ShowGeneralItemDescription(string id)
+        {
+            var item = gameDataCatalog?.FindItem(id);
+            if (item == null) return false;
+            ShowDescription(id, false, item.DisplayName,
+                ItemPlayerGuide.Describe(item) + "\n\n" + ItemPlayerGuide.Acquisition(gameDataCatalog, id),
+                includeAcquisition: true);
+            return true;
+        }
+
+        private void ShowCraftOutputDescription(string id)
+        {
+            var item = gameDataCatalog?.FindItem(id);
+            if (item == null) return;
+            var equipment = gameDataCatalog.FindEquipment(id);
+            var isEquipment = equipment != null || ActiveSlotSystem.IsAllowedItemId(id) ||
+                              item.Category == ItemCategory.Weapon || gameDataCatalog.FindCombatProfile(id) != null;
+            ShowDescription(id, false, item.DisplayName, isEquipment
+                ? BuildItemEquipmentDescription(item, equipment) : ItemPlayerGuide.Describe(item));
         }
 
         private string BuildItemEquipmentDescription(ItemDefinition item, EquipmentDefinition equipment)
@@ -3353,11 +3434,15 @@ namespace Nyangbingo.UI
             _ => string.Empty
         };
 
-        private void ShowDescription(string id, bool material, string title, string body)
+        private bool descriptionIncludesAcquisition;
+
+        private void ShowDescription(string id, bool material, string title, string body,
+            bool includeAcquisition = false)
         {
             if (Time.timeScale <= 0f || shell != null && shell.Screen != GameShellScreen.Gameplay) return;
             if (descriptionRoot != null && descriptionRoot.activeSelf &&
-                descriptionItemId == id && descriptionIsMaterial == material)
+                descriptionItemId == id && descriptionIsMaterial == material &&
+                descriptionIncludesAcquisition == includeAcquisition)
             {
                 HideDescription();
                 return;
@@ -3369,7 +3454,7 @@ namespace Nyangbingo.UI
                 // Screenshot box: x=552..1384, y=293..761 at 1920x1080.
                 // Use the project's 480x270 logical coordinates, preserving 16:9 art.
                 descriptionRoot = CreateUiObject("ItemDescriptionFrame", canvas.transform,
-                    new Vector2(208f, 117f), new Vector2(2f, 3f));
+                    new Vector2(208f, 117f), DescriptionDefaultPosition);
                 descriptionRoot.transform.localScale = Vector3.one * .85f;
                 var frame = descriptionRoot.AddComponent<Image>();
                 frame.sprite = gameplayArtCatalog.DescriptionFrame;
@@ -3381,13 +3466,13 @@ namespace Nyangbingo.UI
                     new Vector2(93f, 45f), new Vector2(12f, 12f), HideDescription, false);
                 close.GetComponentInChildren<Text>().fontSize = 9;
                 var scrollRoot = CreateUiObject("DescriptionScroll", descriptionRoot.transform,
-                    new Vector2(176f, 78f), new Vector2(0f, -9f));
+                    new Vector2(176f, 64f), new Vector2(0f, -2f));
                 var viewport = CreateUiObject("DescriptionViewport", scrollRoot.transform,
-                    new Vector2(176f, 78f), Vector2.zero);
+                    new Vector2(176f, 64f), Vector2.zero);
                 viewport.AddComponent<Image>().color = Color.clear;
                 viewport.AddComponent<RectMask2D>();
                 descriptionBody = CreateText(viewport.transform, "Description", 8,
-                    TextAnchor.UpperLeft, new Vector2(176f, 78f), Vector2.zero);
+                    TextAnchor.UpperLeft, new Vector2(176f, 64f), Vector2.zero);
                 descriptionBody.horizontalOverflow = HorizontalWrapMode.Wrap;
                 descriptionBody.verticalOverflow = VerticalWrapMode.Overflow;
                 var textRect = descriptionBody.rectTransform;
@@ -3395,7 +3480,7 @@ namespace Nyangbingo.UI
                 textRect.anchorMax = Vector2.one;
                 textRect.pivot = new Vector2(.5f, 1f);
                 textRect.anchoredPosition = Vector2.zero;
-                textRect.sizeDelta = new Vector2(0f, 78f);
+                textRect.sizeDelta = new Vector2(0f, 64f);
                 descriptionScroll = scrollRoot.AddComponent<ScrollRect>();
                 descriptionScroll.viewport = (RectTransform)viewport.transform;
                 descriptionScroll.content = textRect;
@@ -3404,11 +3489,11 @@ namespace Nyangbingo.UI
                 descriptionScroll.movementType = ScrollRect.MovementType.Clamped;
                 descriptionScroll.scrollSensitivity = 12f;
                 var scrollbarRoot = CreateUiObject("DescriptionScrollbar", descriptionRoot.transform,
-                    new Vector2(4f, 78f), new Vector2(93f, -9f));
+                    new Vector2(4f, 64f), new Vector2(93f, -2f));
                 scrollbarRoot.AddComponent<Image>().color = new Color(.08f, .1f, .16f, 1f);
                 descriptionScrollbar = scrollbarRoot.AddComponent<Scrollbar>();
                 var slidingArea = CreateUiObject("SlidingArea", scrollbarRoot.transform,
-                    new Vector2(4f, 78f), Vector2.zero);
+                    new Vector2(4f, 64f), Vector2.zero);
                 var handle = CreateUiObject("Handle", slidingArea.transform,
                     new Vector2(4f, 12f), Vector2.zero).AddComponent<Image>();
                 handle.rectTransform.sizeDelta = Vector2.zero;
@@ -3419,17 +3504,46 @@ namespace Nyangbingo.UI
                 descriptionScrollbar.numberOfSteps = 0;
                 descriptionScroll.verticalScrollbar = descriptionScrollbar;
                 descriptionScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+                var resetPosition = CreateButton(descriptionRoot.transform, "ResetPosition", "\u27F3",
+                    new Vector2(86f, -40f), new Vector2(12f, 12f), ResetDescriptionPosition, false);
+                var resetLabel = resetPosition.GetComponentInChildren<Text>();
+                resetLabel.font = Font.CreateDynamicFontFromOSFont(
+                    new[] { "Segoe UI Symbol", "Arial Unicode MS", "Arial" }, 14);
+                resetLabel.fontSize = 12;
+                resetLabel.alignment = TextAnchor.MiddleCenter;
+                resetLabel.alignByGeometry = true;
+                var resetLabelRect = resetLabel.rectTransform;
+                resetLabelRect.anchorMin = Vector2.zero;
+                resetLabelRect.anchorMax = Vector2.one;
+                resetLabelRect.offsetMin = resetLabelRect.offsetMax = Vector2.zero;
+                resetLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+                resetLabel.verticalOverflow = VerticalWrapMode.Overflow;
+                var dragHeader = CreateUiObject("DescriptionDragHeader", descriptionRoot.transform,
+                    new Vector2(208f, 10f), new Vector2(0f, 53.5f));
+                dragHeader.AddComponent<UnityEngine.UI.Image>().color = Color.clear;
+                var dragTrigger = dragHeader.AddComponent<EventTrigger>();
+                var beginDrag = new EventTrigger.Entry { eventID = EventTriggerType.BeginDrag };
+                beginDrag.callback.AddListener(data => BeginDescriptionDrag((PointerEventData)data));
+                dragTrigger.triggers.Add(beginDrag);
+                var drag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
+                drag.callback.AddListener(data => DragDescription((PointerEventData)data));
+                dragTrigger.triggers.Add(drag);
+                var endDrag = new EventTrigger.Entry { eventID = EventTriggerType.EndDrag };
+                endDrag.callback.AddListener(_ => descriptionDragPointerId = int.MinValue);
+                dragTrigger.triggers.Add(endDrag);
+                close.transform.SetAsLastSibling();
             }
             descriptionItemId = id;
             descriptionIsMaterial = material;
+            descriptionIncludesAcquisition = includeAcquisition;
             descriptionTitle.text = title;
             descriptionBody.text = body;
             descriptionRoot.SetActive(true);
             descriptionRoot.transform.SetAsLastSibling();
             Canvas.ForceUpdateCanvases();
             descriptionBody.rectTransform.sizeDelta = new Vector2(0f,
-                Mathf.Max(78f, descriptionBody.preferredHeight));
-            descriptionScrollbar.gameObject.SetActive(descriptionBody.preferredHeight > 78f + .01f);
+                Mathf.Max(64f, descriptionBody.preferredHeight));
+            descriptionScrollbar.gameObject.SetActive(descriptionBody.preferredHeight > 64f + .01f);
             descriptionScroll.StopMovement();
             descriptionScroll.verticalNormalizedPosition = 1f;
         }
