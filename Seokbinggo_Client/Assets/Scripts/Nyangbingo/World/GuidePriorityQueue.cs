@@ -4,7 +4,7 @@ using Nyangbingo.Data;
 
 namespace Nyangbingo.World
 {
-    /// <summary>CSV priority/repeat policy. Only visible messages consume their display budget.</summary>
+    /// <summary>Owner-defined priority and CSV repeat policy. Only visible messages consume their display budget.</summary>
     public sealed class GuidePriorityQueue
     {
         public sealed class Entry
@@ -74,8 +74,8 @@ namespace Nyangbingo.World
             {
                 if (!entry.Active || string.IsNullOrEmpty(entry.Text)) continue;
                 if (entry.Definition.Repeat != "while_active" && entry.Remaining <= 0f) continue;
-                if (result == null || entry.Definition.Tier < result.Definition.Tier ||
-                    (entry.Definition.Tier == result.Definition.Tier && entry.Sequence > result.Sequence)) result = entry;
+                if (result == null || entry.Definition.Priority < result.Definition.Priority ||
+                    (entry.Definition.Priority == result.Definition.Priority && entry.Sequence > result.Sequence)) result = entry;
             }
             return result;
         }

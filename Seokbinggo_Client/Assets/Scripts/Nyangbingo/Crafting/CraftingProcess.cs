@@ -173,9 +173,16 @@ namespace Nyangbingo.Crafting
             if (state == null || !stations.Contains(state) || index < 0 || index >= state.jobs.Count) return false;
             var job = state.jobs[index];
             state.jobs.RemoveAt(index);
-            state.returns.AddRange(job.materials);
-            Collect(state);
+            foreach (var material in job.materials) DeliverOrRetain(state, material);
             return true;
+        }
+
+        private void DeliverOrRetain(StationQueueRecord state, Nyangbingo.Inventory.InventorySlot item)
+        {
+            // Automatic delivery only handles this job, never earlier unclaimed smelting outputs.
+            if (!inventory.TryAddWithStorageState(item.itemId, item.amount, item.hasStorageCondition,
+                    item.EffectiveStorageCondition, item.storageMeltRemainder))
+                state.returns.Add(item);
         }
 
         public int Collect(StationQueueRecord state)
@@ -218,10 +225,11 @@ namespace Nyangbingo.Crafting
                     var recipe = job.smelting ? null : catalog.FindRecipe(job.recipeId);
                     var output = job.smelting ? catalog.FindSmelting(job.recipeId).Output : recipe.Output;
                     state.jobs.RemoveAt(0);
-                    state.returns.Add(new Nyangbingo.Inventory.InventorySlot
-                        { itemId = output.item.Id, amount = output.amount });
+                    var completed = new Nyangbingo.Inventory.InventorySlot
+                        { itemId = output.item.Id, amount = output.amount };
                     // Normal crafting keeps automatic delivery; smelting retains explicit collection.
-                    if (!job.smelting) Collect(state);
+                    if (job.smelting) state.returns.Add(completed);
+                    else DeliverOrRetain(state, completed);
                     if (recipe != null) Nyangbingo.Core.GameEvents.RaiseCraftingCompleted(recipe);
                     if (elapsed <= 0f) break;
                 }

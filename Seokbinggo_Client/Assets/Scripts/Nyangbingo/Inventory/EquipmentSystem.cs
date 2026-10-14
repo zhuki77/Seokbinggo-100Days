@@ -158,6 +158,7 @@ namespace Nyangbingo.Inventory
                 {
                     equipped[slot] = item;
                     Changed?.Invoke();
+                    GameEvents.RaiseEquipmentEquipped();
                 }, sourceIndex);
             if (inventory != null && previousSlot.HasValue)
             {
@@ -172,6 +173,7 @@ namespace Nyangbingo.Inventory
                 equipped[slot] = item;
             }
             Changed?.Invoke();
+            GameEvents.RaiseEquipmentEquipped();
             return true;
         }
         public bool ColdOk(int roomTemperatureC)
@@ -190,9 +192,11 @@ namespace Nyangbingo.Inventory
                 {
                     equipped.Remove(slot);
                     Changed?.Invoke();
+                    GameEvents.RaiseEquipmentUnequipped();
                 }, targetIndex: targetIndex);
             if (!equipped.Remove(slot)) return false;
             Changed?.Invoke();
+            GameEvents.RaiseEquipmentUnequipped();
             return true;
         }
         public Dictionary<EquipmentSlot, EquipmentDefinition> Export() => new Dictionary<EquipmentSlot, EquipmentDefinition>(equipped);

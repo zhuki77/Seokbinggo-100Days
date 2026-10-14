@@ -62,6 +62,8 @@ namespace Nyangbingo.Audio
             GameEvents.OnMiningImpact += HandleMiningImpact;
             GameEvents.OnTileBroken += HandleTileBroken;
             GameEvents.OnItemAcquired += HandleItemAcquired;
+            GameEvents.OnEquipmentUnequipped += HandleEquipmentUnequipped;
+            GameEvents.OnEquipmentEquipped += HandleEquipmentUnequipped;
             GameEvents.OnPlayerDamaged += HandlePlayerDamaged;
             GameEvents.OnYokaiDamaged += HandleYokaiDamaged;
             GameEvents.OnYokaiKilled += HandleYokaiKilled;
@@ -91,6 +93,8 @@ namespace Nyangbingo.Audio
             GameEvents.OnMiningImpact -= HandleMiningImpact;
             GameEvents.OnTileBroken -= HandleTileBroken;
             GameEvents.OnItemAcquired -= HandleItemAcquired;
+            GameEvents.OnEquipmentUnequipped -= HandleEquipmentUnequipped;
+            GameEvents.OnEquipmentEquipped -= HandleEquipmentUnequipped;
             GameEvents.OnPlayerDamaged -= HandlePlayerDamaged;
             GameEvents.OnYokaiDamaged -= HandleYokaiDamaged;
             GameEvents.OnYokaiKilled -= HandleYokaiKilled;
@@ -165,6 +169,7 @@ namespace Nyangbingo.Audio
             surface == MiningImpactSurface.Dirt ? AudioCue.MiningDirtImpact : AudioCue.MiningMineralImpact);
         private void HandleTileBroken(Vector3Int _) => CueRequested?.Invoke(AudioCue.TileBroken);
         private void HandleItemAcquired() => CueRequested?.Invoke(AudioCue.ItemAcquired);
+        private void HandleEquipmentUnequipped() => CueRequested?.Invoke(AudioCue.ItemAcquired);
         private void HandlePlayerDamaged() => CueRequested?.Invoke(AudioCue.PlayerDamaged);
         private void HandleYokaiDamaged() => CueRequested?.Invoke(AudioCue.YokaiDamaged);
         private void HandleYokaiKilled(Nyangbingo.Data.YokaiDefinition _) => CueRequested?.Invoke(AudioCue.YokaiKilled);

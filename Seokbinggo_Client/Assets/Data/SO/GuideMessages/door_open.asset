@@ -15,8 +15,7 @@ MonoBehaviour:
   id: door_open
   tier: 3
   triggerState: seal_blocked_by_open_door
-  text: "\uBB38\uC744 \uB2EB\uC73C\uBA74 \uBC00\uD3D0 \uC0C1\uD0DC\uB97C \uD655\uC778\uD560
-    \uC218 \uC788\uC5B4\uC694."
+  text: "문이 열려있어 냉기가 새고 있어요."
   variables: 
   clearWhen: door_closed
   repeat: while_active

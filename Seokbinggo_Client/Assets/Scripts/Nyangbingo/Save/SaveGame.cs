@@ -71,6 +71,9 @@ namespace Nyangbingo.Save
     {
         public List<string> completedGoalIds = new List<string>();
         public string selectedGoalId = string.Empty;
+        public bool uiStateSaved;
+        public bool windowHidden;
+        public bool selectionListOpen;
         public int guideDay;
         public List<string> consumedGuideIds = new List<string>();
         public List<string> shownRewardCraftingIds = new List<string>();

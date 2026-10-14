@@ -651,6 +651,7 @@ namespace Nyangbingo.Inventory
                 equippedItemId = itemId;
                 usingEquippedItem = true;
                 Changed?.Invoke();
+                GameEvents.RaiseEquipmentEquipped();
                 return true;
             }
             if (!IsValidDefinition(itemId) || equippedItemId == itemId)
@@ -660,6 +661,7 @@ namespace Nyangbingo.Inventory
                 equippedItemId = itemId;
                 usingEquippedItem = true;
                 Changed?.Invoke();
+                GameEvents.RaiseEquipmentEquipped();
             }, sourceIndex);
         }
 
@@ -672,10 +674,12 @@ namespace Nyangbingo.Inventory
                     equippedItemId = string.Empty;
                     usingEquippedItem = false;
                     Changed?.Invoke();
+                    GameEvents.RaiseEquipmentUnequipped();
                 }, targetIndex: targetIndex);
             equippedItemId = string.Empty;
             usingEquippedItem = false;
             Changed?.Invoke();
+            GameEvents.RaiseEquipmentUnequipped();
             return true;
         }
 

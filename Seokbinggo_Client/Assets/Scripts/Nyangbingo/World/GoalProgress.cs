@@ -32,6 +32,16 @@ namespace Nyangbingo.World
             ordered.FirstOrDefault(g => g.Id == selected && g.Track == "select" && !IsComplete(g.Id)) ??
             ordered.FirstOrDefault(g => g.Track == "select" && !IsComplete(g.Id));
         public string SelectedGoalId => Current?.Track == "select" ? Current.Id : selected;
+        public bool HasSavedUiState { get; private set; }
+        public bool WindowHidden { get; private set; }
+        public bool SelectionListOpen { get; private set; }
+
+        public void SetUiState(bool windowHidden, bool selectionListOpen)
+        {
+            HasSavedUiState = true;
+            WindowHidden = windowHidden;
+            SelectionListOpen = !windowHidden && selectionListOpen;
+        }
 
         public void Evaluate(Func<GoalDefinition, bool> isTrue, bool notifyCompletion = true)
         {
@@ -59,11 +69,17 @@ namespace Nyangbingo.World
         public GoalProgressRecord Capture() => new GoalProgressRecord
         {
             completedGoalIds = ordered.Where(g => IsComplete(g.Id)).Select(g => g.Id).ToList(),
-            selectedGoalId = SelectedGoalId ?? string.Empty
+            selectedGoalId = SelectedGoalId ?? string.Empty,
+            uiStateSaved = HasSavedUiState,
+            windowHidden = WindowHidden,
+            selectionListOpen = SelectionListOpen
         };
 
         public void Restore(GoalProgressRecord record)
         {
+            HasSavedUiState = record?.uiStateSaved == true;
+            WindowHidden = HasSavedUiState && record.windowHidden;
+            SelectionListOpen = HasSavedUiState && !WindowHidden && record.selectionListOpen;
             completed.Clear();
             foreach (var id in record?.completedGoalIds ?? new List<string>())
                 if (ordered.Any(g => g.Id == id)) completed.Add(id);
