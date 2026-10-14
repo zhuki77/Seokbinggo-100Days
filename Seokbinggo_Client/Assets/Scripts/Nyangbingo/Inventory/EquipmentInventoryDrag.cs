@@ -25,6 +25,7 @@ namespace Nyangbingo.Inventory
             if (index < 0 || index >= inventory.Capacity) return false;
             var source = inventory.Slots[index];
             if (source.amount <= 0 || (!ActiveSlotSystem.IsAllowedItemId(source.itemId) &&
+                                      !ClawSlotSystem.IsClawItem(source.itemId) &&
                                       findEquipment(source.itemId) == null)) return false;
             SourceIndex = index;
             ItemId = source.itemId;
@@ -35,16 +36,25 @@ namespace Nyangbingo.Inventory
         {
             if (!IsActive || inventory.Slots[SourceIndex].amount <= 0 ||
                 inventory.Slots[SourceIndex].itemId != ItemId) return false;
-            if (visualSlot == 0) return ActiveSlotSystem.IsAllowedItemId(ItemId);
+            if (visualSlot == ClawSlotSystem.VisualSlotIndex) return ClawSlotSystem.IsClawItem(ItemId);
+            if (visualSlot == 0)
+                return ActiveSlotSystem.IsAllowedItemId(ItemId) && !ClawSlotSystem.IsClawItem(ItemId);
             return TryGetEquipmentSlot(visualSlot, out var slot) &&
                    EquipmentSystem.CanEquipInSlot(findEquipment(ItemId), slot);
         }
 
-        public bool TryDrop(int visualSlot, EquipmentSystem equipment, ActiveSlotSystem activeSlot)
+        public bool TryDrop(int visualSlot, EquipmentSystem equipment, ActiveSlotSystem activeSlot,
+            ClawSlotSystem clawSlot = null)
         {
             try
             {
                 if (!CanDrop(visualSlot)) return false;
+                if (visualSlot == ClawSlotSystem.VisualSlotIndex)
+                {
+                    if (clawSlot == null) return false;
+                    if (clawSlot.EquippedItemId == ItemId) return true;
+                    return clawSlot.TryEquip(ItemId, SourceIndex);
+                }
                 if (visualSlot == 0)
                 {
                     if (activeSlot == null) return false;

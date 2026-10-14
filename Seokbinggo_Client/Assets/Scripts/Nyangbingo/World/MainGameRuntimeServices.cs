@@ -50,6 +50,7 @@ namespace Nyangbingo.World
         public EquipmentColdPenaltyRules EquipmentColdPenalty { get; private set; }
         public EquipmentCollection EquipmentCollection { get; private set; }
         public ActiveSlotSystem ActiveSlot { get; private set; }
+        public ClawSlotSystem ClawSlot { get; private set; }
         public PortableLanternRuntime PortableLantern { get; private set; }
         public RecipeBook RecipeBook { get; private set; }
         public SmeltingStation Furnace { get; private set; }
@@ -152,6 +153,7 @@ namespace Nyangbingo.World
             EquipmentColdPenalty = equipmentColdPenalty;
             EquipmentCollection = new EquipmentCollection(gameDataCatalog.FindEquipment, PlayerInventory, InventoryCursor);
             ActiveSlot = new ActiveSlotSystem(PlayerInventory, gameDataCatalog.FindItem, keepInInventory: false);
+            ClawSlot = new ClawSlotSystem(PlayerInventory, gameDataCatalog.FindItem);
             EquipmentCollection.EquippedIds = () => EquipmentSystem.Export().Values.Where(e => e != null).Select(e => e.Id);
             var lanternRadiusDefinition = gameDataCatalog.FindGlobal(GlobalKeys.PortableLanternRadius);
             if (lanternRadiusDefinition == null || !lanternRadiusDefinition.TryGetFloat(out var lanternRadius) ||

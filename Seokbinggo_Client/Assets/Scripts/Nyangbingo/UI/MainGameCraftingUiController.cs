@@ -329,6 +329,7 @@ namespace Nyangbingo.UI
             runtimeServices.EquipmentSystem.Changed += Refresh;
             runtimeServices.EquipmentCollection.Added += HandleEquipmentAdded;
             runtimeServices.ActiveSlot.Changed += Refresh;
+            if (runtimeServices.ClawSlot != null) runtimeServices.ClawSlot.Changed += Refresh;
             runtimeServices.PortableLantern.Changed += Refresh;
             runtimeServices.JangdokStorage.Changed += Refresh;
             runtimeServices.RecipeBook.Changed += Refresh;
@@ -452,7 +453,7 @@ namespace Nyangbingo.UI
                     GrantSelectedRequirementsForEditorTest();
                 if (page == Page.Crafting &&
                     DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeStation))
-                    TeleportToRequiredStationForEditorTest();
+                        TeleportToRequiredStationForEditorTest();
                 if (page == Page.Crafting &&
                     DevelopmentShortcuts.IsPressed(DevelopmentShortcut.RecipeComplete))
                     TryCompleteCurrentProcessForDebug();
@@ -1633,9 +1634,12 @@ namespace Nyangbingo.UI
             inventoryGridRoot.SetActive(false);
         }
 
+        private Sprite clawSlotSprite;
+
         private void BuildEquipmentVisual()
         {
-            if (equipmentVisualRoot == null || equipmentSlotButtons == null || equipmentSlotButtons.Length != 6)
+            EnsureClawEquipmentSlot();
+            if (equipmentVisualRoot == null || equipmentSlotButtons == null || equipmentSlotButtons.Length != 7)
             {
                 Debug.LogError("[Nyangbingo] MainGameCraftingUiController: EquipmentVisual 하이어라키가 인스펙터에 배선되지 않았습니다.");
                 return;
@@ -1678,6 +1682,46 @@ namespace Nyangbingo.UI
                 equipmentAmmoCount.enabled = false;
             }
             equipmentVisualRoot.SetActive(false);
+        }
+
+        /// <summary>인형 머리 위, 좌우 칸 사이의 빈자리에 18px 발톱 칸을 둔다.</summary>
+        private void EnsureClawEquipmentSlot()
+        {
+            if (equipmentSlotButtons == null || equipmentSlotButtons.Length != 6 || equipmentSlotButtons[4] == null)
+                return;
+            var clone = Instantiate(equipmentSlotButtons[4].gameObject, equipmentSlotButtons[4].transform.parent);
+            clone.name = "EquipmentSlot_Claw";
+            var rect = clone.GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(0f, 52f);
+            rect.sizeDelta = new Vector2(34f, 34f);
+            rect.localScale = Vector3.one;
+            clone.transform.SetAsLastSibling();
+            var button = clone.GetComponent<Button>();
+            button.onClick.RemoveAllListeners();
+            var icon = clone.transform.Find("Icon")?.GetComponent<Image>();
+            if (icon != null)
+            {
+                icon.sprite = null;
+                icon.enabled = false;
+            }
+            var fallback = clone.transform.Find("FallbackLabel")?.GetComponent<Text>();
+            if (fallback != null) fallback.text = string.Empty;
+            Array.Resize(ref equipmentSlotButtons, 7);
+            Array.Resize(ref equipmentSlotBackgrounds, 7);
+            Array.Resize(ref equipmentSlotIcons, 7);
+            Array.Resize(ref equipmentSlotFallbackLabels, 7);
+            equipmentSlotButtons[ClawSlotSystem.VisualSlotIndex] = button;
+            equipmentSlotBackgrounds[ClawSlotSystem.VisualSlotIndex] = clone.GetComponent<Image>();
+            equipmentSlotIcons[ClawSlotSystem.VisualSlotIndex] = icon;
+            equipmentSlotFallbackLabels[ClawSlotSystem.VisualSlotIndex] = fallback;
+        }
+
+        private Sprite ClawSlotArt()
+        {
+            if (clawSlotSprite != null) return clawSlotSprite;
+            var sprites = Resources.LoadAll<Sprite>("UI/equipment_claw_slot");
+            if (sprites != null && sprites.Length > 0) clawSlotSprite = sprites[0];
+            return clawSlotSprite;
         }
 
         private void BuildStorageUi()
@@ -1733,9 +1777,16 @@ namespace Nyangbingo.UI
             var source = inventory.Slots[index];
             if (source.amount <= 0) return false;
             var equipment = gameDataCatalog.FindEquipment(source.itemId);
-            if (equipment == null && !ActiveSlotSystem.IsAllowedItemId(source.itemId)) return false;
+            if (equipment == null && !ActiveSlotSystem.IsAllowedItemId(source.itemId) &&
+                !ClawSlotSystem.IsClawItem(source.itemId)) return false;
             bool succeeded;
-            if (ActiveSlotSystem.IsAllowedItemId(source.itemId))
+            if (ClawSlotSystem.IsClawItem(source.itemId))
+            {
+                var claw = runtimeServices.ClawSlot;
+                succeeded = claw != null && (claw.EquippedItemId == source.itemId ||
+                                              claw.TryEquip(source.itemId, index));
+            }
+            else if (ActiveSlotSystem.IsAllowedItemId(source.itemId))
             {
                 var active = runtimeServices.ActiveSlot;
                 succeeded = active.EquippedItemId == source.itemId
@@ -1755,7 +1806,7 @@ namespace Nyangbingo.UI
             }
             ShowMessage(succeeded ? $"{gameDataCatalog.ItemDisplayName(source.itemId, "장비")} 장착 완료" :
                 "장착할 수 없습니다. 인벤토리 공간을 확인하세요.");
-            Refresh();
+                Refresh();
             return true;
         }
 
@@ -1766,6 +1817,8 @@ namespace Nyangbingo.UI
             var id = EquippedItemIdForVisualSlot(visualSlot);
             if (string.IsNullOrEmpty(id)) return true;
             var succeeded = visualSlot == 0 ? runtimeServices.ActiveSlot.TryUnequip() :
+                visualSlot == ClawSlotSystem.VisualSlotIndex ? runtimeServices.ClawSlot != null &&
+                    runtimeServices.ClawSlot.TryUnequip() :
                 EquipmentInventoryDrag.TryGetEquipmentSlot(visualSlot, out var slot) &&
                 runtimeServices.EquipmentSystem.TryUnequip(slot);
             ShowMessage(succeeded ? $"{gameDataCatalog.ItemDisplayName(id, "장비")} 장착 해제" :
@@ -1806,7 +1859,7 @@ namespace Nyangbingo.UI
             var target = source == runtimeServices.PlayerInventory ? storage : runtimeServices.PlayerInventory;
             message = source.TryTransferSlotTo(index, target, count)
                 ? StorageItemMovedMessage : "이동할 보관 공간이 부족합니다.";
-            Refresh();
+                Refresh();
             return true;
         }
 
@@ -1851,9 +1904,9 @@ namespace Nyangbingo.UI
             var grid = codexGridRoot.GetComponent<GridLayoutGroup>();
             if (grid != null)
             {
-                grid.cellSize = YokaiCodexPresentationModel.GridCardSize;
-                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                grid.constraintCount = YokaiCodexPresentationModel.GridColumns;
+            grid.cellSize = YokaiCodexPresentationModel.GridCardSize;
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = YokaiCodexPresentationModel.GridColumns;
             }
 
             codexCardButtons = new Button[needed];
@@ -2067,8 +2120,8 @@ namespace Nyangbingo.UI
             Canvas.ForceUpdateCanvases();
             if (craftingListScrollRect != null)
             {
-                craftingListScrollRect.StopMovement();
-                craftingListScrollRect.verticalNormalizedPosition = 1f;
+            craftingListScrollRect.StopMovement();
+            craftingListScrollRect.verticalNormalizedPosition = 1f;
             }
             if (craftWindowScrollRect != null)
             {
@@ -2100,7 +2153,7 @@ namespace Nyangbingo.UI
             if (page == Page.Gathering)
                 inventorySelectedIndex = (inventorySelectedIndex + delta + count) % count;
             else
-                selectedIndex = (selectedIndex + delta + count) % count;
+            selectedIndex = (selectedIndex + delta + count) % count;
             message = string.Empty;
             Refresh();
             ResetDetailsScroll();
@@ -2132,8 +2185,8 @@ namespace Nyangbingo.UI
             if (HasStorageMode)
             {
                 BeginStorageItemDrag(runtimeServices?.PlayerInventory, index, source, pointer);
-                return;
-            }
+                    return;
+                }
             if (runtimeServices?.IsInitialized != true || HasHeldInventoryItem ||
                 source == null || !source.activeInHierarchy || equipmentVisualRoot == null ||
                 !equipmentVisualRoot.activeInHierarchy ||
@@ -2160,7 +2213,8 @@ namespace Nyangbingo.UI
                 return;
             }
             var name = gameDataCatalog.ItemDisplayName(equipmentDrag.ItemId, "장비");
-            var succeeded = equipmentDrag.TryDrop(visualSlot, runtimeServices.EquipmentSystem, runtimeServices.ActiveSlot);
+            var succeeded = equipmentDrag.TryDrop(visualSlot, runtimeServices.EquipmentSystem,
+                runtimeServices.ActiveSlot, runtimeServices.ClawSlot);
             CancelEquipmentDrag();
             equipmentDropFeedback = succeeded ? "장착 완료" : "슬롯이 맞지 않음";
             equipmentDropFeedbackUntil = Time.unscaledTime + 3f;
@@ -2196,6 +2250,8 @@ namespace Nyangbingo.UI
             valid = valid && inventory.Slots[targetIndex].amount <= 0;
             var succeeded = valid && (visualSlot == 0
                 ? runtimeServices.ActiveSlot.TryUnequip(targetIndex)
+                : visualSlot == ClawSlotSystem.VisualSlotIndex
+                    ? runtimeServices.ClawSlot != null && runtimeServices.ClawSlot.TryUnequip(targetIndex)
                 : EquipmentInventoryDrag.TryGetEquipmentSlot(visualSlot, out var slot) &&
                   runtimeServices.EquipmentSystem.TryUnequip(slot, targetIndex));
             CancelEquipmentDrag();
@@ -2264,7 +2320,7 @@ namespace Nyangbingo.UI
                 (shell != null && shell.Screen != GameShellScreen.Gameplay)) return;
             if (turretRuntime != null && turretRuntime.IsPlacementPreviewActive)
                 turretRuntime.CancelPlacementPreview();
-            tilePalette?.SelectBareHands();
+                tilePalette?.SelectBareHands();
             message = string.Empty;
             if (index < 0 || index >= inventory.Capacity) return;
             if (inventory == runtimeServices.PlayerInventory &&
@@ -3573,8 +3629,8 @@ namespace Nyangbingo.UI
                 descriptionTitle = CreateText(descriptionRoot.transform, "Title", 10,
                     TextAnchor.MiddleLeft, new Vector2(164f, 14f), new Vector2(-6f, 43f));
                 var close = CreateButton(descriptionRoot.transform, "Close", "×",
-                    new Vector2(93f, 45f), new Vector2(12f, 12f), HideDescription, false);
-                close.GetComponentInChildren<Text>().fontSize = 9;
+                    new Vector2(93f, 45f), new Vector2(16f, 16f), HideDescription, false);
+                ApplyDescriptionCornerButton(close, "UI/description_close");
                 var scrollRoot = CreateUiObject("DescriptionScroll", descriptionRoot.transform,
                     new Vector2(176f, 64f), new Vector2(0f, -2f));
                 var viewport = CreateUiObject("DescriptionViewport", scrollRoot.transform,
@@ -3615,19 +3671,22 @@ namespace Nyangbingo.UI
                 descriptionScroll.verticalScrollbar = descriptionScrollbar;
                 descriptionScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
                 var resetPosition = CreateButton(descriptionRoot.transform, "ResetPosition", "\u27F3",
-                    new Vector2(86f, -40f), new Vector2(12f, 12f), ResetDescriptionPosition, false);
-                var resetLabel = resetPosition.GetComponentInChildren<Text>();
-                resetLabel.font = Font.CreateDynamicFontFromOSFont(
-                    new[] { "Segoe UI Symbol", "Arial Unicode MS", "Arial" }, 14);
-                resetLabel.fontSize = 12;
-                resetLabel.alignment = TextAnchor.MiddleCenter;
-                resetLabel.alignByGeometry = true;
-                var resetLabelRect = resetLabel.rectTransform;
-                resetLabelRect.anchorMin = Vector2.zero;
-                resetLabelRect.anchorMax = Vector2.one;
-                resetLabelRect.offsetMin = resetLabelRect.offsetMax = Vector2.zero;
-                resetLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
-                resetLabel.verticalOverflow = VerticalWrapMode.Overflow;
+                    new Vector2(86f, -40f), new Vector2(16f, 16f), ResetDescriptionPosition, false);
+                if (!ApplyDescriptionCornerButton(resetPosition, "UI/description_reset"))
+                {
+                    var resetLabel = resetPosition.GetComponentInChildren<Text>();
+                    resetLabel.font = Font.CreateDynamicFontFromOSFont(
+                        new[] { "Segoe UI Symbol", "Arial Unicode MS", "Arial" }, 14);
+                    resetLabel.fontSize = 12;
+                    resetLabel.alignment = TextAnchor.MiddleCenter;
+                    resetLabel.alignByGeometry = true;
+                    var resetLabelRect = resetLabel.rectTransform;
+                    resetLabelRect.anchorMin = Vector2.zero;
+                    resetLabelRect.anchorMax = Vector2.one;
+                    resetLabelRect.offsetMin = resetLabelRect.offsetMax = Vector2.zero;
+                    resetLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    resetLabel.verticalOverflow = VerticalWrapMode.Overflow;
+                }
                 var dragHeader = CreateUiObject("DescriptionDragHeader", descriptionRoot.transform,
                     new Vector2(208f, 10f), new Vector2(0f, 53.5f));
                 dragHeader.AddComponent<UnityEngine.UI.Image>().color = Color.clear;
@@ -3656,6 +3715,31 @@ namespace Nyangbingo.UI
             descriptionScrollbar.gameObject.SetActive(descriptionBody.preferredHeight > 64f + .01f);
             descriptionScroll.StopMovement();
             descriptionScroll.verticalNormalizedPosition = 1f;
+        }
+
+        /// <summary>설명 창 모서리 버튼. 첫 장은 보통, 둘째 장은 누르고 있는 동안이다.</summary>
+        private static bool ApplyDescriptionCornerButton(Button button, string resourcePath)
+        {
+            if (button == null || button.targetGraphic is not Image image) return false;
+            var sprites = Resources.LoadAll<Sprite>(resourcePath);
+            if (sprites == null || sprites.Length == 0 || sprites[0] == null) return false;
+            image.sprite = sprites[0];
+            image.color = Color.white;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            if (image.sprite.texture != null) image.sprite.texture.filterMode = FilterMode.Point;
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null) label.gameObject.SetActive(false);
+            if (sprites.Length > 1 && sprites[1] != null)
+            {
+                button.transition = Selectable.Transition.SpriteSwap;
+                button.spriteState = new SpriteState
+                {
+                    pressedSprite = sprites[1],
+                    disabledSprite = sprites[1]
+                };
+            }
+            return true;
         }
 
         private RecipeDefinition CurrentRecipe() => filteredRecipes.Count == 0
@@ -3942,7 +4026,7 @@ namespace Nyangbingo.UI
                     : EquipmentSlotSprite(index, false);
                 background.color = background.sprite != null
                     ? Color.white
-                    : new Color(.14f, .2f, .28f, 1f);
+                        : new Color(.14f, .2f, .28f, 1f);
                 var validDrop = IsDraggingEquipment && equipmentDrag.CanDrop(index);
                 if (IsDraggingEquipment)
                     background.color = validDrop ? new Color(.45f, 1f, .55f, 1f) : new Color(.55f, .55f, .55f, 1f);
@@ -4008,13 +4092,18 @@ namespace Nyangbingo.UI
                 case EquipmentSlot.Feet: return 3;
                 case EquipmentSlot.AccessoryOne: return 4;
                 case EquipmentSlot.AccessoryTwo: return 5;
-                default: return definition.IsAccessory ? 4 : -1;
+                default:
+                    if (runtimeServices?.ClawSlot != null &&
+                        runtimeServices.ClawSlot.EquippedItemId == definition.Id)
+                        return ClawSlotSystem.VisualSlotIndex;
+                    return definition.IsAccessory ? 4 : -1;
             }
         }
 
         private string EquippedItemIdForVisualSlot(int index)
         {
             if (index == 0) return runtimeServices?.ActiveSlot?.EquippedItemId;
+            if (index == ClawSlotSystem.VisualSlotIndex) return runtimeServices?.ClawSlot?.EquippedItemId;
             var slot = index switch
             {
                 1 => EquipmentSlot.Head,
@@ -4059,6 +4148,7 @@ namespace Nyangbingo.UI
 
         private Sprite EquipmentSlotSprite(int index, bool selected)
         {
+            if (index == ClawSlotSystem.VisualSlotIndex) return ClawSlotArt();
             if (gameplayArtCatalog == null) return null;
             switch (index)
             {
@@ -4189,9 +4279,9 @@ namespace Nyangbingo.UI
             if (!selected.HasReadableBackText)
                 codexExpandedHintText.text = "바깥 클릭 · 격자로 돌아가기";
             else
-                codexExpandedHintText.text = codexModel.IsBackVisible
-                    ? "카드 클릭 · 앞면 보기    |    바깥 클릭 · 격자"
-                    : "카드 클릭 · 전승 보기    |    바깥 클릭 · 격자";
+            codexExpandedHintText.text = codexModel.IsBackVisible
+                ? "카드 클릭 · 앞면 보기    |    바깥 클릭 · 격자"
+                : "카드 클릭 · 전승 보기    |    바깥 클릭 · 격자";
         }
 
         private void ResolveCharacterArtCatalog()
@@ -4300,6 +4390,8 @@ namespace Nyangbingo.UI
         private string BuildEquippedSummary()
         {
             var builder = new StringBuilder($"발톱 채굴 등급: {ResolveClawTier()}\n현재 장착 장비:\n");
+            var clawItem = gameDataCatalog.FindItem(runtimeServices.ClawSlot?.EquippedItemId);
+            builder.AppendLine($"  · 발톱: {clawItem?.DisplayName ?? "맨 발톱"}");
             var activeItem = gameDataCatalog.FindItem(runtimeServices.ActiveSlot.EquippedItemId);
             builder.AppendLine($"  · 무기·도구: {activeItem?.DisplayName ?? "맨 발톱"}" +
                                (activeItem != null && !runtimeServices.ActiveSlot.IsUsingEquippedItem
@@ -4318,12 +4410,8 @@ namespace Nyangbingo.UI
             return builder.ToString();
         }
 
-        private int ResolveClawTier()
-        {
-            if (runtimeServices.PlayerInventory.Has("icesteel_claw", 1)) return 3;
-            if (runtimeServices.PlayerInventory.Has("iron_claw", 1)) return 2;
-            return 1;
-        }
+        private int ResolveClawTier() =>
+            ClawSlotSystem.ResolveMiningTier(runtimeServices?.ClawSlot?.EquippedItemId);
 
         private int CurrentEntryCount()
         {
@@ -4795,6 +4883,8 @@ namespace Nyangbingo.UI
                 runtimeServices.EquipmentCollection.Added -= HandleEquipmentAdded;
             if (runtimeServices?.ActiveSlot != null)
                 runtimeServices.ActiveSlot.Changed -= Refresh;
+            if (runtimeServices?.ClawSlot != null)
+                runtimeServices.ClawSlot.Changed -= Refresh;
             if (runtimeServices?.PortableLantern != null)
                 runtimeServices.PortableLantern.Changed -= Refresh;
             if (runtimeServices?.JangdokStorage != null)

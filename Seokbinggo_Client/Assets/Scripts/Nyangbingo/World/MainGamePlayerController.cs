@@ -42,7 +42,6 @@ namespace Nyangbingo.World
         private const float SeolpungseonFrostSlowFraction = .3f;
         private const float SeolpungseonFrostSlowDurationSeconds = 2f;
         private const string LanternId = "lantern";
-        private const string IronClawId = "iron_claw";
         private const string IceSteelClawId = "icesteel_claw";
         private const string IronClawMiningCriticalKey = "claw_t2_mine_crit";
         private const string IceSteelClawSlowKey = "claw_t3_slow";
@@ -418,6 +417,8 @@ namespace Nyangbingo.World
 
             runtimeServices.PlayerInventory.Changed += RefreshCombatProfile;
             runtimeServices.ActiveSlot.Changed += RefreshCombatProfile;
+            if (runtimeServices.ClawSlot != null)
+                runtimeServices.ClawSlot.Changed += RefreshCombatProfile;
             runtimeServices.PortableLantern.Changed += RefreshPortableLanternLight;
             runtimeServices.EquipmentSystem.Changed += RefreshEquipmentStats;
             runtimeServices.PlayerTemperature.RoomTemperatureChanged += HandleRoomTemperatureChanged;
@@ -2246,13 +2247,8 @@ namespace Nyangbingo.World
             return Mathf.Clamp01(Mathf.Max(0f, elapsedSeconds) / requiredSeconds);
         }
 
-        private int ResolveMiningClawTier()
-        {
-            var inventory = runtimeServices?.PlayerInventory;
-            if (inventory?.Has(IceSteelClawId, 1) == true) return 3;
-            if (inventory?.Has(IronClawId, 1) == true) return 2;
-            return 1;
-        }
+        private int ResolveMiningClawTier() =>
+            ClawSlotSystem.ResolveMiningTier(runtimeServices?.ClawSlot?.EquippedItemId);
 
         public static float CalculateMiningCriticalChance(float clawChance, float equipmentChance)
         {
@@ -2671,12 +2667,8 @@ namespace Nyangbingo.World
                 CancelMining();
                 HideMiningTargetFeedback();
             }
-            var inventory = runtimeServices?.PlayerInventory;
-            var clawProfileId = inventory != null && inventory.Count(IceSteelClawId) > 0
-                ? IceSteelClawId
-                : inventory != null && inventory.Count(IronClawId) > 0
-                    ? IronClawId
-                    : BareClawId;
+            var claw = runtimeServices?.ClawSlot;
+            var clawProfileId = claw?.ResolveCombatProfileId() ?? BareClawId;
             var profileId = runtimeServices?.ActiveSlot?.ResolveCombatProfileId(clawProfileId) ?? clawProfileId;
             CombatProfileDefinition profile;
             if (profileId == LanternId)
@@ -2686,7 +2678,8 @@ namespace Nyangbingo.World
             }
             else if (GimmickWeaponCombatRules.IsGimmickWeaponId(profileId) && catalog != null)
             {
-                var baseProfile = catalog.FindCombatProfile(clawProfileId);
+                var baseProfile = catalog.FindCombatProfile(
+                    ClawSlotSystem.ResolveMiningProfileId(claw?.EquippedItemId));
                 profile = baseProfile != null
                     ? GimmickWeaponCombatRules.CreateScaledProfile(profileId, baseProfile, catalog)
                     : catalog.FindCombatProfile(profileId);
@@ -3250,6 +3243,8 @@ namespace Nyangbingo.World
                 runtimeServices.PlayerInventory.Changed -= RefreshCombatProfile;
             if (runtimeServices?.ActiveSlot != null)
                 runtimeServices.ActiveSlot.Changed -= RefreshCombatProfile;
+            if (runtimeServices?.ClawSlot != null)
+                runtimeServices.ClawSlot.Changed -= RefreshCombatProfile;
             if (runtimeServices?.PortableLantern != null)
                 runtimeServices.PortableLantern.Changed -= RefreshPortableLanternLight;
             if (runtimeServices?.EquipmentSystem != null)

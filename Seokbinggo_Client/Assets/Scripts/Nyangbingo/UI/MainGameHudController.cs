@@ -2287,12 +2287,8 @@ namespace Nyangbingo.UI
             if (deathPanel != null) deathPanel.SetActive(true);
         }
 
-        private int ResolveClawTier()
-        {
-            if (inventory?.Has("icesteel_claw", 1) == true) return 3;
-            if (inventory?.Has("iron_claw", 1) == true) return 2;
-            return 1;
-        }
+        private int ResolveClawTier() =>
+            ClawSlotSystem.ResolveMiningTier(runtimeServices?.ClawSlot?.EquippedItemId);
 
         private void OnDestroy()
         {
