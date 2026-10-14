@@ -1046,19 +1046,42 @@ namespace Nyangbingo.UI
         }
 
         private Image sealGaugeArt;
+        private readonly Image[] sealGaugeCells = new Image[SealGaugeCellCount];
+
+        // 원본 칸은 9×16, 칸 사이 투명 틈은 2px. 한 스프라이트에 묶으면 타이트 메시가 틈을 메운다.
+        private const int SealGaugeCellCount = 3;
+        private const float SealGaugeCellGap = 2f;
+        private const float SealGaugeRightEdge = 56f;
+        private const float SealGaugeTop = -41f;
 
         private void EnsureSealGauge()
         {
             if (sealGaugeArt != null || statusArtRoot == null) return;
-            var gaugeObject = new GameObject("SealGauge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            gaugeObject.transform.SetParent(statusArtRoot.transform, false);
-            var rect = gaugeObject.GetComponent<RectTransform>();
-            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 1f);
-            sealGaugeArt = gaugeObject.GetComponent<Image>();
+            var rootObject = new GameObject("SealGauge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            rootObject.transform.SetParent(statusArtRoot.transform, false);
+            var rootRect = rootObject.GetComponent<RectTransform>();
+            rootRect.anchorMin = rootRect.anchorMax = new Vector2(0f, 1f);
+            rootRect.pivot = new Vector2(0f, 1f);
+            sealGaugeArt = rootObject.GetComponent<Image>();
+            sealGaugeArt.color = new Color(1f, 1f, 1f, 0f);
             sealGaugeArt.raycastTarget = true;
-            sealGaugeArt.preserveAspect = false;
             sealGaugeArt.enabled = false;
+
+            for (var i = 0; i < SealGaugeCellCount; i++)
+            {
+                var cellObject = new GameObject("SealGaugeCell", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                cellObject.transform.SetParent(rootObject.transform, false);
+                var rect = cellObject.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0f, 1f);
+                var cell = cellObject.GetComponent<Image>();
+                cell.raycastTarget = false;
+                cell.preserveAspect = false;
+                cell.type = Image.Type.Simple;
+                cell.useSpriteMesh = false;
+                cell.enabled = false;
+                sealGaugeCells[i] = cell;
+            }
         }
 
         private void RefreshSealGauge()
@@ -1066,38 +1089,39 @@ namespace Nyangbingo.UI
             EnsureSealGauge();
             if (sealGaugeArt == null) return;
             var frames = gameplayArtCatalog?.SealGaugeFrames;
+            var cellSprite = frames != null && frames.Count > 0 ? frames[frames.Count - 1] : null;
             var ratio = ResolveDisplayedSealRatio();
-            if (frames == null || frames.Count == 0)
-            {
-                sealGaugeArt.enabled = false;
-                return;
-            }
+            var filled = cellSprite == null || ratio <= 0f
+                ? 0
+                : Mathf.Clamp(Mathf.CeilToInt(ratio * SealGaugeCellCount), 1, SealGaugeCellCount);
 
-            if (ratio <= 0f)
-            {
-                sealGaugeArt.enabled = false;
-                return;
-            }
+            var cellWidth = cellSprite != null ? cellSprite.rect.width : 9f;
+            var cellHeight = cellSprite != null ? cellSprite.rect.height : 16f;
+            var span = SealGaugeCellCount * cellWidth + (SealGaugeCellCount - 1) * SealGaugeCellGap;
+            var rootRect = sealGaugeArt.rectTransform;
+            // 아래 홈(안쪽 오른쪽 끝 x 56, 위 y 41). 비율이 낮으면 오른쪽 칸만 남긴다.
+            rootRect.anchoredPosition = new Vector2(SealGaugeRightEdge - span, SealGaugeTop);
+            rootRect.sizeDelta = new Vector2(span, cellHeight);
+            rootRect.SetAsLastSibling();
+            sealGaugeArt.enabled = filled > 0;
+            if (cellSprite != null && cellSprite.texture != null)
+                cellSprite.texture.filterMode = FilterMode.Point;
 
-            // 0번이 세 칸 전부, 마지막이 오른쪽 한 칸이다. 비율이 낮으면 오른쪽만 남긴다.
-            var filled = Mathf.Clamp(Mathf.CeilToInt(ratio * frames.Count), 1, frames.Count);
-            var sprite = frames[frames.Count - filled];
-            if (sprite == null)
+            for (var i = 0; i < sealGaugeCells.Length; i++)
             {
-                sealGaugeArt.enabled = false;
-                return;
+                var cell = sealGaugeCells[i];
+                if (cell == null) continue;
+                var visible = i >= SealGaugeCellCount - filled;
+                cell.enabled = visible && cellSprite != null;
+                if (!cell.enabled) continue;
+                cell.sprite = cellSprite;
+                cell.color = Color.white;
+                cell.type = Image.Type.Simple;
+                cell.useSpriteMesh = false;
+                var rect = cell.rectTransform;
+                rect.anchoredPosition = new Vector2(i * (cellWidth + SealGaugeCellGap), 0f);
+                rect.sizeDelta = new Vector2(cellWidth, cellHeight);
             }
-
-            sealGaugeArt.sprite = sprite;
-            sealGaugeArt.color = Color.white;
-            sealGaugeArt.enabled = true;
-            var rect = sealGaugeArt.rectTransform;
-            var width = sprite.rect.width;
-            var height = sprite.rect.height;
-            // 아래 홈(안쪽 오른쪽 끝 x 56, 위 y 41)에 둔다. 칸이 줄면 왼쪽부터 비운다.
-            rect.anchoredPosition = new Vector2(56f - width, -41f);
-            rect.sizeDelta = new Vector2(width, height);
-            rect.SetAsLastSibling();
         }
 
         private float ResolveDisplayedSealRatio()
