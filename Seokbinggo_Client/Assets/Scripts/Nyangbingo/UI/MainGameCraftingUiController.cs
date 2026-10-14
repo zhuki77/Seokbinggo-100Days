@@ -536,6 +536,7 @@ namespace Nyangbingo.UI
             if (stationSource == null || !stationSource.TryGetCraftingStationIdentity(station, objectId,
                     out var enteredId, out _)) return false;
 
+            sideHudVisible = true;
             bindingProductionStation = true;
             OpenPage(Page.Crafting);
             bindingProductionStation = false;
@@ -945,7 +946,15 @@ namespace Nyangbingo.UI
             viewportImage.color = new Color(24f / 255f, 31f / 255f, 47f / 255f, 1f);
             viewportImage.raycastTarget = true;
 
-            var slotCount = Mathf.Max(columns * visibleRows, visibleRecipes.Count);
+            var largestCraftList = visibleRecipes.GroupBy(recipe =>
+                    (recipe.Station, Category: ItemCraftUiCategory.IndexOf(recipe.Output.item)))
+                .Select(group => group.Count()).DefaultIfEmpty(0).Max();
+            var largestSmeltingList = gameDataCatalog.Smelting.Where(recipe => recipe != null)
+                .GroupBy(recipe => recipe.StationKind)
+                .Select(group => group.Count()).DefaultIfEmpty(0).Max();
+            var largestList = Mathf.Max(largestCraftList, largestSmeltingList);
+            // Share one capacity across stations/categories, with exactly one spare full row.
+            var slotCount = (Mathf.CeilToInt(largestList / (float)columns) + 1) * columns;
             var rows = Mathf.CeilToInt(slotCount / (float)columns);
             var contentObject = new GameObject("RecipeGrid", typeof(RectTransform), typeof(GridLayoutGroup));
             contentObject.transform.SetParent(viewport, false);
@@ -1021,6 +1030,11 @@ namespace Nyangbingo.UI
                 var slotButton = slotObject.GetComponent<Button>();
                 slotButton.targetGraphic = slotImage;
                 slotButton.onClick.AddListener(() => SelectCraftWindowSlot(captured));
+                WireInventoryPointer(slotButton, pointer =>
+                {
+                    if (pointer.button == PointerEventData.InputButton.Right && slotButton.interactable)
+                        SelectCraftWindowSlot(captured);
+                });
                 var mark = CreateArtImage(slotObject.transform, "Selected", slotSprite, Vector2.zero, cell);
                 mark.preserveAspect = true;
                 mark.color = Color.white;
@@ -1263,6 +1277,7 @@ namespace Nyangbingo.UI
             if (open && page == Page.Crafting) RebuildFilteredRecipes();
             else RebuildCraftWindowRecipes();
             Refresh();
+            ResetCraftingListScroll();
         }
 
         private void OnCraftWindowAction()
@@ -1286,6 +1301,7 @@ namespace Nyangbingo.UI
                 }
                 message = string.Empty;
                 Refresh();
+                ResetCraftingListScroll();
                 return;
             }
             if (!open || page != Page.Crafting)
@@ -1987,10 +2003,18 @@ namespace Nyangbingo.UI
 
         private void ResetCraftingListScroll()
         {
-            if (craftingListScrollRect == null) return;
+            if (craftingListScrollRect == null && craftWindowScrollRect == null) return;
             Canvas.ForceUpdateCanvases();
-            craftingListScrollRect.StopMovement();
-            craftingListScrollRect.verticalNormalizedPosition = 1f;
+            if (craftingListScrollRect != null)
+            {
+                craftingListScrollRect.StopMovement();
+                craftingListScrollRect.verticalNormalizedPosition = 1f;
+            }
+            if (craftWindowScrollRect != null)
+            {
+                craftWindowScrollRect.StopMovement();
+                craftWindowScrollRect.verticalNormalizedPosition = 1f;
+            }
         }
 
         private void EnsureSelectedRecipeVisible()
