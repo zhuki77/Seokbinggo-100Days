@@ -408,6 +408,7 @@ namespace Nyangbingo.Save
         public List<string> ownedEquipmentIds = new List<string>();
         public string activeSlotItemId = string.Empty;
         public bool activeSlotUsingItem;
+        public string clawSlotItemId = string.Empty;
         public float portableLanternFuelSeconds;
         public List<UtilityCooldownRecord> utilityCooldowns = new List<UtilityCooldownRecord>();
         public List<PendingItemRecord> pendingItemAcquisitions = new List<PendingItemRecord>();
@@ -475,6 +476,13 @@ namespace Nyangbingo.Save
             if (equipment == null) equipment = new List<EquipmentRecord>();
             if (ownedEquipmentIds == null) ownedEquipmentIds = new List<string>();
             if (activeSlotItemId == null) activeSlotItemId = string.Empty;
+            if (clawSlotItemId == null) clawSlotItemId = string.Empty;
+            if (ClawSlotSystem.IsClawItem(activeSlotItemId))
+            {
+                if (string.IsNullOrEmpty(clawSlotItemId)) clawSlotItemId = activeSlotItemId;
+                activeSlotItemId = string.Empty;
+                activeSlotUsingItem = false;
+            }
             if (utilityCooldowns == null) utilityCooldowns = new List<UtilityCooldownRecord>();
             if (pendingItemAcquisitions == null) pendingItemAcquisitions = new List<PendingItemRecord>();
             if (catnipPatches == null) catnipPatches = new List<CatnipPatchStateRecord>();
@@ -1271,6 +1279,25 @@ namespace Nyangbingo.Save
             if (save == null || activeSlot == null) return false;
             save.NormalizeAfterLoad();
             return activeSlot.TryRestore(save.activeSlotItemId, save.activeSlotUsingItem);
+        }
+    }
+
+    public static class ClawSlotSaveAdapter
+    {
+        public static bool Capture(SaveGame save, ClawSlotSystem clawSlot)
+        {
+            if (save == null || clawSlot == null) return false;
+            var equipped = clawSlot.EquippedItemId ?? string.Empty;
+            save.NormalizeAfterLoad();
+            if (!string.IsNullOrEmpty(equipped)) save.clawSlotItemId = equipped;
+            return true;
+        }
+
+        public static bool Restore(SaveGame save, ClawSlotSystem clawSlot)
+        {
+            if (save == null || clawSlot == null) return false;
+            save.NormalizeAfterLoad();
+            return clawSlot.TryRestore(save.clawSlotItemId);
         }
     }
 

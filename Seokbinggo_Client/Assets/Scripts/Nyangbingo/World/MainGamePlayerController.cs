@@ -17,7 +17,7 @@ using Input = Nyangbingo.Core.GameplayInput;
 namespace Nyangbingo.World
 {
     [DefaultExecutionOrder(-60)]
-    [RequireComponent(typeof(Health), typeof(Rigidbody2D), typeof(BoxCollider2D))]
+    [RequireComponent(typeof(Health), typeof(Rigidbody2D), typeof(CapsuleCollider2D))]
     [RequireComponent(typeof(MeleeArcAttack), typeof(SpriteRenderer))]
     public sealed class MainGamePlayerController : MonoBehaviour
     {
@@ -29,7 +29,7 @@ namespace Nyangbingo.World
         // Keep the existing root-to-feet distance so old saves retain their standing height.
         public const float PlayerFeetBelowRoot = .38f;
 
-        public static float ColliderFeetBelowRoot(BoxCollider2D collider) => collider != null
+        public static float ColliderFeetBelowRoot(CapsuleCollider2D collider) => collider != null
             ? (collider.size.y * .5f - collider.offset.y) * Mathf.Abs(collider.transform.lossyScale.y)
             : PlayerFeetBelowRoot;
         public const float FallDamageBounceHeightTiles = .5f;
@@ -42,7 +42,6 @@ namespace Nyangbingo.World
         private const float SeolpungseonFrostSlowFraction = .3f;
         private const float SeolpungseonFrostSlowDurationSeconds = 2f;
         private const string LanternId = "lantern";
-        private const string IronClawId = "iron_claw";
         private const string IceSteelClawId = "icesteel_claw";
         private const string IronClawMiningCriticalKey = "claw_t2_mine_crit";
         private const string IceSteelClawSlowKey = "claw_t3_slow";
@@ -107,7 +106,7 @@ namespace Nyangbingo.World
 
         private readonly StatSheet statSheet = new StatSheet();
         private Rigidbody2D body;
-        private BoxCollider2D playerCollider;
+        private CapsuleCollider2D playerCollider;
         private readonly RaycastHit2D[] groundProbeHits = new RaycastHit2D[8];
         private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[16];
         private Health health;
@@ -235,7 +234,13 @@ namespace Nyangbingo.World
             runtimeServices ??= GetComponentInParent<MainGameRuntimeServices>();
             if (catalog == null) catalog = bootstrap != null ? bootstrap.GameDataCatalog : null;
             body = GetComponent<Rigidbody2D>();
-            playerCollider = GetComponent<BoxCollider2D>();
+            var leftoverBox = GetComponent<BoxCollider2D>();
+            if (leftoverBox != null)
+            {
+                leftoverBox.enabled = false;
+                Destroy(leftoverBox);
+            }
+            playerCollider = GetComponent<CapsuleCollider2D>();
             health = GetComponent<Health>();
             attack = GetComponent<MeleeArcAttack>();
             environmentState = GetComponentInParent<MainGameEnvironmentState>();
@@ -418,6 +423,8 @@ namespace Nyangbingo.World
 
             runtimeServices.PlayerInventory.Changed += RefreshCombatProfile;
             runtimeServices.ActiveSlot.Changed += RefreshCombatProfile;
+            if (runtimeServices.ClawSlot != null)
+                runtimeServices.ClawSlot.Changed += RefreshCombatProfile;
             runtimeServices.PortableLantern.Changed += RefreshPortableLanternLight;
             runtimeServices.EquipmentSystem.Changed += RefreshEquipmentStats;
             runtimeServices.PlayerTemperature.RoomTemperatureChanged += HandleRoomTemperatureChanged;
@@ -565,6 +572,7 @@ namespace Nyangbingo.World
                 // 이동 중에는 애니메이터의 공격 방향 잠금이 해제된 뒤 이동 방향을 적용한다.
                 characterAnimator?.SetFacing(horizontalFacing);
             }
+            UpdateFootGroundFacing();
             if (!ropeClimbing && !ropeDetachedThisFrame &&
                 (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) ||
                  Input.GetKeyDown(KeyCode.Space)))
@@ -926,7 +934,7 @@ namespace Nyangbingo.World
             return Mathf.Clamp(input, -1f, 1f) * Mathf.Max(0f, moveSpeed);
         }
 
-        public static void ConfigurePhysicsBody(Rigidbody2D targetBody, BoxCollider2D targetCollider)
+        public static void ConfigurePhysicsBody(Rigidbody2D targetBody, CapsuleCollider2D targetCollider)
         {
             if (targetBody == null) throw new System.ArgumentNullException(nameof(targetBody));
             if (targetCollider == null) throw new System.ArgumentNullException(nameof(targetCollider));
@@ -938,7 +946,7 @@ namespace Nyangbingo.World
             targetBody.interpolation = RigidbodyInterpolation2D.Interpolate;
             targetCollider.size = new Vector2(PlayerColliderWidthTiles, PlayerColliderHeightTiles);
             targetCollider.offset = new Vector2(0f, PlayerColliderHeightTiles * .5f - PlayerFeetBelowRoot);
-            targetCollider.edgeRadius = 0f;
+            targetCollider.direction = CapsuleDirection2D.Vertical;
             targetCollider.sharedMaterial = PlayerMovementPhysics.ActorMovementMaterial;
             targetCollider.isTrigger = false;
         }
@@ -2246,13 +2254,8 @@ namespace Nyangbingo.World
             return Mathf.Clamp01(Mathf.Max(0f, elapsedSeconds) / requiredSeconds);
         }
 
-        private int ResolveMiningClawTier()
-        {
-            var inventory = runtimeServices?.PlayerInventory;
-            if (inventory?.Has(IceSteelClawId, 1) == true) return 3;
-            if (inventory?.Has(IronClawId, 1) == true) return 2;
-            return 1;
-        }
+        private int ResolveMiningClawTier() =>
+            ClawSlotSystem.ResolveMiningTier(runtimeServices?.ClawSlot?.EquippedItemId);
 
         public static float CalculateMiningCriticalChance(float clawChance, float equipmentChance)
         {
@@ -2328,6 +2331,9 @@ namespace Nyangbingo.World
             var frames = gameplayArtCatalog?.FindWeaponAttackFrames(activeProfile?.Id);
             var direction = BowCombatRules.IsBowProfile(activeProfile)
                 ? facing.normalized : ResolveBodyAttackDirection();
+            if (!BowCombatRules.IsBowProfile(activeProfile) &&
+                TryResolveFootGroundLook(out var lookX))
+                direction = new Vector2(lookX, 0f);
             characterAnimator?.PlayWeaponAttack(frames, ResolveWeaponAttackDuration(frames?.Count ?? 0));
             characterAnimator?.HoldAttackFacing(direction);
         }
@@ -2547,6 +2553,34 @@ namespace Nyangbingo.World
             return (Vector2)transform.InverseTransformVector(Vector3.up * tileHeight);
         }
 
+        private void UpdateFootGroundFacing()
+        {
+            if (Mathf.Abs(movementInput.x) > Mathf.Epsilon) return;
+            if (!TryResolveFootGroundLook(out var directionX)) return;
+            horizontalFacing = directionX < 0f ? Vector2.left : Vector2.right;
+            characterAnimator?.SetFacing(horizontalFacing);
+        }
+
+        /// <summary>
+        /// 발 밑 칸은 칸 중심이 아니라 마우스의 좌우로 몸을 돌린다.
+        /// 몸통과 같은 높이의 옆 칸은 기존처럼 칸 열을 유지한다.
+        /// </summary>
+        private bool TryResolveFootGroundLook(out float directionX)
+        {
+            directionX = 0f;
+            var tiles = bootstrap?.TileService;
+            if (tiles == null || playerCollider == null || !TryGetInteractionAimWorld(out var mouse))
+                return false;
+            var bounds = playerCollider.bounds;
+            var target = tiles.WorldToCell(mouse);
+            var groundY = tiles.WorldToCell(new Vector2(bounds.center.x, bounds.min.y - .02f)).y;
+            if (target.y > groundY) return false;
+            var delta = mouse.x - bounds.center.x;
+            if (Mathf.Abs(delta) <= .0001f) return false;
+            directionX = Mathf.Sign(delta);
+            return true;
+        }
+
         private Vector2 ResolveBodyAttackDirection()
         {
             var tiles = bootstrap?.TileService;
@@ -2671,12 +2705,8 @@ namespace Nyangbingo.World
                 CancelMining();
                 HideMiningTargetFeedback();
             }
-            var inventory = runtimeServices?.PlayerInventory;
-            var clawProfileId = inventory != null && inventory.Count(IceSteelClawId) > 0
-                ? IceSteelClawId
-                : inventory != null && inventory.Count(IronClawId) > 0
-                    ? IronClawId
-                    : BareClawId;
+            var claw = runtimeServices?.ClawSlot;
+            var clawProfileId = claw?.ResolveCombatProfileId() ?? BareClawId;
             var profileId = runtimeServices?.ActiveSlot?.ResolveCombatProfileId(clawProfileId) ?? clawProfileId;
             CombatProfileDefinition profile;
             if (profileId == LanternId)
@@ -2686,7 +2716,8 @@ namespace Nyangbingo.World
             }
             else if (GimmickWeaponCombatRules.IsGimmickWeaponId(profileId) && catalog != null)
             {
-                var baseProfile = catalog.FindCombatProfile(clawProfileId);
+                var baseProfile = catalog.FindCombatProfile(
+                    ClawSlotSystem.ResolveMiningProfileId(claw?.EquippedItemId));
                 profile = baseProfile != null
                     ? GimmickWeaponCombatRules.CreateScaledProfile(profileId, baseProfile, catalog)
                     : catalog.FindCombatProfile(profileId);
@@ -3250,6 +3281,8 @@ namespace Nyangbingo.World
                 runtimeServices.PlayerInventory.Changed -= RefreshCombatProfile;
             if (runtimeServices?.ActiveSlot != null)
                 runtimeServices.ActiveSlot.Changed -= RefreshCombatProfile;
+            if (runtimeServices?.ClawSlot != null)
+                runtimeServices.ClawSlot.Changed -= RefreshCombatProfile;
             if (runtimeServices?.PortableLantern != null)
                 runtimeServices.PortableLantern.Changed -= RefreshPortableLanternLight;
             if (runtimeServices?.EquipmentSystem != null)

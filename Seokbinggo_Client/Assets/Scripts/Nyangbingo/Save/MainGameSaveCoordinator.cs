@@ -237,6 +237,8 @@ namespace Nyangbingo.Save
                 return CaptureFailed("equipment collection");
             if (!ActiveSlotSaveAdapter.Capture(save, runtimeServices.ActiveSlot))
                 return CaptureFailed("active slot");
+            if (!ClawSlotSaveAdapter.Capture(save, runtimeServices.ClawSlot))
+                return CaptureFailed("claw slot");
             if (!PortableLanternSaveAdapter.Capture(save, runtimeServices.PortableLantern))
                 return CaptureFailed("portable lantern");
             if (!RecipeBookSaveAdapter.Capture(save, runtimeServices.RecipeBook))
@@ -359,6 +361,8 @@ namespace Nyangbingo.Save
                     EquipmentCollectionSaveAdapter.Restore(save, runtimeServices.EquipmentCollection)) &&
                 RestoreStage("active slot", () =>
                     ActiveSlotSaveAdapter.Restore(save, runtimeServices.ActiveSlot)) &&
+                RestoreStage("claw slot", () =>
+                    ClawSlotSaveAdapter.Restore(save, runtimeServices.ClawSlot)) &&
                 RestoreStage("portable lantern", () =>
                     PortableLanternSaveAdapter.Restore(save, runtimeServices.PortableLantern)) &&
                 RestoreStage("recipe book", () =>
@@ -468,7 +472,7 @@ namespace Nyangbingo.Save
             }
 
             var halfExtent = MainGamePlayerController.ColliderFeetBelowRoot(
-                player.GetComponent<BoxCollider2D>());
+                player.GetComponent<CapsuleCollider2D>());
 
             var savedPosition = (Vector2)save.playerState.position;
             if (!ShouldResolveSafePlayerSpawn(forceSafeSurfaceSpawn,

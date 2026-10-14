@@ -611,11 +611,8 @@ namespace Nyangbingo.Inventory
             FanItemIds.SeongeFan, FanItemIds.IceRootWhipfan, FanItemIds.ColdWaveFan,
             BowCombatRules.StrawSlingId, BowCombatRules.GakgungId, BowCombatRules.SingijeonSondaeId,
             BowCombatRules.SeongeGakgungId, BowCombatRules.IceRootBowId, BowCombatRules.ColdWaveSingijeonId,
-            "frostclaw_gauntlet",
-            EvolvedClawCombatRules.SangunClawId, EvolvedClawCombatRules.PerfectClawId, "lantern",
-            GimmickWeaponProgress.FirstFrostClawId,
+            "lantern",
             GimmickWeaponProgress.BaekjungBundleId,
-            GimmickWeaponProgress.YeouijuClawId,
             GimmickWeaponProgress.JigwiAshId,
             GimmickWeaponProgress.SangunWhiskerId,
             GimmickWeaponProgress.YeongnoToothId

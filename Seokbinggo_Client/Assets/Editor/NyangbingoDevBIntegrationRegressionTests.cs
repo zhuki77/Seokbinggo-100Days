@@ -3128,18 +3128,19 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Coyote time must not recharge from residual ground contact while the player is already rising.");
 
         var playerObject = new GameObject("PlayerPhysicsIntegrationContract",
-            typeof(Rigidbody2D), typeof(BoxCollider2D));
+            typeof(Rigidbody2D), typeof(CapsuleCollider2D));
         try
         {
             var body = playerObject.GetComponent<Rigidbody2D>();
-            var playerCollider = playerObject.GetComponent<BoxCollider2D>();
+            var playerCollider = playerObject.GetComponent<CapsuleCollider2D>();
             MainGamePlayerController.ConfigurePhysicsBody(body, playerCollider);
 
             Require(body.bodyType == RigidbodyType2D.Dynamic &&
                     Mathf.Approximately(body.gravityScale, 0f) && body.freezeRotation &&
                     body.collisionDetectionMode == CollisionDetectionMode2D.Continuous &&
                     body.interpolation == RigidbodyInterpolation2D.Interpolate &&
-                    !playerCollider.isTrigger && playerCollider.size == new Vector2(.8f, 1.8f) &&
+                    !playerCollider.isTrigger && playerCollider.direction == CapsuleDirection2D.Vertical &&
+                    playerCollider.size == new Vector2(.8f, 1.8f) &&
                     Mathf.Approximately(playerCollider.offset.y - playerCollider.size.y * .5f, -.38f) &&
                     Mathf.Approximately(MainGamePlayerController.ColliderFeetBelowRoot(playerCollider), .38f),
                 "The merged player must retain the official dynamic foreground-physics body contract.");
@@ -4204,6 +4205,20 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 craftingSource.Contains(
                     "equipmentSlotButtons[index].onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex))"),
             "Clicking a populated equipment visual slot must select its matching equipment entry.");
+        var selectableClaw = ItemDefinition.CreateRuntime(
+            "iron_claw", "Iron Claw", 1, ItemCategory.Weapon, ItemMvpScope.A);
+        Require(MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    "iron_claw",
+                    new[] { selectableEquipmentItem },
+                    new[] { selectableEquipment },
+                    new[] { selectableClaw }) == 1 &&
+                MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    selectableEquipment.Id,
+                    new[] { selectableEquipmentItem },
+                    new[] { selectableEquipment },
+                    new[] { selectableClaw }) == 2,
+            "A claw entry must sit between the weapon list and worn equipment.");
+        UnityEngine.Object.DestroyImmediate(selectableClaw);
         UnityEngine.Object.DestroyImmediate(selectableEquipment);
         UnityEngine.Object.DestroyImmediate(selectableEquipmentItem);
         var codexSource = System.IO.File.ReadAllText(

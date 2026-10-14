@@ -21139,8 +21139,8 @@ MonoBehaviour:
   knockback: 0.5
   combatProfile: {fileID: 0}
   clawProfile: {fileID: 0}
---- !u!61 &2135433845
-BoxCollider2D:
+--- !u!70 &2135433845
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -21174,8 +21174,8 @@ BoxCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0.52}
-  m_Size: {x: 0.9, y: 1.8}
-  m_EdgeRadius: 0
+  m_Size: {x: 0.8, y: 1.8}
+  m_Direction: 0
 --- !u!50 &2135433846
 Rigidbody2D:
   serializedVersion: 5

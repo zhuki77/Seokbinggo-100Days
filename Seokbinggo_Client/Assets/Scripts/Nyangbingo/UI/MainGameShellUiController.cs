@@ -987,6 +987,37 @@ namespace Nyangbingo.UI
             if (oldDifficultyPlaceholder != null) oldDifficultyPlaceholder.gameObject.SetActive(false);
             ConfigureShellButton(settingsApplyButton, new Vector2(-43f, -88f), new Vector2(78f, 22f));
             ConfigureShellButton(settingsBackButton, new Vector2(43f, -88f), new Vector2(78f, 22f));
+            EnsureSettingsFontCredit(settingsPanel);
+        }
+
+        private void EnsureSettingsFontCredit(Transform settingsPanel)
+        {
+            const string creditName = "FontCredit";
+            var credit = settingsPanel.Find(creditName) as RectTransform;
+            Text text;
+            if (credit == null)
+            {
+                var buttonLabel = settingsApplyButton != null
+                    ? settingsApplyButton.GetComponentInChildren<Text>(true) : null;
+                var font = buttonLabel != null ? buttonLabel.font : UiTextFont.Source;
+                text = CreateTraitText(settingsPanel, creditName, font, 5, TextAnchor.MiddleCenter,
+                    new Vector2(0f, -107f), new Vector2(204f, 12f));
+                text.text = "글꼴(폰트)로 도스샘물체(leedheo 제작)를 사용하였습니다";
+                text.color = new Color(.72f, .74f, .78f, .92f);
+                text.raycastTarget = false;
+                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                text.verticalOverflow = VerticalWrapMode.Overflow;
+                credit = text.rectTransform;
+            }
+            else
+            {
+                credit.anchoredPosition = new Vector2(0f, -107f);
+                credit.sizeDelta = new Vector2(204f, 12f);
+                text = credit.GetComponent<Text>();
+                if (text != null)
+                    text.text = "글꼴(폰트)로 도스샘물체(leedheo 제작)를 사용하였습니다";
+            }
+            credit.SetAsLastSibling();
         }
 
         private static void ConfigureFullscreenToggleLayout(Transform settingsPanel)

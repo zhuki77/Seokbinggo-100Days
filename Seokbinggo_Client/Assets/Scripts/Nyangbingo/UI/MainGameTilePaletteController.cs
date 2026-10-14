@@ -553,6 +553,16 @@ namespace Nyangbingo.UI
                 clonedText.text = "9";
         }
 
+        public void WireEquipmentDrags(MainGameCraftingUiController crafting)
+        {
+            if (crafting == null || content == null) return;
+            for (var index = 0; index < ShortcutSlotCount; index++)
+            {
+                var slot = content.Find($"Slot_{index + 1}");
+                crafting.WireHotbarEquipmentDrag(slot != null ? slot.GetComponent<Button>() : null, index);
+            }
+        }
+
         private void RebuildSlots()
         {
             EnsureHotbarSlotObjects();
@@ -575,6 +585,8 @@ namespace Nyangbingo.UI
                     if (pointer.button == PointerEventData.InputButton.Left)
                         TrySelectPaletteSlot(capturedIndex);
                 });
+                FindAnyObjectByType<MainGameCraftingUiController>()
+                    ?.WireHotbarEquipmentDrag(button, capturedIndex);
                 var icon = slotTransform.Find("Icon").GetComponent<Image>();
                 var amount = slotTransform.Find("Amount").GetComponent<Text>();
                 var shortcutTransform = slotTransform.Find("Shortcut");
