@@ -52,6 +52,7 @@ namespace Nyangbingo.UI
         private readonly List<RecipeDefinition> filteredRecipes = new List<RecipeDefinition>();
         private readonly List<SmeltingDefinition> smeltingRecipes = new List<SmeltingDefinition>();
         private readonly List<ItemDefinition> activeSlotItems = new List<ItemDefinition>();
+        private readonly List<ItemDefinition> clawItems = new List<ItemDefinition>();
         private readonly List<EquipmentDefinition> ownedEquipment = new List<EquipmentDefinition>();
         [SerializeField] private GameObject panel;
         [SerializeField] private Text titleText;
@@ -3529,8 +3530,13 @@ namespace Nyangbingo.UI
             }
             else
             {
-                var equipped = runtimeServices.ActiveSlot?.EquippedItemId == item.Id;
-                builder.AppendLine(equipped ? "장착 중" : "장착하지 않음");
+                var isClaw = ClawSlotSystem.IsClawItem(item.Id);
+                var equipped = isClaw
+                    ? runtimeServices.ClawSlot?.EquippedItemId == item.Id
+                    : runtimeServices.ActiveSlot?.EquippedItemId == item.Id;
+                builder.AppendLine(isClaw
+                    ? equipped ? "발톱 칸에 장착 중" : "발톱 칸에 장착하지 않음"
+                    : equipped ? "장착 중" : "장착하지 않음");
                 var profile = gameDataCatalog.FindCombatProfile(item.Id);
                 var gimmick = GimmickWeaponCombatRules.IsGimmickWeaponId(item.Id);
                 if (gimmick)
@@ -3565,7 +3571,9 @@ namespace Nyangbingo.UI
                     builder.AppendLine($"장착하면 주변 {runtimeServices.PortableLantern.RadiusTiles:0.#}칸을 밝힙니다.")
                         .AppendLine($"현재 {(runtimeServices.PortableLantern.IsLit ? "켜짐" : "꺼짐")} · 남은 연료 {Mathf.CeilToInt(runtimeServices.PortableLantern.FuelRemainingSeconds)}초")
                         .AppendLine("장비창에서 R키 또는 연료 버튼으로 석탄을 넣으세요.");
-                builder.AppendLine().AppendLine("장착한 뒤 Q키로 맨 발톱과 바꿔 사용할 수 있습니다.");
+                builder.AppendLine().AppendLine(isClaw
+                    ? "장비 인형의 발톱 칸에 끼워야 채굴과 공격에 쓰입니다."
+                    : "장착한 뒤 Q키로 맨 발톱과 바꿔 사용할 수 있습니다.");
             }
             return builder.ToString().TrimEnd();
         }
@@ -3783,7 +3791,9 @@ namespace Nyangbingo.UI
             inventorySelectedIndex = Mathf.Clamp(inventorySelectedIndex, 0, Mathf.Max(0, inventory.Slots.Count - 1));
             var selectedItem = CurrentInventoryItem();
             var selectedEquipment = selectedItem != null &&
-                (ActiveSlotSystem.IsAllowedItemId(selectedItem.Id) || gameDataCatalog.FindEquipment(selectedItem.Id) != null);
+                (ActiveSlotSystem.IsAllowedItemId(selectedItem.Id) ||
+                 ClawSlotSystem.IsClawItem(selectedItem.Id) ||
+                 gameDataCatalog.FindEquipment(selectedItem.Id) != null);
             var summonBoss = selectedItem != null ? stationSource?.FindBossForSummonItem(selectedItem.Id) : null;
             var summonReason = string.Empty;
             var canSummon = summonBoss != null &&
@@ -3941,8 +3951,10 @@ namespace Nyangbingo.UI
             collectButton.gameObject.SetActive(false);
             RebuildOwnedEquipment();
             var activeSlotItem = CurrentActiveSlotItem();
-            var equipment = activeSlotItem == null ? CurrentEquipment() : null;
-            var item = activeSlotItem ?? (equipment != null ? gameDataCatalog.FindItem(equipment.Id) : null);
+            var clawItem = activeSlotItem == null ? CurrentClawItem() : null;
+            var equipment = activeSlotItem == null && clawItem == null ? CurrentEquipment() : null;
+            var item = activeSlotItem ?? clawItem ??
+                       (equipment != null ? gameDataCatalog.FindItem(equipment.Id) : null);
             if (item == null)
             {
                 titleText.text = "보유 장비 없음";
@@ -3953,7 +3965,9 @@ namespace Nyangbingo.UI
             }
             var equipped = activeSlotItem != null
                 ? runtimeServices.ActiveSlot.EquippedItemId == item.Id
-                : FindEquippedSlot(equipment).HasValue;
+                : clawItem != null
+                    ? runtimeServices.ClawSlot?.EquippedItemId == item.Id
+                    : FindEquippedSlot(equipment).HasValue;
             titleText.text = $"{item.DisplayName} · {(equipped ? "장착 중" : "장착하지 않음")}";
             primaryButton.GetComponentInChildren<Text>().text = equipped ? "E · 해제" : "E · 장착";
             primaryButton.interactable = true;
@@ -4081,6 +4095,7 @@ namespace Nyangbingo.UI
         private int ResolveSelectedEquipmentVisualSlot()
         {
             if (CurrentActiveSlotItem() != null) return 0;
+            if (CurrentClawItem() != null) return ClawSlotSystem.VisualSlotIndex;
             var definition = CurrentEquipment();
             if (definition == null) return -1;
             var equippedSlot = FindEquippedSlot(definition);
@@ -4124,7 +4139,7 @@ namespace Nyangbingo.UI
             RebuildOwnedEquipment();
             var itemId = EquippedItemIdForVisualSlot(visualSlotIndex);
             var entryIndex = ResolveEquipmentEntryIndex(
-                itemId, activeSlotItems, ownedEquipment);
+                itemId, activeSlotItems, ownedEquipment, clawItems);
             if (entryIndex < 0) return;
             selectedIndex = entryIndex;
             RefreshEquipment();
@@ -4132,17 +4147,24 @@ namespace Nyangbingo.UI
 
         public static int ResolveEquipmentEntryIndex(
             string itemId, IReadOnlyList<ItemDefinition> activeItems,
-            IReadOnlyList<EquipmentDefinition> equipment)
+            IReadOnlyList<EquipmentDefinition> equipment,
+            IReadOnlyList<ItemDefinition> claws = null)
         {
             if (string.IsNullOrEmpty(itemId)) return -1;
             if (activeItems != null)
                 for (var index = 0; index < activeItems.Count; index++)
                     if (string.Equals(activeItems[index]?.Id, itemId, StringComparison.Ordinal))
                         return index;
+            var activeCount = activeItems?.Count ?? 0;
+            if (claws != null)
+                for (var index = 0; index < claws.Count; index++)
+                    if (string.Equals(claws[index]?.Id, itemId, StringComparison.Ordinal))
+                        return activeCount + index;
+            var clawCount = claws?.Count ?? 0;
             if (equipment != null)
                 for (var index = 0; index < equipment.Count; index++)
                     if (string.Equals(equipment[index]?.Id, itemId, StringComparison.Ordinal))
-                        return (activeItems?.Count ?? 0) + index;
+                        return activeCount + clawCount + index;
             return -1;
         }
 
@@ -4316,6 +4338,26 @@ namespace Nyangbingo.UI
                 return;
             }
 
+            var clawItem = CurrentClawItem();
+            if (clawItem != null)
+            {
+                var claw = runtimeServices.ClawSlot;
+                if (claw == null)
+                {
+                    ShowMessage("발톱 칸을 사용할 수 없습니다.");
+                    return;
+                }
+                var succeeded = claw.EquippedItemId == clawItem.Id
+                    ? claw.TryUnequip()
+                    : claw.TryEquip(clawItem.Id);
+                ShowMessage(succeeded
+                    ? claw.EquippedItemId == clawItem.Id
+                        ? $"발톱 칸에 {clawItem.DisplayName}을 장착했습니다."
+                        : $"{clawItem.DisplayName}을 소지품으로 옮겼습니다."
+                    : "발톱 칸 변경에 실패했습니다. 인벤토리 공간을 확인하세요.");
+                return;
+            }
+
             var equipment = CurrentEquipment();
             if (equipment == null) return;
             var equippedSlot = FindEquippedSlot(equipment);
@@ -4351,6 +4393,16 @@ namespace Nyangbingo.UI
             }
             activeSlotItems.Sort((left, right) => string.CompareOrdinal(left.Id, right.Id));
 
+            clawItems.Clear();
+            var equippedClawId = runtimeServices.ClawSlot?.EquippedItemId;
+            foreach (var item in gameDataCatalog.Items)
+            {
+                if (item == null || !ClawSlotSystem.IsClawItem(item.Id)) continue;
+                if (item.Id == equippedClawId || runtimeServices.PlayerInventory.Has(item.Id, 1))
+                    clawItems.Add(item);
+            }
+            clawItems.Sort((left, right) => string.CompareOrdinal(left.Id, right.Id));
+
             ownedEquipment.Clear();
             foreach (var id in runtimeServices.EquipmentCollection.Export())
             {
@@ -4369,15 +4421,22 @@ namespace Nyangbingo.UI
                 : null;
         }
 
+        private ItemDefinition CurrentClawItem()
+        {
+            var index = selectedIndex - activeSlotItems.Count;
+            return index >= 0 && index < clawItems.Count ? clawItems[index] : null;
+        }
+
         private EquipmentDefinition CurrentEquipment()
         {
-            var equipmentIndex = selectedIndex - activeSlotItems.Count;
+            var equipmentIndex = selectedIndex - activeSlotItems.Count - clawItems.Count;
             if (ownedEquipment.Count == 0 || equipmentIndex < 0 || equipmentIndex >= ownedEquipment.Count)
                 return null;
             return ownedEquipment[equipmentIndex];
         }
 
-        private int CurrentEquipmentEntryCount() => activeSlotItems.Count + ownedEquipment.Count;
+        private int CurrentEquipmentEntryCount() =>
+            activeSlotItems.Count + clawItems.Count + ownedEquipment.Count;
 
         private EquipmentSlot? FindEquippedSlot(EquipmentDefinition definition)
         {

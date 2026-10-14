@@ -4205,6 +4205,20 @@ public static class NyangbingoDevBIntegrationRegressionTests
                 craftingSource.Contains(
                     "equipmentSlotButtons[index].onClick.AddListener(() => SelectEquipmentVisualSlot(capturedIndex))"),
             "Clicking a populated equipment visual slot must select its matching equipment entry.");
+        var selectableClaw = ItemDefinition.CreateRuntime(
+            "iron_claw", "Iron Claw", 1, ItemCategory.Weapon, ItemMvpScope.A);
+        Require(MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    "iron_claw",
+                    new[] { selectableEquipmentItem },
+                    new[] { selectableEquipment },
+                    new[] { selectableClaw }) == 1 &&
+                MainGameCraftingUiController.ResolveEquipmentEntryIndex(
+                    selectableEquipment.Id,
+                    new[] { selectableEquipmentItem },
+                    new[] { selectableEquipment },
+                    new[] { selectableClaw }) == 2,
+            "A claw entry must sit between the weapon list and worn equipment.");
+        UnityEngine.Object.DestroyImmediate(selectableClaw);
         UnityEngine.Object.DestroyImmediate(selectableEquipment);
         UnityEngine.Object.DestroyImmediate(selectableEquipmentItem);
         var codexSource = System.IO.File.ReadAllText(
