@@ -1452,6 +1452,7 @@ namespace Nyangbingo.UI
             BuildDetailsScrollArea();
             BuildCraftingList();
             BuildInventoryGrid();
+            FindAnyObjectByType<MainGameTilePaletteController>()?.WireEquipmentDrags(this);
             BuildEquipmentVisual();
             BuildStorageUi();
             BuildCodexGrid();
@@ -1654,10 +1655,15 @@ namespace Nyangbingo.UI
                 WireInventoryPointer(equipmentSlotButtons[index], pointer =>
                 {
                     if (TryShiftUnequipVisualSlot(capturedIndex, pointer)) return;
+                    if (pointer.button == PointerEventData.InputButton.Left &&
+                        TryPlaceHeldItem(capturedIndex)) return;
                     if (pointer.button == PointerEventData.InputButton.Right)
                         ShowEquipmentDescription(EquippedItemIdForVisualSlot(capturedIndex));
                 });
                 WireEquipmentDrop(equipmentSlotButtons[index], pointer => DropInventoryEquipment(capturedIndex, pointer));
+                var dropTarget = equipmentSlotButtons[index].GetComponent<EquipmentSlotDropTarget>() ??
+                                 equipmentSlotButtons[index].gameObject.AddComponent<EquipmentSlotDropTarget>();
+                dropTarget.Configure(pointer => DropInventoryEquipment(capturedIndex, pointer));
                 var dragSource = equipmentSlotButtons[index].GetComponent<InventoryEquipmentDragSource>() ??
                                  equipmentSlotButtons[index].gameObject.AddComponent<InventoryEquipmentDragSource>();
                 dragSource.Configure(pointer => BeginEquippedItemDrag(capturedIndex,
@@ -2163,6 +2169,12 @@ namespace Nyangbingo.UI
             EnsureSelectedRecipeVisible();
         }
 
+        public void WireHotbarEquipmentDrag(Button button, int inventoryIndex)
+        {
+            if (button == null || inventoryIndex < 0) return;
+            WireEquipmentDragSource(button, inventoryIndex);
+        }
+
         private void WireEquipmentDragSource(Button button, int index)
         {
             var source = button.GetComponent<InventoryEquipmentDragSource>() ??
@@ -2209,30 +2221,56 @@ namespace Nyangbingo.UI
 
         private void TryDropEquipmentUnderPointer(PointerEventData pointer)
         {
-            if (!IsDraggingEquipment || pointer == null || equipmentSlotButtons == null ||
-                pointer.pointerDrag != equipmentDragSource || pointer.pointerId != equipmentDragPointerId)
-                return;
-            var canvas = equipmentVisualRoot != null
-                ? equipmentVisualRoot.GetComponentInParent<Canvas>()?.rootCanvas : null;
-            var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? canvas.worldCamera : null;
+            if (!IsDraggingEquipment || equipmentSlotButtons == null) return;
+            var screen = pointer != null ? (Vector2)pointer.position : (Vector2)Input.mousePosition;
+            if (TryDropEquipmentAtScreenPoint(screen)) return;
+            if (pointer != null) TryDropEquipmentAtScreenPoint(Input.mousePosition);
+        }
+
+        private bool TryDropEquipmentAtScreenPoint(Vector2 screenPoint)
+        {
+            if (!IsDraggingEquipment || equipmentSlotButtons == null) return false;
             for (var index = equipmentSlotButtons.Length - 1; index >= 0; index--)
             {
                 var button = equipmentSlotButtons[index];
                 if (button == null || !button.gameObject.activeInHierarchy || !equipmentDrag.CanDrop(index))
                     continue;
-                if (!RectTransformUtility.RectangleContainsScreenPoint(
-                        (RectTransform)button.transform, pointer.position, camera))
-                    continue;
-                DropInventoryEquipment(index, pointer);
-                return;
+                if (!ContainsScreenPoint((RectTransform)button.transform, screenPoint)) continue;
+                EquipDraggedItem(index);
+                return true;
             }
+            return false;
+        }
+
+        // 오버레이 캔버스의 월드 코너는 화면 좌표다. 이벤트 카메라가 없어도 칸 위를 판정한다.
+        private static bool ContainsScreenPoint(RectTransform rect, Vector2 screenPoint)
+        {
+            if (rect == null) return false;
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            var min = new Vector2(corners[0].x, corners[0].y);
+            var max = min;
+            for (var index = 1; index < corners.Length; index++)
+            {
+                min = Vector2.Min(min, corners[index]);
+                max = Vector2.Max(max, corners[index]);
+            }
+            const float pad = 8f;
+            return screenPoint.x >= min.x - pad && screenPoint.x <= max.x + pad &&
+                   screenPoint.y >= min.y - pad && screenPoint.y <= max.y + pad;
         }
 
         private void DropInventoryEquipment(int visualSlot, PointerEventData pointer)
         {
-            if (!IsDraggingEquipment || pointer.pointerDrag != equipmentDragSource ||
-                pointer.pointerId != equipmentDragPointerId) return;
+            if (!IsDraggingEquipment) return;
+            if (pointer != null && pointer.pointerDrag != null && equipmentDragSource != null &&
+                pointer.pointerDrag != equipmentDragSource) return;
+            EquipDraggedItem(visualSlot);
+        }
+
+        private void EquipDraggedItem(int visualSlot)
+        {
+            if (!IsDraggingEquipment) return;
             if (equipmentDragSource == null || !equipmentDragSource.activeInHierarchy ||
                 equipmentVisualRoot == null || !equipmentVisualRoot.activeInHierarchy ||
                 (shell != null && shell.Screen != GameShellScreen.Gameplay))
@@ -2247,6 +2285,58 @@ namespace Nyangbingo.UI
             equipmentDropFeedback = succeeded ? "장착 완료" : "슬롯이 맞지 않음";
             equipmentDropFeedbackUntil = Time.unscaledTime + 3f;
             ShowMessage(succeeded ? $"{name} 장착 완료" : "이 칸에 장착할 수 없습니다. 맞는 장비 칸에 놓아주세요.");
+        }
+
+        /// <summary>클릭으로 집어 든 장비를 칸 위에 놓으면 장착한다.</summary>
+        private bool TryPlaceHeldItem(int visualSlot)
+        {
+            if (!HasHeldInventoryItem || HasStorageMode || runtimeServices?.PlayerInventory == null) return false;
+            if (shell != null && shell.Screen != GameShellScreen.Gameplay) return false;
+            var cursor = runtimeServices.InventoryCursor;
+            var held = cursor.Slots[0];
+            if (held.amount <= 0) return false;
+            var bag = runtimeServices.PlayerInventory;
+            if (!bag.TryAdd(held.itemId, 1))
+            {
+                ShowMessage("인벤토리 공간이 없어 장착할 수 없습니다.");
+                return true;
+            }
+            if (!cursor.TryRemove(held.itemId, 1))
+            {
+                RemoveOneFromBag(bag, held.itemId);
+                ShowMessage("인벤토리 공간이 없어 장착할 수 없습니다.");
+                return true;
+            }
+            var index = -1;
+            for (var slot = bag.Slots.Count - 1; slot >= 0; slot--)
+            {
+                if (bag.Slots[slot].itemId != held.itemId || bag.Slots[slot].amount <= 0) continue;
+                index = slot;
+                break;
+            }
+            equipmentDrag ??= new EquipmentInventoryDrag(bag, gameDataCatalog.FindEquipment);
+            var equipped = index >= 0 && equipmentDrag.Begin(index) &&
+                           equipmentDrag.TryDrop(visualSlot, runtimeServices.EquipmentSystem,
+                               runtimeServices.ActiveSlot, runtimeServices.ClawSlot);
+            if (!equipped)
+            {
+                if (index >= 0 && bag.TryRemove(held.itemId, 1, index))
+                    cursor.TryAdd(held.itemId, 1);
+                ShowMessage("이 칸에 장착할 수 없습니다. 맞는 장비 칸에 놓아주세요.");
+                return true;
+            }
+            ShowMessage($"{gameDataCatalog.ItemDisplayName(held.itemId, "장비")} 장착 완료");
+            return true;
+        }
+
+        private static void RemoveOneFromBag(Nyangbingo.Inventory.Inventory bag, string itemId)
+        {
+            for (var slot = bag.Slots.Count - 1; slot >= 0; slot--)
+            {
+                if (bag.Slots[slot].itemId != itemId || bag.Slots[slot].amount <= 0) continue;
+                bag.TryRemove(itemId, 1, slot);
+                return;
+            }
         }
 
         private void BeginEquippedItemDrag(int visualSlot, GameObject source, PointerEventData pointer)
@@ -4073,7 +4163,8 @@ namespace Nyangbingo.UI
                     background.color = validDrop ? new Color(.45f, 1f, .55f, 1f) : new Color(.55f, .55f, .55f, 1f);
                 RefreshSlotSelectionBorder(background, IsDraggingEquipment ? validDrop : index == selectedSlot);
                 var button = equipmentSlotButtons[index];
-                if (button != null) button.interactable = IsDraggingEquipment || !string.IsNullOrEmpty(itemId);
+                // 빈 칸도 레이캐스트를 받아야 드래그와 집어 둔 아이템을 놓을 수 있다.
+                if (button != null) button.interactable = true;
                 var icon = equipmentSlotIcons[index];
                 if (icon == null) continue;
                 icon.sprite = itemArtCatalog?.FindSprite(itemId);
@@ -4826,7 +4917,7 @@ namespace Nyangbingo.UI
         private string DefaultHelpText()
         {
             if (page == Page.Equipment)
-                return "장비를 가방에서 맞는 칸으로 드래그해 장착 · E 장착/해제 · ESC 닫기";
+                return "장비를 집어 칸 위에 놓거나, 끌어다 놓아 장착 · ESC 닫기";
             if (page == Page.Crafting)
                 return IsSmeltingStation(openedStation)
                     ? furnaceSmeltingView
