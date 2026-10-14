@@ -2653,6 +2653,7 @@ namespace Nyangbingo.UI
                 : runtimeServices.Furnace;
             var collected = runtimeServices.StationProduction.Collect(ResolveProductionQueue());
             while (station.Completed.Count > 0 && station.TryCollect(0)) collected++;
+            if (collected > 0) GameEvents.RaiseCraftingCompleted();
             ShowMessage(collected > 0 ? $"완료품 {collected}묶음 회수" : "회수할 완료품이 없거나 인벤토리가 가득 찼습니다.");
         }
 
