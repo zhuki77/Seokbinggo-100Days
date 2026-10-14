@@ -1455,7 +1455,7 @@ public sealed class NyangbingoInputReplayDriver : MonoBehaviour
                     $"player visual is two blocks high (width {visual.bounds.size.x / blockHeight:F3}, height {visual.bounds.size.y / blockHeight:F3}, scale {visual.transform.localScale.x:F3})");
                 Require(Vector3.Distance(player.transform.localScale, Vector3.one) < .001f,
                     "physics root scale remains unchanged");
-                var collider = player.GetComponent<BoxCollider2D>();
+                var collider = player.GetComponent<CapsuleCollider2D>();
                 Require(Mathf.Abs(visual.bounds.min.y - (player.transform.position.y + collider.offset.y - collider.size.y * .5f)) < .02f,
                     "visual feet align with collider bottom");
                 Require(player.transform.Find("AttackVisual").localScale == Vector3.one,

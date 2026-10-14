@@ -472,7 +472,7 @@ namespace Nyangbingo.Save
             }
 
             var halfExtent = MainGamePlayerController.ColliderFeetBelowRoot(
-                player.GetComponent<BoxCollider2D>());
+                player.GetComponent<CapsuleCollider2D>());
 
             var savedPosition = (Vector2)save.playerState.position;
             if (!ShouldResolveSafePlayerSpawn(forceSafeSurfaceSpawn,

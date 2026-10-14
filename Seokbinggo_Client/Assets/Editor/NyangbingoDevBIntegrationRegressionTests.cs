@@ -3128,18 +3128,19 @@ public static class NyangbingoDevBIntegrationRegressionTests
             "Coyote time must not recharge from residual ground contact while the player is already rising.");
 
         var playerObject = new GameObject("PlayerPhysicsIntegrationContract",
-            typeof(Rigidbody2D), typeof(BoxCollider2D));
+            typeof(Rigidbody2D), typeof(CapsuleCollider2D));
         try
         {
             var body = playerObject.GetComponent<Rigidbody2D>();
-            var playerCollider = playerObject.GetComponent<BoxCollider2D>();
+            var playerCollider = playerObject.GetComponent<CapsuleCollider2D>();
             MainGamePlayerController.ConfigurePhysicsBody(body, playerCollider);
 
             Require(body.bodyType == RigidbodyType2D.Dynamic &&
                     Mathf.Approximately(body.gravityScale, 0f) && body.freezeRotation &&
                     body.collisionDetectionMode == CollisionDetectionMode2D.Continuous &&
                     body.interpolation == RigidbodyInterpolation2D.Interpolate &&
-                    !playerCollider.isTrigger && playerCollider.size == new Vector2(.8f, 1.8f) &&
+                    !playerCollider.isTrigger && playerCollider.direction == CapsuleDirection2D.Vertical &&
+                    playerCollider.size == new Vector2(.8f, 1.8f) &&
                     Mathf.Approximately(playerCollider.offset.y - playerCollider.size.y * .5f, -.38f) &&
                     Mathf.Approximately(MainGamePlayerController.ColliderFeetBelowRoot(playerCollider), .38f),
                 "The merged player must retain the official dynamic foreground-physics body contract.");

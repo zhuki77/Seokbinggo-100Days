@@ -17,7 +17,7 @@ using Input = Nyangbingo.Core.GameplayInput;
 namespace Nyangbingo.World
 {
     [DefaultExecutionOrder(-60)]
-    [RequireComponent(typeof(Health), typeof(Rigidbody2D), typeof(BoxCollider2D))]
+    [RequireComponent(typeof(Health), typeof(Rigidbody2D), typeof(CapsuleCollider2D))]
     [RequireComponent(typeof(MeleeArcAttack), typeof(SpriteRenderer))]
     public sealed class MainGamePlayerController : MonoBehaviour
     {
@@ -29,7 +29,7 @@ namespace Nyangbingo.World
         // Keep the existing root-to-feet distance so old saves retain their standing height.
         public const float PlayerFeetBelowRoot = .38f;
 
-        public static float ColliderFeetBelowRoot(BoxCollider2D collider) => collider != null
+        public static float ColliderFeetBelowRoot(CapsuleCollider2D collider) => collider != null
             ? (collider.size.y * .5f - collider.offset.y) * Mathf.Abs(collider.transform.lossyScale.y)
             : PlayerFeetBelowRoot;
         public const float FallDamageBounceHeightTiles = .5f;
@@ -106,7 +106,7 @@ namespace Nyangbingo.World
 
         private readonly StatSheet statSheet = new StatSheet();
         private Rigidbody2D body;
-        private BoxCollider2D playerCollider;
+        private CapsuleCollider2D playerCollider;
         private readonly RaycastHit2D[] groundProbeHits = new RaycastHit2D[8];
         private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[16];
         private Health health;
@@ -234,7 +234,13 @@ namespace Nyangbingo.World
             runtimeServices ??= GetComponentInParent<MainGameRuntimeServices>();
             if (catalog == null) catalog = bootstrap != null ? bootstrap.GameDataCatalog : null;
             body = GetComponent<Rigidbody2D>();
-            playerCollider = GetComponent<BoxCollider2D>();
+            var leftoverBox = GetComponent<BoxCollider2D>();
+            if (leftoverBox != null)
+            {
+                leftoverBox.enabled = false;
+                Destroy(leftoverBox);
+            }
+            playerCollider = GetComponent<CapsuleCollider2D>();
             health = GetComponent<Health>();
             attack = GetComponent<MeleeArcAttack>();
             environmentState = GetComponentInParent<MainGameEnvironmentState>();
@@ -927,7 +933,7 @@ namespace Nyangbingo.World
             return Mathf.Clamp(input, -1f, 1f) * Mathf.Max(0f, moveSpeed);
         }
 
-        public static void ConfigurePhysicsBody(Rigidbody2D targetBody, BoxCollider2D targetCollider)
+        public static void ConfigurePhysicsBody(Rigidbody2D targetBody, CapsuleCollider2D targetCollider)
         {
             if (targetBody == null) throw new System.ArgumentNullException(nameof(targetBody));
             if (targetCollider == null) throw new System.ArgumentNullException(nameof(targetCollider));
@@ -939,7 +945,7 @@ namespace Nyangbingo.World
             targetBody.interpolation = RigidbodyInterpolation2D.Interpolate;
             targetCollider.size = new Vector2(PlayerColliderWidthTiles, PlayerColliderHeightTiles);
             targetCollider.offset = new Vector2(0f, PlayerColliderHeightTiles * .5f - PlayerFeetBelowRoot);
-            targetCollider.edgeRadius = 0f;
+            targetCollider.direction = CapsuleDirection2D.Vertical;
             targetCollider.sharedMaterial = PlayerMovementPhysics.ActorMovementMaterial;
             targetCollider.isTrigger = false;
         }
