@@ -1168,9 +1168,9 @@ namespace Nyangbingo.UI
             var rect = playerHealthFill.rectTransform;
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
-            // 숫자 칸 아래 뚫린 홈. 안쪽은 x 6..55, y 28..31.
-            rect.anchoredPosition = new Vector2(6f, -28f);
-            rect.sizeDelta = new Vector2(50f * ratio, 4f);
+            // 숫자 칸 아래 홈. 위·아래는 x 6부터, 가운데 두 줄은 x 5부터 뚫려 있다.
+            rect.anchoredPosition = new Vector2(5f, -28f);
+            rect.sizeDelta = new Vector2(51f * ratio, 4f);
             playerHealthFill.color = new Color(0.75f, 0.18f, 0.16f, 1f);
             playerHealthFill.enabled = ratio > .001f;
             rect.SetSiblingIndex(0);
