@@ -146,9 +146,19 @@ namespace Nyangbingo.Inventory
 
         // Inventory-bound equipment consumes one bag item and returns the previous
         // item atomically. Moving worn accessories swaps their equipped slots.
-        public bool TryEquipInSlot(EquipmentDefinition item, EquipmentSlot slot, int sourceIndex = -1)
+        public bool TryEquipInSlot(EquipmentDefinition item, EquipmentSlot slot, int sourceIndex = -1,
+            Inventory sourceInventory = null)
         {
             if (!CanEquipInSlot(item, slot)) return false;
+            if (sourceInventory != null && equipped.Any(pair => pair.Key != slot && pair.Value?.Id == item.Id))
+                return false;
+            if (sourceInventory != null)
+                return sourceInventory.TryExchangeEquipment(item.Id, Get(slot)?.Id, () =>
+                {
+                    equipped[slot] = item;
+                    Changed?.Invoke();
+                    GameEvents.RaiseEquipmentEquipped();
+                }, sourceIndex);
             if (Get(slot) == item) return true;
             EquipmentSlot? previousSlot = null;
             foreach (var pair in equipped)
@@ -183,12 +193,12 @@ namespace Nyangbingo.Inventory
                     return false;
             return true;
         }
-        public bool TryUnequip(EquipmentSlot slot, int targetIndex = -1)
+        public bool TryUnequip(EquipmentSlot slot, int targetIndex = -1, Inventory targetInventory = null)
         {
             var item = Get(slot);
             if (item == null) return false;
-            if (inventory != null)
-                return inventory.TryExchangeEquipment(null, item.Id, () =>
+            if (targetInventory != null || inventory != null)
+                return (targetInventory ?? inventory).TryExchangeEquipment(null, item.Id, () =>
                 {
                     equipped.Remove(slot);
                     Changed?.Invoke();

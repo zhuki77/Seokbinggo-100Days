@@ -453,11 +453,11 @@ namespace Nyangbingo.UI
 
         private void PlaceSketchHud()
         {
-            // 체력 틀 96×64는 우측 상단, 퀵슬롯 176×28은 우측 하단.
+            // 체력 틀 96×64는 우측 상단, 퀵슬롯 157×28은 우측 하단.
             const float margin = 4f;
             const float frameWidth = 96f;
             const float frameHeight = 64f;
-            const float hotbarWidth = 176f;
+            const float hotbarWidth = 157f;
             const float hotbarHeight = 28f;
             rightStatusCluster = true;
 
@@ -1212,22 +1212,9 @@ namespace Nyangbingo.UI
             if (tearBalanceText != null)
                 tearBalanceText.text = $"x{tearBalance}";
 
-            var fuelFrames = gameplayArtCatalog?.FuelGaugeFrames;
-            var showFuel = runtimeServices.ActiveSlot?.EquippedItemId == PortableLanternRuntime.LanternItemId;
-            if (fuelGaugeArt != null)
-            {
-                fuelGaugeArt.gameObject.SetActive(showFuel);
-                fuelGaugeText.gameObject.SetActive(showFuel);
-                if (showFuel && fuelFrames != null && fuelFrames.Count > 0)
-                {
-                    var remaining = runtimeServices.PortableLantern.FuelRemainingSeconds;
-                    var fuelRatio = Mathf.Clamp01(remaining / PortableLanternRuntime.FuelSecondsPerCoal);
-                    var index = ResolveDescendingGaugeFrame(fuelRatio, fuelFrames.Count);
-                    fuelGaugeArt.sprite = fuelFrames[index];
-                    fuelGaugeArt.enabled = fuelGaugeArt.sprite != null;
-                    fuelGaugeText.text = Mathf.CeilToInt(remaining).ToString();
-                }
-            }
+            // The retired portable-lantern HUD does not fit the current equipment UI.
+            if (fuelGaugeArt != null) fuelGaugeArt.gameObject.SetActive(false);
+            if (fuelGaugeText != null) fuelGaugeText.gameObject.SetActive(false);
 
             RefreshSaveIndicatorArt();
         }

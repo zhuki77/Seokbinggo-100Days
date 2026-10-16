@@ -53,6 +53,7 @@ namespace Nyangbingo.Save
     {
         public string objectId;
         public string definitionId;
+        public string lanternInstanceId;
         public Vector2 position;
         public float rotationDegrees;
     }
@@ -125,6 +126,7 @@ namespace Nyangbingo.Save
     [Serializable]
     public struct WorldDropStateRecord
     {
+        public string lanternInstanceId;
         public string itemId;
         public int amount;
         public bool hasStorageCondition;
@@ -173,6 +175,7 @@ namespace Nyangbingo.Save
         public Vector2 coreIdleAnchor;
         public int coreIdleStep;
         public float coreIdlePauseRemaining;
+        public bool hasSpawnWanderState;
         public bool hasCurrentCoreTarget;
         public bool hasCoreSequenceState;
         public Vector3Int currentCoreCell;
@@ -335,8 +338,8 @@ namespace Nyangbingo.Save
     [Serializable]
     public sealed class SaveGame
     {
-        /// <summary>v86: schema 28 목표 이력에 이어 29는 용기별 미확인 새벽 결과 목록을 추가한다.</summary>
-        public const int CurrentSchemaVersion = 31;
+        /// <summary>Schema 32 adds individual lantern identities and persistent fuel records.</summary>
+        public const int CurrentSchemaVersion = 32;
         /// <summary>v72: schema 27은 시작 특성 id를 추가하며 schema 23부터 순차 이관한다.</summary>
         public const int MinimumCompatibleSchemaVersion = 23;
         private const string FoxRainCharmId = "fox_rain_charm";
@@ -406,6 +409,8 @@ namespace Nyangbingo.Save
         public List<TurretFuelRecord> turretFuel = new List<TurretFuelRecord>();
         public List<EquipmentRecord> equipment = new List<EquipmentRecord>();
         public List<string> ownedEquipmentIds = new List<string>();
+        public string activeSlotLanternInstanceId;
+        public List<LanternFuelRecord> lanternFuelInstances;
         public string activeSlotItemId = string.Empty;
         public bool activeSlotUsingItem;
         public string clawSlotItemId = string.Empty;
@@ -435,6 +440,62 @@ namespace Nyangbingo.Save
         [NonSerialized] private int sourceSchemaVersion;
 
         public int SourceSchemaVersion => sourceSchemaCaptured ? sourceSchemaVersion : schemaVersion;
+
+        // Legacy stacked lanterns are split without dropping counts when bags are full.
+        private void NormalizeLanternIdentities()
+        {
+            void NormalizeSlots(List<InventorySlot> slots, int capacity, Vector2 position)
+            {
+                if (slots == null) return;
+                var extras = new List<InventorySlot>();
+                for (var index = 0; index < slots.Count; index++)
+                {
+                    var slot = slots[index];
+                    if (slot.itemId != "lantern" || slot.amount <= 0) continue;
+                    for (var n = 1; n < slot.amount; n++)
+                        extras.Add(new InventorySlot { itemId = "lantern", amount = 1, lanternInstanceId = Guid.NewGuid().ToString("N") });
+                    slot.amount = 1;
+                    if (string.IsNullOrEmpty(slot.lanternInstanceId)) slot.lanternInstanceId = Guid.NewGuid().ToString("N");
+                    slots[index] = slot;
+                }
+                foreach (var extra in extras)
+                {
+                    var empty = slots.FindIndex(value => value.amount <= 0);
+                    if (empty >= 0) slots[empty] = extra;
+                    else if (slots.Count < capacity) slots.Add(extra);
+                    else worldDrops.Add(new WorldDropStateRecord
+                    { itemId = "lantern", amount = 1, lanternInstanceId = extra.lanternInstanceId, position = position });
+                }
+            }
+            var playerPosition = (Vector2)playerState.position;
+            NormalizeSlots(inventory, Inventory.Inventory.SlotCount, playerPosition);
+            NormalizeSlots(inventoryCursor, 1, playerPosition);
+            NormalizeSlots(magpieStorage, MagpieCompanionRuntime.StorageSlotCount, magpieNestPosition);
+            foreach (var storage in jangdokStorages)
+                if (storage != null) NormalizeSlots(storage.slots, JangdokStorageRuntime.SlotCount, playerPosition);
+            foreach (var chest in chests)
+                NormalizeSlots(chest.contents, ChestProgress.StorageSlotCount, chest.position);
+            if (activeSlotItemId == "lantern" && string.IsNullOrEmpty(activeSlotLanternInstanceId))
+                activeSlotLanternInstanceId = Guid.NewGuid().ToString("N");
+            for (var i = 0; i < placedObjectRecords.Count; i++)
+            {
+                var record = placedObjectRecords[i];
+                if (record.definitionId == "lantern" && string.IsNullOrEmpty(record.lanternInstanceId))
+                { record.lanternInstanceId = record.objectId; placedObjectRecords[i] = record; }
+            }
+            var dropCount = worldDrops.Count;
+            for (var i = 0; i < dropCount; i++)
+            {
+                var drop = worldDrops[i];
+                if (drop.itemId != "lantern" || drop.amount <= 0) continue;
+                var amount = drop.amount;
+                drop.amount = 1;
+                if (string.IsNullOrEmpty(drop.lanternInstanceId)) drop.lanternInstanceId = Guid.NewGuid().ToString("N");
+                worldDrops[i] = drop;
+                for (var n = 1; n < amount; n++)
+                { drop.lanternInstanceId = Guid.NewGuid().ToString("N"); worldDrops.Add(drop); }
+            }
+        }
 
         public void NormalizeAfterLoad()
         {
@@ -501,6 +562,7 @@ namespace Nyangbingo.Save
                 chests[i] = record;
             }
             if (playerState == null) playerState = new PlayerStateRecord();
+            NormalizeLanternIdentities();
             if (timeState == null) timeState = new TimeStateRecord();
             activeBoss = new ActiveBossStateRecord();
             if (regularEncounter == null) regularEncounter = new RegularEncounterStateRecord();
@@ -1271,6 +1333,7 @@ namespace Nyangbingo.Save
             save.NormalizeAfterLoad();
             save.activeSlotItemId = activeSlot.EquippedItemId;
             save.activeSlotUsingItem = activeSlot.IsUsingEquippedItem;
+            save.activeSlotLanternInstanceId = activeSlot.EquippedLanternInstanceId;
             return true;
         }
 
@@ -1278,7 +1341,7 @@ namespace Nyangbingo.Save
         {
             if (save == null || activeSlot == null) return false;
             save.NormalizeAfterLoad();
-            return activeSlot.TryRestore(save.activeSlotItemId, save.activeSlotUsingItem);
+            return activeSlot.TryRestore(save.activeSlotItemId, save.activeSlotUsingItem, save.activeSlotLanternInstanceId);
         }
     }
 
@@ -1307,7 +1370,8 @@ namespace Nyangbingo.Save
         {
             if (save == null || lantern == null) return false;
             save.NormalizeAfterLoad();
-            save.portableLanternFuelSeconds = lantern.FuelRemainingSeconds;
+            save.lanternFuelInstances = lantern.Export();
+            save.portableLanternFuelSeconds = lantern.UnassignedLegacyFuel;
             return true;
         }
 
@@ -1315,7 +1379,7 @@ namespace Nyangbingo.Save
         {
             if (save == null || lantern == null) return false;
             save.NormalizeAfterLoad();
-            return lantern.TryRestore(save.portableLanternFuelSeconds);
+            return lantern.Restore(save.lanternFuelInstances, save.portableLanternFuelSeconds);
         }
     }
 

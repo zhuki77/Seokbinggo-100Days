@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Bosses;
@@ -42,7 +42,10 @@ namespace Nyangbingo.World
             public GameObject RuntimeRoot;
             public Light2D Light;
             public CounterAura Aura;
-            public float FuelRemaining;
+            public PortableLanternRuntime FuelRegistry;
+            public string LanternInstanceId;
+            private float localFuelRemaining;
+            public float FuelRemaining => FuelRegistry != null ? FuelRegistry.GetFuel(LanternInstanceId) : localFuelRemaining;
 
             public Func<bool> IsHoldoverActive;
             public Action TryBeginHoldover;
@@ -52,7 +55,10 @@ namespace Nyangbingo.World
                 if (deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) || float.IsInfinity(deltaGameSeconds))
                     return;
                 if (FuelRemaining > 0f)
-                    FuelRemaining = Mathf.Max(0f, FuelRemaining - deltaGameSeconds);
+                {
+                    if (FuelRegistry == null)
+                        localFuelRemaining = Mathf.Max(0f, localFuelRemaining - deltaGameSeconds);
+                }
                 else
                     TryBeginHoldover?.Invoke();
                 RefreshActiveState();
@@ -60,9 +66,10 @@ namespace Nyangbingo.World
 
             public bool AddFuel(float seconds)
             {
+                if (FuelRegistry != null) return FuelRegistry.AddFuel(LanternInstanceId, seconds);
                 if (seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds) ||
                     seconds > float.MaxValue - FuelRemaining) return false;
-                FuelRemaining += seconds;
+                localFuelRemaining += seconds;
                 RefreshActiveState();
                 return true;
             }
@@ -70,9 +77,18 @@ namespace Nyangbingo.World
             public bool RestoreFuel(float seconds)
             {
                 if (seconds < 0f || float.IsNaN(seconds) || float.IsInfinity(seconds)) return false;
-                FuelRemaining = seconds;
+                // Import old installed records into this lantern's own fuel record.
+                if (FuelRegistry != null) return seconds == 0f || FuelRegistry.AddFuel(LanternInstanceId, seconds);
+                localFuelRemaining = seconds;
                 RefreshActiveState();
                 return true;
+            }
+
+            public void ExhaustFuel()
+            {
+                if (FuelRegistry != null) FuelRegistry.SetFuel(LanternInstanceId, 0f);
+                else localFuelRemaining = 0f;
+                RefreshActiveState();
             }
 
             public void RefreshActiveState()
@@ -192,8 +208,7 @@ namespace Nyangbingo.World
             foreach (var pair in lanterns.OrderBy(entry => entry.Key, StringComparer.Ordinal))
             {
                 if (eopSuspendedObjectIds.Contains(pair.Key) || pair.Value == null) continue;
-                pair.Value.FuelRemaining = 0f;
-                pair.Value.RefreshActiveState();
+                pair.Value.ExhaustFuel();
                 eopSuspendedObjectIds.Add(pair.Key);
                 objectId = pair.Key;
                 return true;
@@ -479,7 +494,7 @@ namespace Nyangbingo.World
             foreach (var entry in turrets.Values.OrderBy(value => value.ObjectId, StringComparer.Ordinal))
                 if (!WorldSaveAdapter.CaptureTurretFuel(save, entry.ObjectId, entry.Controller)) return false;
             foreach (var entry in lanterns.Values.OrderBy(value => value.ObjectId, StringComparer.Ordinal))
-                save.turretFuel.Add(new TurretFuelRecord
+                if (entry.FuelRegistry == null) save.turretFuel.Add(new TurretFuelRecord
                 {
                     objectId = entry.ObjectId,
                     remainingGameSeconds = entry.FuelRemaining,
@@ -509,7 +524,7 @@ namespace Nyangbingo.World
                 else if (IsInstalledLanternDefinition(record.definitionId))
                 {
                     if (!TryRegisterPlacedLantern(
-                            record.objectId, record.definitionId, out var lantern))
+                            record.objectId, record.definitionId, out var lantern, record.lanternInstanceId))
                         return false;
                     if (hasFuelRecord && !TryRestoreLanternFuel(save, record.objectId, lantern)) return false;
                 }
@@ -608,6 +623,7 @@ namespace Nyangbingo.World
             var inventory = runtimeServices.PlayerInventory;
             if (sourceSlot < 0 || sourceSlot >= inventory.Capacity) return false;
             var original = inventory.Slots[sourceSlot];
+            record.lanternInstanceId = original.lanternInstanceId;
             if (!inventory.TryRemove(definitionId, 1, sourceSlot)) return false;
             // MainGameEnvironmentState applies the authoritative seal whitelist internally.
             // Passing the placement through as a barrier candidate lets insul_wall/door/roof seal,
@@ -630,16 +646,18 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool TryInteractNearestPlacedObject()
+        public bool TryInteractNearestPlacedObject(bool allowNearby = false)
         {
-            if (playerController == null || !playerController.TryGetHighlightedInteractionTarget(
-                    out var record, out _, out var chest) || chest) return false;
+            if (playerController == null || !playerController.TryGetInteractionTarget(
+                    out var record, out _, out var chest, allowNearby) || chest) return false;
             return TryInteractPlacedObject(record);
         }
 
-        public bool TryEnterDifferentCraftingStation(string currentObjectId)
+        public bool TryEnterDifferentCraftingStation(string currentObjectId, bool allowNearby = false)
         {
-            if (!TryGetHoveredCraftingStation(out var record) ||
+            if (playerController == null || !playerController.TryGetInteractionTarget(
+                    out var record, out _, out var chest, allowNearby, currentObjectId) || chest ||
+                MainGameBossSummonUiController.StationForDefinitionId(record.definitionId) == CraftingStation.None ||
                 string.Equals(record.objectId, currentObjectId, StringComparison.Ordinal)) return false;
             var station = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
             if (station == CraftingStation.None) return false;
@@ -647,24 +665,17 @@ namespace Nyangbingo.World
             return productCraftingUi != null && productCraftingUi.TryOpenForStation(station, record.objectId);
         }
 
-        public bool TryInteractFromCraftingUi(string currentObjectId, Func<bool> leaveCrafting)
+        public bool TryInteractFromCraftingUi(string currentObjectId, Func<bool> leaveCrafting, bool allowNearby = false)
         {
-            if (playerController == null || environmentState == null || Input.IsPointerOverUi()) return false;
-            if (playerController.TryGetHighlightedInteractionTarget(out var record, out _, out var chest) && !chest)
+            if (playerController == null || environmentState == null || !allowNearby && Input.IsPointerOverUi()) return false;
+            if (playerController.TryGetInteractionTarget(out var record, out _, out var chest,
+                    allowNearby, currentObjectId) && !chest)
             {
                 if (string.Equals(record.objectId, currentObjectId, StringComparison.Ordinal)) return false;
                 if (!leaveCrafting()) return false;
                 return TryInteractPlacedObject(record);
             }
-            return playerController.TryInteractChestFromCraftingUi(leaveCrafting);
-        }
-
-        private bool TryGetHoveredCraftingStation(out PlacedObjectRecord record)
-        {
-            record = default;
-            return playerController != null &&
-                playerController.TryGetHighlightedInteractionTarget(out record, out _, out var chest) && !chest &&
-                MainGameBossSummonUiController.StationForDefinitionId(record.definitionId) != CraftingStation.None;
+            return playerController.TryInteractChestFromCraftingUi(leaveCrafting, allowNearby, currentObjectId);
         }
 
         public bool TryInteractPlacedObjectClosestToAim(Vector2 aimWorld)
@@ -679,8 +690,7 @@ namespace Nyangbingo.World
             var craftingStation = MainGameBossSummonUiController.StationForDefinitionId(record.definitionId);
             if (craftingStation != CraftingStation.None)
             {
-                if (!TryGetHoveredCraftingStation(out var hovered) || hovered.objectId != record.objectId)
-                    return false;
+                // Callers already resolved a valid cursor target or a nearby E-key target.
                 if (productCraftingUi == null)
                     productCraftingUi = FindAnyObjectByType<MainGameCraftingUiController>();
                 if (productCraftingUi != null && productCraftingUi.TryOpenForStation(craftingStation, record.objectId)) return true;
@@ -824,10 +834,9 @@ namespace Nyangbingo.World
 
         private void TryRefuelLantern(LanternEntry entry)
         {
-            var fuelName = ItemName(entry.FuelItemId);
             if (!runtimeServices.PlayerInventory.TryRemove(entry.FuelItemId, 1))
             {
-                ShowMessage($"{ItemName(entry.DefinitionId)} · 연료 {entry.FuelRemaining:0}초 · {fuelName} 없음");
+                ReportLanternFuel(entry.DefinitionId, entry.FuelItemId, entry.FuelRemaining, false);
                 return;
             }
             if (!entry.AddFuel(entry.FuelSecondsPerUnit))
@@ -836,11 +845,20 @@ namespace Nyangbingo.World
                 ShowMessage($"{ItemName(entry.DefinitionId)}에 연료를 넣지 못했습니다.");
                 return;
             }
-            ShowMessage($"{ItemName(entry.DefinitionId)} · {fuelName} 1개 투입 · 연료 {entry.FuelRemaining:0}초");
+            ReportLanternFuel(entry.DefinitionId, entry.FuelItemId, entry.FuelRemaining, true);
             Debug.Log($"[Nyangbingo] Installed lantern refueled: id={entry.ObjectId}, " +
                       $"definition={entry.DefinitionId}, fuelItem={entry.FuelItemId}, " +
                       $"fuel={entry.FuelRemaining:0.0}.");
             BuildStateChanged?.Invoke();
+        }
+
+        public void ReportLanternFuel(string definitionId, string fuelItemId, float remaining, bool added)
+        {
+            var name = ItemName(definitionId);
+            var fuelName = ItemName(fuelItemId);
+            ShowMessage(added
+                ? $"{name} · {fuelName} 1개 투입 · 연료 {remaining:0}초"
+                : $"{name} · 연료 {remaining:0}초 · {fuelName} 없음");
         }
 
         private void TryRefuelIceJar(PlacedObjectRecord record)
@@ -921,8 +939,9 @@ namespace Nyangbingo.World
                 environmentState == null || runtimeServices?.PlayerInventory == null)
                 return false;
             var isJangdok = record.definitionId == JangdokStorageRuntime.DefinitionId;
-            var dropRuntime = isJangdok ? FindAnyObjectByType<MainGameWorldDropRuntime>() : null;
-            if (isJangdok && dropRuntime == null)
+            var isLantern = record.definitionId == LanternItemId;
+            var dropRuntime = isJangdok || isLantern ? FindAnyObjectByType<MainGameWorldDropRuntime>() : null;
+            if ((isJangdok || isLantern) && dropRuntime == null)
             {
                 ShowMessage("아이템 드랍 처리가 준비되지 않았습니다.");
                 return true;
@@ -943,6 +962,13 @@ namespace Nyangbingo.World
                 for (var index = 0; index < contents.Count; index++)
                     dropRuntime.SpawnStoredStack(gameDataCatalog.FindItem(contents[index].itemId),
                         contents[index], record.position, index + 1, contents.Count + 1);
+            }
+            else if (isLantern)
+            {
+                var identity = lanterns.TryGetValue(record.objectId, out var recovered)
+                    ? recovered.LanternInstanceId : record.lanternInstanceId;
+                dropRuntime.SpawnStoredStack(item, new InventorySlot
+                { itemId = item.Id, amount = 1, lanternInstanceId = identity }, record.position, 0, 1);
             }
             else WorldItemDropRequest.Request(item, 1, record.position);
             if (fullSalvage) TryRefundRemainingFuel(record);
@@ -1042,7 +1068,7 @@ namespace Nyangbingo.World
         }
 
         private bool TryRegisterPlacedLantern(
-            string objectId, string definitionId, out LanternEntry entry)
+            string objectId, string definitionId, out LanternEntry entry, string lanternInstanceId = null)
         {
             entry = null;
             if (!IsInstalledLanternDefinition(definitionId) ||
@@ -1078,9 +1104,16 @@ namespace Nyangbingo.World
                 RuntimeRoot = runtimeRoot,
                 Light = light,
                 Aura = aura,
+                FuelRegistry = definitionId == LanternItemId ? runtimeServices.PortableLantern : null,
+                LanternInstanceId = string.IsNullOrEmpty(lanternInstanceId) ? objectId : lanternInstanceId,
                 TryBeginHoldover = () => TryBeginArtifactModuleHoldover(objectId),
                 IsHoldoverActive = () => runtimeServices?.ModuleHoldover?.IsActive(objectId) ?? false
             };
+            if (entry.FuelRegistry != null)
+            {
+                entry.FuelRegistry.GetFuel(entry.LanternInstanceId);
+                entry.FuelRegistry.Changed += entry.RefreshActiveState;
+            }
             entry.RefreshActiveState();
             lanterns.Add(objectId, entry);
             activeCounterAuras.Add(aura);
@@ -1095,7 +1128,7 @@ namespace Nyangbingo.World
                 return TryRegisterUtilityTurret(record);
             if (IsInstalledLanternDefinition(record.definitionId))
                 return TryRegisterPlacedLantern(
-                    record.objectId, record.definitionId, out _);
+                    record.objectId, record.definitionId, out _, record.lanternInstanceId);
             if (TryGetPassiveCounterAuraConfiguration(
                     record.definitionId, out _, out _, out _, out _, out _))
                 return TryRegisterPlacedCounterAura(record.objectId, record.definitionId);
@@ -1401,6 +1434,7 @@ namespace Nyangbingo.World
                 WorldItemDropRequest.Request(gameDataCatalog?.FindItem(FuelItemId), units, record.position);
             }
             if (!lanterns.TryGetValue(record.objectId, out var lantern) ||
+                lantern.FuelRegistry != null ||
                 lantern.FuelRemaining <= 0f || lantern.FuelSecondsPerUnit <= 0f)
                 return;
             var lanternUnits = Mathf.Max(1, Mathf.RoundToInt(
@@ -1411,6 +1445,10 @@ namespace Nyangbingo.World
         private void RemoveLantern(string objectId)
         {
             if (!lanterns.TryGetValue(objectId, out var entry)) return;
+            if (entry.FuelRegistry != null)
+            {
+                entry.FuelRegistry.Changed -= entry.RefreshActiveState;
+            }
             lanterns.Remove(objectId);
             activeCounterAuras.Remove(entry.Aura);
             if (entry.RuntimeRoot != null) Destroy(entry.RuntimeRoot);
@@ -1536,9 +1574,7 @@ namespace Nyangbingo.World
 
         private void ClearLanterns()
         {
-            foreach (var entry in lanterns.Values)
-                if (entry.RuntimeRoot != null) Destroy(entry.RuntimeRoot);
-            lanterns.Clear();
+            foreach (var objectId in lanterns.Keys.ToArray()) RemoveLantern(objectId);
             foreach (var runtimeRoot in passiveCounterAuraRoots.Values)
                 if (runtimeRoot != null) Destroy(runtimeRoot);
             passiveCounterAuraRoots.Clear();

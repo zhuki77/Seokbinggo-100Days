@@ -36,7 +36,7 @@ workbench,작업대,station,99,A,1일차 밤 20초 온보딩
 furnace,화로,station,99,A,T2 제작대
 blast_furnace,용광로,station,99,A,얼음강철 제련 전용 (v7 신설)
 ice_anvil,얼음 모루,station,99,A,T3 제작대
-lantern,등불,placeable,99,A,반경 6타일 — 어둑시니 카운터. 연료 석탄
+lantern,등불,placeable,1,A,반경 6타일 — 어둑시니 카운터. 연료 석탄
 sieve,체,placeable,99,A,반경 4타일 — 야광귀 카운터
 haetae_statue,해태 석상,placeable,99,A,반경 8타일 화염 -50%
 nest_bed,보금자리,placeable,99,A,리스폰 지점(4-8) + **침대(밤↔낮 스킵) 겸용**(v72 4-10b) — 온난에서만 잘 수 있다

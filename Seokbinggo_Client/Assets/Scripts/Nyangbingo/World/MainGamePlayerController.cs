@@ -548,13 +548,15 @@ namespace Nyangbingo.World
             }
             UpdateAimDirection();
             runtimeServices.DeathTearPouches?.TryCollectWithin(transform.position, TearPouchPickupRadius);
+            if (Input.GetKeyDown(KeyCode.E))
+                MainGameCraftingUiController.TryInteractWithEquippedLantern();
             if (Input.GetKeyDown(KeyCode.E) && !MainGameTurretRuntime.BlocksCombatInput &&
                 !MainGameCraftingUiController.ConsumedWorldInteractionThisFrame &&
                 !MainGameCraftingUiController.BlocksGameplayInput &&
                 !MainGameTilePaletteController.BlocksGameplayInput)
             {
-                var handled = placedObjectInteractions?.TryEnterDifferentCraftingStation(null) == true ||
-                      TryInteractClosestWorldTarget(includePlacedObjects: true);
+                var handled = placedObjectInteractions?.TryEnterDifferentCraftingStation(null, allowNearby: true) == true ||
+                      TryInteractClosestWorldTarget(includePlacedObjects: true, allowNearby: true);
                 if (!handled)
                     interactionMessages?.ShowExternalMessage(
                         "가까이 있는 상호작용 대상을 찾지 못했습니다.");
@@ -1866,18 +1868,70 @@ namespace Nyangbingo.World
             return true;
         }
 
-        public bool TryInteractChestFromCraftingUi(Func<bool> leaveCrafting)
+        public bool TryGetInteractionTarget(out PlacedObjectRecord placed, out Vector3Int cell, out bool chest,
+            bool allowNearby = false, string excludeNearbyObjectId = null)
         {
-            if (!TryGetHighlightedInteractionTarget(out _, out var cell, out var chest) ||
+            if (TryGetHighlightedInteractionTarget(out placed, out cell, out chest)) return true;
+            var tiles = bootstrap?.TileService;
+            if (!allowNearby || tiles == null || Time.timeScale <= 0f ||
+                MainGameTurretRuntime.BlocksCombatInput || MainGameTilePaletteController.BlocksGameplayInput)
+                return false;
+            var origin = AimOrigin;
+            var playerCell = tiles.WorldToCell(origin);
+            var bestDistance = float.PositiveInfinity;
+            var found = false;
+            if (environmentState != null)
+                foreach (var candidate in environmentState.ExportPlacedObjects())
+                {
+                    if (candidate.objectId == excludeNearbyObjectId) continue;
+                    var candidateCell = tiles.WorldToCell(candidate.position);
+                    if (!IsWithinNearbyInteractionRange(playerCell, candidateCell)) continue;
+                    var distance = ((Vector2)tiles.GetCellCenterWorld(candidateCell) - origin).sqrMagnitude;
+                    if (distance >= bestDistance ||
+                        TryFindFirstForegroundOnSegment(tiles, origin, CellAimPoint(candidateCell), out var obstacle) &&
+                        obstacle != candidateCell) continue;
+                    bestDistance = distance;
+                    placed = candidate;
+                    cell = candidateCell;
+                    chest = false;
+                    found = true;
+                }
+            var session = bootstrap?.Session;
+            if (session != null && session.HasWorld && session.LastResult.chests != null)
+                foreach (var candidate in session.LastResult.chests)
+                {
+                    var candidateCell = new Vector3Int(candidate.position.x, candidate.position.y, 0);
+                    if (!IsWithinNearbyInteractionRange(playerCell, candidateCell) ||
+                        !session.TryPeekChestAt(candidateCell)) continue;
+                    var distance = ((Vector2)tiles.GetCellCenterWorld(candidateCell) - origin).sqrMagnitude;
+                    if (distance >= bestDistance ||
+                        TryFindFirstForegroundOnSegment(tiles, origin, CellAimPoint(candidateCell), out var obstacle) &&
+                        obstacle != candidateCell) continue;
+                    bestDistance = distance;
+                    placed = default;
+                    cell = candidateCell;
+                    chest = true;
+                    found = true;
+                }
+            return found;
+        }
+
+        public static bool IsWithinNearbyInteractionRange(Vector3Int playerCell, Vector3Int objectCell) =>
+            Mathf.Abs(playerCell.x - objectCell.x) <= 1 && Mathf.Abs(playerCell.y - objectCell.y) <= 1;
+
+        public bool TryInteractChestFromCraftingUi(Func<bool> leaveCrafting, bool allowNearby = false,
+            string excludeNearbyObjectId = null)
+        {
+            if (!TryGetInteractionTarget(out _, out var cell, out var chest, allowNearby, excludeNearbyObjectId) ||
                 !chest || !leaveCrafting()) return false;
             return TryOpenChestAt(cell);
         }
 
-        private bool TryInteractClosestWorldTarget(bool includePlacedObjects)
+        private bool TryInteractClosestWorldTarget(bool includePlacedObjects, bool allowNearby = false)
         {
-            if (!TryGetHighlightedInteractionTarget(out _, out var cell, out var chest)) return false;
+            if (!TryGetInteractionTarget(out _, out var cell, out var chest, allowNearby)) return false;
             return chest ? TryOpenChestAt(cell) : includePlacedObjects &&
-                placedObjectInteractions?.TryInteractNearestPlacedObject() == true;
+                placedObjectInteractions?.TryInteractNearestPlacedObject(allowNearby) == true;
         }
 
         private bool TryOpenStorageAtPointer()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Core;
@@ -17,6 +17,8 @@ namespace Nyangbingo.Inventory
         [UnityEngine.Range(0f, 1f)] public float storageCondition01;
         /// <summary>얼음류 25%/일을 정수 개수에 정확히 누적하기 위한 0~1 미만 잔여량.</summary>
         [UnityEngine.Range(0f, 1f)] public float storageMeltRemainder;
+
+        public string lanternInstanceId;
 
         public float EffectiveStorageCondition => hasStorageCondition ? storageCondition01 : 1f;
     }
@@ -87,7 +89,16 @@ namespace Nyangbingo.Inventory
                 if (!HasSameStorageState(target, held.hasStorageCondition,
                         held.EffectiveStorageCondition, held.storageMeltRemainder)) return false;
                 var maxStack = FindItem(target.itemId)?.MaxStack ?? 1;
-                if (maxStack <= 1 || target.amount >= maxStack) return false;
+                if (maxStack <= 1)
+                {
+                    if (rightClick || target.itemId != PortableLanternRuntime.LanternItemId) return false;
+                    slots[index] = held;
+                    cursor.slots[0] = target;
+                    Changed?.Invoke();
+                    cursor.Changed?.Invoke();
+                    return true;
+                }
+                if (target.amount >= maxStack) return false;
                 var count = Math.Min(rightClick ? 1 : held.amount, maxStack - target.amount);
                 var portion = TakePortion(ref held, count);
                 var total = target.amount + count;
@@ -159,7 +170,7 @@ namespace Nyangbingo.Inventory
         }
 
         public bool TryAddWithStorageState(string itemId, int amount, bool hasCondition,
-            float condition01, float meltRemainder)
+            float condition01, float meltRemainder, string lanternInstanceId = null)
         {
             if (!CanAddWithStorageState(itemId, amount, hasCondition, condition01, meltRemainder))
                 return false;
@@ -182,8 +193,11 @@ namespace Nyangbingo.Inventory
                     amount = added,
                     hasStorageCondition = hasCondition,
                     storageCondition01 = hasCondition ? condition01 : 0f,
-                    storageMeltRemainder = meltRemainder
+                    storageMeltRemainder = meltRemainder,
+                    lanternInstanceId = itemId == PortableLanternRuntime.LanternItemId
+                        ? string.IsNullOrEmpty(lanternInstanceId) ? Guid.NewGuid().ToString("N") : lanternInstanceId : null
                 };
+                if (itemId == PortableLanternRuntime.LanternItemId) lanternInstanceId = null;
                 amount -= added;
             }
             Changed?.Invoke(); return true;
@@ -298,7 +312,8 @@ namespace Nyangbingo.Inventory
                     amount = removed,
                     hasStorageCondition = slot.hasStorageCondition,
                     storageCondition01 = slot.storageCondition01,
-                    storageMeltRemainder = slot.storageMeltRemainder
+                    storageMeltRemainder = slot.storageMeltRemainder,
+                    lanternInstanceId = slot.lanternInstanceId
                 });
                 slot.amount -= removed;
                 removedAmount += removed;
@@ -401,23 +416,39 @@ namespace Nyangbingo.Inventory
         }
 
         public bool TryExchangeEquipment(string incomingId, string returnedId, Action commitEquipment,
-            int sourceIndex = -1, int targetIndex = -1)
+            int sourceIndex = -1, int targetIndex = -1, InventorySlot returnedState = default,
+            Action<InventorySlot> receiveIncoming = null)
         {
             if (commitEquipment == null) return false;
             var planned = new Inventory(findItem, Capacity);
             if (!planned.TryImport(slots)) return false;
-            if (!string.IsNullOrEmpty(incomingId) && !planned.TryRemove(incomingId, 1, sourceIndex)) return false;
+            var incomingState = default(InventorySlot);
+            if (!string.IsNullOrEmpty(incomingId))
+            {
+                var chosen = sourceIndex;
+                if (chosen < 0)
+                    for (var i = planned.Capacity - 1; i >= 0; i--)
+                        if (planned.slots[i].itemId == incomingId) { chosen = i; break; }
+                if (chosen < 0 || chosen >= planned.Capacity) return false;
+                incomingState = planned.slots[chosen];
+                if (!planned.TryRemove(incomingId, 1, chosen)) return false;
+            }
             if (!string.IsNullOrEmpty(returnedId))
             {
                 if (targetIndex >= 0)
                 {
                     if (targetIndex >= Capacity || planned.slots[targetIndex].amount > 0 ||
                         findItem(returnedId) == null) return false;
-                    planned.slots[targetIndex] = new InventorySlot { itemId = returnedId, amount = 1 };
+                    returnedState.itemId = returnedId;
+                    returnedState.amount = 1;
+                    planned.slots[targetIndex] = returnedState;
                 }
-                else if (!planned.TryAdd(returnedId, 1)) return false;
+                else if (!planned.TryAddWithStorageState(returnedId, 1, returnedState.hasStorageCondition,
+                    returnedState.EffectiveStorageCondition, returnedState.storageMeltRemainder,
+                    returnedState.lanternInstanceId)) return false;
             }
             for (var index = 0; index < slots.Count; index++) slots[index] = planned.slots[index];
+            receiveIncoming?.Invoke(incomingState);
             commitEquipment();
             Changed?.Invoke();
             return true;
@@ -438,8 +469,17 @@ namespace Nyangbingo.Inventory
             restored = null;
             if (saved == null) return false;
             var candidate = new List<InventorySlot>(Capacity);
-            foreach (var slot in saved)
+            var extraLanterns = new List<InventorySlot>();
+            foreach (var savedSlot in saved)
             {
+                var slot = savedSlot;
+                if (slot.itemId == PortableLanternRuntime.LanternItemId && slot.amount > 0)
+                {
+                    for (var n = 1; n < slot.amount; n++)
+                        extraLanterns.Add(new InventorySlot { itemId = slot.itemId, amount = 1, lanternInstanceId = Guid.NewGuid().ToString("N") });
+                    slot.amount = 1;
+                    if (string.IsNullOrEmpty(slot.lanternInstanceId)) slot.lanternInstanceId = Guid.NewGuid().ToString("N");
+                }
                 if (candidate.Count >= Capacity) return false;
                 if (string.IsNullOrEmpty(slot.itemId))
                 {
@@ -457,6 +497,12 @@ namespace Nyangbingo.Inventory
             }
 
             while (candidate.Count < Capacity) candidate.Add(default);
+            foreach (var extra in extraLanterns)
+            {
+                var empty = candidate.FindIndex(value => value.amount <= 0);
+                if (empty < 0) return false;
+                candidate[empty] = extra;
+            }
             restored = candidate;
             return true;
         }
@@ -625,6 +671,7 @@ namespace Nyangbingo.Inventory
         private readonly bool keepInInventory;
 
         public event Action Changed;
+        public string EquippedLanternInstanceId { get; private set; }
         public string EquippedItemId => equippedItemId;
         public bool HasEquippedItem => !string.IsNullOrEmpty(equippedItemId);
         public bool IsUsingEquippedItem => HasEquippedItem && usingEquippedItem;
@@ -640,40 +687,47 @@ namespace Nyangbingo.Inventory
         public static bool IsAllowedItemId(string itemId) =>
             !string.IsNullOrWhiteSpace(itemId) && AllowedItemIds.Contains(itemId);
 
-        public bool TryEquip(string itemId, int sourceIndex = -1)
+        public bool TryEquip(string itemId, int sourceIndex = -1, Inventory sourceInventory = null)
         {
-            if (keepInInventory)
+            if (keepInInventory && sourceInventory == null)
             {
-                if (!IsValidDefinition(itemId) || equippedItemId == itemId || !inventory.Has(itemId, 1)) return false;
+                if (!IsValidDefinition(itemId) || equippedItemId == itemId && itemId != PortableLanternRuntime.LanternItemId || !inventory.Has(itemId, 1)) return false;
+                if (itemId == PortableLanternRuntime.LanternItemId)
+                    foreach (var slot in inventory.Slots)
+                        if (slot.itemId == itemId) { EquippedLanternInstanceId = slot.lanternInstanceId; break; }
                 equippedItemId = itemId;
                 usingEquippedItem = true;
                 Changed?.Invoke();
                 GameEvents.RaiseEquipmentEquipped();
                 return true;
             }
-            if (!IsValidDefinition(itemId) || equippedItemId == itemId)
+            if (!IsValidDefinition(itemId) || sourceInventory == null &&
+                equippedItemId == itemId && itemId != PortableLanternRuntime.LanternItemId)
                 return false;
-            return inventory.TryExchangeEquipment(itemId, equippedItemId, () =>
+            return (sourceInventory ?? inventory).TryExchangeEquipment(itemId, equippedItemId, () =>
             {
                 equippedItemId = itemId;
                 usingEquippedItem = true;
                 Changed?.Invoke();
                 GameEvents.RaiseEquipmentEquipped();
-            }, sourceIndex);
+            }, sourceIndex, returnedState: new InventorySlot { lanternInstanceId = EquippedLanternInstanceId },
+                receiveIncoming: state => EquippedLanternInstanceId = state.lanternInstanceId);
         }
 
-        public bool TryUnequip(int targetIndex = -1)
+        public bool TryUnequip(int targetIndex = -1, Inventory targetInventory = null)
         {
             if (!HasEquippedItem) return false;
-            if (!keepInInventory)
-                return inventory.TryExchangeEquipment(null, equippedItemId, () =>
+            if (!keepInInventory || targetInventory != null)
+                return (targetInventory ?? inventory).TryExchangeEquipment(null, equippedItemId, () =>
                 {
                     equippedItemId = string.Empty;
+                    EquippedLanternInstanceId = null;
                     usingEquippedItem = false;
                     Changed?.Invoke();
                     GameEvents.RaiseEquipmentUnequipped();
-                }, targetIndex: targetIndex);
+                }, targetIndex: targetIndex, returnedState: new InventorySlot { lanternInstanceId = EquippedLanternInstanceId });
             equippedItemId = string.Empty;
+            EquippedLanternInstanceId = null;
             usingEquippedItem = false;
             Changed?.Invoke();
             GameEvents.RaiseEquipmentUnequipped();
@@ -720,16 +774,20 @@ namespace Nyangbingo.Inventory
         public string ResolveCombatProfileId(string clawProfileId) =>
             IsUsingEquippedItem ? equippedItemId : clawProfileId ?? string.Empty;
 
-        public bool TryRestore(string itemId, bool useItem)
+        public bool TryRestore(string itemId, bool useItem, string lanternInstanceId = null)
         {
             if (string.IsNullOrWhiteSpace(itemId))
             {
                 equippedItemId = string.Empty;
+                EquippedLanternInstanceId = null;
                 usingEquippedItem = false;
                 Changed?.Invoke();
                 return true;
             }
             if (!IsValidDefinition(itemId)) return false;
+            EquippedLanternInstanceId = itemId == PortableLanternRuntime.LanternItemId
+                ? string.IsNullOrEmpty(lanternInstanceId) ? Guid.NewGuid().ToString("N") : lanternInstanceId
+                : null;
             equippedItemId = itemId;
             usingEquippedItem = useItem;
             Changed?.Invoke();
@@ -743,68 +801,124 @@ namespace Nyangbingo.Inventory
         }
     }
 
-    /// <summary>
-    /// 휴대용 등불의 연료를 게임 시간으로 관리한다. 등불이 활성 슬롯에 장착되고 Q로 활성화된 동안에만
-    /// 연료가 줄어들며, 설치형 등불의 전투/봉인 판정에는 참여하지 않는다.
-    /// </summary>
+    [Serializable]
+    public struct LanternFuelRecord
+    {
+        public string instanceId;
+        public float remainingGameSeconds;
+    }
+
+    /// <summary>Each lantern keeps its fuel across inventory, equipment, placement and drops.</summary>
     public sealed class PortableLanternRuntime : IGameSecondsTickable, IDisposable
     {
         public const string LanternItemId = "lantern";
         public const string FuelItemId = "coal";
         public const float FuelSecondsPerCoal = 270f;
-
         private readonly Inventory inventory;
         private readonly ActiveSlotSystem activeSlot;
-        private float fuelRemainingSeconds;
-
+        private readonly Dictionary<string, float> fuel = new Dictionary<string, float>(StringComparer.Ordinal);
+        private float unassignedLegacyFuel;
         public event Action Changed;
         public float RadiusTiles { get; }
-        public float FuelRemainingSeconds => fuelRemainingSeconds;
-        public bool IsLit => fuelRemainingSeconds > 0f && activeSlot.IsUsingEquippedItem &&
-                             activeSlot.EquippedItemId == LanternItemId;
+        public float UnassignedLegacyFuel => unassignedLegacyFuel;
+        public float FuelRemainingSeconds => activeSlot.EquippedItemId == LanternItemId
+            ? GetFuel(activeSlot.EquippedLanternInstanceId) : 0f;
+        public bool IsLit => FuelRemainingSeconds > 0f && activeSlot.IsUsingEquippedItem && activeSlot.EquippedItemId == LanternItemId;
 
-        public PortableLanternRuntime(Inventory playerInventory, ActiveSlotSystem playerActiveSlot,
-            float radiusTiles)
+        public PortableLanternRuntime(Inventory playerInventory, ActiveSlotSystem playerActiveSlot, float radiusTiles)
         {
             inventory = playerInventory ?? throw new ArgumentNullException(nameof(playerInventory));
             activeSlot = playerActiveSlot ?? throw new ArgumentNullException(nameof(playerActiveSlot));
-            if (float.IsNaN(radiusTiles) || float.IsInfinity(radiusTiles) || radiusTiles <= 0f)
-                throw new ArgumentOutOfRangeException(nameof(radiusTiles));
+            if (!Valid(radiusTiles) || radiusTiles <= 0f) throw new ArgumentOutOfRangeException(nameof(radiusTiles));
             RadiusTiles = radiusTiles;
             activeSlot.Changed += HandleActiveSlotChanged;
         }
 
+        public float GetFuel(string instanceId)
+        {
+            if (string.IsNullOrEmpty(instanceId)) return 0f;
+            if (!fuel.TryGetValue(instanceId, out var remaining))
+            {
+                remaining = unassignedLegacyFuel;
+                unassignedLegacyFuel = 0f;
+                fuel.Add(instanceId, remaining);
+            }
+            return remaining;
+        }
+
         public bool TryAddFuel(int coalAmount = 1)
         {
-            if (coalAmount <= 0) return false;
-            var addedSeconds = (double)coalAmount * FuelSecondsPerCoal;
-            if (addedSeconds > float.MaxValue - fuelRemainingSeconds ||
-                !inventory.TryRemove(FuelItemId, coalAmount)) return false;
-            fuelRemainingSeconds += (float)addedSeconds;
+            if (coalAmount <= 0 || activeSlot.EquippedItemId != LanternItemId) return false;
+            var seconds = (double)coalAmount * FuelSecondsPerCoal;
+            var id = activeSlot.EquippedLanternInstanceId;
+            if (seconds > float.MaxValue - GetFuel(id) || !inventory.TryRemove(FuelItemId, coalAmount)) return false;
+            return AddFuel(id, (float)seconds);
+        }
+
+        public bool AddFuel(string instanceId, float seconds)
+        {
+            if (string.IsNullOrEmpty(instanceId) || !Valid(seconds) || seconds > float.MaxValue - GetFuel(instanceId)) return false;
+            fuel[instanceId] = GetFuel(instanceId) + seconds;
+            Changed?.Invoke();
+            return true;
+        }
+
+        public bool SetFuel(string instanceId, float seconds)
+        {
+            if (string.IsNullOrEmpty(instanceId) || !Valid(seconds)) return false;
+            fuel[instanceId] = seconds;
             Changed?.Invoke();
             return true;
         }
 
         public void Tick(float deltaGameSeconds)
         {
-            if (!IsLit || deltaGameSeconds <= 0f || float.IsNaN(deltaGameSeconds) ||
-                float.IsInfinity(deltaGameSeconds)) return;
-            var wasLit = IsLit;
-            fuelRemainingSeconds = Math.Max(0f, fuelRemainingSeconds - deltaGameSeconds);
-            if (wasLit != IsLit) Changed?.Invoke();
+            if (!Valid(deltaGameSeconds) || deltaGameSeconds <= 0f) return;
+            var exhausted = false;
+            foreach (var id in new List<string>(fuel.Keys))
+            {
+                var before = fuel[id];
+                fuel[id] = Math.Max(0f, before - deltaGameSeconds);
+                exhausted |= before > 0f && fuel[id] <= 0f;
+            }
+            unassignedLegacyFuel = Math.Max(0f, unassignedLegacyFuel - deltaGameSeconds);
+            if (exhausted) Changed?.Invoke();
         }
 
-        public bool TryRestore(float remainingGameSeconds)
+        public List<LanternFuelRecord> Export()
         {
-            if (remainingGameSeconds < 0f || float.IsNaN(remainingGameSeconds) ||
-                float.IsInfinity(remainingGameSeconds)) return false;
-            fuelRemainingSeconds = remainingGameSeconds;
+            var result = new List<LanternFuelRecord>();
+            foreach (var entry in fuel)
+                result.Add(new LanternFuelRecord { instanceId = entry.Key, remainingGameSeconds = entry.Value });
+            return result;
+        }
+
+        public bool Restore(IEnumerable<LanternFuelRecord> records, float legacySeconds)
+        {
+            if (!Valid(legacySeconds)) return false;
+            var restored = new Dictionary<string, float>(StringComparer.Ordinal);
+            if (records != null)
+                foreach (var record in records)
+                    if (string.IsNullOrEmpty(record.instanceId) || !Valid(record.remainingGameSeconds) ||
+                        !restored.TryAdd(record.instanceId, record.remainingGameSeconds)) return false;
+            fuel.Clear();
+            foreach (var entry in restored) fuel.Add(entry.Key, entry.Value);
+            unassignedLegacyFuel = legacySeconds;
+            if (records == null)
+            {
+                var id = activeSlot.EquippedLanternInstanceId;
+                if (string.IsNullOrEmpty(id))
+                    foreach (var slot in inventory.Slots)
+                        if (slot.itemId == LanternItemId) { id = slot.lanternInstanceId; break; }
+                if (!string.IsNullOrEmpty(id)) GetFuel(id);
+            }
             Changed?.Invoke();
             return true;
         }
 
+        public bool TryRestore(float seconds) => SetFuel(activeSlot.EquippedLanternInstanceId, seconds);
+        private static bool Valid(float value) => value >= 0f && !float.IsNaN(value) && !float.IsInfinity(value);
         public void Dispose() => activeSlot.Changed -= HandleActiveSlotChanged;
-
         private void HandleActiveSlotChanged() => Changed?.Invoke();
     }
 }

@@ -199,7 +199,7 @@ namespace Nyangbingo.World
                 drops[index] != entry || destination == null ||
                 !destination.TryAddWithStorageState(entry.Item.Id, entry.Amount,
                     entry.StorageState.hasStorageCondition, entry.StorageState.EffectiveStorageCondition,
-                    entry.StorageState.storageMeltRemainder))
+                    entry.StorageState.storageMeltRemainder, entry.StorageState.lanternInstanceId))
                 return false;
 
             if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
@@ -223,6 +223,7 @@ namespace Nyangbingo.World
                 if (entry?.Item == null || entry.Root == null) continue;
                 result.Add(new WorldDropStateRecord
                 {
+                    lanternInstanceId = entry.StorageState.lanternInstanceId,
                     itemId = entry.Item.Id,
                     amount = entry.Amount,
                     hasStorageCondition = entry.StorageState.hasStorageCondition,
@@ -269,7 +270,10 @@ namespace Nyangbingo.World
                 entry.StorageState = new InventorySlot { itemId = pair.record.itemId, amount = pair.record.amount,
                     hasStorageCondition = pair.record.hasStorageCondition,
                     storageCondition01 = pair.record.storageCondition01,
-                    storageMeltRemainder = pair.record.storageMeltRemainder };
+                    storageMeltRemainder = pair.record.storageMeltRemainder,
+                    lanternInstanceId = pair.item.Id == PortableLanternRuntime.LanternItemId
+                        ? string.IsNullOrEmpty(pair.record.lanternInstanceId) ? Guid.NewGuid().ToString("N") : pair.record.lanternInstanceId
+                        : null };
                 entry.Root.transform.position = pair.record.position;
                 entry.PickupDelay = pair.record.pickupDelay;
                 entry.TheftProtected = pair.record.theftProtected;
@@ -521,7 +525,7 @@ namespace Nyangbingo.World
                     PickupRadius * PickupRadius) continue;
                 if (!inventory.TryAddWithStorageState(entry.Item.Id, entry.Amount,
                         entry.StorageState.hasStorageCondition, entry.StorageState.EffectiveStorageCondition,
-                        entry.StorageState.storageMeltRemainder)) continue;
+                        entry.StorageState.storageMeltRemainder, entry.StorageState.lanternInstanceId)) continue;
                 acquiredAny = true;
                 if (entry.Collider != null) ActiveDropColliders.Remove(entry.Collider);
                 Destroy(entry.Root);
@@ -532,12 +536,15 @@ namespace Nyangbingo.World
         }
 
         public void SpawnStoredStack(ItemDefinition item, InventorySlot slot, Vector2 position,
-            int batchIndex, int batchCount)
+            int batchIndex, int batchCount, bool theftProtected = false)
         {
             if (item == null || slot.amount <= 0) return;
             // One physical drop per stored stack, rather than one per unit in a large stack.
             var entry = SpawnSingle(item, position, batchIndex, batchCount, null);
             entry.Amount = slot.amount;
+            entry.TheftProtected = theftProtected;
+            if (item.Id == PortableLanternRuntime.LanternItemId && string.IsNullOrEmpty(slot.lanternInstanceId))
+                slot.lanternInstanceId = entry.StorageState.lanternInstanceId;
             entry.StorageState = slot;
         }
 
@@ -601,6 +608,8 @@ namespace Nyangbingo.World
             {
                 Item = item,
                 Amount = 1,
+                StorageState = new InventorySlot { itemId = item.Id, amount = 1,
+                    lanternInstanceId = item.Id == PortableLanternRuntime.LanternItemId ? Guid.NewGuid().ToString("N") : null },
                 Root = root,
                 Body = body,
                 Collider = dropCollider,

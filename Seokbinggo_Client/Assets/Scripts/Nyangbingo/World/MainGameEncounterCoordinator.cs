@@ -1523,7 +1523,9 @@ namespace Nyangbingo.World
                 definition, selectedTarget, counters, instanceSpawnTrack,
                 gateByAggroRadius: usesAggroRadius || suppressFirstStrike,
                 startEngaged: !usesAggroRadius && !suppressFirstStrike,
-                hitPointsOverride: hitPoints, playerTarget: raidTarget, coreRouteSource: this);
+                hitPointsOverride: hitPoints, playerTarget: raidTarget, coreRouteSource: this,
+                wanderWhenUnaware: !raid && instanceSpawnTrack == YokaiSpawnTrack.Raid &&
+                    !IsDayEventNight && baekjungScheduler?.IsActive != true);
             if (definition.Kind == YokaiKind.Gangcheori)
             {
                 var breath = yokaiObject.AddComponent<GangcheoriBreathController>();

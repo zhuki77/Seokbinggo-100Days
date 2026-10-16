@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using Nyangbingo.Audio;
 using Nyangbingo.Data;
@@ -12,7 +11,6 @@ namespace Nyangbingo.UI
     /// <summary>
     /// Title.unity 전용 버튼 배선/연출. MainGameShellUiController에서 타이틀 관련 부분만 분리했다.
     /// FindAnyObjectByType을 쓰지 않고, 모든 대상은 인스펙터에서 사전에 연결한다.
-    /// demoSaveButtons는 GameShellController.DemoSaveDays(1/15/30일차)와 인덱스로 1:1 대응한다.
     /// </summary>
     public sealed class TitleUiController : MonoBehaviour
     {
@@ -22,11 +20,6 @@ namespace Nyangbingo.UI
         [SerializeField] private Button titleContinueButton;
         [SerializeField] private Button titleNewGameButton;
         [SerializeField] private Button titleQuitButton;
-        [SerializeField] private List<Button> demoSaveButtons = new List<Button>();
-        [SerializeField] private GameObject confirmationPanel;
-        [SerializeField] private Button confirmButton;
-        [SerializeField] private Button cancelButton;
-        [SerializeField] private Text confirmationText;
         [SerializeField] private Text statusText;
         [SerializeField] private EnvironmentArtCatalog environmentArtCatalog;
         [SerializeField] private GameplayArtCatalog gameplayArtCatalog;
@@ -38,13 +31,11 @@ namespace Nyangbingo.UI
         private Slider mapWidthSlider;
         private Text mapWidthLabel;
         private int selectedMapWidth = WorldGenerationConfig.DefaultMapWidth;
-        private bool isInitialized;
 
         /// <summary>NyangbingoTitleSceneCreator(에디터 씬 생성 도구) 전용 빌드타임 배선 진입점.</summary>
         public void ConfigureForScene(TitleShellController shellController, SaveManager saves,
             NyangbingoAudioService audio, Button continueGame, Button newGame, Button quit,
-            List<Button> demoButtons, GameObject confirmation, Button confirm, Button cancel,
-            Text confirmationLabel, Text status, EnvironmentArtCatalog environmentArt,
+            Text status, EnvironmentArtCatalog environmentArt,
             GameplayArtCatalog gameplayArt, CharacterArtCatalog characterArt)
         {
             shell = shellController;
@@ -53,11 +44,6 @@ namespace Nyangbingo.UI
             titleContinueButton = continueGame;
             titleNewGameButton = newGame;
             titleQuitButton = quit;
-            demoSaveButtons = demoButtons;
-            confirmationPanel = confirmation;
-            confirmButton = confirm;
-            cancelButton = cancel;
-            confirmationText = confirmationLabel;
             statusText = status;
             environmentArtCatalog = environmentArt;
             gameplayArtCatalog = gameplayArt;
@@ -67,9 +53,7 @@ namespace Nyangbingo.UI
         private void Start()
         {
             if (shell == null || saveManager == null || audioService == null ||
-                titleContinueButton == null || titleNewGameButton == null || titleQuitButton == null ||
-                confirmButton == null || cancelButton == null || confirmationText == null ||
-                demoSaveButtons.Count != GameShellController.DemoSaveDays.Length)
+                titleContinueButton == null || titleNewGameButton == null || titleQuitButton == null)
             {
                 Debug.LogError("[Nyangbingo] TitleUiController: 타이틀 셸 필수 배선이 올바르지 않습니다.");
                 enabled = false;
@@ -78,11 +62,9 @@ namespace Nyangbingo.UI
 
             audioService.Initialize();
             audioService.EnsureAudiblePlayback(MusicTrack.Title);
-            shell.ConfigureForRuntime(saveManager, Application.isMobilePlatform,
-                Debug.isDebugBuild || Application.isEditor);
+            shell.ConfigureForRuntime(saveManager, Application.isMobilePlatform);
             shell.NewGameRequested += HandleNewGameRequested;
             shell.ContinueRequested += HandleContinueRequested;
-            shell.DemoSaveRequested += HandleDemoSaveRequested;
 
             BindTitleButtons();
             EnsureMapWidthSlider();
@@ -90,21 +72,7 @@ namespace Nyangbingo.UI
             ApplyDeliveredTitleArt();
             RefreshTitleControls();
             SetStatus(string.Empty);
-            if (confirmationPanel != null) confirmationPanel.SetActive(false);
-            BringDemoButtonsToFront();
-            isInitialized = true;
             Debug.Log("[Nyangbingo] TitleUiController: 타이틀 셸·맵 크기 슬라이더 연결 완료.");
-        }
-
-        private void Update()
-        {
-            if (!isInitialized) return;
-            var confirming = shell.IsAwaitingDemoLoadConfirmation;
-            if (confirmationPanel != null) confirmationPanel.SetActive(confirming);
-            if (confirmationText != null && confirming)
-                confirmationText.text = $"{shell.PendingDemoDay}일차 데모를 자동저장 슬롯에 복사할까요?";
-            if (Input.GetKeyDown(KeyCode.Escape) && confirming)
-                shell.CancelDemoLoad();
         }
 
         private void BindTitleButtons()
@@ -113,28 +81,6 @@ namespace Nyangbingo.UI
                 SetStatus(shell.TryContinue() ? "불러오는 중..." : "저장 파일이 없습니다."));
             titleNewGameButton.onClick.AddListener(() => shell.RequestNewGame());
             titleQuitButton.onClick.AddListener(() => shell.RequestQuit());
-            confirmButton.onClick.AddListener(ConfirmDemoLoad);
-            cancelButton.onClick.AddListener(() => shell.CancelDemoLoad());
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-            {
-                var day = GameShellController.DemoSaveDays[index];
-                demoSaveButtons[index].onClick.AddListener(() => RequestDemoSave(day));
-            }
-        }
-
-        private void RequestDemoSave(int day)
-        {
-            if (shell.RequestDemoSave(day))
-                SetStatus($"{day}일차 데모를 자동저장 슬롯에 복사할까요?");
-        }
-
-        private void ConfirmDemoLoad()
-        {
-            var demoDay = shell.PendingDemoDay;
-            if (shell.ConfirmDemoLoad())
-                SetStatus($"{demoDay}일차 데모를 자동저장 슬롯에 복사합니다.");
-            else
-                SetStatus($"{demoDay}일차 데모 세이브가 없거나 올바르지 않습니다.");
         }
 
         private void RefreshTitleControls()
@@ -147,15 +93,6 @@ namespace Nyangbingo.UI
             if (titleContinueButton != null) titleContinueButton.interactable = shell.Title.CanContinue;
             if (titleQuitButton != null) titleQuitButton.gameObject.SetActive(shell.Title.ShowsQuit);
             RefreshMapWidthLabel();
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-            {
-                var day = GameShellController.DemoSaveDays[index];
-                var visible = shell.Title.ShowsDemoSaves;
-                demoSaveButtons[index].gameObject.SetActive(visible);
-                var hasDemo = saveManager.HasDemoSave(day);
-                demoSaveButtons[index].interactable = visible &&
-                    (Application.isEditor || hasDemo);
-            }
 
             if (statusText != null)
             {
@@ -163,15 +100,6 @@ namespace Nyangbingo.UI
                 var statusRect = statusText.rectTransform;
                 statusRect.anchoredPosition = new Vector2(-112f, -154f);
                 statusRect.sizeDelta = new Vector2(320f, 20f);
-            }
-        }
-
-        private void BringDemoButtonsToFront()
-        {
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-            {
-                if (demoSaveButtons[index] != null)
-                    demoSaveButtons[index].transform.SetAsLastSibling();
             }
         }
 
@@ -198,13 +126,6 @@ namespace Nyangbingo.UI
             SceneTransitionRequest.BeginDirect("MainGame");
         }
 
-        private void HandleDemoSaveRequested(SaveGame demo)
-        {
-            MainGameLaunchRequest.RequestedMode = MainGameLaunchRequest.Mode.DemoLoad;
-            MainGameLaunchRequest.SaveSlot = GameShellController.AutoSaveSlot;
-            SceneTransitionRequest.BeginDirect("MainGame");
-        }
-
         private void ConfigureTitleMenuLayout()
         {
             ConfigureShellButton(titleContinueButton, new Vector2(-112f, 17f), new Vector2(150f, 27f));
@@ -222,27 +143,6 @@ namespace Nyangbingo.UI
                 labelRect.anchoredPosition = new Vector2(-112f, -102f);
                 labelRect.sizeDelta = new Vector2(150f, 12f);
             }
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-            {
-                // 480x270(16:9) 아래쪽은 y=-135다. -128이면 버튼 하단이 화면 밖으로 4px 나간다.
-                ConfigureShellButton(demoSaveButtons[index],
-                    new Vector2(-112f + (index - 1) * 56f, -120f), new Vector2(52f, 22f));
-                EnsureDemoButtonLabel(demoSaveButtons[index],
-                    $"{GameShellController.DemoSaveDays[index]}일차 데모");
-            }
-        }
-
-        private static void EnsureDemoButtonLabel(Button button, string label)
-        {
-            if (button == null) return;
-            var text = button.GetComponentInChildren<Text>(true);
-            if (text == null) return;
-            text.gameObject.SetActive(true);
-            text.text = label;
-            text.fontSize = 11;
-            text.alignment = TextAnchor.MiddleCenter;
-            text.color = Color.white;
-            text.raycastTarget = false;
         }
 
         private void EnsureMapWidthSlider()
@@ -337,10 +237,6 @@ namespace Nyangbingo.UI
             RuntimeUiButtonArt.Apply(titleContinueButton, gameplayArtCatalog);
             RuntimeUiButtonArt.Apply(titleNewGameButton, gameplayArtCatalog);
             RuntimeUiButtonArt.Apply(titleQuitButton, gameplayArtCatalog);
-            RuntimeUiButtonArt.Apply(confirmButton, gameplayArtCatalog);
-            RuntimeUiButtonArt.Apply(cancelButton, gameplayArtCatalog);
-            for (var index = 0; index < demoSaveButtons.Count; index++)
-                RuntimeUiButtonArt.Apply(demoSaveButtons[index], gameplayArtCatalog);
             ApplyButtonLabelArt(titleContinueButton, gameplayArtCatalog.ShellContinue);
             ApplyButtonLabelArt(titleNewGameButton, gameplayArtCatalog.ShellStart);
             ApplyButtonLabelArt(titleQuitButton, gameplayArtCatalog.ShellLeave);
@@ -513,7 +409,6 @@ namespace Nyangbingo.UI
             {
                 shell.NewGameRequested -= HandleNewGameRequested;
                 shell.ContinueRequested -= HandleContinueRequested;
-                shell.DemoSaveRequested -= HandleDemoSaveRequested;
             }
         }
     }

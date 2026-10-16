@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Combat;
 using Nyangbingo.Data;
@@ -122,6 +122,7 @@ namespace Nyangbingo.Yokai
         private ILootRandomSource randomSource;
         private IYokaiRewardPolicy rewardPolicy;
         private readonly List<ItemAmount> stolenItems = new List<ItemAmount>();
+        private readonly List<InventorySlot> stolenStates = new List<InventorySlot>();
         private bool theftSucceeded;
         public event Action<ItemDefinition, int> Dropped;
 
@@ -134,14 +135,19 @@ namespace Nyangbingo.Yokai
 
         public bool HasStolenItems => stolenItems.Count > 0;
 
-        public bool RecordStolenItems(IReadOnlyList<ItemAmount> items)
+        public bool RecordStolenItems(IReadOnlyList<ItemAmount> items, IReadOnlyList<InventorySlot> states = null)
         {
             if (definition == null || definition.Kind != YokaiKind.Yagwanggwi ||
                 items == null || items.Count == 0) return false;
             foreach (var stack in items)
                 if (stack.item == null || stack.amount <= 0 || stack.amount > stack.item.MaxStack)
                     return false;
-            foreach (var stack in items) stolenItems.Add(stack);
+            for (var i = 0; i < items.Count; i++)
+            {
+                stolenItems.Add(items[i]);
+                stolenStates.Add(states != null && i < states.Count ? states[i] :
+                    new InventorySlot { itemId = items[i].item.Id, amount = items[i].amount });
+            }
             theftSucceeded = true;
             return true;
         }
@@ -149,13 +155,9 @@ namespace Nyangbingo.Yokai
         public List<InventorySlot> CaptureStolenItems()
         {
             var result = new List<InventorySlot>(stolenItems.Count);
-            foreach (var stack in stolenItems)
-                if (stack.item != null && stack.amount > 0)
-                    result.Add(new InventorySlot
-                    {
-                        itemId = stack.item.Id,
-                        amount = stack.amount
-                    });
+            for (var i = 0; i < stolenItems.Count; i++)
+                if (stolenItems[i].item != null && stolenItems[i].amount > 0)
+                    result.Add(stolenStates[i]);
             return result;
         }
 
@@ -163,6 +165,7 @@ namespace Nyangbingo.Yokai
             Func<string, ItemDefinition> findItem)
         {
             stolenItems.Clear();
+            stolenStates.Clear();
             theftSucceeded = false;
             if (items == null) return true;
             foreach (var stack in items)
@@ -171,9 +174,11 @@ namespace Nyangbingo.Yokai
                 if (item == null || stack.amount <= 0 || stack.amount > item.MaxStack)
                 {
                     stolenItems.Clear();
+                    stolenStates.Clear();
                     return false;
                 }
                 stolenItems.Add(new ItemAmount { item = item, amount = stack.amount });
+                stolenStates.Add(stack);
             }
             theftSucceeded = stolenItems.Count > 0;
             return true;
@@ -202,8 +207,19 @@ namespace Nyangbingo.Yokai
             Grant(definition.TearItem, tearAmount);
             if (theftSucceeded && definition.Kind == YokaiKind.Yagwanggwi)
             {
-                foreach (var stolen in stolenItems)
-                    Grant(stolen.item, stolen.amount, true);
+                for (var i = 0; i < stolenItems.Count; i++)
+                {
+                    var stolen = stolenItems[i];
+                    var drops = stolen.item.Id == PortableLanternRuntime.LanternItemId
+                        ? FindAnyObjectByType<MainGameWorldDropRuntime>() : null;
+                    if (drops != null)
+                    {
+                        Dropped?.Invoke(stolen.item, stolen.amount);
+                        drops.SpawnStoredStack(stolen.item, stolenStates[i], transform.position, i, stolenItems.Count,
+                            theftProtected: true);
+                    }
+                    else Grant(stolen.item, stolen.amount, true);
+                }
                 Grant(definition.TearItem, definition.TearBonus);
             }
 

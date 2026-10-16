@@ -21,6 +21,10 @@ namespace Nyangbingo.UI
         private RectTransform root, list, dawnRoot;
         private UnityEngine.UI.Text title, hint, completion, dawnText, dawnPageText;
         private UnityEngine.UI.Text priorityNotice;
+        private UnityEngine.UI.ScrollRect hintScroll;
+        private UnityEngine.UI.Scrollbar hintScrollbar;
+        private RectTransform hintViewport;
+        private string lastHintText;
         private UnityEngine.UI.Image icon, arrow;
         private UnityEngine.UI.Text arrowLabel;
         private UnityEngine.UI.Button titleButton;
@@ -48,7 +52,9 @@ namespace Nyangbingo.UI
               RectTransformUtility.RectangleContainsScreenPoint(dawnRoot, Input.mousePosition,
                   canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera)) ||
              (root != null && root.gameObject.activeInHierarchy &&
-            (RectTransformUtility.RectangleContainsScreenPoint(title.rectTransform, Input.mousePosition,
+            ((hintViewport != null && RectTransformUtility.RectangleContainsScreenPoint(hintViewport, Input.mousePosition,
+                canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera)) ||
+             RectTransformUtility.RectangleContainsScreenPoint(title.rectTransform, Input.mousePosition,
                 canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera) ||
              (list.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(list, Input.mousePosition,
                 canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera)))) ||
@@ -113,11 +119,49 @@ namespace Nyangbingo.UI
                 listOpen = !listOpen;
                 PersistUiState();
             });
-            hint = Label("GoalHint", root, textTemplate, new Vector2(sideInset, -21),
-                new Vector2(innerWidth, Mathf.Max(18f, questSize.y - 29f)), 7);
-            KeepInside(hint);
+            var bodySize = new Vector2(innerWidth, Mathf.Max(18f, questSize.y - 29f));
+            var body = Panel("GoalBodyScroll", root, new Vector2(sideInset, -21), bodySize);
+            var bodyImage = body.GetComponent<UnityEngine.UI.Image>();
+            bodyImage.color = Color.clear;
+            bodyImage.raycastTarget = true;
+            hintScroll = body.gameObject.AddComponent<UnityEngine.UI.ScrollRect>();
+            hintScroll.horizontal = false;
+            hintScroll.vertical = true;
+            hintScroll.movementType = UnityEngine.UI.ScrollRect.MovementType.Clamped;
+            hintScroll.inertia = false;
+            hintScroll.scrollSensitivity = 10f;
+            hintViewport = Panel("Viewport", body, Vector2.zero, new Vector2(bodySize.x - 4f, bodySize.y));
+            var viewportImage = hintViewport.GetComponent<UnityEngine.UI.Image>();
+            viewportImage.color = Color.clear;
+            viewportImage.raycastTarget = true;
+            hintViewport.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
+            hint = Label("GoalHint", hintViewport, textTemplate, Vector2.zero,
+                new Vector2(bodySize.x - 4f, bodySize.y), 7);
             hint.alignment = TextAnchor.UpperCenter;
             hint.horizontalOverflow = HorizontalWrapMode.Overflow;
+            hint.verticalOverflow = VerticalWrapMode.Overflow;
+            hint.raycastTarget = false;
+            var fitter = hint.gameObject.AddComponent<UnityEngine.UI.ContentSizeFitter>();
+            fitter.verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
+            hintScroll.viewport = hintViewport;
+            hintScroll.content = hint.rectTransform;
+            var track = Panel("Scrollbar", body, new Vector2(bodySize.x - 2f, 0f), new Vector2(2f, bodySize.y));
+            var trackImage = track.GetComponent<UnityEngine.UI.Image>();
+            trackImage.color = new Color(.12f, .16f, .24f, 1f);
+            trackImage.raycastTarget = true;
+            var handle = Panel("Handle", track, Vector2.zero, new Vector2(2f, bodySize.y));
+            handle.anchorMin = Vector2.zero;
+            handle.anchorMax = Vector2.one;
+            handle.offsetMin = handle.offsetMax = Vector2.zero;
+            var handleImage = handle.GetComponent<UnityEngine.UI.Image>();
+            handleImage.color = new Color(.48f, .57f, .72f, 1f);
+            handleImage.raycastTarget = true;
+            hintScrollbar = track.gameObject.AddComponent<UnityEngine.UI.Scrollbar>();
+            hintScrollbar.direction = UnityEngine.UI.Scrollbar.Direction.BottomToTop;
+            hintScrollbar.handleRect = handle;
+            hintScrollbar.targetGraphic = handleImage;
+            hintScroll.verticalScrollbar = hintScrollbar;
+            hintScroll.verticalScrollbarVisibility = UnityEngine.UI.ScrollRect.ScrollbarVisibility.AutoHide;
             priorityNotice = Label("PriorityNotice", parent.transform, textTemplate,
                 new Vector2(0f, -24f), new Vector2(300f, 36f), 8);
             priorityNotice.rectTransform.anchorMin = priorityNotice.rectTransform.anchorMax =
@@ -284,7 +328,7 @@ namespace Nyangbingo.UI
             priorityNotice.text = notice ? WrapAtWordBoundaries(selected.Text, priorityNotice) : string.Empty;
             priorityNotice.color = selected?.Definition.Tier <= 2
                 ? new Color(1f, .35f, .25f) : new Color(1f, .9f, .65f);
-            hint.text = WrapAtWordBoundaries(services.Goals.CurrentHint, hint);
+            RefreshHint(services.Goals.CurrentHint);
             if (selected?.Definition.Id != "reward_crafting" || (!listOpen && services.Goals.PendingDawnDay == 0))
                 guides.Advance(selected, Time.unscaledDeltaTime);
             if (selected?.Definition.Id == "reward_crafting" && selected.Remaining <= 0f)
@@ -321,6 +365,18 @@ namespace Nyangbingo.UI
             }
             RefreshArrow();
             PersistUiState();
+        }
+
+        private void RefreshHint(string value)
+        {
+            var wrapped = WrapAtWordBoundaries(value, hint);
+            if (wrapped == lastHintText) return;
+            lastHintText = wrapped;
+            hint.text = wrapped;
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(hint.rectTransform);
+            hintScroll.StopMovement();
+            hintScroll.verticalNormalizedPosition = 1f;
+            hintScrollbar.gameObject.SetActive(hint.preferredHeight > hintViewport.rect.height + .01f);
         }
 
         private void RefreshDawn()

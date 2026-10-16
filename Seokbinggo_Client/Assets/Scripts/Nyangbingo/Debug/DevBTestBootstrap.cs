@@ -1,4 +1,4 @@
-﻿using Nyangbingo.Save;
+using Nyangbingo.Save;
 using Nyangbingo.Core;
 using Nyangbingo.Crafting;
 using Nyangbingo.Data;
@@ -29,6 +29,7 @@ namespace Nyangbingo.Debugging
             TestV29InventoryOwnedPlaceablePolicy();
             TestV28ActiveSlotToggleAndSave();
             TestPortableLanternActiveFuelAndSave();
+            TestEquipmentCursorExchange();
             var wood = ItemDefinition.CreateRuntime("wood", "나무");
             var stone = ItemDefinition.CreateRuntime("stone", "돌");
             var workbench = ItemDefinition.CreateRuntime("workbench", "작업대", 1);
@@ -215,6 +216,7 @@ namespace Nyangbingo.Debugging
             TestYagwanggwiTheftRules();
             TestImportedYokaiSpawnTracksAndDawnFlee();
             TestYokaiDefinitionHealthInitialization();
+            TestSpawnWanderSaveRoundTrip();
             TestYokaiGameSecondsBinding();
             TestSummonedBossFieldYokaiFreezePolicy();
             TestYokaiReconfigurationClockReset();
@@ -517,66 +519,115 @@ namespace Nyangbingo.Debugging
             else Debug.LogError("[Nyangbingo] v28 active slot toggle or save test failed.");
         }
 
+        private void TestEquipmentCursorExchange()
+        {
+            var hat = ItemDefinition.CreateRuntime("cursor_hat", "모자", 1, ItemCategory.Equipment);
+            var otherHat = ItemDefinition.CreateRuntime("cursor_hat_two", "모자2", 1, ItemCategory.Equipment);
+            var lamp = ItemDefinition.CreateRuntime("lantern", "등불", 1, ItemCategory.Tool);
+            var clawItem = ItemDefinition.CreateRuntime("iron_claw", "발톱", 1, ItemCategory.Tool);
+            var filler = ItemDefinition.CreateRuntime("cursor_filler", "재료", 1, ItemCategory.Material);
+            ItemDefinition Find(string id) => id == hat.Id ? hat : id == otherHat.Id ? otherHat :
+                id == lamp.Id ? lamp : id == clawItem.Id ? clawItem : id == filler.Id ? filler : null;
+            var bag = new Nyangbingo.Inventory.Inventory(Find, 1);
+            var cursor = new Nyangbingo.Inventory.Inventory(Find, 1);
+            var storage = new Nyangbingo.Inventory.Inventory(Find, 1);
+            bag.TryAdd(filler.Id, 1);
+            var gear = new EquipmentSystem(bag);
+            var first = EquipmentDefinition.CreateRuntime(hat.Id, EquipmentSlot.Head, false, 1);
+            var second = EquipmentDefinition.CreateRuntime(otherHat.Id, EquipmentSlot.Head, false, 2);
+            cursor.TryAdd(hat.Id, 1);
+            var equipWithFullBag = gear.TryEquipInSlot(first, EquipmentSlot.Head, 0, cursor) && cursor.IsEmpty;
+            cursor.TryAdd(otherHat.Id, 1);
+            var swap = gear.TryEquipInSlot(second, EquipmentSlot.Head, 0, cursor) && cursor.Has(hat.Id, 1);
+            var toStorage = cursor.TryTransferSlotTo(0, storage) && storage.Has(hat.Id, 1);
+            var pickUp = gear.TryUnequip(EquipmentSlot.Head, 0, cursor) && cursor.Has(otherHat.Id, 1) &&
+                         gear.Get(EquipmentSlot.Head) == null;
+            var cancel = gear.TryEquipInSlot(second, EquipmentSlot.Head, 0, cursor) && cursor.IsEmpty;
+            var wrongSlotRejected = !gear.TryEquipInSlot(first, EquipmentSlot.Feet, 0, cursor);
+            var active = new ActiveSlotSystem(bag, Find);
+            cursor.TryAdd(lamp.Id, 1);
+            var identity = cursor.Slots[0].lanternInstanceId;
+            var lampEquipped = active.TryEquip(lamp.Id, 0, cursor) && cursor.IsEmpty &&
+                               active.EquippedLanternInstanceId == identity;
+            var lampPicked = active.TryUnequip(0, cursor) && cursor.Slots[0].lanternInstanceId == identity;
+            cursor.TryRemove(lamp.Id, 1);
+            cursor.TryAdd(clawItem.Id, 1);
+            var claw = new ClawSlotSystem(bag, Find);
+            var clawExchange = claw.TryEquip(clawItem.Id, 0, cursor) && cursor.IsEmpty &&
+                               claw.TryUnequip(0, cursor) && cursor.Has(clawItem.Id, 1);
+            if (equipWithFullBag && swap && toStorage && pickUp && cancel && wrongSlotRejected &&
+                lampEquipped && lampPicked && clawExchange && bag.Has(filler.Id, 1))
+                Debug.Log("[Nyangbingo] Equipment cursor equip, swap, storage, cancel and lantern identity checks completed.");
+            else Debug.LogError("[Nyangbingo] Equipment cursor exchange test failed.");
+        }
+
         private void TestPortableLanternActiveFuelAndSave()
         {
-            var lantern = ItemDefinition.CreateRuntime(PortableLanternRuntime.LanternItemId, "휴대용 등불", 1,
-                ItemCategory.Tool, ItemMvpScope.A);
-            var coal = ItemDefinition.CreateRuntime(PortableLanternRuntime.FuelItemId, "석탄", 99,
-                ItemCategory.Material, ItemMvpScope.A);
-            ItemDefinition Find(string id) => id == lantern.Id ? lantern : id == coal.Id ? coal : null;
-
-            var inventory = new Nyangbingo.Inventory.Inventory(Find);
-            inventory.TryAdd(lantern.Id, 1);
-            inventory.TryAdd(coal.Id, 2);
-            var activeSlot = new ActiveSlotSystem(inventory, Find);
-            var portable = new PortableLanternRuntime(inventory, activeSlot, 3f);
-
-            var equippedWithoutFuelIsDark = activeSlot.TryEquip(lantern.Id) && !portable.IsLit;
-            var fueled = portable.TryAddFuel() && inventory.Count(coal.Id) == 1 && portable.IsLit &&
-                         Mathf.Approximately(portable.FuelRemainingSeconds, 270f);
-            portable.Tick(10f);
-            var activeConsumption = Mathf.Approximately(portable.FuelRemainingSeconds, 260f);
-            var toggledToClaw = activeSlot.Toggle() && !portable.IsLit;
-            portable.Tick(100f);
-            var pausedWhileClawActive = Mathf.Approximately(portable.FuelRemainingSeconds, 260f);
-            activeSlot.Toggle();
-            portable.Tick(60f);
-
-            var save = new SaveGame { inventory = inventory.Export() };
-            var captured = ActiveSlotSaveAdapter.Capture(save, activeSlot) &&
-                           PortableLanternSaveAdapter.Capture(save, portable);
+            var lamp = ItemDefinition.CreateRuntime("lantern", "등불", 99, ItemCategory.Tool, ItemMvpScope.A);
+            var coal = ItemDefinition.CreateRuntime("coal", "석탄", 99, ItemCategory.Material, ItemMvpScope.A);
+            ItemDefinition Find(string id) => id == lamp.Id ? lamp : id == coal.Id ? coal : null;
+            var bag = new Nyangbingo.Inventory.Inventory(Find);
+            bag.TryAdd(lamp.Id, 2);
+            bag.TryAdd(coal.Id, 3);
+            var first = bag.Slots[0].lanternInstanceId;
+            var second = bag.Slots[1].lanternInstanceId;
+            var separate = lamp.MaxStack == 1 && bag.Slots[0].amount == 1 && bag.Slots[1].amount == 1 &&
+                           !string.IsNullOrEmpty(first) && first != second;
+            var active = new ActiveSlotSystem(bag, Find);
+            var runtime = new PortableLanternRuntime(bag, active, 3f);
+            var inventoryCannotRefuel = !runtime.TryAddFuel();
+            var fueledFirst = active.TryEquip(lamp.Id, 0) && runtime.TryAddFuel();
+            var fueledSecond = active.TryEquip(lamp.Id, 1) && runtime.TryAddFuel(2);
+            runtime.Tick(10f);
+            var independent = Mathf.Approximately(runtime.GetFuel(first), 260f) &&
+                              Mathf.Approximately(runtime.GetFuel(second), 530f);
+            var unequipped = active.TryUnequip();
+            runtime.Tick(20f);
+            var inventoryBurns = Mathf.Approximately(runtime.GetFuel(first), 240f) &&
+                                 Mathf.Approximately(runtime.GetFuel(second), 510f);
+            var storage = new Nyangbingo.Inventory.Inventory(Find);
+            var transferred = bag.TryTransferSlotTo(0, storage) && storage.Slots[0].lanternInstanceId == first;
+            var cursor = new Nyangbingo.Inventory.Inventory(Find, 1);
+            var clickPreserves = storage.TryClickSlot(0, cursor, false) && cursor.Slots[0].lanternInstanceId == first &&
+                                 storage.TryClickSlot(0, cursor, false) && storage.Slots[0].lanternInstanceId == first;
+            var save = new SaveGame { inventory = bag.Export() };
+            ActiveSlotSaveAdapter.Capture(save, active);
+            PortableLanternSaveAdapter.Capture(save, runtime);
+            save.worldDrops.Add(new WorldDropStateRecord { itemId = lamp.Id, amount = 1, lanternInstanceId = first });
             var loaded = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(save));
-            loaded.NormalizeAfterLoad();
-            var restoredInventory = new Nyangbingo.Inventory.Inventory(Find);
-            var restoredSlot = new ActiveSlotSystem(restoredInventory, Find);
-            var restoredPortable = new PortableLanternRuntime(restoredInventory, restoredSlot, 3f);
-            var restored = restoredInventory.TryImport(loaded.inventory) &&
-                           ActiveSlotSaveAdapter.Restore(loaded, restoredSlot) &&
-                           PortableLanternSaveAdapter.Restore(loaded, restoredPortable) &&
-                           restoredPortable.IsLit &&
-                           Mathf.Approximately(restoredPortable.FuelRemainingSeconds, 200f);
-            restoredPortable.Tick(200f);
-            var exhaustsCleanly = !restoredPortable.IsLit &&
-                                  Mathf.Approximately(restoredPortable.FuelRemainingSeconds, 0f) &&
-                                  !restoredPortable.TryRestore(float.NaN) &&
-                                  !restoredPortable.TryRestore(-1f);
-
-            var legacy = JsonUtility.FromJson<SaveGame>("{\"schemaVersion\":14}");
+            var restoredBag = new Nyangbingo.Inventory.Inventory(Find);
+            restoredBag.TryImport(loaded.inventory);
+            var restoredActive = new ActiveSlotSystem(restoredBag, Find);
+            var restoredRuntime = new PortableLanternRuntime(restoredBag, restoredActive, 3f);
+            var restored = ActiveSlotSaveAdapter.Restore(loaded, restoredActive) &&
+                           PortableLanternSaveAdapter.Restore(loaded, restoredRuntime);
+            restoredRuntime.Tick(30f);
+            var droppedBurns = loaded.worldDrops[0].lanternInstanceId == first &&
+                               Mathf.Approximately(restoredRuntime.GetFuel(first), 210f) &&
+                               Mathf.Approximately(restoredRuntime.GetFuel(second), 480f);
+            var rejectsInvalid = !restoredRuntime.SetFuel(first, float.NaN) &&
+                                 !restoredRuntime.SetFuel(first, -1f);
+            var legacy = new SaveGame { schemaVersion = 31, portableLanternFuelSeconds = 90f };
+            legacy.inventory.Add(new InventorySlot { itemId = lamp.Id, amount = 3 });
+            for (var i = 1; i < Nyangbingo.Inventory.Inventory.SlotCount; i++)
+                legacy.inventory.Add(new InventorySlot { itemId = coal.Id, amount = 1 });
             legacy.NormalizeAfterLoad();
-            var legacyInventory = new Nyangbingo.Inventory.Inventory(Find);
-            var legacySlot = new ActiveSlotSystem(legacyInventory, Find);
-            var legacyPortable = new PortableLanternRuntime(legacyInventory, legacySlot, 3f);
-            var legacyDefaultsEmpty = PortableLanternSaveAdapter.Restore(legacy, legacyPortable) &&
-                                      Mathf.Approximately(legacyPortable.FuelRemainingSeconds, 0f);
-
-            portable.Dispose();
-            restoredPortable.Dispose();
-            legacyPortable.Dispose();
-
-            if (equippedWithoutFuelIsDark && fueled && activeConsumption && toggledToClaw &&
-                pausedWhileClawActive && captured && restored && exhaustsCleanly && legacyDefaultsEmpty)
-                Debug.Log("[Nyangbingo] Portable lantern lights radius 3 only while active, burns coal for 270 game-seconds, pauses on claw, and saves fuel.");
-            else Debug.LogError("[Nyangbingo] Portable lantern active-slot, fuel, or save test failed.");
+            var legacyStacksPreserved = legacy.inventory[0].amount == 1 && legacy.worldDrops.Count == 2 &&
+                                        legacy.worldDrops[0].lanternInstanceId != legacy.worldDrops[1].lanternInstanceId;
+            var legacyBag = new Nyangbingo.Inventory.Inventory(Find);
+            var legacyActive = new ActiveSlotSystem(legacyBag, Find);
+            var legacyRuntime = new PortableLanternRuntime(legacyBag, legacyActive, 3f);
+            var legacyFuelPreserved = legacyBag.TryImport(legacy.inventory) &&
+                PortableLanternSaveAdapter.Restore(legacy, legacyRuntime) &&
+                Mathf.Approximately(legacyRuntime.GetFuel(legacy.inventory[0].lanternInstanceId), 90f);
+            legacyRuntime.Dispose();
+            runtime.Dispose();
+            restoredRuntime.Dispose();
+            if (separate && inventoryCannotRefuel && fueledFirst && fueledSecond && independent && unequipped &&
+                inventoryBurns && transferred && clickPreserves && restored && droppedBurns && rejectsInvalid &&
+                legacyStacksPreserved && legacyFuelPreserved)
+                Debug.Log("[Nyangbingo] Individual lantern identity, fuel decay, transfers and save checks completed.");
+            else Debug.LogError("[Nyangbingo] Individual lantern fuel test failed.");
         }
 
         private void TestSaveJsonSchemaRejection()
@@ -2929,13 +2980,13 @@ namespace Nyangbingo.Debugging
             else Debug.LogError("[Nyangbingo] Audio event routing or runtime pool test failed.");
         }
 
-        /// <summary>Title.unity 전용 TitleShellController(이어하기/새 게임/데모/종료)를 검증한다.</summary>
+        /// <summary>Title.unity 전용 TitleShellController(이어하기/새 게임/종료)를 검증한다.</summary>
         private void TestTitleShellFlow()
         {
             var shellObject = new GameObject("TemporaryTitleShell");
             var saveManager = shellObject.AddComponent<SaveManager>();
             var shell = shellObject.AddComponent<TitleShellController>();
-            shell.ConfigureForRuntime(saveManager, false, true);
+            shell.ConfigureForRuntime(saveManager, false);
 
             saveManager.Save(GameShellController.AutoSaveSlot, new SaveGame { day = 15 });
             shell.RefreshTitle();
@@ -2943,7 +2994,7 @@ namespace Nyangbingo.Debugging
                                shell.Title.DisplayedHeatStage >= 1 &&
                                shell.Title.DisplayedHeatStage <= HeatStagePresentation.StageCount &&
                                TitleShellController.FormatTitleHeatStage(shell.Title.DisplayedHeatStage) == "1" &&
-                               shell.Title.ShowsDemoSaves && shell.Title.ShowsQuit;
+                               shell.Title.ShowsQuit;
 
             var newGameRequested = false;
             shell.NewGameRequested += () => newGameRequested = true;
@@ -2960,19 +3011,14 @@ namespace Nyangbingo.Debugging
             var continueMatches = continueResult && continueRequestedSlot == GameShellController.AutoSaveSlot &&
                                   continueRequestedSave != null && continueRequestedSave.day == 15;
 
-            var demoGuard = !shell.RequestDemoSave(14) && shell.RequestDemoSave(15) &&
-                            shell.IsAwaitingDemoLoadConfirmation && shell.PendingDemoDay == 15;
-            shell.CancelDemoLoad();
-            var demoCancelled = !shell.IsAwaitingDemoLoadConfirmation;
-
             var quitRequested = false;
             shell.QuitRequested += () => quitRequested = true;
             var desktopQuit = shell.RequestQuit() && quitRequested;
 
             DestroyImmediate(shellObject);
 
-            if (titleMatches && newGameRequested && continueMatches && demoGuard && demoCancelled && desktopQuit)
-                Debug.Log("[Nyangbingo] Title shell continue/new game/demo/quit flow completed.");
+            if (titleMatches && newGameRequested && continueMatches && desktopQuit)
+                Debug.Log("[Nyangbingo] Title shell continue/new game/quit flow completed.");
             else Debug.LogError("[Nyangbingo] Title shell flow test failed.");
         }
 
@@ -5401,6 +5447,37 @@ namespace Nyangbingo.Debugging
 
             Destroy(targetObject);
             Destroy(raidObject);
+        }
+
+        private void TestSpawnWanderSaveRoundTrip()
+        {
+            var definition = YokaiDefinition.CreateRuntime(YokaiKind.ClubGoblin, 10, 1f, 1, 1f,
+                System.Array.Empty<ItemAmount>());
+            var targetObject = new GameObject("SpawnWanderRoundTripTarget");
+            targetObject.transform.position = Vector3.right * 100f;
+            var target = targetObject.AddComponent<DevBTestYokaiTarget>();
+            var actor = new GameObject("SpawnWanderRoundTripYokai");
+            actor.transform.position = new Vector3(10f, 20f);
+            var brain = actor.AddComponent<YokaiBrain>();
+            brain.ConfigureForRuntime(definition, target, gateByAggroRadius: true, startEngaged: false,
+                playerTarget: target, wanderWhenUnaware: true);
+            var before = new Nyangbingo.Save.YokaiStateRecord();
+            brain.CaptureSaveState(before);
+            var json = JsonUtility.ToJson(before);
+            var restored = true;
+            for (var i = 0; i < 3; i++)
+            {
+                brain.ConfigureForRuntime(definition, target, gateByAggroRadius: true, startEngaged: false,
+                    playerTarget: target, wanderWhenUnaware: true);
+                restored &= brain.RestoreSaveState(JsonUtility.FromJson<Nyangbingo.Save.YokaiStateRecord>(json));
+                var after = new Nyangbingo.Save.YokaiStateRecord();
+                brain.CaptureSaveState(after);
+                restored &= json == JsonUtility.ToJson(after);
+            }
+            if (restored) Debug.Log("[Nyangbingo] Spawn wander save round-trip preserves direction and pause.");
+            else Debug.LogError("[Nyangbingo] Spawn wander save round-trip changed state.");
+            Destroy(targetObject);
+            Destroy(actor);
         }
 
         private void TestYokaiDefinitionHealthInitialization()

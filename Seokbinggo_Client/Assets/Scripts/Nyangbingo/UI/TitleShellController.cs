@@ -10,7 +10,6 @@ namespace Nyangbingo.UI
         public bool CanContinue { get; internal set; }
         public int LatestSlot { get; internal set; } = -1;
         public int DisplayedHeatStage { get; internal set; } = 1;
-        public bool ShowsDemoSaves { get; internal set; }
         public bool ShowsQuit { get; internal set; }
     }
 
@@ -23,36 +22,28 @@ namespace Nyangbingo.UI
         [SerializeField] private SaveManager saveManager;
 
         private bool isMobile;
-        private bool developmentMenu;
-        private int pendingDemoDay;
 
-        public bool IsAwaitingDemoLoadConfirmation { get; private set; }
-        public int PendingDemoDay => pendingDemoDay;
         public TitleShellState Title { get; } = new TitleShellState();
 
         public event Action NewGameRequested;
         public event Action<int, SaveGame> ContinueRequested;
-        public event Action<SaveGame> DemoSaveRequested;
         public event Action QuitRequested;
 
         private void Awake()
         {
             isMobile = Application.isMobilePlatform;
-            developmentMenu = Debug.isDebugBuild || Application.isEditor;
             RefreshTitle();
         }
 
-        public void ConfigureForRuntime(SaveManager saves, bool mobile, bool showDevelopmentMenu)
+        public void ConfigureForRuntime(SaveManager saves, bool mobile)
         {
             saveManager = saves;
             isMobile = mobile;
-            developmentMenu = showDevelopmentMenu;
             RefreshTitle();
         }
 
         public void RefreshTitle()
         {
-            Title.ShowsDemoSaves = developmentMenu;
             Title.ShowsQuit = !isMobile;
             var slot = -1;
             SaveGame latest = null;
@@ -72,7 +63,6 @@ namespace Nyangbingo.UI
 
         public bool TryContinue()
         {
-            if (IsAwaitingDemoLoadConfirmation) return false;
             if (saveManager == null || !saveManager.TryLoadLatest(out var slot, out var loaded)) return false;
             ContinueRequested?.Invoke(slot, loaded);
             return true;
@@ -80,36 +70,7 @@ namespace Nyangbingo.UI
 
         public void RequestNewGame()
         {
-            if (IsAwaitingDemoLoadConfirmation) return;
             NewGameRequested?.Invoke();
-        }
-
-        public bool RequestDemoSave(int day)
-        {
-            if (IsAwaitingDemoLoadConfirmation || !developmentMenu ||
-                Array.IndexOf(GameShellController.DemoSaveDays, day) < 0)
-                return false;
-            pendingDemoDay = day;
-            IsAwaitingDemoLoadConfirmation = true;
-            return true;
-        }
-
-        public bool ConfirmDemoLoad()
-        {
-            if (!IsAwaitingDemoLoadConfirmation) return false;
-            var day = pendingDemoDay;
-            IsAwaitingDemoLoadConfirmation = false;
-            pendingDemoDay = 0;
-            if (saveManager == null || !saveManager.TryCopyDemoToAutoSave(day, out var demo))
-                return false;
-            DemoSaveRequested?.Invoke(demo);
-            return true;
-        }
-
-        public void CancelDemoLoad()
-        {
-            IsAwaitingDemoLoadConfirmation = false;
-            pendingDemoDay = 0;
         }
 
         public bool RequestQuit()

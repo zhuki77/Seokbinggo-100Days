@@ -140,6 +140,7 @@ namespace Nyangbingo.Data
         [SerializeField] private Sprite[] craftCategoryBarFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite craftSmeltPanel;
         [SerializeField] private Sprite[] craftSmeltButtonFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] craftCollectButtonFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] craftViewToggleFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite craftScroll;
         [SerializeField] private Sprite questWindow;
@@ -170,8 +171,10 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> SaveIndicatorFrames => saveIndicatorFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> PlayerVitalsFrames => playerVitalsFrames ?? Array.Empty<Sprite>();
         [SerializeField] private Sprite hotbarFrame;
+        [SerializeField] private Sprite inventoryHotbarHighlight;
         [SerializeField] private Sprite[] sealGaugeFrames = Array.Empty<Sprite>();
         public Sprite HotbarFrame => hotbarFrame;
+        public Sprite InventoryHotbarHighlight => inventoryHotbarHighlight;
         public IReadOnlyList<Sprite> SealGaugeFrames => sealGaugeFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x1Frames => button1x1Frames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> Button1x2Frames => button1x2Frames ?? Array.Empty<Sprite>();
@@ -260,6 +263,7 @@ namespace Nyangbingo.Data
         public IReadOnlyList<Sprite> CraftCategoryBarFrames => craftCategoryBarFrames ?? Array.Empty<Sprite>();
         public Sprite CraftSmeltPanel => craftSmeltPanel;
         public IReadOnlyList<Sprite> CraftSmeltButtonFrames => craftSmeltButtonFrames ?? Array.Empty<Sprite>();
+        public IReadOnlyList<Sprite> CraftCollectButtonFrames => craftCollectButtonFrames ?? Array.Empty<Sprite>();
         public IReadOnlyList<Sprite> CraftViewToggleFrames => craftViewToggleFrames ?? Array.Empty<Sprite>();
         public Sprite CraftScroll => craftScroll;
         public Sprite QuestWindow => questWindow;

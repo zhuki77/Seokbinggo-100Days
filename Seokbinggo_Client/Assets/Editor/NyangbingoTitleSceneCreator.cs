@@ -66,24 +66,6 @@ public static class NyangbingoTitleSceneCreator
         var titleQuit = CreateMenuButton(titlePanel.transform, "Quit", "게임 종료",
             new Vector2(0f, -80f), new Vector2(300f, 58f));
 
-        var demoButtons = new List<Button>();
-        for (var index = 0; index < GameShellController.DemoSaveDays.Length; index++)
-        {
-            var day = GameShellController.DemoSaveDays[index];
-            var demoButton = CreateMenuButton(titlePanel.transform, $"DemoSaveDay{day}", $"{day}일차 데모",
-                new Vector2(-648f + index * 200f, -328f), new Vector2(184f, 60f));
-            demoButtons.Add(demoButton);
-        }
-
-        var confirmationPanel = CreateOverlayPanel(titlePanel.transform, "ConfirmationPanel",
-            new Color(.06f, .04f, .05f, 1f));
-        var confirmationText = CreateMenuText(confirmationPanel.transform, "Message", "확인하시겠습니까?",
-            new Vector2(0f, 70f), new Vector2(720f, 120f), 26);
-        var confirmButton = CreateMenuButton(confirmationPanel.transform, "Confirm", "확인",
-            new Vector2(-110f, -65f), new Vector2(190f, 52f));
-        var cancelButton = CreateMenuButton(confirmationPanel.transform, "Cancel", "취소",
-            new Vector2(110f, -65f), new Vector2(190f, 52f));
-
         var statusText = CreateMenuText(titlePanel.transform, "Status", "", new Vector2(0f, -140f),
             new Vector2(760f, 48f), 20);
 
@@ -94,7 +76,7 @@ public static class NyangbingoTitleSceneCreator
         var shell = canvasObject.AddComponent<TitleShellController>();
         var shellUi = canvasObject.AddComponent<TitleUiController>();
         shellUi.ConfigureForScene(shell, saveManager, audioService, titleContinue, titleNew, titleQuit,
-            demoButtons, confirmationPanel, confirmButton, cancelButton, confirmationText, statusText,
+            statusText,
             environmentArtCatalog, gameplayArtCatalog, characterArtCatalog);
 
         EditorUtility.SetDirty(saveManager);

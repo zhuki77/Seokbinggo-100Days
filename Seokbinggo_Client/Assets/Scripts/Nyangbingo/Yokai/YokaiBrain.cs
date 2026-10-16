@@ -113,6 +113,7 @@ namespace Nyangbingo.Yokai
         private Vector2 coreIdleAnchor;
         private int coreIdleStep;
         private float coreIdlePauseRemaining;
+        private bool wanderBeforeAggro;
         // Each creature owns its random stream, including ones entering idle on the same tick.
         private readonly System.Random coreIdleRandom = new System.Random(System.Guid.NewGuid().GetHashCode());
         private Vector2 forcedAggroPosition;
@@ -196,7 +197,8 @@ namespace Nyangbingo.Yokai
         public void ConfigureForRuntime(YokaiDefinition value, IYokaiTarget targetValue,
             IYokaiCounterSource counters = null, YokaiSpawnTrack instanceSpawnTrack = YokaiSpawnTrack.Raid,
             bool gateByAggroRadius = false, bool startEngaged = true, int? hitPointsOverride = null,
-            IYokaiTarget playerTarget = null, IYokaiCoreRoute coreRouteSource = null)
+            IYokaiTarget playerTarget = null, IYokaiCoreRoute coreRouteSource = null,
+            bool wanderWhenUnaware = false)
         {
             definition = value;
             target = targetValue;
@@ -237,6 +239,9 @@ namespace Nyangbingo.Yokai
             gangcheoriBreath = GetComponent<GangcheoriBreathController>();
             useAggroRadius = gateByAggroRadius;
             isAggroed = !gateByAggroRadius || startEngaged;
+            wanderBeforeAggro = wanderWhenUnaware;
+            if (wanderBeforeAggro && !isAggroed && target is not IYokaiCoreTarget)
+                ResetIdleWander();
             infiltrationRecorded = false;
             if (health != null)
             {
@@ -279,6 +284,7 @@ namespace Nyangbingo.Yokai
             record.coreIdleAnchor = coreIdleAnchor;
             record.coreIdleStep = coreIdleStep;
             record.coreIdlePauseRemaining = coreIdlePauseRemaining;
+            record.hasSpawnWanderState = wanderBeforeAggro;
             record.hasCoreArrivalGoalState = true;
             record.hasCoreSequenceState = true;
             record.hasCurrentCoreTarget = target is IYokaiCoreTarget;
@@ -401,6 +407,9 @@ namespace Nyangbingo.Yokai
                 if (invasionCore?.TargetTransform != null) BeginCoreTarget(invasionCore);
             }
             SetBossEncounterPaused(false);
+            if (wanderBeforeAggro && !record.hasSpawnWanderState && state == State.Approach &&
+                !isAggroed && target is not IYokaiCoreTarget)
+                ResetIdleWander();
             SetAnimationMoving(state != State.AttackWall);
             if (definition != null && definition.Kind == YokaiKind.Gaekgwi)
             {
@@ -609,9 +618,14 @@ namespace Nyangbingo.Yokai
             if (target == null || target.TargetTransform == null) return;
             if (useAggroRadius && !isAggroed && state != State.CoreIdle)
             {
-                if (target is IYokaiStealthTarget stealth && stealth.IsHiddenFromAggro) return;
                 var detectionOffset = target.TargetTransform.position - transform.position;
-                if (!IsWithinAggroRadius(detectionOffset, definition.AggroRadius)) return;
+                if (target is IYokaiStealthTarget stealth && stealth.IsHiddenFromAggro ||
+                    !IsWithinAggroRadius(detectionOffset, definition.AggroRadius))
+                {
+                    if (wanderBeforeAggro && state == State.Approach && target is not IYokaiCoreTarget)
+                        TickCoreIdle(actionSeconds);
+                    return;
+                }
                 isAggroed = true;
             }
             var counters = counterSource ?? target as IYokaiCounterSource;
@@ -893,9 +907,7 @@ namespace Nyangbingo.Yokai
             corePathCheckNeeded = false;
             coreRouteOpen = false;
             physicsBody?.SetWallBreachAllowed(true);
-            coreIdleAnchor = transform.position;
-            coreIdleStep = coreIdleRandom.Next(2) == 0 ? 0 : 2;
-            coreIdlePauseRemaining = NextCoreIdlePause();
+            ResetIdleWander();
             target = corePlayerTarget;
             useAggroRadius = true;
             isAggroed = false;
@@ -959,9 +971,16 @@ namespace Nyangbingo.Yokai
 
         private float NextCoreIdlePause() => .4f + (float)coreIdleRandom.NextDouble() * .9f;
 
+        private void ResetIdleWander()
+        {
+            coreIdleAnchor = transform.position;
+            coreIdleStep = coreIdleRandom.Next(2) == 0 ? 0 : 2;
+            coreIdlePauseRemaining = NextCoreIdlePause();
+        }
+
         private void ScheduleNextCoreIdleStep()
         {
-            // Keep every leg one tile and stay around the completed core goal.
+            // Keep every leg one tile around the spawn or completed core goal.
             // 0/2 go right/left; 1/3 return to the anchor (also compatible with old saves).
             coreIdleStep = coreIdleStep == 0 || coreIdleStep == 2
                 ? 1

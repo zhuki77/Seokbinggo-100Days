@@ -45,7 +45,7 @@ namespace Nyangbingo.Data
 
         public string Id => id;
         public string DisplayName => displayName;
-        public int MaxStack => maxStack;
+        public int MaxStack => id == "lantern" ? 1 : maxStack;
         public ItemCategory Category => category;
         public ItemMvpScope MvpScope => mvpScope;
         public string Note => note;

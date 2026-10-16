@@ -73,11 +73,11 @@ namespace Nyangbingo.Inventory
                 _ => "bare_claw"
             };
 
-        public bool TryEquip(string itemId, int sourceIndex = -1)
+        public bool TryEquip(string itemId, int sourceIndex = -1, Inventory sourceInventory = null)
         {
-            if (!IsClawItem(itemId) || equippedItemId == itemId || findItem(itemId) == null)
+            if (!IsClawItem(itemId) || sourceInventory == null && equippedItemId == itemId || findItem(itemId) == null)
                 return false;
-            return inventory.TryExchangeEquipment(itemId, equippedItemId, () =>
+            return (sourceInventory ?? inventory).TryExchangeEquipment(itemId, equippedItemId, () =>
             {
                 equippedItemId = itemId;
                 Changed?.Invoke();
@@ -85,10 +85,10 @@ namespace Nyangbingo.Inventory
             }, sourceIndex);
         }
 
-        public bool TryUnequip(int targetIndex = -1)
+        public bool TryUnequip(int targetIndex = -1, Inventory targetInventory = null)
         {
             if (!HasEquippedItem) return false;
-            return inventory.TryExchangeEquipment(null, equippedItemId, () =>
+            return (targetInventory ?? inventory).TryExchangeEquipment(null, equippedItemId, () =>
             {
                 equippedItemId = string.Empty;
                 Changed?.Invoke();

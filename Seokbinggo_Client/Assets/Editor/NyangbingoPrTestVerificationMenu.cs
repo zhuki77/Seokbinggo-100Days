@@ -127,24 +127,6 @@ public static class NyangbingoPrTestVerificationMenu
             return false;
         }
 
-        var demoButtons = serialized.FindProperty("demoSaveButtons");
-        if (demoButtons == null || demoButtons.arraySize != GameShellController.DemoSaveDays.Length)
-        {
-            summary = $"demoSaveButtons {demoButtons?.arraySize ?? 0}/" +
-                      $"{GameShellController.DemoSaveDays.Length}";
-            return false;
-        }
-
-        for (var index = 0; index < demoButtons.arraySize; index++)
-        {
-            var button = demoButtons.GetArrayElementAtIndex(index).objectReferenceValue as Button;
-            if (button == null)
-            {
-                summary = $"demo save button {index} unassigned";
-                return false;
-            }
-        }
-
         var shellSource = File.ReadAllText("Assets/Scripts/Nyangbingo/UI/TitleUiController.cs");
         if (!shellSource.Contains("SceneTransitionRequest.BeginDirect(\"MainGame\")"))
         {

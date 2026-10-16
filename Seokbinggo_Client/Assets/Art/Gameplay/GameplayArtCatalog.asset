@@ -413,6 +413,9 @@ MonoBehaviour:
   craftSmeltButtonFrames:
   - {fileID: -5978639560776834825, guid: 15063a0b13d0489eb133b8c4e18d3e35, type: 3}
   - {fileID: 1769039371810824475, guid: 15063a0b13d0489eb133b8c4e18d3e35, type: 3}
+  craftCollectButtonFrames:
+  - {fileID: -9164641716322144861, guid: 0e08636690cf02a4687701b01b92a67c, type: 3}
+  - {fileID: -6327507319350343630, guid: 0e08636690cf02a4687701b01b92a67c, type: 3}
   craftViewToggleFrames:
   - {fileID: -5978639560776834825, guid: 479be6309cbd4d64a81f7b37d8e2a500, type: 3}
   - {fileID: 1769039371810824475, guid: 479be6309cbd4d64a81f7b37d8e2a500, type: 3}
@@ -424,7 +427,8 @@ MonoBehaviour:
   labelDegree: {fileID: -6547866197422528238, guid: 2e63b790bf2fa5b4b98555bd2847fc17, type: 3}
   labelTemperature: {fileID: -7953195898309326814, guid: 000f2f8c085e2c54bb48190e88c99953, type: 3}
   labelDay: {fileID: -514819981857950251, guid: 689bcc4b64ebf374cb9e68d964719b67, type: 3}
-  hotbarFrame: {fileID: -4216926166922869588, guid: 9d46bd9c253e1da4e9b0cf82c0b9fd1a, type: 3}
+  hotbarFrame: {fileID: 912989945456343288, guid: de547c4a275db9f44854407ab3eaf162, type: 3}
+  inventoryHotbarHighlight: {fileID: -2752679129137416279, guid: e970fb9390d1dab4681895d3fecb72d8, type: 3}
   sealGaugeFrames:
   - {fileID: -2646992443644165850, guid: afb13f8152fa4254688968f9c678b81a, type: 3}
   - {fileID: 7801099338458754420, guid: afb13f8152fa4254688968f9c678b81a, type: 3}

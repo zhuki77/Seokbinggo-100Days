@@ -58,7 +58,9 @@ namespace Nyangbingo.Inventory
                 if (visualSlot == 0)
                 {
                     if (activeSlot == null) return false;
-                    if (activeSlot.EquippedItemId == ItemId)
+                    if (activeSlot.EquippedItemId == ItemId &&
+                        (ItemId != PortableLanternRuntime.LanternItemId ||
+                         activeSlot.EquippedLanternInstanceId == inventory.Slots[SourceIndex].lanternInstanceId))
                         return activeSlot.IsUsingEquippedItem || activeSlot.Toggle();
                     return activeSlot.TryEquip(ItemId, SourceIndex);
                 }

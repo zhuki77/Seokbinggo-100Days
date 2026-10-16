@@ -181,7 +181,7 @@ namespace Nyangbingo.Crafting
         {
             // Automatic delivery only handles this job, never earlier unclaimed smelting outputs.
             if (!inventory.TryAddWithStorageState(item.itemId, item.amount, item.hasStorageCondition,
-                    item.EffectiveStorageCondition, item.storageMeltRemainder))
+                    item.EffectiveStorageCondition, item.storageMeltRemainder, item.lanternInstanceId))
                 state.returns.Add(item);
         }
 
@@ -195,7 +195,7 @@ namespace Nyangbingo.Crafting
                 var item = state.returns[i];
                 state.returns.RemoveAt(i);
                 if (inventory.TryAddWithStorageState(item.itemId, item.amount, item.hasStorageCondition,
-                        item.EffectiveStorageCondition, item.storageMeltRemainder)) collected++;
+                        item.EffectiveStorageCondition, item.storageMeltRemainder, item.lanternInstanceId)) collected++;
                 else { state.returns.Insert(i, item); i++; }
             }
             return collected;

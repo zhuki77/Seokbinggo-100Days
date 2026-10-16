@@ -12,7 +12,7 @@ using Input = Nyangbingo.Core.GameplayInput;
 namespace Nyangbingo.UI
 {
     /// <summary>
-    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 9칸을 고정 슬롯으로 보여 주며,
+    /// v29 하단 핫바/타일 팔레트. 인벤토리 앞 8칸을 고정 슬롯으로 보여 주며,
     /// 마우스 휠로 선택 슬롯을 순환한다.
     /// 빈 칸도 선택 가능하다. 전경 타일·설치물·벽지 배치를 같은 슬롯에서 처리한다.
     /// </summary>
@@ -39,7 +39,7 @@ namespace Nyangbingo.UI
         public const float BottomStatusLineHeight = 18f;
         public const string WallpaperItemId = "wallpaper";
         public const KeyCode RangeToggleKey = KeyCode.R;
-        public const int ShortcutSlotCount = 9;
+        public const int ShortcutSlotCount = MainGameCraftingUiController.InventoryHotbarSlotCount;
         public const bool UsesMouseWheelSelection = true;
         /// <summary>채굴과 동일 — globals <c>player_mining_reach_tiles</c> 기본값.</summary>
         public const float DefaultPlacementReachTiles = 4f;
@@ -280,7 +280,7 @@ namespace Nyangbingo.UI
             runtimeServices.PlayerInventory.Changed += RefreshPalette;
             initialized = true;
             RefreshPalette();
-            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–9칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
+            Debug.Log("[Nyangbingo] 하단 핫바 연결 완료: 인벤 1–8칸·마우스 휠 선택·설치물 미리보기·전경 블록 설치.");
         }
 
         private void Update()
@@ -300,7 +300,8 @@ namespace Nyangbingo.UI
             SynchronizeProductPlacementSelection();
             RefreshBottomStatusStacking();
 
-            if (gameplayVisible && Time.timeScale > 0f && Input.GetKeyDown(RangeToggleKey))
+            if (gameplayVisible && Time.timeScale > 0f && !Input.IsPointerOverUi() &&
+                Input.GetKeyDown(RangeToggleKey))
             {
                 rangeOverlaysVisible = !rangeOverlaysVisible;
                 rangeOverlayRenderer?.SetVisible(rangeOverlaysVisible);
@@ -367,7 +368,7 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// 퀵슬롯 아홉 칸은 우측 하단 핫바(176×28)의 16×16 홈에 올린다.
+        /// 퀵슬롯 여덟 칸은 우측 하단 핫바(157×28)의 16×16 홈에 올린다.
         /// </summary>
         public void PlaceInVitalsWells()
         {
@@ -386,16 +387,16 @@ namespace Nyangbingo.UI
                 viewport.offsetMax = Vector2.zero;
             }
 
-            // 핫바 176×28. 어두운 홈은 x = 4 + 19n, y = 8, 한 칸 16×16.
+            // 핫바 157×28. 어두운 홈은 x = 4 + 19n, y = 8, 한 칸 16×16.
             const float slotSize = 16f;
             const float wellY = 8f;
             content.anchorMin = content.anchorMax = new Vector2(0f, 1f);
             content.pivot = new Vector2(0f, 1f);
             content.anchoredPosition = Vector2.zero;
             content.localScale = Vector3.one;
-            content.sizeDelta = new Vector2(176f, 28f);
+            content.sizeDelta = new Vector2(157f, 28f);
 
-            for (var index = 0; index < 9; index++)
+            for (var index = 0; index < ShortcutSlotCount; index++)
             {
                 var slot = content.Find($"Slot_{index + 1}") as RectTransform;
                 if (slot == null) continue;
@@ -536,21 +537,13 @@ namespace Nyangbingo.UI
         }
 
         /// <summary>
-        /// The delivered palette prefab stops at Slot_8. The hotbar sheet has a ninth well,
-        /// so the missing slot is cloned from Slot_8 before wiring.
+        /// Hide the retired ninth slot in older authored prefabs.
         /// </summary>
         private void EnsureHotbarSlotObjects()
         {
-            if (content == null || content.Find("Slot_9") != null) return;
-            var template = content.Find("Slot_8");
-            if (template == null) return;
-            var clone = Instantiate(template.gameObject, content);
-            clone.name = "Slot_9";
-            var trigger = clone.GetComponent<EventTrigger>();
-            if (trigger != null) Destroy(trigger);
-            var clonedShortcut = clone.transform.Find("Shortcut");
-            if (clonedShortcut != null && clonedShortcut.GetComponent<Text>() is Text clonedText)
-                clonedText.text = "9";
+            if (content == null) return;
+            var extra = content.Find("Slot_9");
+            if (extra != null) extra.gameObject.SetActive(false);
         }
 
         public void WireEquipmentDrags(MainGameCraftingUiController crafting)
@@ -634,7 +627,6 @@ namespace Nyangbingo.UI
 
         /// <summary>
         /// 슬롯 번호는 글꼴 대신 숫자 스프라이트를 쓴다.
-        /// Slot_9는 Slot_8 복제라 글자 8이 남는데, 스프라이트는 칸 번호 그대로 9를 그린다.
         /// </summary>
         private void PlaceHotbarNumber(Transform slot, int number)
         {
@@ -666,11 +658,11 @@ namespace Nyangbingo.UI
                 image = marker.GetComponent<Image>();
 
             var rect = (RectTransform)marker;
-            const float height = 5f;
+            const float height = 4f;
             var width = sprite.rect.height > 0f ? sprite.rect.width * (height / sprite.rect.height) : height;
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(.5f, .5f);
-            // 16×16 홈은 y=8에서 시작한다. 솟은 탭의 중심은 그 위, 핫바 (6.5+19n, 4.5)이다.
+            // Centre the number inside the raised tab above the item well.
             rect.anchoredPosition = new Vector2(2.5f, 3.5f);
             rect.sizeDelta = new Vector2(width, height);
             rect.localScale = Vector3.one;
@@ -989,17 +981,8 @@ namespace Nyangbingo.UI
             AppendCircularRanges("iron_sieve", 4f);
             AppendCircularRanges("haetae_statue", 8f);
 
-            var coreCell = bootstrap?.SealSystem?.SealCoreCell;
-            if (coreCell.HasValue)
-            {
-                var rx = ReadGlobalFloat(GlobalKeys.SealWindowRadiusX, 28f);
-                var ry = ReadGlobalFloat(GlobalKeys.SealWindowRadiusY, 12f);
-                var coreCenter = bootstrap?.TileService != null
-                    ? (Vector2)bootstrap.TileService.GetCellCenterWorld(coreCell.Value)
-                    : new Vector2(coreCell.Value.x + .5f, coreCell.Value.y + .5f);
-                rangeOverlays.Add(new WorldRangeOverlay(
-                    coreCenter, rx, ry, WorldRangeShape.AxisAlignedRect));
-            }
+            // Retire the oversized seal-window debug rectangle. Its yellow edge
+            // crossed the whole screen when R also served as lantern refuelling.
             rangeOverlayRenderer.SetVisible(true);
             rangeOverlayRenderer.Render(rangeOverlays);
             return rangeOverlays.Count;

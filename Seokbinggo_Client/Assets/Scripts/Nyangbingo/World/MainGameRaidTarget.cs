@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Nyangbingo.Data;
 using Nyangbingo.Combat;
@@ -118,7 +118,7 @@ namespace Nyangbingo.World
                     if (item == null || stack.amount <= 0) return false;
                     receipt.Add(new ItemAmount { item = item, amount = stack.amount });
                 }
-                return recipient.RecordStolenItems(receipt);
+                return recipient.RecordStolenItems(receipt, stacks);
             });
         }
 
