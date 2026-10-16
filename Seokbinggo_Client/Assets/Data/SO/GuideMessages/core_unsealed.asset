@@ -15,8 +15,9 @@ MonoBehaviour:
   id: core_unsealed
   tier: 3
   triggerState: core_unsealed
-  text: "\uB0C9\uAE30\uAC00 \uC0C8\uACE0 \uC788\uC5B4\uC694. \uC791\uC740 \uBC29\uC744
-    \uB9CC\uB4E4\uACE0 \uBB38\uC744 \uB2EB\uC544\uBCF4\uC138\uC694."
+  text: "\uB0C9\uAE30\uAC00 \uC0C8\uACE0 \uC788\uC5B4\uC694. '\uCC28\uC5F4\uBCBD'\uACFC
+    '\uB2E8\uC5F4\uBB38'\uC744 \uC774\uC6A9\uD574 \uC791\uC740 \uBC29\uC744 \uB9CC\uB4E4\uACE0
+    \uBB38\uC744 \uB2EB\uC544\uBCF4\uC138\uC694."
   variables: 
   clearWhen: core_sealed
   repeat: while_active

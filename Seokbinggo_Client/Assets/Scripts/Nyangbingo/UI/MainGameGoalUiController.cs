@@ -20,6 +20,7 @@ namespace Nyangbingo.UI
         private Canvas canvas;
         private RectTransform root, list, dawnRoot;
         private UnityEngine.UI.Text title, hint, completion, dawnText, dawnPageText;
+        private UnityEngine.UI.Text priorityNotice;
         private UnityEngine.UI.Image icon, arrow;
         private UnityEngine.UI.Text arrowLabel;
         private UnityEngine.UI.Button titleButton;
@@ -117,6 +118,18 @@ namespace Nyangbingo.UI
             KeepInside(hint);
             hint.alignment = TextAnchor.UpperCenter;
             hint.horizontalOverflow = HorizontalWrapMode.Overflow;
+            priorityNotice = Label("PriorityNotice", parent.transform, textTemplate,
+                new Vector2(0f, -24f), new Vector2(300f, 36f), 8);
+            priorityNotice.rectTransform.anchorMin = priorityNotice.rectTransform.anchorMax =
+                priorityNotice.rectTransform.pivot = new Vector2(.5f, 1f);
+            priorityNotice.alignment = TextAnchor.UpperCenter;
+            priorityNotice.fontStyle = FontStyle.Bold;
+            var noticeShadow = priorityNotice.gameObject.AddComponent<UnityEngine.UI.Shadow>();
+            noticeShadow.effectColor = new Color(0f, 0f, 0f, .95f);
+            noticeShadow.effectDistance = new Vector2(1f, -1f);
+            // Draw behind the inventory/equipment tabs on the shared HUD canvas.
+            priorityNotice.rectTransform.SetAsFirstSibling();
+            priorityNotice.gameObject.SetActive(false);
             completion = Label("GoalCompleted", root, textTemplate,
                 new Vector2(sideInset, -(questSize.y - 16f)), new Vector2(innerWidth, 14), 7);
             KeepInside(completion);
@@ -248,6 +261,7 @@ namespace Nyangbingo.UI
             RefreshQuestButtonHighlight();
             if (!visible)
             {
+                priorityNotice.gameObject.SetActive(false);
                 arrow.gameObject.SetActive(false);
                 dawnRoot.gameObject.SetActive(false);
                 dawnShownFrame = 0;
@@ -265,7 +279,12 @@ namespace Nyangbingo.UI
             title.text = goal?.DisplayName ?? string.Empty;
             if (!listOpen && services.Goals.PendingDawnDay == 0) services.Goals.RefreshRewardCraftingGuide();
             var selected = guides.Select(false);
-            hint.text = WrapAtWordBoundaries(selected?.Text, hint);
+            var notice = selected != null && selected.Definition.Tier < 4;
+            priorityNotice.gameObject.SetActive(notice);
+            priorityNotice.text = notice ? WrapAtWordBoundaries(selected.Text, priorityNotice) : string.Empty;
+            priorityNotice.color = selected?.Definition.Tier <= 2
+                ? new Color(1f, .35f, .25f) : new Color(1f, .9f, .65f);
+            hint.text = WrapAtWordBoundaries(services.Goals.CurrentHint, hint);
             if (selected?.Definition.Id != "reward_crafting" || (!listOpen && services.Goals.PendingDawnDay == 0))
                 guides.Advance(selected, Time.unscaledDeltaTime);
             if (selected?.Definition.Id == "reward_crafting" && selected.Remaining <= 0f)
@@ -694,6 +713,7 @@ namespace Nyangbingo.UI
             if (services?.Bed != null) services.Bed.Slept -= HandleGuideSlept;
             if (services?.StorageTemperature != null) services.StorageTemperature.DailyProcessed -= HandleGuideDawn;
             if (root != null) Destroy(root.gameObject);
+            if (priorityNotice != null) Destroy(priorityNotice.gameObject);
             if (reopenButton != null) Destroy(reopenButton.gameObject);
             if (reopenNormal != null) Destroy(reopenNormal);
             if (reopenPressed != null) Destroy(reopenPressed);

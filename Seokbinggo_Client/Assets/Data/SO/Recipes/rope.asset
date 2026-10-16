@@ -19,9 +19,9 @@ MonoBehaviour:
     amount: 1
   output:
     item: {fileID: 11400000, guid: 416981ee698472f40b1cd3425ad662de, type: 2}
-    amount: 1
+    amount: 16
   durationSeconds: 0
   type: 10
   mvpScope: 1
   note: "\uAE30\uD68D\uC790 \uD655\uC815: \uB098\uBB34 1\uAC1C\u2192\uB85C\uD504
-    1\uAC1C. \uC190 \uC81C\uC791 \uC989\uC2DC \uC644\uB8CC."
+    16\uAC1C. \uC190 \uC81C\uC791 \uC989\uC2DC \uC644\uB8CC."

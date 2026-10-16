@@ -37,6 +37,7 @@ namespace Nyangbingo.UI
         }
 
         public const int CraftingFilterCount = 6;
+        private static readonly Color MissingIngredientColor = new Color(1f, .05f, .05f, 1f);
         private const string StorageItemMovedMessage = "아이템을 이동했습니다.";
 
         [SerializeField] private GameDataCatalog gameDataCatalog;
@@ -71,8 +72,10 @@ namespace Nyangbingo.UI
         private RectTransform tearBalanceRoot;
         private Image craftWindowOutputIcon;
         private string displayedCraftOutputId;
-        private Image[] craftWindowIngredientIcons = new Image[3];
-        private readonly Text[] craftWindowIngredientCounts = new Text[3];
+        private const int CraftIngredientColumns = 3;
+        private const int CraftIngredientSlotCount = CraftIngredientColumns * 2;
+        private Image[] craftWindowIngredientIcons = new Image[CraftIngredientSlotCount];
+        private readonly Text[] craftWindowIngredientCounts = new Text[CraftIngredientSlotCount];
         private Button[] craftWindowSlotButtons = Array.Empty<Button>();
         private Image[] craftWindowSlotIcons = Array.Empty<Image>();
         private Image[] craftWindowSlotMarks = Array.Empty<Image>();
@@ -158,8 +161,8 @@ namespace Nyangbingo.UI
         private Scrollbar descriptionScrollbar;
         private string descriptionItemId;
         private bool descriptionIsMaterial;
-        private readonly string[] displayedIngredientIds = new string[3];
-        private readonly bool[] displayedIngredientMissing = new bool[3];
+        private readonly string[] displayedIngredientIds = new string[CraftIngredientSlotCount];
+        private readonly bool[] displayedIngredientMissing = new bool[CraftIngredientSlotCount];
         private UnityEngine.UI.Image inventoryCursorIcon;
         private UnityEngine.UI.Text inventoryCursorCount;
         private EquipmentInventoryDrag equipmentDrag;
@@ -173,6 +176,29 @@ namespace Nyangbingo.UI
         private bool IsDraggingEquippedItem => equippedDragVisualSlot >= 0;
         private static MainGameCraftingUiController cursorOwner;
         private bool HasHeldInventoryItem => runtimeServices?.InventoryCursor?.IsEmpty == false;
+
+        public static void ReturnHeldItemBeforeWorldInput()
+        {
+            var owner = cursorOwner;
+            if (owner == null || !owner.HasHeldInventoryItem || owner.IsDraggingItem ||
+                Time.timeScale <= 0f || owner.shell != null && owner.shell.Screen != GameShellScreen.Gameplay) return;
+            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.F) ||
+                !Input.IsPointerOverUi() && (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)))
+                owner.TryReturnHeldItemForInteraction();
+        }
+
+        private bool TryReturnHeldItemForInteraction()
+        {
+            if (!HasHeldInventoryItem) return true;
+            if (!ReturnHeldInventoryItem())
+            {
+                ShowMessage("아이템을 내려놓을 공간이 없습니다. 빈 슬롯을 확보해 주세요.");
+                return false;
+            }
+            HideInventoryCursorPreview();
+            Refresh();
+            return true;
+        }
 
         private string message;
         private float messageUntil;
@@ -871,8 +897,11 @@ namespace Nyangbingo.UI
             });
             for (var index = 0; index < craftWindowIngredientIcons.Length; index++)
             {
-                var icon = CreateArtImage(root, $"Ingredient_{index + 1}", null, Vector2.zero, new Vector2(8f, 8f));
-                PlaceTopLeft(icon.rectTransform, 8f + index * 9f, 45f, 8f, 8f);
+                var icon = CreateArtImage(root, $"Ingredient_{index + 1}", null, Vector2.zero, new Vector2(7f, 7f));
+                // Keep both rows inset from the material compartment border, including count glyphs.
+                PlaceTopLeft(icon.rectTransform,
+                    7f + index % CraftIngredientColumns * 8f,
+                    39f + index / CraftIngredientColumns * 9f, 7f, 7f);
                 icon.preserveAspect = true;
                 var ingredientIndex = index;
                 var ingredientButton = icon.gameObject.AddComponent<Button>();
@@ -1149,7 +1178,7 @@ namespace Nyangbingo.UI
                 icon.enabled = icon.sprite != null;
                 var missing = ingredientItem != null && required > 0 && runtimeServices.PlayerInventory != null &&
                               runtimeServices.PlayerInventory.Count(ingredientItem.Id) < required;
-                icon.color = missing ? new Color(.5f, .18f, .18f, 1f) : Color.white;
+                icon.color = missing ? MissingIngredientColor : Color.white;
                 displayedIngredientIds[index] = ingredientItem?.Id;
                 displayedIngredientMissing[index] = missing;
                 var ingredientButton = icon.GetComponent<Button>();
@@ -1256,6 +1285,7 @@ namespace Nyangbingo.UI
 
         private void SelectCraftWindowSlot(int index)
         {
+            if (!TryReturnHeldItemForInteraction()) return;
             if (IsShowingSmeltingList)
             {
                 if (index < 0 || index >= smeltingRecipes.Count) return;
@@ -1271,6 +1301,7 @@ namespace Nyangbingo.UI
 
         private void SelectCraftCategory(int index)
         {
+            if (!TryReturnHeldItemForInteraction()) return;
             if (index < 0 || index >= ItemCraftUiCategory.Labels.Length) return;
             if (IsShowingSmeltingList) furnaceSmeltingView = false;
             craftCategoryIndex = index;
@@ -1284,6 +1315,7 @@ namespace Nyangbingo.UI
 
         private void OnCraftWindowAction()
         {
+            if (!TryReturnHeldItemForInteraction()) return;
             if (IsShowingSmeltingList) TrySmeltSelected();
             else TryCraftFromWindow();
         }
@@ -2047,7 +2079,7 @@ namespace Nyangbingo.UI
                 Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) return false;
             if (!Input.GetKeyDown(KeyCode.Tab)) return false;
             if ((shell != null && shell.Screen != GameShellScreen.Gameplay) || Time.timeScale <= 0f) return true;
-            if (IsDraggingItem || HasHeldInventoryItem) return true;
+            if (IsDraggingItem || !TryReturnHeldItemForInteraction()) return true;
             sideHudVisible = !sideHudVisible;
             if (sideHudVisible) RefreshCraftWindow();
             ApplySideHudVisibility();
@@ -2679,6 +2711,7 @@ namespace Nyangbingo.UI
         private void TryPrimaryAction()
         {
             if (!open) return;
+            if (!TryReturnHeldItemForInteraction()) return;
             switch (page)
             {
                 case Page.Gathering: TryUseOrPlaceSelectedInventoryItem(); break;
@@ -3447,12 +3480,12 @@ namespace Nyangbingo.UI
                     {
                         icon.sprite = itemArtCatalog?.FindSprite(ingredient.item.Id);
                         icon.enabled = icon.sprite != null;
-                        icon.color = isMissing ? new Color(.6f, .6f, .6f, 1f) : Color.white;
+                        icon.color = isMissing ? MissingIngredientColor : Color.white;
                     }
                     if (count != null)
                     {
                         count.text = $"{owned}/{ingredient.amount}";
-                        count.color = isMissing ? new Color(1f, .32f, .32f, 1f) : new Color(.93f, .96f, 1f);
+                        count.color = new Color(.93f, .96f, 1f);
                     }
                 }
 

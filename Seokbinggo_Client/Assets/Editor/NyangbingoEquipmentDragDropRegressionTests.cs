@@ -254,6 +254,21 @@ public static class NyangbingoEquipmentDragDropRegressionTests
             controller = Child(root, "Controller").AddComponent<MainGameCraftingUiController>();
             Set(controller, "runtimeServices", runtime);
             Set(controller, "gameDataCatalog", catalog);
+            Require(bag.TryClickSlot(0, cursor, false), "interaction held-item fixture");
+            runtime.InventoryCursorOrigin = new InventoryCursorOrigin
+                { kind = "player", slotIndex = 0 };
+            Require((bool)Invoke(controller, "TryReturnHeldItemForInteraction") &&
+                    cursor.IsEmpty && bag.Count(helmet.Id) == 1 && runtime.InventoryCursorOrigin == null,
+                "interaction must return the held item and clear its origin");
+            var fullBag = new Inventory(catalog.FindItem, 1);
+            Require(fullBag.TryAdd("wood", 1) && cursor.TryAdd(helmet.Id, 1),
+                "interaction full-bag fixture");
+            SetProperty(runtime, "PlayerInventory", fullBag);
+            Require(!(bool)Invoke(controller, "TryReturnHeldItemForInteraction") &&
+                    cursor.Count(helmet.Id) == 1 && fullBag.Count("wood") == 1,
+                "failed auto-return must retain the held item without replacing another stack");
+            SetProperty(runtime, "PlayerInventory", bag);
+            Require(cursor.TryRemove(helmet.Id, 1), "interaction fixture cleanup");
             Set(controller, "open", true);
             var grid = Child(root, "InventoryGrid");
             var buttons = Enumerable.Range(0, Inventory.SlotCount).Select(i => Button(grid, "Slot" + i)).ToArray();

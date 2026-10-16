@@ -293,6 +293,8 @@ namespace Nyangbingo.World
         private void Update()
         {
             if (Time.timeScale <= 0f) return;
+            MainGameCraftingUiController.ReturnHeldItemBeforeWorldInput();
+            playerController?.ReleasePlacementForInteractionInput();
             if (MainGameCraftingUiController.BlocksWorldActions)
             {
                 RefreshInteractionStatus();

@@ -499,6 +499,8 @@ namespace Nyangbingo.World
         private void Update()
         {
             if (!initialized || runtimeServices == null || !runtimeServices.IsInitialized) return;
+            MainGameCraftingUiController.ReturnHeldItemBeforeWorldInput();
+            ReleasePlacementForInteractionInput();
             RefreshPortableLanternLight();
             RefreshPlayerFireDamageMultiplier();
             if (dead)
@@ -1817,18 +1819,33 @@ namespace Nyangbingo.World
         }
 
         /// <summary>
-        /// 사거리 안 상자와 설치물 중 마우스에 가장 가까운 대상을 E로 고른다.
-        /// 캣닢·삼줄기·나무처럼 얻는 자원은 좌클릭 채굴로 통일한다.
+        /// 상호작용 입력은 설치 모드를 먼저 해제하여 같은 입력으로 대상에 접근한다.
         /// </summary>
+        public void ReleasePlacementForInteractionInput()
+        {
+            if (!initialized || dead || Time.timeScale <= 0f ||
+                MainGameCraftingUiController.BlocksWorldActions) return;
+            var interactKey = Input.GetKeyDown(KeyCode.E);
+            var interactClick = Input.GetMouseButtonDown(1) && !Input.IsPointerOverUi() &&
+                !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift) &&
+                TryGetHighlightedInteractionTarget(out _, out _, out _, ignorePlacement: true);
+            if (!interactKey && !interactClick) return;
+            tilePalette ??= FindAnyObjectByType<MainGameTilePaletteController>();
+            if (placedObjectInteractions?.IsPlacementPreviewActive != true &&
+                tilePalette?.ShouldBlockPrimaryForPlacement != true) return;
+            tilePalette?.SelectBareHands();
+            placedObjectInteractions?.CancelPlacementPreview();
+        }
+
         public bool TryGetHighlightedInteractionTarget(out PlacedObjectRecord placed,
-            out Vector3Int cell, out bool chest)
+            out Vector3Int cell, out bool chest, bool ignorePlacement = false)
         {
             placed = default;
             cell = default;
             chest = false;
             var tiles = bootstrap?.TileService;
             if (tiles == null || Input.IsPointerOverUi() || Time.timeScale <= 0f ||
-                MainGameTurretRuntime.BlocksCombatInput || MainGameTilePaletteController.BlocksGameplayInput ||
+                (!ignorePlacement && (MainGameTurretRuntime.BlocksCombatInput || MainGameTilePaletteController.BlocksGameplayInput)) ||
                 !TryGetInteractionAimWorld(out var aim)) return false;
             var origin = AimOrigin;
             if (environmentState != null && environmentState.TryResolvePlacedObjectMiningTarget(

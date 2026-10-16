@@ -90,4 +90,4 @@ samdugumi_summon,summon,세 갈래 매듭,smithy,"ice_root_bundle:3,yokai_tear:2
 eop_summon,summon,업단지,smithy,"cold_wave_ingot:2,yokai_tear:26",1,30,B,업구렁이 소환
 jukbuin,placeable,죽부인,workbench,"hemp_stalk:4,wood:2",1,10,A,보금자리 반경 2타일 내 자연 재생 ×1.5 — 재료는 GDD 6-15 확정표 · 제작대/시간은 보금자리 준용 (v41)
 daebal,placeable,대발,workbench,"hemp_stalk:3,wood:3",1,10,A,반경 4타일 낮 화염 -25% — 재료는 GDD 6-15 확정표 · 제작대/시간은 보금자리 준용 (v41)
-rope,placeable,로프,none,wood:1,1,0,A,기획자 확정: 나무 1개→로프 1개. 손 제작 즉시 완료.
+rope,placeable,로프,none,wood:1,16,0,A,기획자 확정: 나무 1개→로프 16개. 손 제작 즉시 완료.

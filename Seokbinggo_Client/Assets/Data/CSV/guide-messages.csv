@@ -6,7 +6,7 @@ invasion_active,2,invasion_active,요괴가 기지를 공격하고 있어요!,,d
 baekjung_tonight,2,baekjung_tonight,오늘 밤은 백중날이에요. 요괴가 평소보다 많이 나와요.,,night_start,once_per_day,[가안 문구],baekjung_day=15 · 휴식 잠금 없음
 boss_tonight,2,boss_tonight,오늘 밤 {boss}가 {place}에 나타나요. 회복품과 장비를 챙기세요.,boss|place,night_start,once_per_day,[가안 문구],강철이 30일 — place = 얼음 호수(imugi_arena=surface_ice_lake · D2 확정)
 boss_active,2,boss_fight_active,{boss}와 싸우는 중이에요. 지금은 저장할 수 없어요.,boss,boss_end,while_active,[가안 문구],boss_save_policy=no_serialize
-core_unsealed,3,core_unsealed,냉기가 새고 있어요. 작은 방을 만들고 문을 닫아보세요.,,core_sealed,while_active,오너 2026-10-03,g05 안내 겸용
+core_unsealed,3,core_unsealed,냉기가 새고 있어요. '차열벽'과 '단열문'을 이용해 작은 방을 만들고 문을 닫아보세요.,,core_sealed,while_active,오너 2026-10-03,g05 안내 겸용
 door_open,3,seal_blocked_by_open_door,문이 열려있어 냉기가 새고 있어요.,,door_closed,while_active,오너 2026-10-03,누출 원인이 열린 문이면 먼 누출 좌표보다 먼저
 placed_block_not_seal,3,placing_non_seal_block,놓은 {block}은 밀폐 벽으로 인정되지 않아요. 차열벽을 사용하세요.,block,placement_end,while_active,오너 2026-10-03,오너 문구 「놓은 돌은」 — 흙도 같은 규칙이라 {block}=돌/흙. seal-whitelist: 자연 지형은 인정 · 플레이어가 놓은 흙·돌은 불인정
 seal_success,3,core_sealed_now,밀폐됐어요! 장독의 얼음 보관 조건을 확인하세요.,,shown,once_per_event,오너 2026-10-03,
